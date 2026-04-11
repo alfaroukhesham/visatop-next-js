@@ -1,0 +1,11 @@
+---
+description: Neon Postgres and Drizzle ORM
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Database
+
+- Use **Drizzle** with `DATABASE_URL` (Neon). Export `db` from `@/lib/db`.
+- Schema lives under `lib/db/schema/`. Change the database only via **Drizzle migrations** (`pnpm run db:generate` / `pnpm run db:migrate` or `db:push` for prototyping).
+- Never commit `.env` or `.env.local`; use `.env.example` as the template.

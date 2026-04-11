@@ -1,0 +1,15 @@
+---
+description: Split status model for applications (application/payment/fulfillment + automation jobs)
+alwaysApply: true
+---
+
+# Application state machine (split statuses)
+
+- Do **not** use one giant “status enum”. Split into:
+  - `applicationStatus` (user-facing lifecycle)
+  - `paymentStatus` (money movement)
+  - `fulfillmentStatus` (ops execution)
+  - `automationJobs` (attempts/artifacts) as separate records
+- Client UI maps internal states to **neutral** language (no “automation failed”, no affiliate details).
+- Never encode payment events as “application status only”; keep payment transitions consistent with webhooks.
+

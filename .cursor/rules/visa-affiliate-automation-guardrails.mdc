@@ -1,0 +1,16 @@
+---
+description: Affiliate scraping + Playwright automation guardrails (kill switch, observability, manual fallback)
+alwaysApply: true
+---
+
+# Affiliate automation (unofficial)
+
+- Assume automation is brittle (layout changes/CAPTCHA/rate limits). Build for failure.
+- Every automated path must have:
+  - **Per-service enable/disable** and an automation **kill switch**
+  - Job **observability** (status, attempts, timestamps, last error)
+  - Artifacts (screenshot/trace) with redaction where needed
+  - A **manual fallback** path; admin can mark manual success
+- Manual success proof is **tiered by service value/risk** and is **internal-only**.
+- Sync jobs (reference pricing) run **daily** by default + **manual on-demand**, with progress tracking and “notify on change”.
+

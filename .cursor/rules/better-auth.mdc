@@ -1,0 +1,11 @@
+---
+description: Better Auth sessions and routes
+globs: "**/*.{tsx,ts}"
+alwaysApply: false
+---
+
+# Auth
+
+- Use **Better Auth** only: `auth` from `@/lib/auth`, client via `@/lib/auth-client`, HTTP handler at `app/api/auth/[...all]`.
+- Keep **`BETTER_AUTH_SECRET`**, **`BETTER_AUTH_URL`**, and **`NEXT_PUBLIC_APP_URL`** aligned per environment (local vs Netlify). Mismatched origins break cookies and redirects.
+- Do not store passwords in custom tables; use Better Auth’s `user` / `account` models.

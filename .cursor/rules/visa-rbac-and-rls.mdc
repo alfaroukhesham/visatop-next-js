@@ -1,0 +1,17 @@
+---
+description: RBAC + Postgres RLS enforcement pattern (actor context, audit logging, sensitive tables)
+alwaysApply: true
+---
+
+# RBAC + RLS
+
+- RBAC must be enforced in both:
+  - **App layer** (central permission checks)
+  - **DB layer** (Postgres RLS) for sensitive tables (payments, connectors/credentials, audit logs, documents).
+- Every privileged action must write an **audit log** row (actor, action, entity, before/after as needed).
+- RLS policies must use request-scoped “actor context” set at the start of server actions/handlers:
+  - `app.actor_type` = `admin|client|system`
+  - `app.actor_id` = stable id
+  - optionally `app.actor_permissions` for capability checks
+- Do not bypass RLS except via explicit “system/service” actor for background jobs; still record acting admin id where relevant.
+

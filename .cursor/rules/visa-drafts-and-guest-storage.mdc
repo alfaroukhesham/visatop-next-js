@@ -1,0 +1,14 @@
+---
+description: Guest drafts, localStorage safety, fixed expiry, and cleanup rules
+alwaysApply: true
+---
+
+# Drafts + guests
+
+- Create an `Application` draft immediately after nationality + service selection.
+- localStorage is **not** a secure store (XSS/shared device risk):
+  - Store only a **resume token / draft id** and minimal UI state client-side.
+  - Never store passport images, extracted OCR fields, or other PII in localStorage.
+- Draft expiry is a **fixed window** (not sliding) and is **admin-configurable** (e.g. 24h/48h/7d).
+- Cleanup job may delete/archive drafts only when `paymentStatus = unpaid` and `draftExpiresAt < now()`.
+

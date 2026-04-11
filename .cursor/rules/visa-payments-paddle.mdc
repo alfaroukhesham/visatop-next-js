@@ -1,0 +1,15 @@
+---
+description: Payment provider abstraction + Paddle webhook discipline (quote locking, idempotency, refunds)
+alwaysApply: true
+---
+
+# Payments (MoR) — Paddle first
+
+- Implement payments behind a `PaymentProvider` interface. Do not leak provider IDs across the app.
+- Use **webhooks as source of truth**. Client redirects are not authoritative.
+- On checkout creation, **lock a PriceQuote** (amount/currency/breakdown) and persist `priceQuoteId`.
+- Include metadata in checkout: `applicationId`, `serviceId`, `priceQuoteId`, `userId?`, `isGuest`.
+- Webhook handling must be **idempotent** (store provider event ids / hashes; ignore duplicates).
+- Refunds are an **admin intent** → provider call → webhook-confirmed state. Support full/partial.
+- Never expose affiliate cost/margin breakdown to the client; show one total only.
+

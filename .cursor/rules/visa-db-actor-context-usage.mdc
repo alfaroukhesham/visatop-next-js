@@ -1,0 +1,22 @@
+---
+description: Enforce actor-context wrapper for all DB access to RLS-protected tables (Neon HTTP requires transactions)
+alwaysApply: true
+---
+
+# DB actor context (required for RLS)
+
+- This project uses **Neon HTTP** (`drizzle-orm/neon-http`). `set_config(...)` only persists within the same transaction.
+- Any access to RLS-protected tables must be performed inside:
+  - `withAdminDbActor(adminUserId, (tx) => ...)`
+  - `withClientDbActor(userId, (tx) => ...)`
+  - `withSystemDbActor((tx) => ...)`
+- Do not query RLS tables via `db` directly in route handlers/server actions.
+
+Example (admin route handler):
+
+```ts
+const permissions = await withAdminDbActor(adminUserId, async (tx) => {
+  return tx.select().from(adminPermission);
+});
+```
+

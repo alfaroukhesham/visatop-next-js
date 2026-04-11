@@ -1,0 +1,10 @@
+---
+description: shadcn/ui and component conventions
+globs: "**/*.{tsx,ts}"
+alwaysApply: false
+---
+
+# shadcn / UI
+
+- Use primitives from `@/components/ui/*` and `cn()` from `@/lib/utils`. Do not duplicate button/input/card patterns.
+- Follow import aliases from `components.json` (`@/components`, `@/lib`).

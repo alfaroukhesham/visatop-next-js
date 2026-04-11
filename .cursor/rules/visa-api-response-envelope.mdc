@@ -1,0 +1,14 @@
+---
+description: Standardize JSON API responses with an envelope and requestId for debugging
+alwaysApply: true
+---
+
+# API responses (JSON envelope + request id)
+
+- All non-auth JSON route handlers should respond using:
+  - `jsonOk(data, { requestId })`
+  - `jsonError(code, message, { status, requestId, details? })`
+- Always read `requestId` from `headers().get('x-request-id')` and pass it through.
+- Do not return raw `{ error: ... }` payloads from API routes.
+- Keep `details` free of secrets/PII (no documents, OCR output, auth tokens, cookies).
+

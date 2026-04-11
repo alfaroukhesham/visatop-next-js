@@ -30,8 +30,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files (keep `.env.example` committable)
+.env
+.env.*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +41,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local Stitch HTML cache (development only)
+.stitch-cache/
+
+# Agent / local AI bundles (do not commit)
+.agents/
+skills-lock.json
+
+# Cursor: track `.cursor/rules/` only; keep skills and other IDE data local
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
