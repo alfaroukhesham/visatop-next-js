@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { adminAuth } from "@/lib/admin-auth";
-import { withAdminDbActor, resolveAdminPermissions } from "@/lib/db/actor-context";
+import { withAdminDbActor } from "@/lib/db/actor-context";
 import { jsonError, jsonOk } from "@/lib/api/response";
 
 export const dynamic = "force-dynamic";
@@ -19,10 +19,7 @@ export async function GET() {
 
   const adminUserId = session.user.id;
 
-  const permissions = await withAdminDbActor(adminUserId, async () => {
-    return resolveAdminPermissions(adminUserId);
-  });
+  const permissions = await withAdminDbActor(adminUserId, async ({ permissions: p }) => p);
 
   return jsonOk({ adminUserId, permissions }, { requestId });
 }
-

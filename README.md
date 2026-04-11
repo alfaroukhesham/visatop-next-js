@@ -96,6 +96,18 @@ Run migrations against the production Neon branch before expecting sign-up/sign-
 
 Full conventions, RLS follow-ups (audit log, guests, refunds, `system` actor), and **phases 1–4** (catalog/pricing, guests + docs, Paddle, affiliate jobs): [`docs/IMPLEMENTATION_REFERENCE.md`](docs/IMPLEMENTATION_REFERENCE.md).
 
+## Tests
+
+- **`pnpm test`** — Vitest watch mode. **`pnpm test:ci`** — single run (used in [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+- Vitest sets a placeholder `DATABASE_URL` when unset so the module graph loads; real DB calls in tests are mocked unless you point at a live database.
+- **Postgres RLS integration** ([`tests/integration/rls-catalog.test.ts`](tests/integration/rls-catalog.test.ts)): set **`RUN_DB_TESTS=1`** and a migrated **`DATABASE_URL`** (see [`.env.test.example`](.env.test.example)).
+
+Apply new migrations after pulling (Phase 1 adds **`0003_catalog_addon_rls`**):
+
+```bash
+pnpm run db:migrate
+```
+
 ## RBAC after first admin
 
 Phase 0 seeds permissions and a **`super_admin`** role in the database. After you create the first admin user (see above), **assign that role** by inserting into **`admin_user_role`** (link `admin_user.id` to role id **`00000000-0000-0000-0000-000000000001`**). Without this, `withAdminDbActor` resolves **no permissions** and RLS will deny access to protected tables.

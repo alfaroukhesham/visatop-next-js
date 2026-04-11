@@ -353,40 +353,64 @@ CREATE POLICY affiliate_connector_admin_select ON "affiliate_connector"
   FOR SELECT
   USING (app_actor_type() = 'admin' AND app_has_permission('affiliate.read'));
 
-CREATE POLICY affiliate_connector_admin_write ON "affiliate_connector"
-  FOR INSERT, UPDATE, DELETE
+CREATE POLICY affiliate_connector_admin_insert ON "affiliate_connector"
+  FOR INSERT
+  WITH CHECK (app_actor_type() = 'admin' AND app_has_permission('affiliate.write'));
+CREATE POLICY affiliate_connector_admin_update ON "affiliate_connector"
+  FOR UPDATE
   USING (app_actor_type() = 'admin' AND app_has_permission('affiliate.write'))
   WITH CHECK (app_actor_type() = 'admin' AND app_has_permission('affiliate.write'));
+CREATE POLICY affiliate_connector_admin_delete ON "affiliate_connector"
+  FOR DELETE
+  USING (app_actor_type() = 'admin' AND app_has_permission('affiliate.write'));
 
 -- automation_job: read vs run split
 CREATE POLICY automation_job_admin_select ON "automation_job"
   FOR SELECT
   USING (app_actor_type() = 'admin' AND app_has_permission('jobs.read'));
 
-CREATE POLICY automation_job_admin_write ON "automation_job"
-  FOR INSERT, UPDATE, DELETE
+CREATE POLICY automation_job_admin_insert ON "automation_job"
+  FOR INSERT
+  WITH CHECK (app_actor_type() = 'admin' AND app_has_permission('jobs.run'));
+CREATE POLICY automation_job_admin_update ON "automation_job"
+  FOR UPDATE
   USING (app_actor_type() = 'admin' AND app_has_permission('jobs.run'))
   WITH CHECK (app_actor_type() = 'admin' AND app_has_permission('jobs.run'));
+CREATE POLICY automation_job_admin_delete ON "automation_job"
+  FOR DELETE
+  USING (app_actor_type() = 'admin' AND app_has_permission('jobs.run'));
 
 -- application: read vs write split
 CREATE POLICY application_admin_select ON "application"
   FOR SELECT
   USING (app_actor_type() = 'admin' AND app_has_permission('applications.read'));
 
-CREATE POLICY application_admin_write ON "application"
-  FOR INSERT, UPDATE, DELETE
+CREATE POLICY application_admin_insert ON "application"
+  FOR INSERT
+  WITH CHECK (app_actor_type() = 'admin' AND app_has_permission('applications.write'));
+CREATE POLICY application_admin_update ON "application"
+  FOR UPDATE
   USING (app_actor_type() = 'admin' AND app_has_permission('applications.write'))
   WITH CHECK (app_actor_type() = 'admin' AND app_has_permission('applications.write'));
+CREATE POLICY application_admin_delete ON "application"
+  FOR DELETE
+  USING (app_actor_type() = 'admin' AND app_has_permission('applications.write'));
 
 -- price_quote: read vs write split
 CREATE POLICY price_quote_admin_select ON "price_quote"
   FOR SELECT
   USING (app_actor_type() = 'admin' AND app_has_permission('pricing.read'));
 
-CREATE POLICY price_quote_admin_write ON "price_quote"
-  FOR INSERT, UPDATE, DELETE
+CREATE POLICY price_quote_admin_insert ON "price_quote"
+  FOR INSERT
+  WITH CHECK (app_actor_type() = 'admin' AND app_has_permission('pricing.write'));
+CREATE POLICY price_quote_admin_update ON "price_quote"
+  FOR UPDATE
   USING (app_actor_type() = 'admin' AND app_has_permission('pricing.write'))
   WITH CHECK (app_actor_type() = 'admin' AND app_has_permission('pricing.write'));
+CREATE POLICY price_quote_admin_delete ON "price_quote"
+  FOR DELETE
+  USING (app_actor_type() = 'admin' AND app_has_permission('pricing.write'));
 
 -- Client access (scaffold): can read own application + quote (ownership by user_id)
 CREATE POLICY application_client_select_own ON "application"

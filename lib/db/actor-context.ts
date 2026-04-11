@@ -8,6 +8,11 @@ import {
   adminUserRole,
 } from "@/lib/db/schema";
 
+export type AdminDbActorContext = {
+  tx: NeonHttpDatabase<Record<string, never>>;
+  permissions: string[];
+};
+
 export type DbActorType = "admin" | "client" | "system";
 
 export type DbActor = {
@@ -83,13 +88,13 @@ export async function withDbActor<T>(
 
 export async function withAdminDbActor<T>(
   adminUserId: string,
-  fn: (tx: NeonHttpDatabase<Record<string, never>>) => Promise<T>,
+  fn: (ctx: AdminDbActorContext) => Promise<T>,
 ) {
   return db.transaction(async (tx) => {
     const typedTx = tx as unknown as NeonHttpDatabase<Record<string, never>>;
     const permissions = await resolveAdminPermissions(adminUserId, typedTx);
     await setActorGucs(typedTx, { type: "admin", id: adminUserId, permissions });
-    return fn(typedTx);
+    return fn({ tx: typedTx, permissions });
   });
 }
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Settings2, Sparkles } from "lucide-react";
+import { ArrowRight, Globe2, Settings2, Sparkles } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Card,
@@ -9,6 +9,12 @@ import {
 } from "@/components/ui/card";
 
 const links = [
+  {
+    href: "/admin/catalog",
+    title: "Catalog & pricing",
+    description: "Nationalities, services, margins, and reference prices.",
+    icon: Globe2,
+  },
   {
     href: "/admin/operations",
     title: "Operations",

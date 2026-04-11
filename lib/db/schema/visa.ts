@@ -7,6 +7,7 @@ import {
   timestamp,
   index,
   uniqueIndex,
+  bigint,
 } from "drizzle-orm/pg-core";
 
 export const nationality = pgTable(
@@ -75,6 +76,11 @@ export const addon = pgTable(
       .default(sql`gen_random_uuid()`),
     key: text("key").notNull(),
     name: text("name").notNull(),
+    /** Display add-on line total in minor units (e.g. cents). */
+    amount: bigint("amount", { mode: "bigint" })
+      .notNull()
+      .default(sql`0`),
+    currency: text("currency").default("USD").notNull(),
     enabled: boolean("enabled").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },

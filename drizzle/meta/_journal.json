@@ -22,6 +22,13 @@
       "when": 1775820313746,
       "tag": "0002_harsh_wolverine",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775896849332,
+      "tag": "0003_catalog_addon_rls",
+      "breakpoints": true
     }
   ]
 }

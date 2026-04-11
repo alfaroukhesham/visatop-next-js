@@ -185,7 +185,7 @@ No `org_id` required in MVP; separation is based on actor type and ownership (cl
 Because the project uses **Neon HTTP** (`drizzle-orm/neon-http`), `set_config(...)` variables only persist **within a transaction**.
 
 Use `lib/db/actor-context.ts` helpers:
-- `withAdminDbActor(adminUserId, fn)`
+- `withAdminDbActor(adminUserId, ({ tx, permissions }) => ...)`
 - `withClientDbActor(userId, fn)`
 - `withSystemDbActor(fn)`
 
@@ -196,7 +196,7 @@ These wrap all DB work in one transaction, set:
 
 and then run your queries against the transaction handle so RLS can evaluate correctly.
 
-**Admin permissions in the same transaction:** `withAdminDbActor` loads RBAC permissions **inside** the same `db.transaction` as `set_config`, then sets `app.actor_permissions` before running your callback.
+**Admin permissions in the same transaction:** `withAdminDbActor` resolves RBAC permissions **once** inside the same `db.transaction` as `set_config`, sets `app.actor_permissions`, and passes `{ tx, permissions }` to your callback (so `runAdminDbJson` can gate on `permissions` without a second query).
 
 ### RLS policy shape (Phase 0)
 
@@ -209,9 +209,7 @@ Migrated in `drizzle/0002_harsh_wolverine.sql`:
 ### Known gaps to close in Phases 1–4 (review follow-ups)
 
 1. **`audit_log` writes**  
-   RLS currently allows **admin `SELECT`** only. Inserts from an admin-scoped transaction will **fail** until you add either:
-   - **`INSERT` policy** for admins (e.g. require `audit.write` or any admin), or  
-   - **`withSystemDbActor`** for audit writes only (tighter separation).
+   Phase 1 catalog/pricing admin mutations write **`audit_log`** rows (requires **`audit.write`**, seeded on **`super_admin`** per migration **`0003_catalog_addon_rls`**). Extend the same pattern to other privileged surfaces as they ship (payments, applications, etc.).
 
 2. **Guest applications vs RLS**  
    Client policies require **`user_id IS NOT NULL`**. **Guests** (`user_id` null) need a deliberate design:
@@ -257,10 +255,16 @@ Migrated in `drizzle/0002_harsh_wolverine.sql`:
 
 ## 8) Testing & repo hygiene (baseline)
 
+### Tooling (Phase 1+)
+
+- **Vitest** — `pnpm test` / `pnpm test:ci` ([`vitest.config.ts`](../vitest.config.ts)). CI runs lint, `test:ci`, and **`pnpm run build`** ([`.github/workflows/ci.yml`](../.github/workflows/ci.yml)).
+- **TDD expectation:** add or extend tests before (or alongside) behavior changes; keep suites green on every merge.
+- **Postgres RLS integration:** [`tests/integration/rls-catalog.test.ts`](../tests/integration/rls-catalog.test.ts) runs only when **`RUN_DB_TESTS=1`** and **`DATABASE_URL`** point at a database where migrations (including **`0003_catalog_addon_rls`**) are applied.
+
 ### Testing (recommended next)
 
 - Smoke: migrations apply on a clean DB.
-- RLS: at least one scenario each for **client own-row**, **admin with/without permission**, **system** (internal test only).
+- RLS: at least one scenario each for **client own-row**, **admin with/without permission**, **system** (internal test only). Phase 1 adds catalog/pricing admin matrix coverage in the integration file above.
 
 ### Git scope for AI tooling
 
@@ -285,4 +289,15 @@ Phase 0 (schema, migration `0002_harsh_wolverine`, actor helpers, envelope, midd
 | **4 — Affiliate automation** | Connectors per domain, reference **daily + manual** sync with progress and notify-on-change; Playwright jobs with artifacts, retries, **manual fallback** and **kill switch**. | Job runners use **`system`** (or dedicated policies) for writes to sync/automation tables; never set **`system`** from request input. Redact artifacts; observability on every job attempt. |
 
 **Cross-cutting (any phase):** resolve **`audit_log` INSERT** (§6.1) before treating audit as reliable; treat **`system`** as a **trust boundary** (§6.4).
+
+---
+
+## 10) Phase 1 — catalog + pricing (implemented)
+
+- **Migration [`0003_catalog_addon_rls`](../drizzle/0003_catalog_addon_rls.sql):** `addon.amount` / `addon.currency` (minor units); seeds **`catalog.read`**, **`catalog.write`**, **`audit.write`**; RLS on catalog tables, `margin_policy`, `affiliate_site`, `affiliate_reference_price`; admin + **`system`** read policies for public catalog paths; **`audit_log` INSERT** for admins with **`audit.write`**.
+- **RLS write policies (Postgres):** use separate **`FOR INSERT`**, **`FOR UPDATE`**, and **`FOR DELETE`** admin policies (each with the right `USING` / `WITH CHECK` shape). Do **not** replace invalid multi-action syntax with a single permissive **`FOR ALL`** policy, because that can unintentionally widen **SELECT** when policies are permissive.
+- **Pricing library:** [`lib/pricing/compute-display-price.ts`](../lib/pricing/compute-display-price.ts), [`lib/pricing/resolve-catalog-pricing.ts`](../lib/pricing/resolve-catalog-pricing.ts); canonical affiliate site via **`PRICING_AFFILIATE_SITE_ID`** (optional, see [`.env.example`](../.env.example)).
+- **Public APIs:** `GET /api/catalog/nationalities`, `GET /api/catalog/services?nationality=XX` — client payload is **totals only** (no reference/margin breakdown).
+- **Admin APIs:** `/api/admin/catalog/*` (visa services, nationalities, eligibility) and `/api/admin/pricing/*` (margin policies, reference prices) — **`runAdminDbJson`** gates on `permissions` from **`withAdminDbActor`** (same transaction as the handler body; see [`lib/admin-api/require-admin-db.ts`](../lib/admin-api/require-admin-db.ts)). Mutations require **`audit.write`** and append **`audit_log`** via [`lib/admin-api/write-admin-audit.ts`](../lib/admin-api/write-admin-audit.ts).
+- **Admin UI:** [`app/admin/(protected)/catalog/page.tsx`](../app/admin/(protected)/catalog/page.tsx) — read-only overview (mutations via APIs).
 

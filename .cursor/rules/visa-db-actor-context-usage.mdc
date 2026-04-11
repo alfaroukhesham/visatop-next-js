@@ -7,7 +7,7 @@ alwaysApply: true
 
 - This project uses **Neon HTTP** (`drizzle-orm/neon-http`). `set_config(...)` only persists within the same transaction.
 - Any access to RLS-protected tables must be performed inside:
-  - `withAdminDbActor(adminUserId, (tx) => ...)`
+  - `withAdminDbActor(adminUserId, ({ tx, permissions }) => ...)` — permissions are resolved once per transaction alongside GUCs.
   - `withClientDbActor(userId, (tx) => ...)`
   - `withSystemDbActor((tx) => ...)`
 - Do not query RLS tables via `db` directly in route handlers/server actions.
@@ -15,7 +15,7 @@ alwaysApply: true
 Example (admin route handler):
 
 ```ts
-const permissions = await withAdminDbActor(adminUserId, async (tx) => {
+const rows = await withAdminDbActor(adminUserId, async ({ tx }) => {
   return tx.select().from(adminPermission);
 });
 ```
