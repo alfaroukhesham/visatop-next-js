@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL && secrets.DATABASE_URL || 'postgresql://ci:ci@127.0.0.1:5432/ci' }}
+      BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET && secrets.BETTER_AUTH_SECRET || 'ci-placeholder-better-auth-secret-do-not-use-in-prod-0123456789abcdef' }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
