@@ -66,7 +66,12 @@ const nextConfig: NextConfig = {
   },
   // Node-only native deps used by server routes (OCR / image + PDF normalization).
   // Keeping them external avoids Turbopack trying to bundle their native bindings.
-  serverExternalPackages: ["sharp", "pdfjs-dist", "@google/genai"],
+  serverExternalPackages: [
+    "sharp",
+    "pdfjs-dist",
+    "@google/genai",
+    "@napi-rs/canvas",
+  ],
   ...(devTunnelHosts.length > 0
     ? { allowedDevOrigins: devTunnelHosts }
     : {}),

@@ -17,6 +17,9 @@ importers:
       '@google/genai':
         specifier: ^1.50.1
         version: 1.50.1(@modelcontextprotocol/sdk@1.28.0(zod@4.3.6))
+      '@napi-rs/canvas':
+        specifier: ^0.1.98
+        version: 0.1.98
       '@neondatabase/serverless':
         specifier: ^1.0.2
         version: 1.0.2
@@ -6484,7 +6487,6 @@ snapshots:
       '@napi-rs/canvas-linux-x64-musl': 0.1.98
       '@napi-rs/canvas-win32-arm64-msvc': 0.1.98
       '@napi-rs/canvas-win32-x64-msvc': 0.1.98
-    optional: true
 
   '@napi-rs/wasm-runtime@0.2.12':
     dependencies:
