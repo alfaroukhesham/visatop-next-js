@@ -1,11 +1,11 @@
 ---
-description: Enforce actor-context wrapper for all DB access to RLS-protected tables (Neon HTTP requires transactions)
+description: Enforce actor-context wrapper for all DB access to RLS-protected tables (Neon Pool + transactions for session GUCs)
 alwaysApply: true
 ---
 
 # DB actor context (required for RLS)
 
-- This project uses **Neon HTTP** (`drizzle-orm/neon-http`). `set_config(...)` only persists within the same transaction.
+- This project uses **Neon serverless `Pool`** (`drizzle-orm/neon-serverless`). `set_config(...)` only persists within the same transaction.
 - Any access to RLS-protected tables must be performed inside:
   - `withAdminDbActor(adminUserId, ({ tx, permissions }) => ...)` — permissions are resolved once per transaction alongside GUCs.
   - `withClientDbActor(userId, (tx) => ...)`

@@ -8,6 +8,7 @@ import { jsonError, jsonOk } from "@/lib/api/response";
 import * as schema from "@/lib/db/schema";
 import { zIso4217Alpha3 } from "@/lib/validation/currency";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_SAFE = BigInt(Number.MAX_SAFE_INTEGER);

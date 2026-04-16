@@ -12,3 +12,9 @@ alwaysApply: true
 - Do not return raw `{ error: ... }` payloads from API routes.
 - Keep `details` free of secrets/PII (no documents, OCR output, auth tokens, cookies).
 
+# Route handler runtime (required)
+
+- **Every** `route.ts` under `app/api/` **must** include `export const runtime = "nodejs";`.
+- This prevents Next.js 16 Turbopack from evaluating the handler in the proxy's Edge compilation graph (which fails on Node-only deps like `@neondatabase/serverless`, `better-auth`, OpenTelemetry).
+- Omitting it causes `(unsupported edge import 'path')` errors and 404 responses in dev.
+

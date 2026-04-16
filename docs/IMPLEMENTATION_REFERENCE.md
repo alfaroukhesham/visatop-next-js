@@ -182,7 +182,7 @@ No `org_id` required in MVP; separation is based on actor type and ownership (cl
 
 ### Runtime helper (required)
 
-Because the project uses **Neon HTTP** (`drizzle-orm/neon-http`), `set_config(...)` variables only persist **within a transaction**.
+Because the project uses **Neon serverless `Pool`** (`drizzle-orm/neon-serverless`), `set_config(...)` variables only persist **within a transaction**.
 
 Use `lib/db/actor-context.ts` helpers:
 - `withAdminDbActor(adminUserId, ({ tx, permissions }) => ...)`
@@ -197,6 +197,8 @@ These wrap all DB work in one transaction, set:
 and then run your queries against the transaction handle so RLS can evaluate correctly.
 
 **Admin permissions in the same transaction:** `withAdminDbActor` resolves RBAC permissions **once** inside the same `db.transaction` as `set_config`, sets `app.actor_permissions`, and passes `{ tx, permissions }` to your callback (so `runAdminDbJson` can gate on `permissions` without a second query).
+
+**Bootstrapped admin role:** Migrations seed the **`super_admin`** role and its **`admin_role_permission`** rows, but each **`admin_user`** must be linked via **`admin_user_role`**. Migration **`0006_seed_super_admin_user_role.sql`** assigns **`info@visatop.com`** to **`super_admin`** (`role_id` **`00000000-0000-0000-0000-000000000001`**). For any other first admin email, insert that row manually (or duplicate the migration pattern).
 
 ### RLS policy shape (Phase 0)
 
@@ -227,13 +229,14 @@ Migrated in `drizzle/0002_harsh_wolverine.sql`:
 
 ---
 
-## 7) HTTP: middleware, API envelope, observability
+## 7) HTTP: request proxy, API envelope, observability
 
-### Middleware (`middleware.ts`)
+### Request proxy (`proxy.ts`)
 
-- **Matchers:** `/api/*`, `/portal`, `/portal/*`, `/admin`, `/admin/*`.
-- **`x-request-id`:** Set on incoming request headers (or generated) and echoed on the response; route handlers should read via `headers().get('x-request-id')` and pass into `jsonOk` / `jsonError`.
+- **Matchers:** `/api/:path*`, `/portal`, `/portal/:path*`, `/admin`, `/admin/:path*`.
+- **`x-request-id`:** Set on all matched routes (or generated) and echoed on the response; route handlers read via `headers().get('x-request-id')` and pass into `jsonOk` / `jsonError`.
 - **`x-pathname`:** Set from `nextUrl.pathname` for **`/portal*`** and **`/admin*`** so layouts can build accurate **`callbackUrl`** after sign-in.
+- **Node.js runtime requirement:** every `route.ts` under `app/api/` **must** export `export const runtime = "nodejs"`. Without this, Next.js 16 Turbopack in dev may evaluate the handler for the proxy's Edge compilation graph and throw `(unsupported edge import 'path')`. This is a one-liner per file — see §8 testing notes.
 
 ### JSON API envelope (`lib/api/response.ts`)
 
@@ -279,12 +282,12 @@ Migrated in `drizzle/0002_harsh_wolverine.sql`:
 
 ## 9) Phased delivery (1–4) — scope and RLS touchpoints
 
-Phase 0 (schema, migration `0002_harsh_wolverine`, actor helpers, envelope, middleware, OTel/Pino) is the baseline. The rows below are **what each phase should deliver** and **which Phase 0 gaps it should close**.
+Phase 0 (schema, migration `0002_harsh_wolverine`, actor helpers, envelope, `proxy.ts`, OTel/Pino) is the baseline. The rows below are **what each phase should deliver** and **which Phase 0 gaps it should close**.
 
 | Phase | Product focus | Engineering / RLS |
 |--------|----------------|-------------------|
 | **1 — Catalog + pricing** | Admin CRUD for visa services (enable/disable, attributes), nationality ↔ service eligibility, margin policies (global + per-service), **displayed price** from reference + margin + add-ons − discounts (pre–checkout intent). | Extend or tighten RLS so admin writes align with seeded permissions (e.g. **`pricing.*`**, **`catalog.*`** as you wire routes). Ensure **audit** on pricing/discount actions once **`audit_log` INSERT** is allowed (see §6 gaps). |
-| **2 — Drafts, guests, documents** | Create **`application`** on nationality + service; **fixed** draft TTL + cleanup for **unpaid** only; document upload + extraction pipeline (can stub OCR). | **Guest path:** today’s client RLS expects **`user_id = app.actor_id`**. Implement **resume token** (hashed) + **server-only** access and/or **new RLS** for guest rows — do not rely on “signed-in client” policies for guests. |
+| **2 — Drafts, guests, documents** *(implemented — see §11)* | Create **`application`** on nationality + service; **fixed** draft TTL + cleanup for **unpaid** only; document upload + extraction pipeline (can stub OCR). | **Guest path:** **`resume_token_hash`** + **`HttpOnly`** cookie **`vt_resume`**; guest routes verify cookie then use **`withSystemDbActor`**. Signed-in drafts use **`withClientDbActor`** + new client **`INSERT`/`UPDATE`** RLS on **`application`**. |
 | **3 — Paddle** | `PaymentProvider` + Paddle adapter; checkout creation **locks** `price_quote`; webhooks → normalized events; admin refund intent → provider → webhook-confirmed state; **idempotent** `payment_event`. | All webhook and payment state transitions that bypass user context run under **`withSystemDbActor`** only after **signature verification**. Wire **`payments.refund`** (or system-only writes) for refund-related rows. Keep **split** `applicationStatus` / `paymentStatus` / `fulfillmentStatus`. |
 | **4 — Affiliate automation** | Connectors per domain, reference **daily + manual** sync with progress and notify-on-change; Playwright jobs with artifacts, retries, **manual fallback** and **kill switch**. | Job runners use **`system`** (or dedicated policies) for writes to sync/automation tables; never set **`system`** from request input. Redact artifacts; observability on every job attempt. |
 
@@ -295,9 +298,19 @@ Phase 0 (schema, migration `0002_harsh_wolverine`, actor helpers, envelope, midd
 ## 10) Phase 1 — catalog + pricing (implemented)
 
 - **Migration [`0003_catalog_addon_rls`](../drizzle/0003_catalog_addon_rls.sql):** `addon.amount` / `addon.currency` (minor units); seeds **`catalog.read`**, **`catalog.write`**, **`audit.write`**; RLS on catalog tables, `margin_policy`, `affiliate_site`, `affiliate_reference_price`; admin + **`system`** read policies for public catalog paths; **`audit_log` INSERT** for admins with **`audit.write`**.
+- **Optional demo seed (not a migration):** [`scripts/seed-demo-catalog.sql`](../scripts/seed-demo-catalog.sql) — same idempotent catalog/pricing rows as above. Run **`pnpm db:seed:demo`** when you want demo data (after schema migrations). Does **not** run with **`pnpm db:migrate`**. If an older checkout already applied migration tag `0006_seed_demo_catalog`, remove that row from **`drizzle.__drizzle_migrations`** once so Drizzle’s journal and the DB stay aligned.
 - **RLS write policies (Postgres):** use separate **`FOR INSERT`**, **`FOR UPDATE`**, and **`FOR DELETE`** admin policies (each with the right `USING` / `WITH CHECK` shape). Do **not** replace invalid multi-action syntax with a single permissive **`FOR ALL`** policy, because that can unintentionally widen **SELECT** when policies are permissive.
 - **Pricing library:** [`lib/pricing/compute-display-price.ts`](../lib/pricing/compute-display-price.ts), [`lib/pricing/resolve-catalog-pricing.ts`](../lib/pricing/resolve-catalog-pricing.ts); canonical affiliate site via **`PRICING_AFFILIATE_SITE_ID`** (optional, see [`.env.example`](../.env.example)).
 - **Public APIs:** `GET /api/catalog/nationalities`, `GET /api/catalog/services?nationality=XX` — client payload is **totals only** (no reference/margin breakdown).
 - **Admin APIs:** `/api/admin/catalog/*` (visa services, nationalities, eligibility) and `/api/admin/pricing/*` (margin policies, reference prices) — **`runAdminDbJson`** gates on `permissions` from **`withAdminDbActor`** (same transaction as the handler body; see [`lib/admin-api/require-admin-db.ts`](../lib/admin-api/require-admin-db.ts)). Mutations require **`audit.write`** and append **`audit_log`** via [`lib/admin-api/write-admin-audit.ts`](../lib/admin-api/write-admin-audit.ts).
 - **Admin UI:** [`app/admin/(protected)/catalog/page.tsx`](../app/admin/(protected)/catalog/page.tsx) — read-only overview (mutations via APIs).
+
+---
+
+## 11) Phase 2 — drafts, guests, documents (implemented)
+
+- **Migration [`0004_phase2_application_documents`](../drizzle/0004_phase2_application_documents.sql):** `application.resume_token_hash` + partial unique index; **`application_document`**; RLS for **`application`** client draft **`INSERT`/`UPDATE`**; **`application_document`** policies (**`system`** `FOR ALL`, admin split **`INSERT`/`UPDATE`/`DELETE`/`SELECT`**, client own-row **`SELECT`/`INSERT`/`UPDATE`**).
+- **APIs:** **`POST /api/applications`** — session → **`withClientDbActor`**; no session → guest draft via **`withSystemDbActor`**, **`Set-Cookie`:** `vt_resume` (**`HttpOnly`**, **`SameSite=Lax`**, **`Secure`** in production), JSON **without** plaintext token. **`GET` / `PATCH /api/applications/[id]`** — session **or** cookie. **`POST /api/applications/[id]/documents`** (metadata only). **`POST /api/applications/[id]/extract`** (sets **`extraction_status`** to **`queued`**). **`POST /api/internal/cleanup-drafts`** — header **`x-internal-secret`** must match **`INTERNAL_CRON_SECRET`**; deletes **unpaid** + **`draft`** rows with **`draft_expires_at < now()`** (non-null).
+- **Config:** Draft TTL is stored in **`platform_setting`** (`key` = **`draft_ttl_hours`**, default **48** in migration **`0005`**). Admins read/update via **`GET` / `PUT /api/admin/settings/draft-ttl`** (`settings.read` / `settings.write` + **`audit.write`** on **`PUT`**). **`INTERNAL_CRON_SECRET`** — [`.env.example`](../.env.example).
+- **Code:** [`lib/applications/`](../lib/applications/) (status, resume token, **`resume-cookie`**, draft TTL from DB in the same transaction as draft create, create body schema, public DTO).
 

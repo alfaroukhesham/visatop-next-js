@@ -1,8 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
-  const pathname = request.nextUrl.pathname;
+  const { pathname } = request.nextUrl;
 
   const incomingRequestId = requestHeaders.get("x-request-id");
   const requestId =
@@ -12,7 +12,6 @@ export function middleware(request: NextRequest) {
 
   requestHeaders.set("x-request-id", requestId);
 
-  // Portal / admin layouts use this for post-login callbackUrl (deep links).
   if (pathname.startsWith("/portal") || pathname.startsWith("/admin")) {
     requestHeaders.set("x-pathname", pathname);
   }

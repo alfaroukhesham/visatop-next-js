@@ -31,6 +31,12 @@ pnpm run db:migrate
 # or during early prototyping: pnpm run db:push
 ```
 
+Optional demo nationalities/services/pricing (not part of migrate):
+
+```bash
+pnpm run db:seed:demo
+```
+
 Then start the development server:
 
 ```bash
@@ -89,7 +95,7 @@ Run migrations against the production Neon branch before expecting sign-up/sign-
 
 ## Middleware, API responses, and observability
 
-- **Middleware** (`middleware.ts`): sets **`x-request-id`** for `/api/*`, `/portal/*`, and `/admin/*`; sets **`x-pathname`** for portal/admin routes so post-login redirects preserve deep links.
+- **Proxy** (`proxy.ts`, Next.js 16): sets **`x-request-id`** for `/api/*`, `/portal/*`, and `/admin/*`; sets **`x-pathname`** for portal/admin routes so post-login redirects preserve deep links. All API `route.ts` files export `runtime = "nodejs"` to prevent Turbopack edge bundling issues.
 - **JSON APIs** (non–Better-Auth): use **`jsonOk` / `jsonError`** from [`lib/api/response.ts`](lib/api/response.ts) and pass through **`x-request-id`** from headers. See [`.cursor/rules/visa-api-response-envelope.mdc`](.cursor/rules/visa-api-response-envelope.mdc).
 - **OpenTelemetry** ([`instrumentation.ts`](instrumentation.ts)): optional export via **`OTEL_EXPORTER_OTLP_ENDPOINT`**; server-only. Optional **`OTEL_SERVICE_NAME`**, **`OTEL_DIAGNOSTIC_LOGS=1`**.
 - **Logging**: [`lib/logger.ts`](lib/logger.ts) (Pino + redaction). Set **`LOG_LEVEL`** if needed.
@@ -110,7 +116,10 @@ pnpm run db:migrate
 
 ## RBAC after first admin
 
-Phase 0 seeds permissions and a **`super_admin`** role in the database. After you create the first admin user (see above), **assign that role** by inserting into **`admin_user_role`** (link `admin_user.id` to role id **`00000000-0000-0000-0000-000000000001`**). Without this, `withAdminDbActor` resolves **no permissions** and RLS will deny access to protected tables.
+Phase 0 seeds permissions and a **`super_admin`** role. Each admin user must have a row in **`admin_user_role`** linking `admin_user.id` to that role (**`00000000-0000-0000-0000-000000000001`**), or `withAdminDbActor` resolves **no permissions**.
+
+- Migration **`0006_seed_super_admin_user_role`** (run via **`pnpm run db:migrate`**) links **`info@visatop.com`** to **`super_admin`** automatically.
+- For a different bootstrap email, insert **`admin_user_role`** yourself (same role id) after creating that admin user.
 
 ## Git and AI tooling
 

@@ -1,5 +1,4 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { drizzle } from "drizzle-orm/neon-serverless";
 import * as schema from "./schema";
 
 const url = process.env.DATABASE_URL;
@@ -9,5 +8,10 @@ if (!url) {
   );
 }
 
-const sql = neon(url);
-export const db = drizzle(sql, { schema });
+/** Pooled driver so `db.transaction()` works (RLS `set_config` is session-scoped). */
+export const db = drizzle(url, { schema });
+
+/** Transaction callback handle (same query surface as `db` for RLS-scoped work). */
+export type DbTransaction = Parameters<
+  Parameters<(typeof db)["transaction"]>[0]
+>[0];

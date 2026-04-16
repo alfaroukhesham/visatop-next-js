@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
-import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
+import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { computeDisplayPriceMinor } from "./compute-display-price";
 
@@ -59,7 +59,7 @@ export function pickCanonicalAffiliateSiteId(
   return first?.id ?? null;
 }
 
-type SchemaDb = NeonHttpDatabase<Record<string, never>>;
+type SchemaDb = DbTransaction;
 
 export async function resolveCanonicalAffiliateSiteId(
   tx: SchemaDb,

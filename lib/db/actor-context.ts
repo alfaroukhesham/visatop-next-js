@@ -1,7 +1,6 @@
 import { sql } from "drizzle-orm";
 import { eq } from "drizzle-orm";
-import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
-import { db } from "@/lib/db";
+import { db, type DbTransaction } from "@/lib/db";
 import {
   adminPermission,
   adminRolePermission,
@@ -9,7 +8,7 @@ import {
 } from "@/lib/db/schema";
 
 export type AdminDbActorContext = {
-  tx: NeonHttpDatabase<Record<string, never>>;
+  tx: DbTransaction;
   permissions: string[];
 };
 
@@ -27,17 +26,12 @@ function permissionsToSetting(perms?: string[] | null): string {
   return (perms ?? []).join(",");
 }
 
-async function setActorGucs(
-  tx: NeonHttpDatabase<Record<string, never>>,
-  actor: DbActor,
-) {
+async function setActorGucs(tx: DbTransaction, actor: DbActor) {
   const actorType = actor.type;
   const actorId = actor.id ?? "";
   const actorPerms = permissionsToSetting(actor.permissions);
 
-  // NOTE: With Neon HTTP, session GUCs only persist within the same transaction.
-  // Always call this within `db.transaction(...)` and run all subsequent queries
-  // on the passed `tx`.
+  // Session GUCs only persist within the same transaction; run all queries on `tx`.
   await tx.execute(
     sql`select
       set_config('app.actor_type', ${actorType}, true),
@@ -49,7 +43,7 @@ async function setActorGucs(
 
 export async function resolveAdminPermissions(
   adminUserId: string,
-  tx?: NeonHttpDatabase<Record<string, never>>,
+  tx?: DbTransaction,
 ) {
   const q = (tx ?? db)
     .select({ key: adminPermission.key })
@@ -72,17 +66,15 @@ export async function resolveAdminPermissions(
  * Run a DB operation within an actor-scoped transaction.
  *
  * Why transaction?
- * - The current DB client uses Neon HTTP (stateless per query).
- * - `set_config(...)` only affects the current session; the transaction ensures
- *   all queries share the same session.
+ * - `set_config(...)` is session-scoped; the transaction keeps one connection/session.
  */
 export async function withDbActor<T>(
   actor: DbActor,
-  fn: (tx: NeonHttpDatabase<Record<string, never>>) => Promise<T>,
+  fn: (tx: DbTransaction) => Promise<T>,
 ): Promise<T> {
   return db.transaction(async (tx) => {
-    await setActorGucs(tx as unknown as NeonHttpDatabase<Record<string, never>>, actor);
-    return fn(tx as unknown as NeonHttpDatabase<Record<string, never>>);
+    await setActorGucs(tx, actor);
+    return fn(tx);
   });
 }
 
@@ -91,22 +83,21 @@ export async function withAdminDbActor<T>(
   fn: (ctx: AdminDbActorContext) => Promise<T>,
 ) {
   return db.transaction(async (tx) => {
-    const typedTx = tx as unknown as NeonHttpDatabase<Record<string, never>>;
-    const permissions = await resolveAdminPermissions(adminUserId, typedTx);
-    await setActorGucs(typedTx, { type: "admin", id: adminUserId, permissions });
-    return fn({ tx: typedTx, permissions });
+    const permissions = await resolveAdminPermissions(adminUserId, tx);
+    await setActorGucs(tx, { type: "admin", id: adminUserId, permissions });
+    return fn({ tx, permissions });
   });
 }
 
 export async function withClientDbActor<T>(
   userId: string,
-  fn: (tx: NeonHttpDatabase<Record<string, never>>) => Promise<T>,
+  fn: (tx: DbTransaction) => Promise<T>,
 ) {
   return withDbActor({ type: "client", id: userId, permissions: [] }, fn);
 }
 
 export async function withSystemDbActor<T>(
-  fn: (tx: NeonHttpDatabase<Record<string, never>>) => Promise<T>,
+  fn: (tx: DbTransaction) => Promise<T>,
 ) {
   return withDbActor({ type: "system", id: null, permissions: [] }, fn);
 }

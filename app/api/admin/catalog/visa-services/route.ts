@@ -7,6 +7,7 @@ import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import * as schema from "@/lib/db/schema";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const postBody = z.object({

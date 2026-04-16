@@ -1,7 +1,7 @@
-import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
+import type { DbTransaction } from "@/lib/db";
 import { auditLog } from "@/lib/db/schema";
 
-type Tx = NeonHttpDatabase<Record<string, never>>;
+type Tx = DbTransaction;
 
 export type AdminAuditInput = {
   adminUserId: string;

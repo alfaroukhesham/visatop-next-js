@@ -3,6 +3,7 @@ import { listPublicServicesForNationality } from "@/lib/catalog/queries";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const ALPHA2 = /^[A-Z]{2}$/;

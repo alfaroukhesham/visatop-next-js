@@ -1,5 +1,5 @@
 import { and, eq, exists } from "drizzle-orm";
-import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
+import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { computeDisplayPriceMinor } from "@/lib/pricing/compute-display-price";
 import {
@@ -11,7 +11,7 @@ import {
 } from "@/lib/pricing/resolve-catalog-pricing";
 
 /** Matches `withSystemDbActor` / `withAdminDbActor` transaction handle typing. */
-type SchemaDb = NeonHttpDatabase<Record<string, never>>;
+type SchemaDb = DbTransaction;
 
 export type PublicNationalityRow = {
   code: string;

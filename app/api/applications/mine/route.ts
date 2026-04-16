@@ -5,6 +5,7 @@ import { application } from "@/lib/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { jsonError, jsonOk } from "@/lib/api/response";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {

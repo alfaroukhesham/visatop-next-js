@@ -3,6 +3,7 @@ import { adminAuth } from "@/lib/admin-auth";
 import { withAdminDbActor } from "@/lib/db/actor-context";
 import { jsonError, jsonOk } from "@/lib/api/response";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {

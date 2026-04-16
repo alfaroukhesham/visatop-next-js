@@ -142,6 +142,15 @@ export default async function Home() {
                 {session?.user ? (
                   <>
                     <Link
+                      href="/apply/start"
+                      className={cn(
+                        buttonVariants({ variant: "secondary" }),
+                        "justify-center rounded-none font-semibold",
+                      )}
+                    >
+                      Start application (guest OK)
+                    </Link>
+                    <Link
                       href="/portal"
                       className={cn(buttonVariants({ variant: "default" }), "justify-center")}
                     >
@@ -160,6 +169,15 @@ export default async function Home() {
                 ) : (
                   <>
                     <Link
+                      href="/apply/start"
+                      className={cn(
+                        buttonVariants({ variant: "secondary" }),
+                        "justify-center rounded-none font-semibold",
+                      )}
+                    >
+                      Start without signing in
+                    </Link>
+                    <Link
                       href="/sign-in"
                       className={cn(buttonVariants({ variant: "default" }), "justify-center")}
                     >
@@ -167,7 +185,7 @@ export default async function Home() {
                     </Link>
                     <Link
                       href="/sign-up"
-                      className={cn(buttonVariants({ variant: "secondary" }), "justify-center")}
+                      className={cn(buttonVariants({ variant: "outline" }), "justify-center")}
                     >
                       Create account
                     </Link>

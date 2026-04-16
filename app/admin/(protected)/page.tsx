@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { ArrowRight, Globe2, Settings2, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  Banknote,
+  Globe2,
+  Settings2,
+  SlidersHorizontal,
+  Sparkles,
+} from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Card,
@@ -11,9 +18,21 @@ import {
 const links = [
   {
     href: "/admin/catalog",
-    title: "Catalog & pricing",
-    description: "Nationalities, services, margins, and reference prices.",
+    title: "Catalog",
+    description: "Nationalities and visa services wired to public catalog APIs.",
     icon: Globe2,
+  },
+  {
+    href: "/admin/pricing",
+    title: "Margins & reference",
+    description: "Latest margin policies and affiliate reference observations.",
+    icon: Banknote,
+  },
+  {
+    href: "/admin/settings",
+    title: "Platform settings",
+    description: "Draft TTL and other operational keys in Postgres.",
+    icon: SlidersHorizontal,
   },
   {
     href: "/admin/operations",
@@ -52,7 +71,7 @@ export default function AdminHomePage() {
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-6 py-10">
-        <ul className="grid gap-4 sm:grid-cols-2">
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {links.map(({ href, title, description, icon: Icon }) => (
             <li key={href}>
               <Link href={href} className="block h-full">

@@ -1,11 +1,11 @@
 import { headers } from "next/headers";
-import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
+import type { DbTransaction } from "@/lib/db";
 import { adminAuth } from "@/lib/admin-auth";
 import { jsonError } from "@/lib/api/response";
 import { isForeignKeyViolation } from "@/lib/db/pg-errors";
 import { withAdminDbActor } from "@/lib/db/actor-context";
 
-export type AdminDbTx = NeonHttpDatabase<Record<string, never>>;
+export type AdminDbTx = DbTransaction;
 
 /**
  * One Neon transaction: admin session, permissions resolved once inside

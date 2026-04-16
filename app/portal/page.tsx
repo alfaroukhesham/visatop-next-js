@@ -3,6 +3,7 @@ import {
   ArrowRight,
   Briefcase,
   LayoutDashboard,
+  PenLine,
 } from "lucide-react";
 import {
   Card,
@@ -14,15 +15,21 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 const links = [
   {
+    href: "/apply/start",
+    title: "Start application",
+    description: "Pick nationality + service to create a draft (guests welcome).",
+    icon: PenLine,
+  },
+  {
     href: "/portal/client-dashboard",
     title: "Client dashboard",
-    description: "Active applications and visa destinations.",
+    description: "Overview and shortcuts to destinations.",
     icon: LayoutDashboard,
   },
   {
     href: "/portal/application-workspace",
-    title: "Application workspace",
-    description: "Upload, OCR preview, and payment section.",
+    title: "Legacy workspace shell",
+    description: "Redirects into the live draft workspace when an id is present.",
     icon: Briefcase,
   },
 ] as const;
@@ -52,7 +59,7 @@ export default function PortalHomePage() {
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-6 py-10">
-        <ul className="grid gap-4 sm:grid-cols-2">
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {links.map(({ href, title, description, icon: Icon }) => (
             <li key={href}>
               <Link href={href} className="block h-full">

@@ -34,6 +34,8 @@ export const application = pgTable(
 
     referenceNumber: text("reference_number"),
     draftExpiresAt: timestamp("draft_expires_at"),
+    /** SHA-256 hex of guest resume token; null for signed-in drafts. */
+    resumeTokenHash: text("resume_token_hash"),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
@@ -49,6 +51,7 @@ export const application = pgTable(
     index("application_paymentStatus_idx").on(t.paymentStatus),
     index("application_fulfillmentStatus_idx").on(t.fulfillmentStatus),
     index("application_draftExpiresAt_idx").on(t.draftExpiresAt),
+    index("application_resumeTokenHash_idx").on(t.resumeTokenHash),
   ],
 );
 
