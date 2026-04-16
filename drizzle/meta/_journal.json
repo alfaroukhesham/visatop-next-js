@@ -50,6 +50,13 @@
       "when": 1776100000000,
       "tag": "0006_seed_super_admin_user_role",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776367381912,
+      "tag": "0007_passport_ocr_documents",
+      "breakpoints": true
     }
   ]
 }

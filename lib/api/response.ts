@@ -6,7 +6,17 @@ export type ApiErrorCode =
   | "NOT_FOUND"
   | "VALIDATION_ERROR"
   | "CONFLICT"
-  | "INTERNAL_ERROR";
+  | "INTERNAL_ERROR"
+  // Document upload / extraction (passport OCR feature).
+  | "FILE_TOO_LARGE"
+  | "UNSUPPORTED_TYPE"
+  | "CORRUPT_IMAGE"
+  | "PDF_NOT_SINGLE_PAGE"
+  | "NO_PASSPORT_DOCUMENT"
+  | "EXTRACTION_ALREADY_RUNNING"
+  | "STALE_EXTRACTION_LEASE"
+  | "CHECKOUT_FROZEN"
+  | "RATE_LIMITED";
 
 export type ApiOk<T> = {
   ok: true;

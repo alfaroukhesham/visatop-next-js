@@ -3,6 +3,9 @@ import {
   pgTable,
   text,
   timestamp,
+  date,
+  integer,
+  jsonb,
   index,
   boolean,
   numeric,
@@ -37,6 +40,47 @@ export const application = pgTable(
     /** SHA-256 hex of guest resume token; null for signed-in drafts. */
     resumeTokenHash: text("resume_token_hash"),
 
+    // Applicant profile (populated by OCR + manual edits; see spec §6.4 provenance).
+    fullName: text("full_name"),
+    dateOfBirth: date("date_of_birth"),
+    placeOfBirth: text("place_of_birth"),
+    /**
+     * Applicant's nationality text as read by OCR or manually entered (free-form,
+     * e.g. "Italian"). Distinct from `nationalityCode` (FK to nationality catalog).
+     */
+    applicantNationality: text("applicant_nationality"),
+    passportNumber: text("passport_number"),
+    passportExpiryDate: date("passport_expiry_date"),
+    profession: text("profession"),
+    address: text("address"),
+    phone: text("phone"),
+    /**
+     * Per-field provenance: `{ fieldName: { source: 'ocr' | 'manual' } }`.
+     * Absent fields default to `{ source: 'ocr' }` the first time OCR writes.
+     * Once set to `manual`, OCR must not overwrite (spec §6.4).
+     */
+    applicantProfileProvenanceJson: jsonb("applicant_profile_provenance_json"),
+
+    // Passport extraction summary (spec §9.4; lease fields drive §10.2.1 concurrency).
+    passportExtractionStatus: text("passport_extraction_status")
+      .notNull()
+      .default("not_started"),
+    passportExtractionUpdatedAt: timestamp("passport_extraction_updated_at"),
+    passportExtractionStartedAt: timestamp("passport_extraction_started_at"),
+    passportExtractionLeaseExpiresAt: timestamp("passport_extraction_lease_expires_at"),
+    passportExtractionRunId: integer("passport_extraction_run_id")
+      .notNull()
+      .default(0),
+    passportExtractionDocumentId: text("passport_extraction_document_id"),
+    passportExtractionSha256: text("passport_extraction_sha256"),
+
+    /**
+     * Checkout document-freeze gate (spec §1). Nullable text:
+     * - null or 'none': required docs may be replaced/deleted
+     * - 'pending': user cannot mutate `passport_copy` / `personal_photo`
+     */
+    checkoutState: text("checkout_state"),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -52,6 +96,10 @@ export const application = pgTable(
     index("application_fulfillmentStatus_idx").on(t.fulfillmentStatus),
     index("application_draftExpiresAt_idx").on(t.draftExpiresAt),
     index("application_resumeTokenHash_idx").on(t.resumeTokenHash),
+    index("application_passportExtractionStatus_idx").on(t.passportExtractionStatus),
+    index("application_passportExtractionLeaseExpiresAt_idx").on(
+      t.passportExtractionLeaseExpiresAt,
+    ),
   ],
 );
 
