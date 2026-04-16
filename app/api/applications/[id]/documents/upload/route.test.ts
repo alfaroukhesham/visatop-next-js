@@ -33,7 +33,7 @@ vi.mock("@/lib/documents/normalize-image", async () => {
   );
   return {
     ...actual,
-    normalizeImageBuffer: vi.fn(async (_b: Buffer) => ({
+    normalizeImageBuffer: vi.fn(async () => ({
       bytes: Buffer.from("jpg-normalized"),
       sha256: "sha-img",
       contentType: "image/jpeg" as const,
@@ -45,7 +45,7 @@ vi.mock("@/lib/documents/normalize-image", async () => {
 });
 
 vi.mock("@/lib/documents/normalize-passport-upload", () => ({
-  normalizePassportUpload: vi.fn(async (_in) => ({
+  normalizePassportUpload: vi.fn(async () => ({
     bytes: Buffer.from("jpg-passport"),
     sha256: "sha-passport",
     contentType: "image/jpeg" as const,
@@ -58,7 +58,7 @@ vi.mock("@/lib/documents/normalize-passport-upload", () => ({
 }));
 
 vi.mock("@/lib/documents/normalize-supporting-upload", () => ({
-  normalizeSupportingUpload: vi.fn(async (_in) => ({
+  normalizeSupportingUpload: vi.fn(async () => ({
     bytes: Buffer.from("jpg-supporting"),
     sha256: "sha-supporting",
     contentType: "image/jpeg" as const,

@@ -119,7 +119,7 @@ function tryParseOcrJson(raw: string): {
   }
   return {
     ok: true,
-    result: { schemaVersion: OCR_SCHEMA_VERSION, ...zresult.data },
+    result: { ...zresult.data, schemaVersion: OCR_SCHEMA_VERSION },
   };
 }
 

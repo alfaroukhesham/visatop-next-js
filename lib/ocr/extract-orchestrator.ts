@@ -171,15 +171,13 @@ export async function acquireExtractionLease(
     documentBytes: Buffer.isBuffer(doc.bytes) ? doc.bytes : Buffer.from(doc.bytes),
     applicantProfile: {
       fullName: row.fullName ?? null,
-      dateOfBirth:
-        row.dateOfBirth instanceof Date ? toIsoDate(row.dateOfBirth) : row.dateOfBirth ?? null,
+      // Drizzle `date(..., { mode: "string" })` returns ISO-formatted strings;
+      // normalize anyway in case a raw Date slips in via a future mode change.
+      dateOfBirth: normalizeSqlDate(row.dateOfBirth),
       placeOfBirth: row.placeOfBirth ?? null,
       applicantNationality: row.applicantNationality ?? null,
       passportNumber: row.passportNumber ?? null,
-      passportExpiryDate:
-        row.passportExpiryDate instanceof Date
-          ? toIsoDate(row.passportExpiryDate)
-          : row.passportExpiryDate ?? null,
+      passportExpiryDate: normalizeSqlDate(row.passportExpiryDate),
       profession: row.profession ?? null,
       address: row.address ?? null,
     },
@@ -349,4 +347,16 @@ function toIsoDate(d: Date): string {
   const m = String(d.getUTCMonth() + 1).padStart(2, "0");
   const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+/**
+ * Normalize whatever `date` column value Drizzle hands us into a nullable ISO
+ * string (`YYYY-MM-DD`). In string mode the driver returns strings already;
+ * the Date branch guards against future mode toggles.
+ */
+function normalizeSqlDate(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") return value;
+  if (value instanceof Date) return toIsoDate(value);
+  return null;
 }
