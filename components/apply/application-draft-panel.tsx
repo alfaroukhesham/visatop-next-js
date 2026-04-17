@@ -81,6 +81,8 @@ type ExtractResponse = {
 
 type DocType = "passport_copy" | "personal_photo" | "supporting";
 
+const UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
+
 const MIME_BY_TYPE: Record<DocType, string> = {
   passport_copy: "image/jpeg,image/png,application/pdf",
   personal_photo: "image/jpeg,image/png",
@@ -128,6 +130,10 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
   const photo = useMemo(() => latestByType(docs, "personal_photo"), [docs]);
 
   async function onUpload(type: DocType, file: File) {
+    if (file.size > UPLOAD_MAX_BYTES) {
+      setActionMsg("File exceeds 8MB limit.");
+      return;
+    }
     setActionMsg(null);
     setUploading(type);
     const form = new FormData();
@@ -141,7 +147,11 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
     setUploading(null);
     const json = await res.json().catch(() => null);
     if (!res.ok || !json?.ok) {
-      const msg = json?.error?.message ?? `Upload failed (HTTP ${res.status})`;
+      const msg =
+        json?.error?.message ??
+        (res.status === 413
+          ? "File exceeds 8MB limit."
+          : `Upload failed (HTTP ${res.status})`);
       setActionMsg(msg);
       return;
     }
@@ -348,6 +358,7 @@ function DocumentUploadSlot({
   onUpload: (file: File) => void;
 }) {
   const [pending, setPending] = useState<File | null>(null);
+  const tooLarge = pending ? pending.size > UPLOAD_MAX_BYTES : false;
   const inputId = `file-${docType}`;
   return (
     <div className="border-border border p-4 space-y-3">
@@ -390,11 +401,14 @@ function DocumentUploadSlot({
           onChange={(e) => setPending(e.target.files?.[0] ?? null)}
           className="text-muted-foreground block w-full text-xs file:mr-3 file:border file:border-border file:bg-muted file:px-3 file:py-2 file:text-sm file:font-medium file:text-foreground"
         />
+        {tooLarge ? (
+          <p className="text-destructive text-xs">File exceeds 8MB limit.</p>
+        ) : null}
         <Button
           type="button"
           size="sm"
           className="rounded-none"
-          disabled={!pending || uploading}
+          disabled={!pending || uploading || tooLarge}
           onClick={() => {
             if (pending) {
               onUpload(pending);
