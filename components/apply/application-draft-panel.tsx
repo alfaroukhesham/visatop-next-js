@@ -77,19 +77,6 @@ type ExtractResponse = {
     requiredFieldsComplete: boolean;
     missingRequiredFields: string[];
   } | null;
-  debug?: {
-    provider: string;
-    model: string;
-    promptVersion: number;
-    attempts: Array<{
-      attempt: 1 | 2;
-      status: "succeeded" | "failed";
-      errorCode: string | null;
-      errorMessage: string | null;
-      missingFields: string[];
-      latencyMs: number;
-    }>;
-  };
 };
 
 type DocType = "passport_copy" | "personal_photo" | "supporting";
@@ -336,7 +323,6 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
       <ApplicantReview
         applicant={app.applicant}
         extraction={extractResult?.extraction ?? null}
-        debug={extractResult?.debug ?? null}
         readiness={readiness}
         missing={extractResult?.validation?.missingRequiredFields ?? []}
       />
@@ -449,13 +435,11 @@ function DocumentUploadSlot({
 function ApplicantReview({
   applicant,
   extraction,
-  debug,
   readiness,
   missing,
 }: {
   applicant: ApplicantProfile;
   extraction: ExtractResponse["extraction"] | null;
-  debug: ExtractResponse["debug"] | null;
   readiness: string | null;
   missing: string[];
 }) {
@@ -512,24 +496,6 @@ function ApplicantReview({
             ? ` · OCR missing: ${extraction.ocrMissingFields.join(", ")}`
             : ""}
         </p>
-      ) : null}
-      {debug ? (
-        <details className="border-border bg-muted/30 rounded-sm border px-3 py-2 text-xs">
-          <summary className="cursor-pointer select-none text-muted-foreground">
-            Debug (dev only): {debug.provider} / {debug.model} / prompt v{debug.promptVersion}
-          </summary>
-          <ul className="mt-2 space-y-1">
-            {debug.attempts.map((a) => (
-              <li key={a.attempt} className="font-mono text-[11px]">
-                attempt {a.attempt}: {a.status}
-                {a.errorCode ? ` · ${a.errorCode}` : ""}
-                {a.errorMessage ? ` · ${a.errorMessage}` : ""}
-                {a.missingFields.length ? ` · missing: ${a.missingFields.join(",")}` : ""}
-                {` · ${a.latencyMs}ms`}
-              </li>
-            ))}
-          </ul>
-        </details>
       ) : null}
       {missing.length > 0 ? (
         <p className="text-destructive text-xs">
