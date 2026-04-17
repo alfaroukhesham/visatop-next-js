@@ -26,6 +26,7 @@ import { withClientDbActor, withSystemDbActor } from "@/lib/db/actor-context";
 import {
   application,
   applicationDocument,
+  applicationDocumentExtraction,
   DOCUMENT_STATUS,
   DOCUMENT_TYPE,
   EXTRACTION_STATUS,
@@ -161,6 +162,121 @@ export async function POST(
       "EXTRACTION_ALREADY_RUNNING",
       "Extraction is already in progress. Please wait and retry.",
       { status: 409, requestId },
+    );
+  }
+
+  // Hard cap: at most 2 total extraction attempts per passport document.
+  // This prevents spam and aligns with the spec's "two chances" posture.
+  const countAttempts = async (tx: DbTransaction) => {
+    const rows = await tx
+      .select({ attempt: applicationDocumentExtraction.attempt })
+      .from(applicationDocumentExtraction)
+      .where(eq(applicationDocumentExtraction.documentId, lease.documentId));
+    return new Set(rows.map((r) => r.attempt)).size;
+  };
+  const attemptsAlreadyUsed =
+    access.access.kind === "user"
+      ? await withClientDbActor(access.access.userId, countAttempts)
+      : await withSystemDbActor(countAttempts);
+  if (attemptsAlreadyUsed >= 2) {
+    const finishedAt = new Date();
+    const delta = mergeOcrIntoProfile(lease.applicantProfile, lease.provenance, null);
+    const mergedSnapshot = mergeIntoSnapshot(lease.applicantProfile, delta.updates);
+
+    const loadUploadsAndContact = async (tx: DbTransaction) => {
+      const uploads = await tx
+        .select({
+          documentType: applicationDocument.documentType,
+        })
+        .from(applicationDocument)
+        .where(
+          and(
+            eq(applicationDocument.applicationId, applicationId),
+            eq(applicationDocument.status, DOCUMENT_STATUS.UPLOADED_TEMP),
+          ),
+        );
+      const hasPassport = uploads.some((u) => u.documentType === DOCUMENT_TYPE.PASSPORT_COPY);
+      const hasPhoto = uploads.some((u) => u.documentType === DOCUMENT_TYPE.PERSONAL_PHOTO);
+
+      const contactRows = await tx
+        .select({
+          guestEmail: application.guestEmail,
+          phone: application.phone,
+          runId: application.passportExtractionRunId,
+        })
+        .from(application)
+        .where(eq(application.id, applicationId))
+        .limit(1);
+      const contact = contactRows[0] ?? null;
+      return { hasPassport, hasPhoto, contact };
+    };
+    const context =
+      access.access.kind === "user"
+        ? await withClientDbActor(access.access.userId, loadUploadsAndContact)
+        : await withSystemDbActor(loadUploadsAndContact);
+
+    if (!context.contact || context.contact.runId !== lease.runId) {
+      return jsonError(
+        "STALE_EXTRACTION_LEASE",
+        "Extraction was invalidated by a newer upload. Retry.",
+        { status: 409, requestId },
+      );
+    }
+
+    const finalizeFn = async (tx: DbTransaction) =>
+      finalizeExtraction(tx, {
+        applicationId,
+        runId: lease.runId,
+        documentId: lease.documentId,
+        documentSha256: lease.documentSha256,
+        terminalStatus: EXTRACTION_STATUS.NEEDS_MANUAL,
+        profileDelta: delta,
+        now: finishedAt,
+      });
+    const finalized =
+      access.access.kind === "user"
+        ? await withClientDbActor(access.access.userId, finalizeFn)
+        : await withSystemDbActor(finalizeFn);
+    if (!finalized) {
+      return jsonError(
+        "STALE_EXTRACTION_LEASE",
+        "Extraction was invalidated by a newer upload. Retry.",
+        { status: 409, requestId },
+      );
+    }
+
+    const validation = computeValidation({
+      profile: snapshotToValidationProfile(mergedSnapshot, {
+        email: context.contact.guestEmail ?? null,
+        phone: context.contact.phone ?? null,
+      }),
+      uploads: {
+        passportCopyPresent: context.hasPassport,
+        personalPhotoPresent: context.hasPhoto,
+      },
+      now: finishedAt,
+    });
+
+    console.info("[extract] capped", {
+      requestId,
+      applicationId,
+      documentId: lease.documentId,
+      attemptsAlreadyUsed,
+    });
+
+    return jsonOk(
+      {
+        extraction: {
+          status: EXTRACTION_STATUS.NEEDS_MANUAL,
+          attemptsUsed: attemptsAlreadyUsed,
+          documentId: lease.documentId,
+          prefill: snapshotToPrefill(mergedSnapshot, null),
+          ocrMissingFields: [],
+          submissionMissingFields: validation.requiredFieldsMissing.slice(),
+          validation,
+        },
+      },
+      { requestId },
     );
   }
 

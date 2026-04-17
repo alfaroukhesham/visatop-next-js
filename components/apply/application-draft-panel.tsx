@@ -93,6 +93,23 @@ function latestByType(docs: PublicDocument[], type: DocType) {
   return docs.find((d) => d.documentType === type && d.status !== "deleted") ?? null;
 }
 
+function customerFacingExtractionLabel(status: string | null | undefined): string {
+  switch (status) {
+    case "not_started":
+      return "Not started";
+    case "running":
+      return "In progress";
+    case "succeeded":
+      return "Completed";
+    case "needs_manual":
+      return "Needs manual review";
+    case "failed":
+      return "Needs manual entry";
+    default:
+      return "Not started";
+  }
+}
+
 export function ApplicationDraftPanel({ applicationId }: { applicationId: string }) {
   const [app, setApp] = useState<PublicApplication | null>(null);
   const [docs, setDocs] = useState<PublicDocument[]>([]);
@@ -132,6 +149,14 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
 
   const passport = useMemo(() => latestByType(docs, "passport_copy"), [docs]);
   const photo = useMemo(() => latestByType(docs, "personal_photo"), [docs]);
+
+  const extractionStatus = app?.passportExtraction.status ?? null;
+  const attemptsUsed = extractResult?.extraction.attemptsUsed ?? 0;
+  const attemptsLeft = Math.max(0, 2 - attemptsUsed);
+  const extractionLocked =
+    extractionStatus === "succeeded" ||
+    (extractionStatus === "needs_manual" && attemptsUsed >= 2) ||
+    (extractionStatus === "failed" && attemptsUsed >= 2);
 
   async function onUpload(type: DocType, file: File) {
     if (file.size > UPLOAD_MAX_BYTES) {
@@ -180,7 +205,14 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
       return;
     }
     setExtractResult(res.data);
-    setActionMsg(`Extraction ${res.data.extraction.status}.`);
+    const s = res.data.extraction.status;
+    if (s === "succeeded") {
+      setActionMsg("We filled in what we could. Review your details below.");
+    } else if (s === "needs_manual") {
+      setActionMsg("We couldn’t read everything. Please enter the remaining details manually.");
+    } else {
+      setActionMsg("We couldn’t read your passport. Please enter the details manually.");
+    }
     // Application profile likely changed (prefill merged by server).
     await load({ silent: true });
   }
@@ -214,7 +246,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
 
   const readiness = extractResult?.validation?.readiness ?? null;
   const gotBoth = Boolean(passport && photo);
-  const canExtract = Boolean(passport) && !extracting;
+  const canExtract = Boolean(passport) && !extracting && !extractionLocked && attemptsLeft > 0;
 
   return (
     <div className="space-y-8">
@@ -315,9 +347,18 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
             Extract passport details
           </Button>
           <p className="text-muted-foreground text-xs">
-            Current: <span className="font-mono">{app.passportExtraction.status}</span>
+            Status:{" "}
+            <span className="font-medium">{customerFacingExtractionLabel(app.passportExtraction.status)}</span>
+            {attemptsLeft > 0 && app.passportExtraction.status !== "succeeded"
+              ? ` · ${attemptsLeft} attempt${attemptsLeft === 1 ? "" : "s"} left`
+              : ""}
           </p>
         </div>
+        {attemptsLeft === 0 && app.passportExtraction.status !== "succeeded" ? (
+          <p className="text-muted-foreground text-sm">
+            We’ve tried twice. Please enter your details manually below.
+          </p>
+        ) : null}
       </section>
 
       <ApplicantReview

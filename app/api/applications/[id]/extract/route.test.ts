@@ -166,53 +166,42 @@ describe("POST /api/applications/[id]/extract", () => {
     vi.mocked(extractPassport).mockResolvedValue(SUCCESS_OCR);
     vi.mocked(finalizeExtraction).mockResolvedValue(true);
 
-    // Second call (inside commitFn) reads uploads + contact then finalize.
     const { withClientDbActor } = await import("@/lib/db/actor-context");
-    vi.mocked(withClientDbActor).mockImplementationOnce(async (_uid, fn) => fn({} as never));
-    vi.mocked(withClientDbActor).mockImplementationOnce(async (_uid, fn) => {
-      const fakeTx = {
-        select: () => ({
-          from: () => ({
-            where: () => ({
-              limit: async () => [
-                { guestEmail: "e@example.com", phone: "+100", runId: 1 },
-              ],
-              // For uploads query (no .limit())
-            }),
-          }),
-        }),
-      } as never;
-      // drizzle chain is too complex; this test focuses on the 409 and success
-      // envelope. Use a lightweight stand-in: patch `from().where()` to return
-      // an awaitable list for the uploads query path.
+    // Route reads: (1) attempts used ([]), (2) uploads (passport+photo),
+    // (3) contact row (runId=1). Provide a tiny thenable tx stand-in.
+    vi.mocked(withClientDbActor).mockImplementation(async (_uid, fn) => {
+      let call = 0;
       const proxyTx = new Proxy(
         {},
         {
           get(_t, prop) {
-            if (prop === "select") {
-              return () => ({
-                from: () => {
-                  const terminal = {
-                    where: () => terminal,
-                    limit: async () => [
-                      { guestEmail: "e@example.com", phone: "+100", runId: 1 },
-                    ],
-                    then: (resolve: (v: unknown) => void) =>
-                      resolve([
+            if (prop !== "select") return undefined;
+            return () => ({
+              from: () => {
+                const terminal = {
+                  where: () => terminal,
+                  limit: async () => [
+                    { guestEmail: "e@example.com", phone: "+100", runId: 1 },
+                  ],
+                  then: (resolve: (v: unknown) => void) => {
+                    call += 1;
+                    if (call === 1) return resolve([]);
+                    if (call === 2) {
+                      return resolve([
                         { id: "doc-passport", documentType: "passport_copy" },
                         { id: "doc-photo", documentType: "personal_photo" },
-                      ]),
-                  };
-                  return terminal;
-                },
-              });
-            }
-            return undefined;
+                      ]);
+                    }
+                    return resolve([]);
+                  },
+                };
+                return terminal;
+              },
+            });
           },
         },
       ) as never;
       return fn(proxyTx);
-      void fakeTx;
     });
 
     const res = await POST(makeRequest(), {
@@ -245,28 +234,28 @@ describe("POST /api/applications/[id]/extract", () => {
     vi.mocked(finalizeExtraction).mockResolvedValue(false);
 
     const { withClientDbActor } = await import("@/lib/db/actor-context");
-    vi.mocked(withClientDbActor).mockImplementationOnce(async (_uid, fn) => fn({} as never));
-    vi.mocked(withClientDbActor).mockImplementationOnce(async (_uid, fn) => {
+    // First tx read (attempt count) returns [], but contact runId check fails (runId=2).
+    vi.mocked(withClientDbActor).mockImplementation(async (_uid, fn) => {
+      let call = 0;
       const proxyTx = new Proxy(
         {},
         {
           get(_t, prop) {
-            if (prop === "select") {
-              return () => ({
-                from: () => {
-                  const terminal = {
-                    where: () => terminal,
-                    // Simulate runId moved from 1 → 2
-                    limit: async () => [
-                      { guestEmail: null, phone: null, runId: 2 },
-                    ],
-                    then: (resolve: (v: unknown) => void) => resolve([]),
-                  };
-                  return terminal;
-                },
-              });
-            }
-            return undefined;
+            if (prop !== "select") return undefined;
+            return () => ({
+              from: () => {
+                const terminal = {
+                  where: () => terminal,
+                  limit: async () => [{ guestEmail: null, phone: null, runId: 2 }],
+                  then: (resolve: (v: unknown) => void) => {
+                    call += 1;
+                    if (call === 1) return resolve([]);
+                    return resolve([]);
+                  },
+                };
+                return terminal;
+              },
+            });
           },
         },
       ) as never;
