@@ -61,6 +61,20 @@ type ExtractResponsePayload = {
     submissionMissingFields: string[];
     validation: ValidationResult;
   };
+  /** Dev-only diagnostics; never includes document bytes or OCR raw text. */
+  debug?: {
+    provider: string;
+    model: string;
+    promptVersion: number;
+    attempts: Array<{
+      attempt: 1 | 2;
+      status: "succeeded" | "failed";
+      errorCode: string | null;
+      errorMessage: string | null;
+      missingFields: string[];
+      latencyMs: number;
+    }>;
+  };
 };
 
 type OcrPrefill = {
@@ -306,6 +320,22 @@ export async function POST(
         ? EXTRACTION_STATUS.NEEDS_MANUAL
         : EXTRACTION_STATUS.FAILED;
 
+  if (terminalStatus === EXTRACTION_STATUS.FAILED) {
+    // Server-side diagnostic breadcrumb; do not log OCR JSON or bytes.
+    console.warn("[extract] failed", {
+      requestId,
+      applicationId,
+      documentId: lease.documentId,
+      attempts: ocrResult.attempts.map((a) => ({
+        attempt: a.attempt,
+        errorCode: a.errorCode,
+        errorMessage: a.errorMessage,
+        missingFields: a.missingFields,
+        latencyMs: a.latencyMs,
+      })),
+    });
+  }
+
   const payload: ExtractResponsePayload = {
     extraction: {
       status: terminalStatus,
@@ -317,6 +347,24 @@ export async function POST(
       validation,
     },
   };
+
+  // Dev-only: return a small diagnostic surface so debugging doesn't require
+  // digging through server logs. Keep free of PII and no raw model output.
+  if (process.env.NODE_ENV !== "production") {
+    payload.debug = {
+      provider: ocrResult.provider,
+      model: ocrResult.model,
+      promptVersion: ocrResult.promptVersion,
+      attempts: ocrResult.attempts.map((a) => ({
+        attempt: a.attempt,
+        status: a.status,
+        errorCode: a.errorCode,
+        errorMessage: a.errorMessage,
+        missingFields: a.missingFields.slice(),
+        latencyMs: a.latencyMs,
+      })),
+    };
+  }
 
   return jsonOk(payload, { requestId });
 }
