@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
+import { PaddleCheckoutButton } from "./paddle-checkout-button";
 
 type ApplicantProfile = {
   fullName: string | null;
@@ -120,6 +121,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
   const [uploading, setUploading] = useState<DocType | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [extractResult, setExtractResult] = useState<ExtractResponse | null>(null);
+  const [countdown, setCountdown] = useState<number | null>(null);
 
   const load = useCallback(async (opts?: { silent?: boolean }) => {
     const silent = opts?.silent === true;
@@ -140,6 +142,39 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
     setApp(appRes.data.application);
     if (docsRes.ok) setDocs(docsRes.data.documents);
   }, [applicationId]);
+
+  // Poll for payment confirmation if checkout is active
+  useEffect(() => {
+    if (app?.paymentStatus === "checkout_created") {
+      const interval = setInterval(() => void load({ silent: true }), 5000);
+      return () => clearInterval(interval);
+    }
+  }, [app?.paymentStatus, load]);
+
+  // Checkout TTL Timer
+  useEffect(() => {
+    if (countdown !== null && countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (countdown === 0) {
+      void cancelCheckout();
+    }
+  }, [countdown]);
+
+  async function cancelCheckout() {
+    setActionMsg(null);
+    const res = await fetchApiEnvelope(`/api/applications/${applicationId}/checkout-cancel`, {
+      method: "POST",
+    });
+    if (!res.ok) {
+      setActionMsg(res.error.message);
+      return;
+    }
+    setCountdown(null);
+    setActionMsg("Checkout cancelled.");
+    await load({ silent: true });
+  }
+
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -367,6 +402,83 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
         readiness={readiness}
         missing={extractResult?.validation?.missingRequiredFields ?? []}
       />
+
+      {/* Payment Section */}
+      <section className="space-y-4">
+        {readiness === "ready" && app.paymentStatus === "unpaid" && (
+          <div className="border-2 border-primary bg-primary/5 p-5 sm:p-6 space-y-4">
+            <h2 className="font-heading text-lg font-bold flex items-center gap-2">
+              💳 Secure Payment
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Your application is complete and ready for submission. Please pay the service fee to begin processing.
+            </p>
+            <PaddleCheckoutButton
+              applicationId={applicationId}
+              onSuccess={() => {
+                setCountdown(null);
+                load({ silent: true });
+              }}
+              onCancel={() => {
+                // We keep the state as checkout_created until they manually cancel or TTL expires
+                // But we start the timer if it wasn't already running
+                if (countdown === null) setCountdown(600);
+              }}
+              onError={(msg) => setActionMsg(msg)}
+            />
+          </div>
+        )}
+
+        {app.paymentStatus === "checkout_created" && (
+          <div className="border-2 border-primary bg-primary/5 p-5 sm:p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="font-heading text-lg font-bold">Complete your payment</h2>
+                <p className="text-sm text-muted-foreground">Checkout is in progress.</p>
+              </div>
+              {countdown !== null && (
+                <div className="bg-primary text-primary-foreground px-4 py-2 font-mono text-xl font-bold flex items-center gap-2">
+                  <span className="text-xs uppercase opacity-80">Expires:</span>
+                  {Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, "0")}
+                </div>
+              )}
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1">
+                <PaddleCheckoutButton
+                  applicationId={applicationId}
+                  onSuccess={() => {
+                    setCountdown(null);
+                    load({ silent: true });
+                  }}
+                  onError={(msg) => setActionMsg(msg)}
+                />
+              </div>
+              <Button
+                variant="ghost"
+                className="rounded-none hover:bg-destructive/10 hover:text-destructive"
+                onClick={cancelCheckout}
+              >
+                Cancel & Reset
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {app.paymentStatus === "paid" && (
+          <div className="bg-success/10 border border-success/30 p-5 flex items-center gap-3">
+            <CheckCircle2 className="text-success size-6" />
+            <div>
+              <p className="text-success font-bold">Payment Confirmed</p>
+              <p className="text-xs text-success/80 italic">
+                Your application is being processed by our automated systems.
+              </p>
+            </div>
+          </div>
+        )}
+      </section>
+
 
       <p className="text-muted-foreground text-center text-xs">
         <Link href="/apply/start" className="text-link hover:underline">
