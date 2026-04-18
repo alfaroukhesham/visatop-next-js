@@ -1,11 +1,6 @@
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { createDraftBodySchema } from "@/lib/applications/create-draft-body";
-import {
-  APPLICATION_STATUS,
-  FULFILLMENT_STATUS,
-  PAYMENT_STATUS,
-} from "@/lib/applications/status";
 import { computeDraftExpiresAt, getDraftTtlHoursFromTx } from "@/lib/applications/draft-ttl";
 import { toPublicApplication } from "@/lib/applications/public-application";
 import { buildResumeSetCookieValue } from "@/lib/applications/resume-cookie";
@@ -44,9 +39,9 @@ export async function POST(req: Request) {
             guestEmail: body.guestEmail ?? null,
             nationalityCode: body.nationalityCode,
             serviceId: body.serviceId,
-            applicationStatus: APPLICATION_STATUS.DRAFT,
-            paymentStatus: PAYMENT_STATUS.UNPAID,
-            fulfillmentStatus: FULFILLMENT_STATUS.NOT_STARTED,
+            applicationStatus: "draft",
+            paymentStatus: "unpaid",
+            fulfillmentStatus: "not_started",
             draftExpiresAt,
             resumeTokenHash: null,
           })
@@ -85,9 +80,9 @@ export async function POST(req: Request) {
           guestEmail: body.guestEmail ?? null,
           nationalityCode: body.nationalityCode,
           serviceId: body.serviceId,
-          applicationStatus: APPLICATION_STATUS.DRAFT,
-          paymentStatus: PAYMENT_STATUS.UNPAID,
-          fulfillmentStatus: FULFILLMENT_STATUS.NOT_STARTED,
+          applicationStatus: "draft",
+          paymentStatus: "unpaid",
+          fulfillmentStatus: "not_started",
           draftExpiresAt,
           resumeTokenHash: hash,
         })

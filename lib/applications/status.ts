@@ -1,35 +1,20 @@
-export const APPLICATION_STATUS = {
-  DRAFT: "draft",
-  SUBMITTED: "submitted",
-  IN_REVIEW: "in_review",
-  APPROVED: "approved",
-  REJECTED: "rejected",
-  CANCELLED: "cancelled",
-} as const;
-export type ApplicationStatus =
-  (typeof APPLICATION_STATUS)[keyof typeof APPLICATION_STATUS];
+export const APPLICATION_STATUSES = [
+  "draft", "needs_docs", "extracting", "needs_review", 
+  "ready_for_payment", "in_progress", "awaiting_authority", 
+  "completed", "cancelled"
+] as const;
+export type ApplicationStatus = typeof APPLICATION_STATUSES[number];
 
-export const PAYMENT_STATUS = {
-  UNPAID: "unpaid",
-  PENDING: "pending",
-  PAID: "paid",
-  REFUNDED: "refunded",
-  FAILED: "failed",
-} as const;
-export type PaymentStatus = (typeof PAYMENT_STATUS)[keyof typeof PAYMENT_STATUS];
+export const PAYMENT_STATUSES = [
+  "unpaid", "checkout_created", "paid", "refund_pending", "refunded", "failed"
+] as const;
+export type PaymentStatus = typeof PAYMENT_STATUSES[number];
 
-export const FULFILLMENT_STATUS = {
-  NOT_STARTED: "not_started",
-  IN_PROGRESS: "in_progress",
-  DONE: "done",
-  FAILED: "failed",
-} as const;
-export type FulfillmentStatus =
-  (typeof FULFILLMENT_STATUS)[keyof typeof FULFILLMENT_STATUS];
+export const FULFILLMENT_STATUSES = [
+  "not_started", "automation_running", "manual_in_progress", 
+  "ready_for_ops_payment", "submitted", "done"
+] as const;
+export type FulfillmentStatus = typeof FULFILLMENT_STATUSES[number];
 
-/** Nullable checkout-freeze gate on `application.checkout_state`. */
-export const CHECKOUT_STATE = {
-  NONE: "none",
-  PENDING: "pending",
-} as const;
-export type CheckoutState = (typeof CHECKOUT_STATE)[keyof typeof CHECKOUT_STATE];
+export const CHECKOUT_STATES = ["none", "pending"] as const;
+export type CheckoutState = typeof CHECKOUT_STATES[number];

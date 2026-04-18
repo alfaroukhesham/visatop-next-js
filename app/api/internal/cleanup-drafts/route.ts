@@ -8,10 +8,6 @@ import {
   applicationDocumentBlob,
   DOCUMENT_STATUS,
 } from "@/lib/db/schema";
-import {
-  APPLICATION_STATUS,
-  PAYMENT_STATUS,
-} from "@/lib/applications/status";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -41,8 +37,8 @@ export async function POST(request: Request) {
       .delete(application)
       .where(
         and(
-          eq(application.paymentStatus, PAYMENT_STATUS.UNPAID),
-          eq(application.applicationStatus, APPLICATION_STATUS.DRAFT),
+          eq(application.paymentStatus, "unpaid"),
+          eq(application.applicationStatus, "draft"),
           isNotNull(application.draftExpiresAt),
           lt(application.draftExpiresAt, sql`now()`),
         ),
@@ -70,7 +66,7 @@ export async function POST(request: Request) {
           isNull(applicationDocumentBlob.retainedAt),
           isNotNull(applicationDocumentBlob.tempExpiresAt),
           lt(applicationDocumentBlob.tempExpiresAt, sql`now()`),
-          eq(application.paymentStatus, PAYMENT_STATUS.UNPAID),
+          eq(application.paymentStatus, "unpaid"),
           eq(applicationDocument.status, DOCUMENT_STATUS.UPLOADED_TEMP),
         ),
       );
