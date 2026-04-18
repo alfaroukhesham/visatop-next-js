@@ -45,7 +45,7 @@ const links = [
   {
     href: "/admin/pricing",
     title: "Margins & reference",
-    description: "Latest margin policies and affiliate reference observations.",
+    description: "Margin policies and reference costs (admin-maintained / imports).",
     icon: Banknote,
   },
   {

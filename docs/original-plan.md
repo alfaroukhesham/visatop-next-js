@@ -40,10 +40,10 @@ We’ll implement a tiny helper so every server action/route handler sets these 
 - Webhook handler idempotently updates `paymentStatus` and writes normalized payment events
 - Admin refund intent → provider refund → webhook-confirmed state
 
-#### Phase 4 — Affiliate automation & sync jobs (parallel track) (5–12 days)
-- **Affiliate connector** table (domain, auth mode, selector version, kill switch)
-- **Daily sync job** + **manual “sync now”** + job progress + “notify on change”
-- **Playwright automation jobs** with artifacts + retry/manual fallback workflow
+#### Phase 4 — Catalog/pricing imports + ops fulfillment (replaces scraping) (5–12 days)
+- **Cancelled:** web scraping or scheduled jobs to pull **pricing** from third-party websites.
+- **CSV/XLSX import** for **reference costs**, **services**, **eligibility**, and related catalog fields: **validation**, **dry-run/preview**, **audit** on apply, row-level errors, optional **notify** stakeholders when reference costs change after import.
+- **Ops fulfillment:** **manual-first** workflows; **manual success** with tiered internal proof (see [`IMPLEMENTATION_REFERENCE.md`](./IMPLEMENTATION_REFERENCE.md) §4–§5).
 
 **Phases 1–4 (RLS touchpoints, exit criteria):** see **§9** in [`IMPLEMENTATION_REFERENCE.md`](./IMPLEMENTATION_REFERENCE.md).
 
@@ -74,12 +74,10 @@ We’ll implement a tiny helper so every server action/route handler sets these 
 - `payment` (…, **amount `bigint`** minor units, currency, …)
 - `payment_event` (paymentId, providerEventId, type, payloadHash, receivedAt) for idempotency
 
-#### Automation + sync
-- `affiliate_site` (domain, enabled)
-- `affiliate_connector` (siteId, name, enabled, credentialsRef/encrypted blob, config JSON, selectorVersion, killSwitch)
-- `price_sync_job` (status, startedAt, finishedAt, requestedByAdminId nullable, logs)
-- `affiliate_reference_price` (serviceId, siteId, **amount `bigint`** minor units, currency, observedAt, sourceUrl, raw JSON)
-- `automation_job` (applicationId, connectorId, status, attempt, lastError, artifactRefs, startedAt, finishedAt)
+#### Reference pricing + optional legacy automation tables
+- `affiliate_site` — may still label a **logical partner** for internal reference rows (**not** for live scraping).
+- `affiliate_reference_price` (serviceId, siteId, **amount `bigint`** minor units, currency, observedAt, …) — **values** maintained via **admin import/UI**; naming is historical.
+- **Legacy / deferred:** `affiliate_connector`, `price_sync_job`, `automation_job` may exist from earlier plans; **do not** build new **scrape-based** sync on them without an explicit product decision.
 
 ---
 
@@ -97,7 +95,7 @@ We’ll implement a tiny helper so every server action/route handler sets these 
 #### Admin
 - `GET/POST/PATCH /api/admin/services`
 - `POST /api/admin/services/:id/enable|disable`
-- `POST /api/admin/pricing/sync` (manual) + `GET /api/admin/pricing/sync/:jobId`
+- `POST /api/admin/pricing/import` (multipart CSV/XLSX) + `GET /api/admin/pricing/import/:jobId` *(or equivalent — align with validated import pipeline in [`IMPLEMENTATION_REFERENCE.md`](./IMPLEMENTATION_REFERENCE.md))*
 - `POST /api/admin/applications/:id/manual-success` (tiered proof)
 - `POST /api/admin/payments/:id/refund` (intent)
 - `GET /api/admin/audit` (permission-gated)
