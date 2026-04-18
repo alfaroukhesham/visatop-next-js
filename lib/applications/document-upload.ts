@@ -9,8 +9,6 @@ import {
   type DocumentType,
   EXTRACTION_STATUS,
 } from "@/lib/db/schema";
-import { CHECKOUT_STATE } from "@/lib/applications/status";
-import { PAYMENT_STATUS } from "@/lib/applications/status";
 
 export const UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
 
@@ -81,7 +79,7 @@ export async function persistUploadedDocument(
 
   const isRequired =
     input.documentType === "passport_copy" || input.documentType === "personal_photo";
-  if (isRequired && app.checkoutState === CHECKOUT_STATE.PENDING) {
+  if (isRequired && app.checkoutState === "pending") {
     return { ok: false, error: { code: "CHECKOUT_FROZEN" } };
   }
 
@@ -102,7 +100,7 @@ export async function persistUploadedDocument(
   const prior = priorRows[0] ?? null;
 
   const tempExpiresAt =
-    app.paymentStatus === PAYMENT_STATUS.UNPAID ? app.draftExpiresAt ?? null : null;
+    app.paymentStatus === "unpaid" ? app.draftExpiresAt ?? null : null;
 
   if (prior && prior.sha256 === input.sha256) {
     if (tempExpiresAt !== undefined) {

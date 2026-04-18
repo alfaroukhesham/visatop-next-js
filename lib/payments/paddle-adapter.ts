@@ -30,7 +30,6 @@ export const paddleAdapter: PaymentProvider = {
         },
       ],
       customData: params.metadata,
-      customer: params.customerEmail ? { email: params.customerEmail } : undefined,
     });
 
     return {

@@ -16,8 +16,8 @@ import { adminAuth } from "@/lib/admin-auth";
 import * as actorContext from "@/lib/db/actor-context";
 import { DELETE } from "./route";
 
-function makeTx(foundRow: Record<string, unknown> | null) {
-  const audits: Array<Parameters<typeof vi.fn>[0]> = [];
+function makeTx(foundRow: any) {
+  const audits: Array<any> = [];
   const deletes: string[] = [];
 
   const tx = {
@@ -29,7 +29,7 @@ function makeTx(foundRow: Record<string, unknown> | null) {
       }),
     }),
     insert: () => ({
-      values: async (v: Record<string, unknown>) => {
+      values: async (v: any) => {
         audits.push(v);
       },
     }),
