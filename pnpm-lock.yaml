@@ -47,6 +47,12 @@ importers:
       '@opentelemetry/semantic-conventions':
         specifier: ^1.40.0
         version: 1.40.0
+      '@paddle/paddle-js':
+        specifier: ^1.6.2
+        version: 1.6.2
+      '@paddle/paddle-node-sdk':
+        specifier: ^3.7.0
+        version: 3.7.0
       better-auth:
         specifier: ^1.5.6
         version: 1.5.6(@opentelemetry/api@1.9.1)(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(@neondatabase/serverless@1.0.2)(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(kysely@0.28.14)(pg@8.20.0))(next@16.2.1(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(pg@8.20.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vitest@2.1.9(@types/node@22.19.15)(jsdom@29.0.2(@noble/hashes@2.0.1))(lightningcss@1.32.0)(msw@2.12.14(@types/node@22.19.15)(typescript@5.9.3)))
@@ -2024,6 +2030,13 @@ packages:
     engines: {node: ^18.19.0 || >=20.6.0}
     peerDependencies:
       '@opentelemetry/api': ^1.1.0
+
+  '@paddle/paddle-js@1.6.2':
+    resolution: {integrity: sha512-nx1NXCzwWUWjf0iaRDiXZlfWgFjNZ6996RFcTDk0G0ggzrh514Zsc6jGTPOUGdLB1sYJXVQiKKoNLoKoXhH+sA==}
+
+  '@paddle/paddle-node-sdk@3.7.0':
+    resolution: {integrity: sha512-VUlmBCGmCJU7mv1H/t7PDVg2GvnPy9tt3rnqbkf4BqpxL6zxKtgFxxXT/B7k6QX//L5lW6fC58ax/a86DJ/zcw==}
+    engines: {node: '>=20'}
 
   '@pinojs/redact@0.4.0':
     resolution: {integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==}
@@ -7239,6 +7252,10 @@ snapshots:
     dependencies:
       '@opentelemetry/api': 1.9.1
       '@opentelemetry/core': 2.6.1(@opentelemetry/api@1.9.1)
+
+  '@paddle/paddle-js@1.6.2': {}
+
+  '@paddle/paddle-node-sdk@3.7.0': {}
 
   '@pinojs/redact@0.4.0': {}
 
