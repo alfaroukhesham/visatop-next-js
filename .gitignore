@@ -53,3 +53,5 @@ skills-lock.json
 .cursor/*
 !.cursor/rules/
 !.cursor/rules/**
+.superpowers/
+.worktrees/

@@ -1,14 +1,29 @@
+/**
+ * Client-facing document collection endpoint for an application.
+ *
+ * - `GET` — returns a lightweight list of non-deleted documents so the apply
+ *   wizard can gate "both uploads exist" without relying on localStorage.
+ * - `POST` (legacy JSON body) — deprecated Phase-2 metadata-only stub. Kept
+ *   temporarily so the existing draft panel keeps compiling; new multipart
+ *   uploads go through `POST /api/applications/[id]/documents/upload`.
+ */
 import { headers } from "next/headers";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, ne, or, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { readResumeTokenFromRequestCookies } from "@/lib/applications/resume-cookie";
+import { resolveApplicationAccess } from "@/lib/applications/application-access";
+import { toPublicDocument } from "@/lib/applications/document-upload";
 import { verifyResumeToken } from "@/lib/applications/resume-token";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { isForeignKeyViolation } from "@/lib/db/pg-errors";
 import { withClientDbActor, withSystemDbActor } from "@/lib/db/actor-context";
-import { application, applicationDocument } from "@/lib/db/schema";
+import {
+  application,
+  applicationDocument,
+  DOCUMENT_STATUS,
+} from "@/lib/db/schema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +33,45 @@ const docBody = z.object({
   mimeType: z.string().min(1).max(128),
   sizeBytes: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
 });
+
+export async function GET(
+  req: Request,
+  ctx: { params: Promise<{ id: string }> },
+) {
+  const hdrs = await headers();
+  const requestId = hdrs.get("x-request-id");
+  const { id: applicationId } = await ctx.params;
+
+  const access = await resolveApplicationAccess(req, hdrs, applicationId);
+  if (!access.ok) {
+    if (access.failure.kind === "not_found") {
+      return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
+    }
+    return jsonError("FORBIDDEN", "Missing resume session", { status: 403, requestId });
+  }
+
+  const listFn = async (tx: Parameters<Parameters<typeof withSystemDbActor>[0]>[0]) =>
+    tx
+      .select()
+      .from(applicationDocument)
+      .where(
+        and(
+          eq(applicationDocument.applicationId, applicationId),
+          or(
+            ne(applicationDocument.status, DOCUMENT_STATUS.DELETED),
+            isNull(applicationDocument.status),
+          ),
+        ),
+      )
+      .orderBy(desc(applicationDocument.createdAt));
+
+  const rows =
+    access.access.kind === "user"
+      ? await withClientDbActor(access.access.userId, listFn)
+      : await withSystemDbActor(listFn);
+
+  return jsonOk({ documents: rows.map(toPublicDocument) }, { requestId });
+}
 
 export async function POST(
   req: Request,

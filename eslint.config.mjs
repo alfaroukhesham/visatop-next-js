@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local git worktrees / agent assets are not part of the shipped app graph.
+    ".worktrees/**",
+    ".agents/**",
   ]),
 ]);
 
