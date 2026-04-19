@@ -39,6 +39,9 @@ export type ApplicationAccessFailure =
  * guests, verifies the `vt_resume` cookie matches the stored token hash
  * (constant-time). Does NOT load the full row — routes re-read inside their
  * own actor-scoped transaction so RLS can do its job.
+ *
+ * Guest resume is evaluated before session ownership so a logged-in user can
+ * continue a guest application with `withSystemDbActor` when the cookie is valid.
  */
 export async function resolveApplicationAccess(
   req: Request,
@@ -46,40 +49,68 @@ export async function resolveApplicationAccess(
   applicationId: string,
 ): Promise<{ ok: true; access: ApplicationAccess } | { ok: false; failure: ApplicationAccessFailure }> {
   const session = await auth.api.getSession({ headers: hdrs });
-  if (session) {
-    return {
-      ok: true,
-      access: { kind: "user", userId: session.user.id, isGuest: false },
-    };
-  }
   const token = readResumeTokenFromRequestCookies(req.headers.get("cookie"));
-  if (!token) return { ok: false, failure: { kind: "forbidden" } };
 
-  const verified = await withSystemDbActor(async (tx) => {
+  if (token) {
+    const verified = await withSystemDbActor(async (tx) => {
+      const rows = await tx
+        .select({
+          id: application.id,
+          resumeTokenHash: application.resumeTokenHash,
+          isGuest: application.isGuest,
+        })
+        .from(application)
+        .where(eq(application.id, applicationId))
+        .limit(1);
+      const row = rows[0];
+      if (!row) return { present: false, verified: false } as const;
+      if (!row.resumeTokenHash || !row.isGuest) {
+        return { present: true, verified: false } as const;
+      }
+      if (!verifyResumeToken(token, row.resumeTokenHash)) {
+        return { present: true, verified: false } as const;
+      }
+      return { present: true, verified: true } as const;
+    });
+
+    if (!verified.present) return { ok: false, failure: { kind: "not_found" } };
+    if (verified.verified) {
+      return {
+        ok: true,
+        access: { kind: "guest", userId: null, isGuest: true },
+      };
+    }
+    if (verified.present && !verified.verified && !session) {
+      return { ok: false, failure: { kind: "forbidden" } };
+    }
+  }
+
+  if (!session) {
+    return { ok: false, failure: { kind: "forbidden" } };
+  }
+
+  const owned = await withSystemDbActor(async (tx) => {
     const rows = await tx
       .select({
-        id: application.id,
-        resumeTokenHash: application.resumeTokenHash,
+        userId: application.userId,
         isGuest: application.isGuest,
       })
       .from(application)
       .where(eq(application.id, applicationId))
       .limit(1);
-    const row = rows[0];
-    if (!row) return { present: false, verified: false } as const;
-    if (!row.resumeTokenHash || !row.isGuest) {
-      return { present: true, verified: false } as const;
-    }
-    if (!verifyResumeToken(token, row.resumeTokenHash)) {
-      return { present: true, verified: false } as const;
-    }
-    return { present: true, verified: true } as const;
+    return rows[0] ?? null;
   });
 
-  if (!verified.present) return { ok: false, failure: { kind: "not_found" } };
-  if (!verified.verified) return { ok: false, failure: { kind: "forbidden" } };
+  if (!owned) return { ok: false, failure: { kind: "not_found" } };
+  if (owned.isGuest) {
+    return { ok: false, failure: { kind: "forbidden" } };
+  }
+  if (!owned.userId || owned.userId !== session.user.id) {
+    return { ok: false, failure: { kind: "forbidden" } };
+  }
+
   return {
     ok: true,
-    access: { kind: "guest", userId: null, isGuest: true },
+    access: { kind: "user", userId: session.user.id, isGuest: false },
   };
 }
