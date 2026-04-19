@@ -2,9 +2,10 @@
  * Admin DELETE of a single application document (spec §12A).
  *
  * Deletes the document row; its `application_document_blob` is removed via
- * FK `ON DELETE CASCADE`. We write an audit row first with the pre-delete
- * snapshot. If the document does not belong to the given application (or is
- * already gone) we return 404 without writing an audit row.
+ * FK `ON DELETE CASCADE`. We write an audit row only after a successful delete
+ * so the audit cannot outlive a failed or absent row. If the document does not
+ * belong to the given application (or is already gone) we return 404 without
+ * writing an audit row.
  */
 import { headers } from "next/headers";
 import { and, eq } from "drizzle-orm";
@@ -29,8 +30,15 @@ export async function DELETE(
     requestId,
     ["applications.write", "audit.write"],
     async ({ tx, adminUserId }) => {
-      const rows = await tx
-        .select({
+      const deleted = await tx
+        .delete(schema.applicationDocument)
+        .where(
+          and(
+            eq(schema.applicationDocument.id, documentId),
+            eq(schema.applicationDocument.applicationId, applicationId),
+          ),
+        )
+        .returning({
           id: schema.applicationDocument.id,
           applicationId: schema.applicationDocument.applicationId,
           documentType: schema.applicationDocument.documentType,
@@ -40,16 +48,8 @@ export async function DELETE(
           sha256: schema.applicationDocument.sha256,
           originalFilename: schema.applicationDocument.originalFilename,
           createdAt: schema.applicationDocument.createdAt,
-        })
-        .from(schema.applicationDocument)
-        .where(
-          and(
-            eq(schema.applicationDocument.id, documentId),
-            eq(schema.applicationDocument.applicationId, applicationId),
-          ),
-        )
-        .limit(1);
-      const row = rows[0];
+        });
+      const row = deleted[0];
       if (!row) {
         return jsonError("NOT_FOUND", "Document not found", {
           status: 404,
@@ -65,24 +65,8 @@ export async function DELETE(
         beforeJson: JSON.stringify(row),
       });
 
-      const deleted = await tx
-        .delete(schema.applicationDocument)
-        .where(
-          and(
-            eq(schema.applicationDocument.id, documentId),
-            eq(schema.applicationDocument.applicationId, applicationId),
-          ),
-        )
-        .returning({ id: schema.applicationDocument.id });
-      if (deleted.length === 0) {
-        return jsonError("NOT_FOUND", "Document not found", {
-          status: 404,
-          requestId,
-        });
-      }
-
       return jsonOk(
-        { deletedId: deleted[0].id, applicationId },
+        { deletedId: row.id, applicationId },
         { requestId },
       );
     },

@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { and, eq, isNotNull, isNull, lt, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import {
@@ -77,15 +77,13 @@ export async function POST(request: Request) {
 
     const orphanIds = orphanRows.map((r) => r.documentId);
     if (orphanIds.length > 0) {
-      for (const id of orphanIds) {
-        await tx
-          .delete(applicationDocumentBlob)
-          .where(eq(applicationDocumentBlob.documentId, id));
-        await tx
-          .update(applicationDocument)
-          .set({ status: DOCUMENT_STATUS.DELETED })
-          .where(eq(applicationDocument.id, id));
-      }
+      await tx
+        .delete(applicationDocumentBlob)
+        .where(inArray(applicationDocumentBlob.documentId, orphanIds));
+      await tx
+        .update(applicationDocument)
+        .set({ status: DOCUMENT_STATUS.DELETED })
+        .where(inArray(applicationDocument.id, orphanIds));
     }
 
     return {

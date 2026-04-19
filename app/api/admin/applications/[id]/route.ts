@@ -4,8 +4,8 @@
  * Cascades to `application_document` → `application_document_blob` and
  * `application_document_extraction` via existing FK `ON DELETE CASCADE`,
  * so a single `DELETE` on `application` is sufficient to remove all bytes.
- * An audit row is written *before* the delete so the entity snapshot is
- * still visible in the same transaction.
+ * We `DELETE ... RETURNING` a snapshot, then write the audit row so we never
+ * record a delete audit unless the row was actually removed.
  */
 import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
@@ -30,8 +30,10 @@ export async function DELETE(
     requestId,
     ["applications.write", "audit.write"],
     async ({ tx, adminUserId }) => {
-      const existing = await tx
-        .select({
+      const deleted = await tx
+        .delete(schema.application)
+        .where(eq(schema.application.id, id))
+        .returning({
           id: schema.application.id,
           userId: schema.application.userId,
           isGuest: schema.application.isGuest,
@@ -40,11 +42,8 @@ export async function DELETE(
           fulfillmentStatus: schema.application.fulfillmentStatus,
           serviceId: schema.application.serviceId,
           nationalityCode: schema.application.nationalityCode,
-        })
-        .from(schema.application)
-        .where(eq(schema.application.id, id))
-        .limit(1);
-      const row = existing[0];
+        });
+      const row = deleted[0];
       if (!row) {
         return jsonError("NOT_FOUND", "Application not found", {
           status: 404,
@@ -60,18 +59,7 @@ export async function DELETE(
         beforeJson: JSON.stringify(row),
       });
 
-      const deleted = await tx
-        .delete(schema.application)
-        .where(eq(schema.application.id, id))
-        .returning({ id: schema.application.id });
-      if (deleted.length === 0) {
-        return jsonError("NOT_FOUND", "Application not found", {
-          status: 404,
-          requestId,
-        });
-      }
-
-      return jsonOk({ deletedId: deleted[0].id }, { requestId });
+      return jsonOk({ deletedId: row.id }, { requestId });
     },
   );
 }

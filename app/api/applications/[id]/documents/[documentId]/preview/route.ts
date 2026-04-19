@@ -76,6 +76,7 @@ export async function GET(
       "Content-Length": String(doc.bytes.byteLength),
       "Cache-Control": "private, no-store",
       "Content-Disposition": `inline; filename="${filename}"`,
+      "X-Content-Type-Options": "nosniff",
       "x-request-id": requestId ?? "",
     },
   });

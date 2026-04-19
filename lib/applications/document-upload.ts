@@ -1,5 +1,4 @@
-import { and, desc, eq, ne, or } from "drizzle-orm";
-import { isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
 import {
   application,
@@ -162,7 +161,7 @@ export async function persistUploadedDocument(
         passportExtractionUpdatedAt: null,
         passportExtractionStartedAt: null,
         passportExtractionLeaseExpiresAt: null,
-        passportExtractionRunId: (app.passportExtractionRunId ?? 0) + 1,
+        passportExtractionRunId: sql<number>`${application.passportExtractionRunId} + 1`,
         passportExtractionDocumentId: null,
         passportExtractionSha256: null,
       })

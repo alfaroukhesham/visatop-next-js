@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -149,7 +149,14 @@ function NationalitiesSection({
             </thead>
             <tbody className="divide-border divide-y">
               {rows.map((n) => (
-                <NationalityRow key={n.code} n={n} canWrite={canWrite} busy={busy} run={run} flash={flash} />
+                <NationalityRow
+                  key={`${n.code}:${n.name}:${n.enabled ? 1 : 0}`}
+                  n={n}
+                  canWrite={canWrite}
+                  busy={busy}
+                  run={run}
+                  flash={flash}
+                />
               ))}
             </tbody>
           </table>
@@ -228,11 +235,6 @@ function NationalityRow({
 }) {
   const [name, setName] = useState(n.name);
   const [enabled, setEnabled] = useState(n.enabled);
-
-  useEffect(() => {
-    setName(n.name);
-    setEnabled(n.enabled);
-  }, [n.name, n.enabled]);
 
   return (
     <tr className="hover:bg-muted/30">
@@ -403,7 +405,14 @@ function ServicesSection({
             </thead>
             <tbody className="divide-border divide-y">
               {rows.map((s) => (
-                <ServiceRow key={s.id} s={s} canWrite={canWrite} busy={busy} run={run} flash={flash} />
+                <ServiceRow
+                  key={`${s.id}:${s.name}:${s.durationDays ?? ""}:${s.entries ?? ""}:${s.enabled ? 1 : 0}`}
+                  s={s}
+                  canWrite={canWrite}
+                  busy={busy}
+                  run={run}
+                  flash={flash}
+                />
               ))}
             </tbody>
           </table>
@@ -432,13 +441,6 @@ function ServiceRow({
   );
   const [entries, setEntries] = useState(s.entries ?? "");
   const [enabled, setEnabled] = useState(s.enabled);
-
-  useEffect(() => {
-    setName(s.name);
-    setDurationDays(s.durationDays === null || s.durationDays === undefined ? "" : String(s.durationDays));
-    setEntries(s.entries ?? "");
-    setEnabled(s.enabled);
-  }, [s.name, s.durationDays, s.entries, s.enabled]);
 
   return (
     <tr className="hover:bg-muted/30">
