@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { PaddleCheckoutButton } from "./paddle-checkout-button";
+import { computeValidation } from "@/lib/documents/validation-readiness";
 
 type ApplicantProfile = {
   fullName: string | null;
@@ -279,9 +280,19 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
     );
   }
 
-  const readiness = extractResult?.validation?.readiness ?? null;
   const gotBoth = Boolean(passport && photo);
   const canExtract = Boolean(passport) && !extracting && !extractionLocked && attemptsLeft > 0;
+
+  const currentValidation = computeValidation({
+    profile: { ...app.applicant, email: app.guestEmail },
+    uploads: {
+      passportCopyPresent: Boolean(passport),
+      personalPhotoPresent: Boolean(photo),
+    },
+    now: new Date(),
+  });
+  const readiness = currentValidation.readiness;
+  const missing = currentValidation.requiredFieldsMissing;
 
   return (
     <div className="space-y-8">
@@ -401,7 +412,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
         applicant={app.applicant}
         extraction={extractResult?.extraction ?? null}
         readiness={readiness}
-        missing={extractResult?.validation?.missingRequiredFields ?? []}
+        missing={missing}
         locked={app.checkoutState === "pending" || app.paymentStatus === "paid"}
         onSaved={() => void load({ silent: true })}
       />
@@ -638,6 +649,23 @@ function ApplicantReview({
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // Sync state when applicant prop changes (e.g., after extraction)
+  useEffect(() => {
+    const newInitial: Record<string, string> = {};
+    for (const r of ROWS) newInitial[r.apiKey] = applicant[r.key] ?? "";
+    setValues((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const k in newInitial) {
+        if (newInitial[k] !== prev[k]) {
+          next[k] = newInitial[k] as string;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [applicant]);
+
   // Detect dirty state vs initial
   const dirty = ROWS.some((r) => (values[r.apiKey] ?? "") !== (initial[r.apiKey] ?? ""));
 
@@ -656,7 +684,19 @@ function ApplicantReview({
     );
     setSaving(false);
     if (!res.ok) {
-      setSaveError(res.error.message);
+      const details = res.error.details as { fieldErrors?: Record<string, string[]> } | undefined;
+      const fieldErrs = details?.fieldErrors;
+      if (fieldErrs && typeof fieldErrs === "object" && Object.keys(fieldErrs).length > 0) {
+        const issues = Object.entries(fieldErrs)
+          .map(([k, v]) => {
+             const row = ROWS.find(r => r.apiKey === k);
+             return `${row ? row.label : k}: ${Array.isArray(v) ? v[0] : v}`;
+          })
+          .join(" | ");
+        setSaveError(`Validation failed → ${issues}`);
+      } else {
+        setSaveError(res.error.message);
+      }
       return;
     }
     setSaveMsg("Changes saved.");
@@ -742,7 +782,7 @@ function ApplicantReview({
                   }
                   className={[
                     "rounded-none",
-                    isMissing ? "border-destructive ring-destructive/30" : "",
+                    isMissing && !values[r.apiKey] ? "border-destructive ring-destructive/30" : "",
                     locked ? "opacity-70 cursor-not-allowed" : "",
                   ].join(" ")}
                 />

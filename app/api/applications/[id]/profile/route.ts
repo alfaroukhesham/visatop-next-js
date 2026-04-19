@@ -18,6 +18,7 @@ const profilePatchBody = z
     dateOfBirth: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD")
+      .or(z.literal(""))
       .optional(),
     placeOfBirth: z.string().max(500).optional(),
     applicantNationality: z.string().max(200).optional(),
@@ -25,6 +26,7 @@ const profilePatchBody = z
     passportExpiryDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD")
+      .or(z.literal(""))
       .optional(),
     profession: z.string().max(500).optional(),
     address: z.string().max(500).optional(),
@@ -44,9 +46,11 @@ export async function PATCH(
   const parsed = await parseJsonBody(req, profilePatchBody, requestId);
   if (!parsed.ok) return parsed.response;
 
-  // Filter to only keys that were actually provided
+  // Filter to only keys that were actually provided, and convert empty strings to null
   const updates = Object.fromEntries(
-    Object.entries(parsed.data).filter(([, v]) => v !== undefined)
+    Object.entries(parsed.data)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => [k, v === "" ? null : v])
   );
 
   if (Object.keys(updates).length === 0) {
