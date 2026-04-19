@@ -10,28 +10,22 @@ UPDATE application SET payment_status = 'checkout_created' WHERE payment_status 
 UPDATE application SET fulfillment_status = 'manual_in_progress' WHERE fulfillment_status = 'in_progress';
 UPDATE application SET fulfillment_status = 'not_started' WHERE fulfillment_status = 'failed';
 
--- Add client SELECT own row to payment
+-- Client SELECT on own payment rows (same GUC actor model as 0002; do not use Supabase-only roles like "authenticated".)
 DROP POLICY IF EXISTS "client select own payment" ON payment;
-CREATE POLICY "client select own payment" ON payment FOR SELECT TO authenticated
-USING (application_id IN (SELECT id FROM application WHERE user_id = current_setting('app.actor_id', true)));
+DROP POLICY IF EXISTS payment_client_select_own ON payment;
+CREATE POLICY payment_client_select_own ON payment
+  FOR SELECT
+  USING (
+    app_actor_type() = 'client'
+    AND EXISTS (
+      SELECT 1 FROM application a
+      WHERE a.id = payment.application_id
+        AND a.user_id IS NOT NULL
+        AND a.user_id = app_actor_id()
+    )
+  );
 
--- Add client SELECT own row to price_quote
+-- Remove wrongly named policy if a failed migrate left it; canonical client quote policy is price_quote_client_select_own (0002).
 DROP POLICY IF EXISTS "client select own quote" ON price_quote;
-CREATE POLICY "client select own quote" ON price_quote FOR SELECT TO authenticated
-USING (application_id IN (SELECT id FROM application WHERE user_id = current_setting('app.actor_id', true)));
 
--- System access for payments
-DROP POLICY IF EXISTS "system all payment" ON payment;
-CREATE POLICY "system all payment" ON payment FOR ALL TO system USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "system all payment_event" ON payment_event;
-CREATE POLICY "system all payment_event" ON payment_event FOR ALL TO system USING (true) WITH CHECK (true);
-
--- Admin select for payments
-DROP POLICY IF EXISTS "admin select payment" ON payment;
-CREATE POLICY "admin select payment" ON payment FOR SELECT TO authenticated
-USING (current_setting('app.actor_type', true) = 'admin' AND current_setting('app.rbac_applications_read', true) = 'true');
-
-DROP POLICY IF EXISTS "admin select payment_event" ON payment_event;
-CREATE POLICY "admin select payment_event" ON payment_event FOR SELECT TO authenticated
-USING (current_setting('app.actor_type', true) = 'admin' AND current_setting('app.rbac_applications_read', true) = 'true');
+-- payment_system_all / payment_event_system_all / payment_admin_select already exist from 0002; do not replace with TO system / TO authenticated.
