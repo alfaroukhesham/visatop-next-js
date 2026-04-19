@@ -6,9 +6,19 @@ import { computeValidation } from "@/lib/documents/validation-readiness";
 /**
  * Re-evaluates application readiness and auto-advances the applicationStatus.
  *
- * If readiness === "ready" and status is "needs_review", transitions to "ready_for_payment".
- * If readiness !== "ready" and status is "ready_for_payment", reverts to "needs_review".
+ * When validation is "ready":
+ * - From `needs_review`, or from early lifecycle (`draft`, `needs_docs`, `extracting`),
+ *   move to `ready_for_payment` so `/api/checkout` can take the lock (it requires that status).
+ * When validation is not ready and status is `ready_for_payment`, revert to `needs_review`.
  */
+const READINESS_EVALUABLE_STATUSES = new Set([
+  "draft",
+  "needs_docs",
+  "extracting",
+  "needs_review",
+  "ready_for_payment",
+]);
+
 export async function evaluateApplicationReadiness(
   tx: DbTransaction,
   applicationId: string,
@@ -23,9 +33,7 @@ export async function evaluateApplicationReadiness(
 
   if (!app) return;
 
-  // Only auto-transition if in the review/payment phases.
-  // Ignore drafts, completed, cancelled, etc.
-  if (app.applicationStatus !== "needs_review" && app.applicationStatus !== "ready_for_payment") {
+  if (!READINESS_EVALUABLE_STATUSES.has(app.applicationStatus)) {
     return;
   }
 
@@ -64,7 +72,15 @@ export async function evaluateApplicationReadiness(
 
   const isReady = validation.readiness === "ready";
 
-  if (isReady && app.applicationStatus === "needs_review") {
+  const canAdvanceToPayment =
+    isReady &&
+    app.applicationStatus !== "ready_for_payment" &&
+    (app.applicationStatus === "needs_review" ||
+      app.applicationStatus === "draft" ||
+      app.applicationStatus === "needs_docs" ||
+      app.applicationStatus === "extracting");
+
+  if (canAdvanceToPayment) {
     await tx
       .update(application)
       .set({ applicationStatus: "ready_for_payment" })
