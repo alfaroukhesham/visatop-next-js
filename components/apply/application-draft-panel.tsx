@@ -144,10 +144,10 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
     if (docsRes.ok) setDocs(docsRes.data.documents);
   }, [applicationId]);
 
-  // Poll for payment confirmation if checkout is active
+  // Poll for payment confirmation (webhook updates DB; client overlay success is not authoritative).
   useEffect(() => {
     if (app?.paymentStatus === "checkout_created") {
-      const interval = setInterval(() => void load({ silent: true }), 5000);
+      const interval = setInterval(() => void load({ silent: true }), 2000);
       return () => clearInterval(interval);
     }
   }, [app?.paymentStatus, load]);
@@ -431,7 +431,8 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
               applicationId={applicationId}
               onSuccess={() => {
                 setCountdown(null);
-                load({ silent: true });
+                setActionMsg("Payment submitted. Confirming with our systems…");
+                void load({ silent: true });
               }}
               onCancel={() => {
                 // We keep the state as checkout_created until they manually cancel or TTL expires
@@ -464,7 +465,8 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
                   applicationId={applicationId}
                   onSuccess={() => {
                     setCountdown(null);
-                    load({ silent: true });
+                    setActionMsg("Payment submitted. Confirming with our systems…");
+                    void load({ silent: true });
                   }}
                   onError={(msg) => setActionMsg(msg)}
                 />

@@ -3,7 +3,7 @@ import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { paddleAdapter } from "@/lib/payments/paddle-adapter";
 import { application, payment, paymentEvent } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, or } from "drizzle-orm";
 import { retainRequiredDocuments } from "@/lib/applications/retain-required-documents";
 import { createId } from "@paralleldrive/cuid2";
 import crypto from "crypto";
@@ -27,9 +27,47 @@ export async function POST(req: Request) {
   const providerEventId = rawPayload.event_id || "unknown";
 
   await withSystemDbActor(async (tx) => {
-    // Lookup payment
-    const [payRow] = await tx.select().from(payment).where(eq(payment.providerTransactionId, event.transactionId)).limit(1);
-    if (!payRow) return; // Unknown transaction, ignore
+    // Checkout stores Paddle's transaction id on `provider_checkout_id`; after capture the same
+    // `txn_*` appears on webhooks. Do not look up only `provider_transaction_id` or no row matches.
+    let payRow =
+      event.transactionId ?
+        (
+          await tx
+            .select()
+            .from(payment)
+            .where(
+              or(
+                eq(payment.providerCheckoutId, event.transactionId),
+                eq(payment.providerTransactionId, event.transactionId),
+              ),
+            )
+            .limit(1)
+        )[0]
+      : undefined;
+
+    if (!payRow && typeof event.metadata.applicationId === "string" && event.metadata.applicationId) {
+      const rows = await tx
+        .select()
+        .from(payment)
+        .where(
+          and(
+            eq(payment.applicationId, event.metadata.applicationId),
+            eq(payment.status, "checkout_created"),
+          ),
+        )
+        .orderBy(desc(payment.createdAt))
+        .limit(1);
+      payRow = rows[0];
+    }
+
+    if (!payRow) {
+      console.warn("[webhooks/paddle] No payment row for event", {
+        type: event.type,
+        transactionId: event.transactionId,
+        applicationId: event.metadata.applicationId,
+      });
+      return;
+    }
 
     // Lookup application
     const [appRow] = await tx.select().from(application).where(eq(application.id, payRow.applicationId)).limit(1);
@@ -61,8 +99,14 @@ export async function POST(req: Request) {
         // We still consider it paid to release locks, but flag it
       }
 
-      // 3. Mark paid and release checkout lock
-      await tx.update(payment).set({ status: "paid" }).where(eq(payment.id, payRow.id));
+      // 3. Mark paid and release checkout lock (persist txn id for support / refunds)
+      await tx
+        .update(payment)
+        .set({
+          status: "paid",
+          providerTransactionId: event.transactionId || payRow.providerTransactionId,
+        })
+        .where(eq(payment.id, payRow.id));
       await tx.update(application).set({
         paymentStatus: "paid",
         checkoutState: "none",
