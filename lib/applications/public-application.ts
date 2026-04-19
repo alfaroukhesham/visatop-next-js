@@ -23,6 +23,7 @@ export function toPublicApplication(row: ApplicationRow) {
     isGuest: row.isGuest,
     guestEmail: row.guestEmail,
     checkoutState: row.checkoutState,
+    adminAttentionRequired: row.adminAttentionRequired,
 
     applicant: {
       fullName: row.fullName,

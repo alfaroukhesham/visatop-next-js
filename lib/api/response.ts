@@ -16,7 +16,8 @@ export type ApiErrorCode =
   | "EXTRACTION_ALREADY_RUNNING"
   | "STALE_EXTRACTION_LEASE"
   | "CHECKOUT_FROZEN"
-  | "RATE_LIMITED";
+  | "RATE_LIMITED"
+  | "SERVICE_UNAVAILABLE";
 
 export type ApiOk<T> = {
   ok: true;

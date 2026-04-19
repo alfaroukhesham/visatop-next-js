@@ -78,6 +78,13 @@
       "when": 1776471000000,
       "tag": "0010_payment_event_payload_hash_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1776472000000,
+      "tag": "0011_guest_link_audit_system_insert",
+      "breakpoints": true
     }
   ]
 }
