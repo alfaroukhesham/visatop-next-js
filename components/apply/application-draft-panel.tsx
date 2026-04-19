@@ -397,10 +397,13 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
       </section>
 
       <ApplicantReview
+        applicationId={applicationId}
         applicant={app.applicant}
         extraction={extractResult?.extraction ?? null}
         readiness={readiness}
         missing={extractResult?.validation?.missingRequiredFields ?? []}
+        locked={app.checkoutState === "pending" || app.paymentStatus === "paid"}
+        onSaved={() => void load({ silent: true })}
       />
 
       {/* Payment Section */}
@@ -586,31 +589,84 @@ function DocumentUploadSlot({
 }
 
 function ApplicantReview({
+  applicationId,
   applicant,
   extraction,
   readiness,
   missing,
+  locked,
+  onSaved,
 }: {
+  applicationId: string;
   applicant: ApplicantProfile;
   extraction: ExtractResponse["extraction"] | null;
   readiness: string | null;
   missing: string[];
+  locked: boolean;
+  onSaved: () => void;
 }) {
-  const rows: Array<{ label: string; key: keyof ApplicantProfile; value: string | null }> = [
-    { label: "Full name", key: "fullName", value: applicant.fullName },
-    { label: "Date of birth", key: "dateOfBirth", value: applicant.dateOfBirth },
-    { label: "Nationality", key: "nationality", value: applicant.nationality },
-    { label: "Passport number", key: "passportNumber", value: applicant.passportNumber },
-    { label: "Passport expiry", key: "passportExpiryDate", value: applicant.passportExpiryDate },
-    { label: "Place of birth", key: "placeOfBirth", value: applicant.placeOfBirth },
-    { label: "Profession", key: "profession", value: applicant.profession },
-    { label: "Address", key: "address", value: applicant.address },
-    { label: "Phone", key: "phone", value: applicant.phone },
+  const prefilled = new Set<string>(Object.keys(extraction?.prefill ?? {}));
+
+  type ProfileKey =
+    | "fullName"
+    | "dateOfBirth"
+    | "nationality"
+    | "passportNumber"
+    | "passportExpiryDate"
+    | "placeOfBirth"
+    | "profession"
+    | "address"
+    | "phone";
+
+  const ROWS: Array<{ label: string; key: ProfileKey; apiKey: string; placeholder?: string }> = [
+    { label: "Full name", key: "fullName", apiKey: "fullName", placeholder: "e.g. John Smith" },
+    { label: "Date of birth", key: "dateOfBirth", apiKey: "dateOfBirth", placeholder: "YYYY-MM-DD" },
+    { label: "Nationality", key: "nationality", apiKey: "applicantNationality", placeholder: "e.g. Egyptian" },
+    { label: "Passport number", key: "passportNumber", apiKey: "passportNumber", placeholder: "e.g. A12345678" },
+    { label: "Passport expiry", key: "passportExpiryDate", apiKey: "passportExpiryDate", placeholder: "YYYY-MM-DD" },
+    { label: "Place of birth", key: "placeOfBirth", apiKey: "placeOfBirth", placeholder: "e.g. Cairo" },
+    { label: "Profession", key: "profession", apiKey: "profession", placeholder: "e.g. Engineer" },
+    { label: "Address", key: "address", apiKey: "address", placeholder: "Full home address" },
+    { label: "Phone", key: "phone", apiKey: "phone", placeholder: "+1 555 000 0000" },
   ];
+
+  const initial: Record<string, string> = {};
+  for (const r of ROWS) initial[r.apiKey] = applicant[r.key] ?? "";
+
+  const [values, setValues] = useState<Record<string, string>>(initial);
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Detect dirty state vs initial
+  const dirty = ROWS.some((r) => (values[r.apiKey] ?? "") !== (initial[r.apiKey] ?? ""));
+
+  async function handleSave() {
+    setSaving(true);
+    setSaveMsg(null);
+    setSaveError(null);
+    const patch: Record<string, string> = {};
+    for (const r of ROWS) {
+      const v = values[r.apiKey] ?? "";
+      if (v !== (initial[r.apiKey] ?? "")) patch[r.apiKey] = v;
+    }
+    const res = await fetchApiEnvelope<{ application: unknown }>(
+      `/api/applications/${applicationId}/profile`,
+      { method: "PATCH", body: JSON.stringify(patch) }
+    );
+    setSaving(false);
+    if (!res.ok) {
+      setSaveError(res.error.message);
+      return;
+    }
+    setSaveMsg("Changes saved.");
+    onSaved();
+  }
+
   const readinessLabel = (() => {
     switch (readiness) {
       case "ready":
-        return { text: "Ready to continue", tone: "success" };
+        return { text: "Ready for payment", tone: "success" };
       case "blocked_validation":
         return { text: "Needs attention before checkout", tone: "warn" };
       case "blocked_missing_docs":
@@ -628,9 +684,7 @@ function ApplicantReview({
           <span
             className={
               "text-xs font-medium inline-flex items-center gap-1 " +
-              (readinessLabel.tone === "success"
-                ? "text-success"
-                : "text-destructive")
+              (readinessLabel.tone === "success" ? "text-success" : "text-destructive")
             }
           >
             {readinessLabel.tone === "success" ? (
@@ -642,38 +696,77 @@ function ApplicantReview({
           </span>
         ) : null}
       </div>
-      {extraction ? (
+
+      {missing.length > 0 && (
+        <div className="border-l-4 border-destructive bg-destructive/5 px-3 py-2 text-sm">
+          <p className="font-semibold text-destructive">Required fields missing:</p>
+          <p className="text-destructive/80 text-xs mt-1">{missing.join(", ")}</p>
+        </div>
+      )}
+
+      {extraction && (
         <p className="text-muted-foreground text-xs">
-          Extraction {extraction.status} · attempts {extraction.attemptsUsed}
+          OCR {extraction.status} · {extraction.attemptsUsed} attempt(s)
           {extraction.ocrMissingFields.length > 0
-            ? ` · OCR missing: ${extraction.ocrMissingFields.join(", ")}`
+            ? ` · could not read: ${extraction.ocrMissingFields.join(", ")}`
             : ""}
         </p>
-      ) : null}
-      {missing.length > 0 ? (
-        <p className="text-destructive text-xs">
-          Required fields missing: {missing.join(", ")}
+      )}
+
+      {locked && (
+        <p className="text-muted-foreground bg-muted px-3 py-2 text-xs rounded">
+          🔒 Fields are locked while payment is in progress.
         </p>
-      ) : null}
+      )}
+
       <dl className="grid gap-3 sm:grid-cols-2">
-        {rows.map((r) => (
-          <div key={r.key}>
-            <dt className="text-foreground text-xs font-medium">{r.label}</dt>
-            <dd className="mt-1">
-              <Input
-                type="text"
-                readOnly
-                value={r.value ?? ""}
-                placeholder="—"
-                className="rounded-none"
-              />
-            </dd>
-          </div>
-        ))}
+        {ROWS.map((r) => {
+          const isMissing = missing.includes(r.key);
+          const wasOcr = prefilled.has(r.key);
+          return (
+            <div key={r.key}>
+              <dt className="text-foreground text-xs font-medium flex items-center gap-1">
+                {r.label}
+                {wasOcr && (
+                  <span className="text-[10px] text-primary bg-primary/10 px-1 rounded">OCR</span>
+                )}
+              </dt>
+              <dd className="mt-1">
+                <Input
+                  type="text"
+                  readOnly={locked}
+                  value={values[r.apiKey] ?? ""}
+                  placeholder={r.placeholder ?? "—"}
+                  onChange={(e) =>
+                    setValues((prev) => ({ ...prev, [r.apiKey]: e.target.value }))
+                  }
+                  className={[
+                    "rounded-none",
+                    isMissing ? "border-destructive ring-destructive/30" : "",
+                    locked ? "opacity-70 cursor-not-allowed" : "",
+                  ].join(" ")}
+                />
+              </dd>
+            </div>
+          );
+        })}
       </dl>
-      <p className="text-muted-foreground text-xs">
-        Read-only preview. Manual edit + provenance tracking lands in the next iteration.
-      </p>
+
+      {!locked && (
+        <div className="flex items-center gap-3 pt-2">
+          <Button
+            type="button"
+            disabled={!dirty || saving}
+            onClick={() => void handleSave()}
+            className="rounded-none"
+          >
+            {saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+            {saving ? "Saving…" : "Save changes"}
+          </Button>
+          {saveMsg && <p className="text-success text-xs">{saveMsg}</p>}
+          {saveError && <p className="text-destructive text-xs">{saveError}</p>}
+        </div>
+      )}
     </section>
   );
 }

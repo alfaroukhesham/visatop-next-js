@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   Banknote,
+  FileStack,
   Globe2,
   Settings2,
   SlidersHorizontal,
@@ -35,10 +36,10 @@ const links = [
     icon: SlidersHorizontal,
   },
   {
-    href: "/admin/operations",
-    title: "Operations",
-    description: "Verification queue and review drawer.",
-    icon: Settings2,
+    href: "/admin/applications",
+    title: "Applications",
+    description: "Manage and monitor all visa applications, payments, and fulfillment.",
+    icon: FileStack,
   },
   {
     href: "/admin/automations",
