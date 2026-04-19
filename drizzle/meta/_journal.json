@@ -57,6 +57,27 @@
       "when": 1776367381912,
       "tag": "0007_passport_ocr_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1776468000000,
+      "tag": "0008_phase3_paddle_status_upgrade",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776470000000,
+      "tag": "0009_checkout_client_write_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776471000000,
+      "tag": "0010_payment_event_payload_hash_unique",
+      "breakpoints": true
     }
   ]
 }

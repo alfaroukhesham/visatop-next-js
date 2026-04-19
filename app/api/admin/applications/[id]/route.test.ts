@@ -17,7 +17,7 @@ import * as actorContext from "@/lib/db/actor-context";
 import { DELETE } from "./route";
 
 function makeTx(foundRow: Record<string, unknown> | null) {
-  const audits: Array<Parameters<typeof vi.fn>[0]> = [];
+  const audits: Array<Record<string, unknown>> = [];
   const deletes: string[] = [];
 
   const tx = {

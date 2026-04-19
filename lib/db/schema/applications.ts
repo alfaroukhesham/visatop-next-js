@@ -81,6 +81,8 @@ export const application = pgTable(
      */
     checkoutState: text("checkout_state"),
 
+    adminAttentionRequired: boolean("admin_attention_required").default(false).notNull(),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

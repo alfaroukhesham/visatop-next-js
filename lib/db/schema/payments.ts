@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { pgTable, text, timestamp, index, bigint } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, index, bigint, uniqueIndex } from "drizzle-orm/pg-core";
 import { application } from "./applications";
 
 export const payment = pgTable(
@@ -46,7 +46,7 @@ export const paymentEvent = pgTable(
   (t) => [
     index("payment_event_paymentId_idx").on(t.paymentId),
     index("payment_event_providerEvent_idx").on(t.providerEventId),
-    index("payment_event_payloadHash_idx").on(t.payloadHash),
+    uniqueIndex("payment_event_payload_hash_unique").on(t.payloadHash),
   ],
 );
 
