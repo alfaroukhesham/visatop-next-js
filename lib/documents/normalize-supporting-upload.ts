@@ -31,6 +31,9 @@ export async function normalizeSupportingUpload(input: {
   }
 
   if (input.contentType === "application/pdf") {
+    if (!input.bytes.subarray(0, 5).equals(Buffer.from("%PDF-"))) {
+      throw new Error("Invalid supporting PDF.");
+    }
     const sha256 = createHash("sha256").update(input.bytes).digest("hex");
     return {
       bytes: input.bytes,

@@ -33,7 +33,10 @@ export type Readiness =
   | "ready";
 
 export type ValidationFailure = {
-  code: "passport_expired_or_insufficient_validity" | "dob_invalid";
+  code:
+    | "passport_expired_or_insufficient_validity"
+    | "passport_expiry_date_invalid"
+    | "dob_invalid";
   message: string;
 };
 
@@ -117,8 +120,14 @@ export function computeValidation(input: ComputeValidationInput): ValidationResu
 
   const validationFailures: ValidationFailure[] = [];
 
-  const expiry = parseIsoDateUtc(input.profile.passportExpiryDate ?? null);
-  if (expiry) {
+  const passportExpiryRaw = input.profile.passportExpiryDate ?? null;
+  const expiry = parseIsoDateUtc(passportExpiryRaw);
+  if (isPresent(passportExpiryRaw) && !expiry) {
+    validationFailures.push({
+      code: "passport_expiry_date_invalid",
+      message: "Passport expiry date looks invalid. Please check and correct it.",
+    });
+  } else if (expiry) {
     const minValid = addDaysUtc(
       new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())),
       PASSPORT_MIN_VALIDITY_DAYS,

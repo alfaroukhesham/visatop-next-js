@@ -19,13 +19,6 @@ import { DELETE } from "./route";
 function makeTx(foundRow: Record<string, unknown> | null) {
   const audits: Array<Record<string, unknown>> = [];
   const tx = {
-    select: () => ({
-      from: () => ({
-        where: () => ({
-          limit: async () => (foundRow ? [foundRow] : []),
-        }),
-      }),
-    }),
     insert: () => ({
       values: async (v: Record<string, unknown>) => {
         audits.push(v);
@@ -33,7 +26,7 @@ function makeTx(foundRow: Record<string, unknown> | null) {
     }),
     delete: () => ({
       where: () => ({
-        returning: async () => (foundRow ? [{ id: foundRow.id }] : []),
+        returning: async () => (foundRow ? [foundRow] : []),
       }),
     }),
   } as unknown as Parameters<Parameters<typeof actorContext.withAdminDbActor>[1]>[0]["tx"];

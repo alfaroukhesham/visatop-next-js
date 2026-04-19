@@ -1,6 +1,6 @@
 # Visa platform — implementation reference
 
-This document consolidates the **implementation-level** decisions and conventions for the visa platform features discussed in the brainstorm, focusing on **Paddle**, **application state machine**, **pricing/quotes**, **affiliate automation**, **draft expiry**, and **RBAC + RLS**.
+This document consolidates the **implementation-level** decisions and conventions for the visa platform features discussed in the brainstorm, focusing on **Paddle**, **application state machine**, **pricing/quotes**, **admin-managed catalog/reference pricing (file import)**, **ops fulfillment**, **draft expiry**, and **RBAC + RLS**.
 
 For product intent, IA, and design direction, see:
 - [`PRODUCT_REQUIREMENTS.md`](../PRODUCT_REQUIREMENTS.md)
@@ -15,7 +15,7 @@ For product intent, IA, and design direction, see:
 
 - **Provider abstraction**: app code calls a small internal `PaymentProvider` interface; Paddle is one adapter.
 - **Webhooks-first**: browser redirects are not authoritative; Paddle webhooks drive final payment state.
-- **Quote lock**: when checkout is created, a `PriceQuote` is locked so later reference price sync does not change what the user is charged.
+- **Quote lock**: when checkout is created, a `PriceQuote` is locked so later **reference price or catalog changes** (e.g. a new admin import) do not change what the user is charged.
 - **No internal cost leakage**: the client never sees affiliate-cost vs margin breakdown. They see one total.
 
 ### Modeling choice (locked)
@@ -50,24 +50,30 @@ Include stable internal identifiers so webhooks can reconcile:
 
 ---
 
-## 2) Pricing + quotes + sync
+## 2) Pricing + quotes + reference data (admin import)
+
+### Direction (locked): no third-party price scraping
+
+- **Cancelled:** automated **web scraping** or **scheduled jobs** that pull **pricing** from third-party / affiliate websites.
+- **Replacement:** admins upload **CSV and/or Excel (XLSX)** files that carry **reference costs**, **service definitions**, **eligibility**, and other catalog fields the business needs. Imports are **validated**, **audited**, and should support a **dry-run / preview** before commit where practical.
+- Existing schema names like `affiliate_reference_price` may still mean “internal reference cost used for margin math,” but the **source of truth** is **admin-supplied data**, not a live scrape.
 
 ### Reference vs displayed price
 
-- **Reference cost**: scraped/observed price from affiliate (admin-only).
+- **Reference cost**: internal cost basis entered by ops via **import or admin UI** (admin-only; never shown to clients as a breakdown).
 - **Displayed price**: \(reference cost + configured margin + add-ons - discounts\).
 - Margin is configurable globally and per service; discount/override is allowed with audit.
 
 ### Repricing behavior (locked)
 
 - **Before checkout creation / firm intent**: prices are live and can increase; no promise of old low price if the user waits.
-- **After checkout creation**: lock the quote amount for the checkout; charge that amount even if reference changes.
+- **After checkout creation**: lock the quote amount for the checkout; charge that amount even if reference or catalog data changes later.
 
-### Sync cadence (locked)
+### Update cadence (locked)
 
-- Default **daily** sync.
-- Admin can initiate **manual sync** anytime.
-- Sync runs as a background job with **progress** and **notify on change**.
+- **No** default **daily scrape/sync** for prices.
+- Admins apply updates on a **business cadence** (e.g. weekly import, ad hoc when partners send new tariffs).
+- Optional product features: **import job** with **progress**, row-level **errors**, and **notify stakeholders when reference costs change** after a successful import (not “notify on scrape”).
 
 ---
 
@@ -140,21 +146,22 @@ Client sees neutral status like “Processing” / “Awaiting authority decisio
 
 ---
 
-## 5) Affiliate automation (scrape + Playwright)
+## 5) Ops fulfillment (manual-first)
 
-### Integration constraint (locked)
+### Scope (locked)
 
-- No official API; automation is **brittle by nature**.
+- **Pricing and catalog reference data** are **not** acquired via scraping; see **§2**.
+- **Fulfillment** (paying partners, submitting to authorities, etc.) is handled as **ops workflow**. Client-facing statuses stay **neutral**; see **§4** client language rule.
 
 ### Operational guardrails (required)
 
-- Per-service enable/disable + **kill switch** for automation.
-- Observability: job status, attempt count, error, timestamps; store artifacts (screenshots/trace) with redaction where needed.
-- Manual fallback: ops can complete the affiliate journey manually and mark **manual success**.
+- Per-service enable/disable for any **automated assist** features (if introduced later); a clear **kill switch** if something runs against external UIs.
+- If browser automation or integrations exist in the future: observability (job status, attempts, errors, timestamps), artifacts with redaction where needed, and **manual fallback** remain mandatory.
+- **Manual completion** remains **first-class**: ops can complete work outside the product and mark **manual success**.
 
 ### Manual success proof (tiered, locked)
 
-Proof requirement depends on service value/risk; proof is **internal-only** (receipt upload and/or structured fields like amount/currency/affiliate reference).
+Proof requirement depends on service value/risk; proof is **internal-only** (receipt upload and/or structured fields like amount/currency/partner reference).
 
 ---
 
@@ -289,7 +296,7 @@ Phase 0 (schema, migration `0002_harsh_wolverine`, actor helpers, envelope, `pro
 | **1 — Catalog + pricing** | Admin CRUD for visa services (enable/disable, attributes), nationality ↔ service eligibility, margin policies (global + per-service), **displayed price** from reference + margin + add-ons − discounts (pre–checkout intent). | Extend or tighten RLS so admin writes align with seeded permissions (e.g. **`pricing.*`**, **`catalog.*`** as you wire routes). Ensure **audit** on pricing/discount actions once **`audit_log` INSERT** is allowed (see §6 gaps). |
 | **2 — Drafts, guests, documents** *(implemented — see §11)* | Create **`application`** on nationality + service; **fixed** draft TTL + cleanup for **unpaid** only; document upload + extraction pipeline (can stub OCR). | **Guest path:** **`resume_token_hash`** + **`HttpOnly`** cookie **`vt_resume`**; guest routes verify cookie then use **`withSystemDbActor`**. Signed-in drafts use **`withClientDbActor`** + new client **`INSERT`/`UPDATE`** RLS on **`application`**. |
 | **3 — Paddle** | `PaymentProvider` + Paddle adapter; checkout creation **locks** `price_quote`; webhooks → normalized events; admin refund intent → provider → webhook-confirmed state; **idempotent** `payment_event`. | All webhook and payment state transitions that bypass user context run under **`withSystemDbActor`** only after **signature verification**. Wire **`payments.refund`** (or system-only writes) for refund-related rows. Keep **split** `applicationStatus` / `paymentStatus` / `fulfillmentStatus`. |
-| **4 — Affiliate automation** | Connectors per domain, reference **daily + manual** sync with progress and notify-on-change; Playwright jobs with artifacts, retries, **manual fallback** and **kill switch**. | Job runners use **`system`** (or dedicated policies) for writes to sync/automation tables; never set **`system`** from request input. Redact artifacts; observability on every job attempt. |
+| **4 — Imports + ops fulfillment** | **CSV/XLSX import pipeline** for services, eligibility, reference costs, and related fields (validation, audit, optional diff/notify on change). **No** third-party **price scraping** or scrape-based sync jobs. Ops workflows for fulfillment; **manual success** with tiered internal proof. | Import handlers use **`withAdminDbActor`** + **`audit.write`**. Any future **background** processing uses **`withSystemDbActor`** only from **non-spoofable** entrypoints; never derive **`system`** from user input. |
 
 **Cross-cutting (any phase):** resolve **`audit_log` INSERT** (§6.1) before treating audit as reliable; treat **`system`** as a **trust boundary** (§6.4).
 
@@ -300,7 +307,7 @@ Phase 0 (schema, migration `0002_harsh_wolverine`, actor helpers, envelope, `pro
 - **Migration [`0003_catalog_addon_rls`](../drizzle/0003_catalog_addon_rls.sql):** `addon.amount` / `addon.currency` (minor units); seeds **`catalog.read`**, **`catalog.write`**, **`audit.write`**; RLS on catalog tables, `margin_policy`, `affiliate_site`, `affiliate_reference_price`; admin + **`system`** read policies for public catalog paths; **`audit_log` INSERT** for admins with **`audit.write`**.
 - **Optional demo seed (not a migration):** [`scripts/seed-demo-catalog.sql`](../scripts/seed-demo-catalog.sql) — same idempotent catalog/pricing rows as above. Run **`pnpm db:seed:demo`** when you want demo data (after schema migrations). Does **not** run with **`pnpm db:migrate`**. If an older checkout already applied migration tag `0006_seed_demo_catalog`, remove that row from **`drizzle.__drizzle_migrations`** once so Drizzle’s journal and the DB stay aligned.
 - **RLS write policies (Postgres):** use separate **`FOR INSERT`**, **`FOR UPDATE`**, and **`FOR DELETE`** admin policies (each with the right `USING` / `WITH CHECK` shape). Do **not** replace invalid multi-action syntax with a single permissive **`FOR ALL`** policy, because that can unintentionally widen **SELECT** when policies are permissive.
-- **Pricing library:** [`lib/pricing/compute-display-price.ts`](../lib/pricing/compute-display-price.ts), [`lib/pricing/resolve-catalog-pricing.ts`](../lib/pricing/resolve-catalog-pricing.ts); canonical affiliate site via **`PRICING_AFFILIATE_SITE_ID`** (optional, see [`.env.example`](../.env.example)).
+- **Pricing library:** [`lib/pricing/compute-display-price.ts`](../lib/pricing/compute-display-price.ts), [`lib/pricing/resolve-catalog-pricing.ts`](../lib/pricing/resolve-catalog-pricing.ts); optional **`PRICING_AFFILIATE_SITE_ID`** labels which `affiliate_site` row to use when resolving reference rows (see [`.env.example`](../.env.example)) — **not** for scraping.
 - **Public APIs:** `GET /api/catalog/nationalities`, `GET /api/catalog/services?nationality=XX` — client payload is **totals only** (no reference/margin breakdown).
 - **Admin APIs:** `/api/admin/catalog/*` (visa services, nationalities, eligibility) and `/api/admin/pricing/*` (margin policies, reference prices) — **`runAdminDbJson`** gates on `permissions` from **`withAdminDbActor`** (same transaction as the handler body; see [`lib/admin-api/require-admin-db.ts`](../lib/admin-api/require-admin-db.ts)). Mutations require **`audit.write`** and append **`audit_log`** via [`lib/admin-api/write-admin-audit.ts`](../lib/admin-api/write-admin-audit.ts).
 - **Admin UI:** [`app/admin/(protected)/catalog/page.tsx`](../app/admin/(protected)/catalog/page.tsx) — read-only overview (mutations via APIs).

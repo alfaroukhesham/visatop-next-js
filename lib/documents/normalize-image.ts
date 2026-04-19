@@ -62,7 +62,7 @@ export async function normalizeImageBuffer(input: Buffer): Promise<NormalizedIma
 
   const shouldResize = width > MAX_RASTER_EDGE_PX || height > MAX_RASTER_EDGE_PX;
 
-  const bytes = await pipeline
+  const { data: bytes, info } = await pipeline
     .rotate()
     .resize(
       shouldResize
@@ -75,17 +75,15 @@ export async function normalizeImageBuffer(input: Buffer): Promise<NormalizedIma
         : undefined,
     )
     .jpeg({ quality: JPEG_QUALITY, mozjpeg: false })
-    .withMetadata({ exif: {} })
-    .toBuffer();
+    .toBuffer({ resolveWithObject: true });
 
-  const finalMeta = await sharp(bytes).metadata();
   const sha256 = createHash("sha256").update(bytes).digest("hex");
   return {
     bytes,
     sha256,
     contentType: NORMALIZED_CONTENT_TYPE,
     byteLength: bytes.byteLength,
-    width: finalMeta.width ?? 0,
-    height: finalMeta.height ?? 0,
+    width: info.width ?? 0,
+    height: info.height ?? 0,
   };
 }

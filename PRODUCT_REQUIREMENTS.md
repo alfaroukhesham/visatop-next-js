@@ -164,8 +164,11 @@ Map these to shadcn tokens in `globals.css` when evolving the theme.
 
 **Engineering conventions** (DB, RLS, payments, phases): [`docs/IMPLEMENTATION_REFERENCE.md`](docs/IMPLEMENTATION_REFERENCE.md).
 
+**Pricing & catalog data:** **Reference costs** and **service/catalog details** are maintained by **admins** via **CSV/Excel import** (validated, audited) and admin UI — **not** by **web scraping** third-party sites. See [`docs/IMPLEMENTATION_REFERENCE.md`](docs/IMPLEMENTATION_REFERENCE.md) §2 and [`docs/plans/2026-04-07-visa-platform-design.md`](docs/plans/2026-04-07-visa-platform-design.md).
+
 ---
 
 ## Changelog
 
 - Migrated from in-app `/portal/prd` page to this file as the canonical PRD for agents and humans.
+- Documented **admin CSV/XLSX** as the source for **reference pricing and catalog details**; **scraping-based** price retrieval is **out of scope**.

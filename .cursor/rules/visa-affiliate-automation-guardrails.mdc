@@ -1,16 +1,17 @@
 ---
-description: Affiliate scraping + Playwright automation guardrails (kill switch, observability, manual fallback)
+description: Ops fulfillment guardrails; admin file import for reference pricing (no third-party price scraping)
 alwaysApply: true
 ---
 
-# Affiliate automation (unofficial)
+# Ops fulfillment + pricing data
 
-- Assume automation is brittle (layout changes/CAPTCHA/rate limits). Build for failure.
+- **Do not** implement **web scraping** or **scheduled sync jobs** to pull **pricing** from third-party websites. **Reference pricing and catalog rows** come from **admin CSV/XLSX import** (validated, audited) and admin UI. See `docs/IMPLEMENTATION_REFERENCE.md` §2.
+- **Fulfillment** is **manual-first**. If any **browser or integration automation** is introduced later, assume it is brittle (layout changes/CAPTCHA/rate limits) and build for failure.
 - Every automated path must have:
-  - **Per-service enable/disable** and an automation **kill switch**
+  - **Per-service enable/disable** and a **kill switch**
   - Job **observability** (status, attempts, timestamps, last error)
   - Artifacts (screenshot/trace) with redaction where needed
   - A **manual fallback** path; admin can mark manual success
 - Manual success proof is **tiered by service value/risk** and is **internal-only**.
-- Sync jobs (reference pricing) run **daily** by default + **manual on-demand**, with progress tracking and “notify on change”.
+- **Import jobs** (optional): progress, row errors, audit trail; optional **notify** stakeholders when **reference costs** change after a successful import — **not** “notify on scrape.”
 

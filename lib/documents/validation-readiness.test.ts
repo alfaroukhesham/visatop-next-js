@@ -57,6 +57,16 @@ describe("computeValidation", () => {
     expect(v.nowUtcDate).toBe("2026-04-16");
   });
 
+  it("flags malformed passport expiry when a value is provided", () => {
+    const v = computeValidation({
+      profile: { ...COMPLETE_PROFILE, passportExpiryDate: "not-a-date" },
+      uploads: UPLOADS_OK,
+      now: NOW,
+    });
+    expect(v.readiness).toBe("blocked_validation");
+    expect(v.validationFailures.map((f) => f.code)).toContain("passport_expiry_date_invalid");
+  });
+
   it("flags passport expiry exactly 179 days in the future as failure", () => {
     const expiry = new Date(NOW.getTime() + 179 * 24 * 3600 * 1000);
     const v = computeValidation({

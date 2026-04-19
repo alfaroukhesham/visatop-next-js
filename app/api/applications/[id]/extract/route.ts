@@ -351,18 +351,6 @@ export async function POST(
       return { ok: false, staleLease: true };
     }
 
-    for (const attempt of ocrResult.attempts) {
-      await persistExtractionAttempt(tx, {
-        documentId: lease.documentId,
-        provider: ocrResult.provider,
-        model: ocrResult.model,
-        promptVersion: ocrResult.promptVersion,
-        attempt,
-        validationJson: null,
-        now: finishedAt,
-      });
-    }
-
     const terminalStatus: ExtractionStatus =
       ocrResult.status === "succeeded"
         ? EXTRACTION_STATUS.SUCCEEDED
@@ -380,6 +368,18 @@ export async function POST(
       now: finishedAt,
     });
     if (!committed) return { ok: false, staleLease: true };
+
+    for (const attempt of ocrResult.attempts) {
+      await persistExtractionAttempt(tx, {
+        documentId: lease.documentId,
+        provider: ocrResult.provider,
+        model: ocrResult.model,
+        promptVersion: ocrResult.promptVersion,
+        attempt,
+        validationJson: null,
+        now: finishedAt,
+      });
+    }
 
     return {
       ok: true,

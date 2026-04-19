@@ -277,8 +277,8 @@ export async function extractPassport(
     });
   }
 
-  const last = attempts[attempts.length - 1];
-  const finalResult = last?.result ?? null;
+  const lastValid = [...attempts].reverse().find((a) => a.result !== null);
+  const finalResult = lastValid?.result ?? null;
   const missingFields = listMissingOcrFields(finalResult);
 
   const anySchemaValid = attempts.some((a) => a.result !== null);

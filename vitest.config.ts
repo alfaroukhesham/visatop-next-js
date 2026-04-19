@@ -17,7 +17,7 @@ export default defineConfig({
     environment: "node",
     setupFiles: ["./tests/setup-vitest.ts"],
     include: ["**/*.{test,spec}.{ts,tsx}"],
-    exclude: ["node_modules", ".next", "dist"],
+    exclude: ["node_modules", ".next", "dist", ".worktrees/**", ".agents/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
