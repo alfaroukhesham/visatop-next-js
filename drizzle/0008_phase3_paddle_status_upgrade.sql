@@ -1,5 +1,5 @@
 -- drizzle/0008_phase3_paddle_status_upgrade.sql
-ALTER TABLE application ADD COLUMN admin_attention_required boolean NOT NULL DEFAULT false;
+ALTER TABLE application ADD COLUMN IF NOT EXISTS admin_attention_required boolean NOT NULL DEFAULT false;
 
 UPDATE application SET application_status = 'needs_review' WHERE application_status IN ('submitted', 'in_review');
 UPDATE application SET application_status = 'completed' WHERE application_status = 'approved';
