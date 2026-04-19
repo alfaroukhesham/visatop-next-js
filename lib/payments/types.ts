@@ -29,7 +29,7 @@ export type PaddleRefundReason = "fraud" | "accidental" | "customer_request";
 
 export interface PaymentProvider {
   createCheckout(params: CreateCheckoutParams): Promise<ProviderCheckoutResult>;
-  verifyWebhookSignature(body: string, signature: string): boolean;
+  verifyWebhookSignature(body: string, signature: string): Promise<boolean>;
   parseWebhookEvent(body: string): ParsedWebhookEvent;
   initiateRefund(transactionId: string, reason: PaddleRefundReason, amountMinor?: number): Promise<RefundResult>;
 }

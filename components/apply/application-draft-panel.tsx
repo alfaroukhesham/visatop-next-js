@@ -95,6 +95,28 @@ function latestByType(docs: PublicDocument[], type: DocType) {
   return docs.find((d) => d.documentType === type && d.status !== "deleted") ?? null;
 }
 
+/** Remount profile form when server-driven applicant / extraction data changes (avoids setState-in-effect). */
+function applicantFormResetKey(
+  applicant: ApplicantProfile,
+  extraction: ExtractResponse["extraction"] | null,
+): string {
+  const stable = [
+    applicant.fullName ?? "",
+    applicant.dateOfBirth ?? "",
+    applicant.nationality ?? "",
+    applicant.passportNumber ?? "",
+    applicant.passportExpiryDate ?? "",
+    applicant.placeOfBirth ?? "",
+    applicant.profession ?? "",
+    applicant.address ?? "",
+    applicant.phone ?? "",
+  ].join("\u001e");
+  const ex = extraction
+    ? `${extraction.documentId ?? ""}\u001e${extraction.attemptsUsed}\u001e${extraction.status}`
+    : "";
+  return `${stable}\u001e${ex}`;
+}
+
 function customerFacingExtractionLabel(status: string | null | undefined): string {
   switch (status) {
     case "not_started":
@@ -144,25 +166,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
     if (docsRes.ok) setDocs(docsRes.data.documents);
   }, [applicationId]);
 
-  // Poll for payment confirmation (webhook updates DB; client overlay success is not authoritative).
-  useEffect(() => {
-    if (app?.paymentStatus === "checkout_created") {
-      const interval = setInterval(() => void load({ silent: true }), 2000);
-      return () => clearInterval(interval);
-    }
-  }, [app?.paymentStatus, load]);
-
-  // Checkout TTL Timer
-  useEffect(() => {
-    if (countdown !== null && countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (countdown === 0) {
-      void cancelCheckout();
-    }
-  }, [countdown]);
-
-  async function cancelCheckout() {
+  const cancelCheckout = useCallback(async () => {
     setActionMsg(null);
     const res = await fetchApiEnvelope(`/api/applications/${applicationId}/checkout-cancel`, {
       method: "POST",
@@ -174,14 +178,32 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
     setCountdown(null);
     setActionMsg("Checkout cancelled.");
     await load({ silent: true });
-  }
-
+  }, [applicationId, load]);
 
   useEffect(() => {
     queueMicrotask(() => {
       void load();
     });
   }, [load]);
+
+  // Poll for payment confirmation (webhook updates DB; client overlay success is not authoritative).
+  useEffect(() => {
+    if (app?.paymentStatus === "checkout_created") {
+      const interval = setInterval(() => void load({ silent: true }), 2000);
+      return () => clearInterval(interval);
+    }
+  }, [app?.paymentStatus, load]);
+
+  // Checkout TTL timer — cancel when countdown reaches zero.
+  useEffect(() => {
+    if (countdown !== null && countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+    if (countdown === 0) {
+      queueMicrotask(() => void cancelCheckout());
+    }
+  }, [countdown, cancelCheckout]);
 
   const passport = useMemo(() => latestByType(docs, "passport_copy"), [docs]);
   const photo = useMemo(() => latestByType(docs, "personal_photo"), [docs]);
@@ -408,6 +430,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
       </section>
 
       <ApplicantReview
+        key={applicantFormResetKey(app.applicant, extractResult?.extraction ?? null)}
         applicationId={applicationId}
         applicant={app.applicant}
         extraction={extractResult?.extraction ?? null}
@@ -650,23 +673,6 @@ function ApplicantReview({
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
-
-  // Sync state when applicant prop changes (e.g., after extraction)
-  useEffect(() => {
-    const newInitial: Record<string, string> = {};
-    for (const r of ROWS) newInitial[r.apiKey] = applicant[r.key] ?? "";
-    setValues((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      for (const k in newInitial) {
-        if (newInitial[k] !== prev[k]) {
-          next[k] = newInitial[k] as string;
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [applicant]);
 
   // Detect dirty state vs initial
   const dirty = ROWS.some((r) => (values[r.apiKey] ?? "") !== (initial[r.apiKey] ?? ""));

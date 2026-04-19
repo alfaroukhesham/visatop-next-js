@@ -75,8 +75,11 @@ export function PaddleCheckoutButton({
 
       const { transactionId, clientToken } = envelope.data;
 
+      const paddleEnv =
+        process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "production" ? "production" : "sandbox";
+
       const paddle = await initializePaddle({
-        environment: (process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT as any) || "sandbox",
+        environment: paddleEnv,
         token: clientToken || process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "",
         eventCallback: (event: PaddleEventData) => {
           const name = event.name;
@@ -130,9 +133,9 @@ export function PaddleCheckoutButton({
       paddle.Checkout.open({
         transactionId,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Checkout error:", err);
-      onError?.(err.message);
+      onError?.(err instanceof Error ? err.message : "Checkout failed.");
       setIsInitializing(false);
     }
   };

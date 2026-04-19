@@ -30,8 +30,8 @@ export function ApplicationRefundForm({ applicationId }: { applicationId: string
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error?.message || "Refund failed.");
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Refund failed.");
     } finally {
       setLoading(false);
     }

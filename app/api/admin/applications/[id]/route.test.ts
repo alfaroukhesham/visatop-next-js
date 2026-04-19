@@ -16,13 +16,13 @@ import { adminAuth } from "@/lib/admin-auth";
 import * as actorContext from "@/lib/db/actor-context";
 import { DELETE } from "./route";
 
-function makeTx(foundRow: any) {
-  const audits: Array<any> = [];
+function makeTx(foundRow: Record<string, unknown> | null) {
+  const audits: Array<Record<string, unknown>> = [];
   const deletes: string[] = [];
 
   const tx = {
     insert: () => ({
-      values: async (v: any) => {
+      values: async (v: Record<string, unknown>) => {
         audits.push(v);
       },
     }),

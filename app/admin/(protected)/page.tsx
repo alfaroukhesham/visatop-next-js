@@ -4,7 +4,6 @@ import {
   Banknote,
   FileStack,
   Globe2,
-  Settings2,
   SlidersHorizontal,
   Sparkles,
 } from "lucide-react";

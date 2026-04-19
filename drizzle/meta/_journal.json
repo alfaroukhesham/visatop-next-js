@@ -71,6 +71,13 @@
       "when": 1776470000000,
       "tag": "0009_checkout_client_write_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776471000000,
+      "tag": "0010_payment_event_payload_hash_unique",
+      "breakpoints": true
     }
   ]
 }

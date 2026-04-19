@@ -7,6 +7,7 @@ import { PaddleProviderError, paddleAdapter } from "@/lib/payments/paddle-adapte
 import * as schema from "@/lib/db/schema";
 import { eq, and, or, isNull } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
+import type { DbTransaction } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
       return jsonError("UNAUTHORIZED", "Cannot access application", { status, requestId });
     }
 
-    const runTx = async (tx: any) => {
+    const runTx = async (tx: DbTransaction) => {
       // 1. Atomic checkout lock guard
       const [lockedApp] = await tx
         .update(schema.application)

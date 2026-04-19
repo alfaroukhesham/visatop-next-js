@@ -96,13 +96,11 @@ export const paddleAdapter: PaymentProvider = {
     }
   },
 
-  verifyWebhookSignature(body: string, signature: string): boolean {
+  async verifyWebhookSignature(body: string, signature: string): Promise<boolean> {
     const secret = process.env.PADDLE_WEBHOOK_SECRET;
     if (!secret) return false;
-    // In a real implementation, use paddle.webhooks.unmarshal with try/catch
-    // For now, assume unmarshal throws if invalid
     try {
-      paddle.webhooks.unmarshal(body, secret, signature);
+      await paddle.webhooks.unmarshal(body, secret, signature);
       return true;
     } catch {
       return false;
@@ -110,23 +108,45 @@ export const paddleAdapter: PaymentProvider = {
   },
 
   parseWebhookEvent(body: string): ParsedWebhookEvent {
-    // Basic parser for demonstration/mock
-    const payload = JSON.parse(body);
-    const data = payload.data;
-    
-    // Attempt to extract total amount from details or fallback
-    let amountStr = "0.00";
-    if (data.details?.totals?.total) {
-      amountStr = data.details.totals.total;
-    } else if (data.amount) {
+    const payload = JSON.parse(body) as {
+      event_type?: string;
+      data?: Record<string, unknown>;
+    };
+    const data = payload.data ?? {};
+
+    // Totals from Paddle webhooks are strings in the smallest currency unit (not major units).
+    let amountStr = "0";
+    const detailsTotals = data.details as { totals?: { total?: string } } | undefined;
+    const dataTotals = data.totals as { total?: string } | undefined;
+    if (detailsTotals?.totals?.total) {
+      amountStr = detailsTotals.totals.total;
+    } else if (dataTotals?.total) {
+      amountStr = dataTotals.total;
+    } else if (typeof data.amount === "string") {
       amountStr = data.amount;
     }
 
+    // Prefer `transaction_id` so adjustment/refund payloads do not use `adj_*` as the txn id.
+    const transactionIdRaw =
+      (typeof data.transaction_id === "string" && data.transaction_id) ||
+      (typeof data.id === "string" && data.id) ||
+      "";
+    const amountMinor = Number.parseInt(amountStr, 10);
+    if (!transactionIdRaw || !Number.isFinite(amountMinor)) {
+      throw new Error("Invalid Paddle webhook payload: missing transaction id or amount");
+    }
+
+    const customData = data.custom_data;
+    const metadata =
+      customData && typeof customData === "object" && !Array.isArray(customData)
+        ? (customData as Record<string, string>)
+        : {};
+
     return {
-      type: payload.event_type,
-      transactionId: data.id || data.transaction_id,
-      amountMinor: Math.round(parseFloat(amountStr) * 100),
-      metadata: data.custom_data || {},
+      type: (payload.event_type as ParsedWebhookEvent["type"]) ?? "unknown",
+      transactionId: transactionIdRaw,
+      amountMinor,
+      metadata,
     };
   },
 

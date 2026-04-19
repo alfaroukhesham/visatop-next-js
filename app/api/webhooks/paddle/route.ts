@@ -15,12 +15,17 @@ export async function POST(req: Request) {
   const hdrs = await headers();
   const signature = hdrs.get("paddle-signature");
 
-  if (!signature || !paddleAdapter.verifyWebhookSignature(bodyText, signature)) {
+  if (!signature || !(await paddleAdapter.verifyWebhookSignature(bodyText, signature))) {
     return jsonError("UNAUTHORIZED", "Invalid signature", { status: 401 });
   }
 
   const payloadHash = crypto.createHash("sha256").update(bodyText).digest("hex");
-  const event = paddleAdapter.parseWebhookEvent(bodyText);
+  let event;
+  try {
+    event = paddleAdapter.parseWebhookEvent(bodyText);
+  } catch {
+    return jsonError("VALIDATION_ERROR", "Invalid webhook payload", { status: 400 });
+  }
 
   // Parse payload JSON to get raw payload
   const rawPayload = JSON.parse(bodyText);
@@ -73,18 +78,18 @@ export async function POST(req: Request) {
     const [appRow] = await tx.select().from(application).where(eq(application.id, payRow.applicationId)).limit(1);
     if (!appRow) return;
 
-    // Idempotency check
-    const [existing] = await tx.select().from(paymentEvent).where(eq(paymentEvent.payloadHash, payloadHash)).limit(1);
-    if (existing) return;
-
-    // Insert event
-    await tx.insert(paymentEvent).values({
-      id: createId(),
-      paymentId: payRow.id,
-      providerEventId: providerEventId,
-      type: event.type,
-      payloadHash,
-    });
+    const [insertedEvent] = await tx
+      .insert(paymentEvent)
+      .values({
+        id: createId(),
+        paymentId: payRow.id,
+        providerEventId: providerEventId,
+        type: event.type,
+        payloadHash,
+      })
+      .onConflictDoNothing({ target: paymentEvent.payloadHash })
+      .returning();
+    if (!insertedEvent) return;
 
     if (event.type === "transaction.completed") {
       // 1. Resurrection Guard

@@ -4,6 +4,7 @@ import { withSystemDbActor, withClientDbActor } from "@/lib/db/actor-context";
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
 import * as schema from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import type { DbTransaction } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -21,7 +22,7 @@ export async function POST(
     return jsonError("UNAUTHORIZED", "Cannot access application", { status, requestId });
   }
 
-  const runTx = async (tx: any) => {
+  const runTx = async (tx: DbTransaction) => {
     // Only allow cancellation if in checkout_created status and pending lock
     const [updated] = await tx
       .update(schema.application)

@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { runAdminDbJson } from "@/lib/admin-api/require-admin-db";
 import { writeAdminAudit } from "@/lib/admin-api/write-admin-audit";
-import { paddleAdapter } from "@/lib/payments/paddle-adapter";
+import { PaddleProviderError, paddleAdapter } from "@/lib/payments/paddle-adapter";
 import * as schema from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import type { PaddleRefundReason } from "@/lib/payments/types";
@@ -28,6 +28,13 @@ export async function POST(
 
       if (!reason) {
         return jsonError("VALIDATION_ERROR", "Reason is required", {
+          status: 400,
+          requestId,
+        });
+      }
+
+      if (amount !== undefined && amount !== null) {
+        return jsonError("VALIDATION_ERROR", "Partial refunds are not supported yet", {
           status: 400,
           requestId,
         });
@@ -72,11 +79,7 @@ export async function POST(
       }
 
       try {
-        const result = await paddleAdapter.initiateRefund(
-          payment.providerTransactionId,
-          reason,
-          amount
-        );
+        const result = await paddleAdapter.initiateRefund(payment.providerTransactionId, reason);
 
         // Update application status to reflect refund pending
         await tx
@@ -92,23 +95,26 @@ export async function POST(
           entityId: applicationId,
           afterJson: JSON.stringify({
             reason,
-            requestedAmount: amount,
             refundId: result.refundId,
             refundStatus: result.status,
           }),
         });
 
         return jsonOk(result, { requestId });
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Refund failed:", err);
-        return jsonError(
-          "INTERNAL_ERROR",
-          err.message || "Refund initiation failed",
-          {
-            status: 502,
+        if (err instanceof PaddleProviderError) {
+          return jsonError("INTERNAL_ERROR", err.message, {
+            status: err.httpStatus,
             requestId,
-          }
-        );
+            details: { paddleCode: err.paddleCode },
+          });
+        }
+        const message = err instanceof Error ? err.message : "Refund initiation failed";
+        return jsonError("INTERNAL_ERROR", message, {
+          status: 502,
+          requestId,
+        });
       }
 
     }

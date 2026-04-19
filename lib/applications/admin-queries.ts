@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, or, count, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, or, count } from "drizzle-orm";
 import { type DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 

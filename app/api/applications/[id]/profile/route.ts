@@ -8,6 +8,7 @@ import { application } from "@/lib/db/schema";
 import { toPublicApplication } from "@/lib/applications/public-application";
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
 import { evaluateApplicationReadiness } from "@/lib/applications/evaluate-readiness";
+import type { DbTransaction } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,12 +64,8 @@ export async function PATCH(
     return jsonError("UNAUTHORIZED", "Cannot access application", { status, requestId });
   }
 
-  const doUpdate = async (tx: any) => {
-    const updated = await tx
-      .update(application)
-      .set(updates)
-      .where(eq(application.id, applicationId))
-      .returning();
+  const doUpdate = async (tx: DbTransaction) => {
+    await tx.update(application).set(updates).where(eq(application.id, applicationId));
 
     await evaluateApplicationReadiness(tx, applicationId);
 
