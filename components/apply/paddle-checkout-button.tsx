@@ -14,6 +14,8 @@ interface PaddleCheckoutButtonProps {
   applicationId: string;
   disabled?: boolean;
   onSuccess?: () => void;
+  /** Runs whenever the Paddle overlay closes (success, cancel, or dismiss). Use to refetch server payment state. */
+  onOverlayClosed?: () => void;
   onCancel?: () => void;
   onError?: (error: string) => void;
 }
@@ -22,6 +24,7 @@ export function PaddleCheckoutButton({
   applicationId,
   disabled,
   onSuccess,
+  onOverlayClosed,
   onCancel,
   onError,
 }: PaddleCheckoutButtonProps) {
@@ -82,7 +85,11 @@ export function PaddleCheckoutButton({
         environment: paddleEnv,
         token: clientToken || process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "",
         eventCallback: (event: PaddleEventData) => {
-          const name = event.name;
+          const name =
+            event.name ??
+            (typeof (event as { event?: unknown }).event === "string"
+              ? ((event as { event: string }).event as PaddleEventData["name"])
+              : undefined);
 
           if (name === CheckoutEventNames.CHECKOUT_COMPLETED) {
             markSuccess();
@@ -108,6 +115,7 @@ export function PaddleCheckoutButton({
             if (!paymentFinished.current) {
               onCancel?.();
             }
+            onOverlayClosed?.();
             return;
           }
 

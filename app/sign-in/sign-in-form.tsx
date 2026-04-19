@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
 import { authClient } from "@/lib/auth-client";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -16,13 +17,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-function safeCallbackUrl(raw: string | null): string {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
-    return "/portal";
-  }
-  return raw;
-}
 
 type SocialProvider = "google" | "facebook";
 
@@ -183,7 +177,11 @@ export function SignInForm({ facebookEnabled }: { facebookEnabled: boolean }) {
                   {pending ? "Signing in…" : "Sign in"}
                 </Button>
                 <Link
-                  href="/sign-up"
+                  href={
+                    searchParams.get("callbackUrl")
+                      ? `/sign-up?callbackUrl=${encodeURIComponent(searchParams.get("callbackUrl")!)}`
+                      : "/sign-up"
+                  }
                   className={cn(
                     buttonVariants({ variant: "ghost" }),
                     "w-full sm:w-auto inline-flex items-center justify-center",

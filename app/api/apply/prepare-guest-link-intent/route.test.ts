@@ -74,6 +74,24 @@ describe("POST /api/apply/prepare-guest-link-intent", () => {
     expect(res.status).toBe(404);
   });
 
+  it("returns 503 when GUEST_LINK_INTENT_SECRET is not configured", async () => {
+    vi.stubEnv("GUEST_LINK_INTENT_SECRET", "");
+    const res = await POST(
+      new Request("http://localhost:3000/api/apply/prepare-guest-link-intent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: "http://localhost:3000",
+          Cookie: "vt_resume=fake",
+        },
+        body: JSON.stringify({ applicationId: paidGuestRow.id }),
+      }),
+    );
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.error?.details?.code).toBe("GUEST_LINK_INTENT_NOT_CONFIGURED");
+  });
+
   it("returns 503 when kill switch is false", async () => {
     vi.stubEnv("GUEST_LINK_AFTER_AUTH_ENABLED", "false");
     vi.mocked(loadGuestApplicationRowByResumeCookie).mockResolvedValue(paidGuestRow as never);

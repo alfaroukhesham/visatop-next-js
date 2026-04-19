@@ -452,6 +452,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
             </p>
             <PaddleCheckoutButton
               applicationId={applicationId}
+              onOverlayClosed={() => void load({ silent: true })}
               onSuccess={() => {
                 setCountdown(null);
                 setActionMsg("Payment submitted. Confirming with our systems…");
@@ -486,6 +487,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
               <div className="flex-1">
                 <PaddleCheckoutButton
                   applicationId={applicationId}
+                  onOverlayClosed={() => void load({ silent: true })}
                   onSuccess={() => {
                     setCountdown(null);
                     setActionMsg("Payment submitted. Confirming with our systems…");

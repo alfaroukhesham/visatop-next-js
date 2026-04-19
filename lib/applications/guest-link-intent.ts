@@ -8,6 +8,12 @@ export const GUEST_LINK_INTENT_TTL_SEC = 1800;
 
 type Payload = { applicationId: string; exp: number };
 
+/** `true` when signing / verification can run (UTF-8 length ≥ 32 bytes). */
+export function isGuestLinkIntentSecretConfigured(): boolean {
+  const s = process.env.GUEST_LINK_INTENT_SECRET?.trim();
+  return Boolean(s && Buffer.byteLength(s, "utf8") >= 32);
+}
+
 function requireIntentSecret(): string {
   const s = process.env.GUEST_LINK_INTENT_SECRET?.trim();
   if (!s || Buffer.byteLength(s, "utf8") < 32) {

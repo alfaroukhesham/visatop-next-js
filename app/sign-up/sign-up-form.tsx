@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
 import { authClient } from "@/lib/auth-client";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ type SocialProvider = "google" | "facebook";
 
 export function SignUpForm({ facebookEnabled }: { facebookEnabled: boolean }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -52,7 +54,7 @@ export function SignUpForm({ facebookEnabled }: { facebookEnabled: boolean }) {
       return;
     }
     router.refresh();
-    router.push("/portal");
+    router.push(safeCallbackUrl(searchParams.get("callbackUrl")));
   }
 
   const socialCols =
@@ -191,7 +193,11 @@ export function SignUpForm({ facebookEnabled }: { facebookEnabled: boolean }) {
                   {pending ? "Creating…" : "Create account"}
                 </Button>
                 <Link
-                  href="/sign-in"
+                  href={
+                    searchParams.get("callbackUrl")
+                      ? `/sign-in?callbackUrl=${encodeURIComponent(searchParams.get("callbackUrl")!)}`
+                      : "/sign-in"
+                  }
                   className={cn(
                     buttonVariants({ variant: "ghost" }),
                     "w-full sm:w-auto inline-flex items-center justify-center",

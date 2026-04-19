@@ -7,6 +7,7 @@ import { extractClientIp } from "@/lib/applications/client-ip";
 import { guestLinkMatrixAllowsLink } from "@/lib/applications/guest-link-gating";
 import {
   buildLinkIntentClearCookieValue,
+  isGuestLinkIntentSecretConfigured,
   readLinkIntentFromRequestCookies,
   verifyGuestLinkIntent,
 } from "@/lib/applications/guest-link-intent";
@@ -35,6 +36,18 @@ export async function POST(req: Request) {
       status: 503,
       requestId,
     });
+  }
+
+  if (!isGuestLinkIntentSecretConfigured()) {
+    return jsonError(
+      "SERVICE_UNAVAILABLE",
+      "Guest account linking is not configured: set GUEST_LINK_INTENT_SECRET (32+ bytes UTF-8) in the server environment.",
+      {
+        status: 503,
+        requestId,
+        details: { code: "GUEST_LINK_INTENT_NOT_CONFIGURED" },
+      },
+    );
   }
 
   const originBlock = assertTrustedJsonPostOrigin(req, requestId);

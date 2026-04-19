@@ -1,16 +1,26 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button-variants";
-import { cn } from "@/lib/utils";
+import { authClient } from "@/lib/auth-client";
 import { GUEST_LINK_EVENTS, trackGuestLinkEvent } from "@/lib/analytics/guest-link-events";
+import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
+import { buildPostLinkLocation } from "@/lib/applications/post-link-redirect";
 import type { PublicApplication } from "@/lib/applications/public-application";
+import { cn } from "@/lib/utils";
 
 type Props = {
   applicationId: string;
   initialApplication: PublicApplication;
+};
+
+type ApiErrBody = {
+  ok?: boolean;
+  data?: { prepared?: boolean; applicationId?: string; linked?: boolean; alreadyLinked?: boolean };
+  error?: { message?: string; code?: string; details?: { code?: string } };
 };
 
 function pollIntervalMs(elapsedMs: number): number {
@@ -19,9 +29,13 @@ function pollIntervalMs(elapsedMs: number): number {
 }
 
 export function SubmittedApplicationClient({ applicationId, initialApplication }: Props) {
+  const router = useRouter();
+  const { data: session, isPending: sessionPending } = authClient.useSession();
   const [app, setApp] = useState(initialApplication);
   const [pollMsg, setPollMsg] = useState<string | null>(null);
   const [terminal, setTerminal] = useState(false);
+  const [linkActionError, setLinkActionError] = useState<string | null>(null);
+  const [authBusy, setAuthBusy] = useState(false);
   const firedView = useRef(false);
 
   useEffect(() => {
@@ -67,9 +81,9 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
   }, [app.paymentStatus, load]);
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const linkAfterUrl = `${origin}/apply/link-after-signup`;
+  const linkAfterPath = "/apply/link-after-signup";
 
-  async function prepareGuestIntent(): Promise<boolean> {
+  async function prepareGuestIntent(): Promise<{ ok: true } | { ok: false; message: string }> {
     const res = await fetch(`${origin}/api/apply/prepare-guest-link-intent`, {
       method: "POST",
       credentials: "include",
@@ -79,40 +93,101 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
       },
       body: JSON.stringify({ applicationId }),
     });
-    const json = (await res.json()) as {
-      ok?: boolean;
-      data?: { prepared?: boolean; applicationId?: string };
-    };
-    if (!json.ok || !json.data?.applicationId) {
-      return false;
+    const json = (await res.json()) as ApiErrBody;
+    if (!res.ok || !json.ok || !json.data?.applicationId) {
+      const detail =
+        json.error?.details && typeof json.error.details === "object" && "code" in json.error.details
+          ? String((json.error.details as { code?: string }).code ?? "")
+          : "";
+      const base = json.error?.message ?? `Could not prepare linking (HTTP ${res.status}).`;
+      const notCfg =
+        detail === "GUEST_LINK_INTENT_NOT_CONFIGURED" ||
+        (json.error?.message ?? "").includes("GUEST_LINK_INTENT_SECRET");
+      const msg =
+        notCfg
+          ? "This server is missing GUEST_LINK_INTENT_SECRET (32+ bytes). Add it to .env and restart the dev server."
+          : res.status === 503
+            ? "Account linking is temporarily unavailable. Try again later."
+            : res.status === 404
+            ? "We could not verify this application on this device. Use the same browser where you paid, or check your connection."
+            : detail === "INTENT_REQUIRES_PAID" || detail === "LINK_NOT_ALLOWED"
+              ? "This application cannot be linked in its current state. Refresh the page or contact support."
+              : base;
+      return { ok: false, message: msg };
     }
     const idToStore = json.data.applicationId;
     try {
       sessionStorage.setItem("guest_link_application_id", idToStore);
       if (sessionStorage.getItem("guest_link_application_id") !== idToStore) {
-        return false;
+        return {
+          ok: false,
+          message:
+            "This browser blocked saving your application id (private mode or storage disabled). Allow storage for this site, or try another browser.",
+        };
       }
     } catch {
-      return false;
+      return {
+        ok: false,
+        message:
+          "This browser blocked saving your application id. Allow storage for this site, or try another browser.",
+      };
     }
     trackGuestLinkEvent(GUEST_LINK_EVENTS.guestLinkIntentPrepared, { applicationId });
-    return true;
+    return { ok: true };
   }
 
   async function goAuth(target: "sign-up" | "sign-in") {
-    const ok = await prepareGuestIntent();
-    if (!ok) {
-      setPollMsg("We could not start account linking. Try again, or refresh this page.");
+    setLinkActionError(null);
+    setAuthBusy(true);
+    const prep = await prepareGuestIntent();
+    setAuthBusy(false);
+    if (!prep.ok) {
+      setLinkActionError(prep.message);
       return;
     }
-    const cb = encodeURIComponent(linkAfterUrl);
-    window.location.href =
-      target === "sign-up" ? `/sign-up?callbackUrl=${cb}` : `/sign-in?callbackUrl=${cb}`;
+    const cb = encodeURIComponent(safeCallbackUrl(linkAfterPath));
+    window.location.assign(
+      target === "sign-up" ? `/sign-up?callbackUrl=${cb}` : `/sign-in?callbackUrl=${cb}`,
+    );
+  }
+
+  async function attachWhileSignedIn() {
+    setLinkActionError(null);
+    setAuthBusy(true);
+    try {
+      const prep = await prepareGuestIntent();
+      if (!prep.ok) {
+        setLinkActionError(prep.message);
+        return;
+      }
+      const res = await fetch(`${origin}/api/applications/link-after-auth`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: origin,
+        },
+      });
+      const json = (await res.json()) as ApiErrBody;
+      if (json.ok && (json.data?.linked || json.data?.alreadyLinked)) {
+        router.replace(buildPostLinkLocation(applicationId));
+        return;
+      }
+      const msg =
+        json.error?.message ??
+        (res.status === 401
+          ? "Your session expired. Sign in again, then use the buttons below."
+          : "We could not attach this application. Try again or contact support.");
+      setLinkActionError(msg);
+    } finally {
+      setAuthBusy(false);
+    }
   }
 
   const confirming = app.paymentStatus === "checkout_created";
   const paid = app.paymentStatus === "paid";
   const showGuestLink = paid && app.isGuest;
+  const signedIn = Boolean(session?.user?.id);
 
   return (
     <div className="space-y-8">
@@ -161,16 +236,45 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
         <section className="border-border bg-card space-y-4 rounded-none border p-6">
           <h2 className="font-heading text-lg font-semibold">Save this application to your account</h2>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Create an account or sign in on this device so we can attach this paid application to your profile.
+            {signedIn
+              ? "You are signed in. Attach this paid application to your profile on this device."
+              : "Create an account or sign in on this device so we can attach this paid application to your profile."}
           </p>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Button type="button" className="rounded-none" onClick={() => void goAuth("sign-up")}>
-              Create account
+          {linkActionError ? (
+            <p className="text-destructive text-sm leading-relaxed" role="alert">
+              {linkActionError}
+            </p>
+          ) : null}
+          {!sessionPending && signedIn ? (
+            <Button
+              type="button"
+              className="rounded-none"
+              disabled={authBusy}
+              onClick={() => void attachWhileSignedIn()}
+            >
+              {authBusy ? "Attaching…" : "Attach to my account"}
             </Button>
-            <Button type="button" variant="outline" className="rounded-none" onClick={() => void goAuth("sign-in")}>
-              I already have an account
-            </Button>
-          </div>
+          ) : (
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button
+                type="button"
+                className="rounded-none"
+                disabled={authBusy || sessionPending}
+                onClick={() => void goAuth("sign-up")}
+              >
+                {authBusy ? "Working…" : "Create account"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-none"
+                disabled={authBusy || sessionPending}
+                onClick={() => void goAuth("sign-in")}
+              >
+                {authBusy ? "Working…" : "I already have an account"}
+              </Button>
+            </div>
+          )}
         </section>
       )}
 
