@@ -8,6 +8,7 @@ import {
   type DocumentType,
   EXTRACTION_STATUS,
 } from "@/lib/db/schema";
+import { evaluateApplicationReadiness } from "@/lib/applications/evaluate-readiness";
 
 export const UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
 
@@ -165,6 +166,8 @@ export async function persistUploadedDocument(
       })
       .where(eq(application.id, input.applicationId));
   }
+
+  await evaluateApplicationReadiness(tx, input.applicationId);
 
   return { ok: true, document: newDoc, replacedPriorId, wasIdempotent: false };
 }

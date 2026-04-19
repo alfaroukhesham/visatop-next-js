@@ -48,6 +48,7 @@ import {
   persistExtractionAttempt,
   type ApplicantProfileSnapshot,
 } from "@/lib/ocr/extract-orchestrator";
+import { evaluateApplicationReadiness } from "@/lib/applications/evaluate-readiness";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -223,8 +224,8 @@ export async function POST(
       );
     }
 
-    const finalizeFn = async (tx: DbTransaction) =>
-      finalizeExtraction(tx, {
+    const finalizeFn = async (tx: DbTransaction) => {
+      const res = await finalizeExtraction(tx, {
         applicationId,
         runId: lease.runId,
         documentId: lease.documentId,
@@ -233,6 +234,11 @@ export async function POST(
         profileDelta: delta,
         now: finishedAt,
       });
+      if (res) {
+        await evaluateApplicationReadiness(tx, applicationId, finishedAt);
+      }
+      return res;
+    };
     const finalized =
       access.access.kind === "user"
         ? await withClientDbActor(access.access.userId, finalizeFn)
@@ -368,6 +374,8 @@ export async function POST(
       now: finishedAt,
     });
     if (!committed) return { ok: false, staleLease: true };
+
+    await evaluateApplicationReadiness(tx, applicationId, finishedAt);
 
     for (const attempt of ocrResult.attempts) {
       await persistExtractionAttempt(tx, {

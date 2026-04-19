@@ -7,6 +7,7 @@ import { withClientDbActor, withSystemDbActor } from "@/lib/db/actor-context";
 import { application } from "@/lib/db/schema";
 import { toPublicApplication } from "@/lib/applications/public-application";
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
+import { evaluateApplicationReadiness } from "@/lib/applications/evaluate-readiness";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -64,7 +65,13 @@ export async function PATCH(
       .set(updates)
       .where(eq(application.id, applicationId))
       .returning();
-    const row = updated[0];
+
+    await evaluateApplicationReadiness(tx, applicationId);
+
+    // Re-fetch the row to get the potentially updated status
+    const rows = await tx.select().from(application).where(eq(application.id, applicationId)).limit(1);
+    const row = rows[0];
+
     if (!row) {
       return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
     }
