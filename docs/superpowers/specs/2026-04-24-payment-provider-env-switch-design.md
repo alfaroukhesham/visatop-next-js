@@ -1,6 +1,6 @@
 # Payment provider env switch (Paddle | Ziina)
 
-**Status:** Draft for review  
+**Status:** Implementation-ready draft (post-review)  
 **Date:** 2026-04-24  
 **Related:** [2026-04-18-phase3-paddle-admin-design.md](./2026-04-18-phase3-paddle-admin-design.md), `visa-payments-paddle` skill, [Ziina custom integration](https://docs.ziina.com/developers/custom-integration)
 
@@ -19,156 +19,287 @@ Introduce a **single active payment provider** per deployment, selected by **env
 
 - Choosing provider **per checkout** or **per user** (only global env switch in v1).
 - Ziina **embedded** iframe checkout (requires domain verification + Ziina approval; deferred).
-- Partial refunds for Ziina unless Ziina API and admin UI already align with existing “full refund only” MVP for Paddle.
+- **Partial refunds** for any provider in this release remain **out of scope** (admin and types today are full-refund MVP). The `visa-payments-paddle` skill’s “support full/partial” line should be **reconciled in-repo** when partial refunds ship (doc/skill amendment), not in this project’s first env-switch PR unless explicitly pulled in.
 - Runtime hot-switching without redeploy (config is read at process start).
 - Abstracting **Paddle’s** public SDK types through a single mega-interface that hides all provider-specific shapes; instead use a **small shared core** plus **provider modules** that return explicit discriminated results.
 
-## 4. Current context (repo)
+## 4. Current context (repo) — honest baseline
 
-- `POST /api/checkout` runs an atomic transaction: checkout lock on `application`, `price_quote` insert, `payment` insert with **`provider: "paddle"`** hardcoded, `paddleAdapter.createCheckout`, stores **`provider_checkout_id`** = Paddle transaction id.
-- Client: `PaddleCheckoutButton` → `Paddle.Checkout.open({ transactionId })`.
-- `POST /api/webhooks/paddle`: signature verification, parse event, dedupe via **`payment_event.payload_hash`**, resolve `payment` by checkout/txn id or metadata, update `payment` / `application` / audit / doc retention.
-- Admin: `POST /api/admin/applications/[id]/refund` uses **`paddleAdapter`** and **`provider_transaction_id`**.
-- `lib/payments/types.ts` defines **`PaymentProvider`** but it is **Paddle-shaped** (`transactionId` + `clientToken`, Paddle webhook parse shape, `PaddleRefundReason`).
+- `POST /api/checkout` runs an **atomic DB transaction** that includes **external** `paddleAdapter.createCheckout` (Paddle HTTP) **before commit**, while checkout lock (`application.checkout_state = pending`) is held. See **§7.2.1** for transaction-boundary rules.
+- `payment.provider` is today effectively always **`paddle`** (hardcoded at insert).
+- Client: `PaddleCheckoutButton` posts checkout, expects **`jsonOk` envelope** (`ok`, `data`, `error`) — see **§5.1**.
+- `POST /api/webhooks/paddle`: signature verification, parse, **`payment_event`** dedupe via **`payload_hash`**, resolve `payment`, apply paid/failed paths. **`refund.completed`** appears in `lib/payments/types.ts` as a possible parsed type but **is not applied** in the webhook route today (no transition from `refund_pending` off webhook).
+- Admin: `POST /api/admin/applications/[id]/refund` calls Paddle, sets application/payment into **`refund_pending`** (or equivalent) — **terminal refunded state is not webhook-driven for Paddle in current code**.
+- Client cancel: `POST /api/applications/[id]/checkout-cancel` (see `application-draft-panel.tsx`) resets checkout when user cancels from **your** UI; Ziina users may abandon on the host — **§7.3.1**.
+- `lib/payments/types.ts` **`PaymentProvider`** is Paddle-shaped and only `paddleAdapter` implements it.
 
 ## 5. Requirements
 
 | ID | Requirement |
 |----|-------------|
-| R1 | Exactly one “active” provider per deployment, driven by env; misconfiguration (active Ziina but missing Ziina secrets) must fail fast at checkout/webhook with clear logs, not silent wrong-provider behavior. |
-| R2 | `payment.provider` must reflect the provider used for that row (`paddle` \| `ziina`). |
-| R3 | Checkout API returns a **discriminated** payload so the client can render the correct UX without inferring from optional fields. |
-| R4 | **Webhooks are authoritative** for `paid` / `failed` (and refund completion if applicable). Success/cancel **redirect** is for UX only. |
-| R5 | Ziina webhooks: verify **HMAC** (`X-Hmac-Signature` vs raw body) when `ZIINA_WEBHOOK_SECRET` is set; optionally enforce **sender IP allowlist** per Ziina docs (document trade-off: strict IP vs proxies). |
-| R6 | Idempotency: reuse **`payment_event`** unique **`payload_hash`**; Ziina events need a stable hash of canonical body (raw string preferred). |
-| R7 | Admin refund: branch on **`payment.provider`**; Ziina path calls Ziina refund API with correct ids/amount/currency; audit trail preserved. |
+| R1 | Exactly one active provider per deployment; misconfiguration fails fast with clear logs and **documented HTTP + envelope** (see **§5.4**). |
+| R2 | `payment.provider` reflects the provider used (`paddle` \| `ziina`). |
+| R3 | Checkout success response uses existing **`jsonOk` envelope**; **`data`** is a **discriminated union** by `provider` (see **§5.1**). |
+| R4 | Webhooks are authoritative for **paid** / **failed** capture paths. Success/cancel **redirect** is UX-only. |
+| R5 | Ziina webhooks: verify per **§5.2**; optional IP allowlist per env. |
+| R6 | Idempotency: **`payment_event.payload_hash`** input per **§5.3** (never hash normalized-only JSON without provider binding). |
+| R7 | Admin refund: branch on `payment.provider`; Ziina calls Ziina refund API. **Refund terminal semantics:** see **§7.6** (baseline vs unified). |
+| R8 | **Provider integrity:** after resolving `payment`, `payment.provider` must equal **route-implied or event-carried** provider; else **reject** (401/400), **no state change**, **audit log** (see **§7.2.2**). Optional strengthener: metadata/quote match when provider supports it. |
+| R9 | **Correlation:** Paddle keeps custom metadata on checkout. Ziina **create payment intent** OpenAPI (current docs) does **not** expose arbitrary metadata fields — correlation is **`provider_checkout_id` === intent id** from the **signed** webhook, plus amount/currency checks against `payment` / `price_quote`. If Ziina adds metadata later, implementation may add optional equality checks. If product later requires tamper-evident return URLs, add a **signed return token** or short-lived **nonce** row (out of v1 unless required). |
+| R10 | **Checkout cancel:** in-app cancel API behavior must be documented relative to Ziina abandon path (**§7.3.1**). |
+
+### 5.1 Checkout API wire format (`jsonOk` / `jsonError`)
+
+Clients today assume an envelope, not raw provider payloads.
+
+**Success (`jsonOk`):** `data` MUST be exactly one of:
+
+```ts
+// Discriminated by `provider` — implement as TS union + runtime narrow
+type CheckoutData =
+  | { provider: "paddle"; transactionId: string; clientToken: string }
+  | { provider: "ziina"; redirectUrl: string };
+```
+
+**Errors:** On validation/access errors, unchanged `jsonError` behavior. When **`PAYMENT_PROVIDER=ziina`** but Ziina is misconfigured (missing token, bad base URL) or Ziina returns a **non-retryable** client error after DB work:
+
+- Define **`error.code`** (e.g. `PAYMENT_PROVIDER_ERROR`, `ZIINA_UNAVAILABLE`) and HTTP status (**502** upstream, **503** if intentionally unavailable).
+- **If provider HTTP runs inside the same DB transaction as today:** Drizzle rolls back the whole transaction — **`checkout_state`** and **`payment`** rows are not left half-applied (current Paddle pattern).
+- **If implementation later splits phases** (see **§7.2.1**): spec requires explicit **cleanup** of `checkout_created` / `checkout_state` stale rows and user-visible retry — document in implementation plan.
+
+### 5.2 Ziina webhook HMAC (R5) — implementation contract
+
+Per [Ziina webhooks](https://docs.ziina.com/api-reference/webhook/index): when a **secret** was configured at webhook registration, requests include **`X-Hmac-Signature`**: **hex-encoded HMAC-SHA256** of the **raw request body** (same bytes verified as received; no JSON re-serialization).
+
+| Environment | `ZIINA_WEBHOOK_SECRET` set | Behavior |
+|-------------|----------------------------|----------|
+| Production | Yes | Reject request if HMAC invalid (**401**). |
+| Production | No | **Fail closed:** reject (**401** or **503** with code `webhook_secret_not_configured`) — no application of events. |
+| Development | No | May allow **dev-only** bypass behind explicit `ZIINA_WEBHOOK_ALLOW_UNSIGNED=true` (default false); log **CRITICAL** if used. |
+
+**Replay:** If Ziina documents timestamped signatures or replay windows, implementation MUST follow vendor spec; if not documented, log **`providerEventId`** / hash dedupe provides idempotency only (not replay attack prevention beyond duplicate delivery).
+
+**IP allowlist:** Optional; if enabled, reject non-allowlisted source IPs per Ziina docs. Document proxy caveats.
+
+### 5.3 `payment_event.payload_hash` (R6)
+
+**Rule:** `payload_hash = sha256_hex(provider + "\n" + rawBody)` where **`provider`** is the literal string `paddle` or `ziina`, and **`rawBody`** is the exact webhook POST body string used for signature verification.
+
+- **Paddle migration note:** today’s Paddle path hashes **raw body only**; when touching this code, **migrate** existing dedupe to the prefixed form **or** keep Paddle on legacy hash until a one-time migration job — **implementation plan must pick one** and avoid dual-write ambiguity. Recommended: **new prefix rule for both** from env-switch release, accept that old Paddle events are not re-playable for dedupe collision (negligible if deploy is coordinated).
+
+**Forbidden:** hashing only a normalized JSON projection for storage (collision risk across providers).
+
+### 5.4 Misconfiguration matrix (R1)
+
+| `PAYMENT_PROVIDER` | Missing vars | Checkout | Webhook receiver |
+|--------------------|--------------|----------|-------------------|
+| `paddle` | `PADDLE_API_KEY` / client token | Fail with `jsonError`, no partial DB commit if tx includes provider call | Paddle route returns 401 on bad signature |
+| `ziina` | `ZIINA_ACCESS_TOKEN` | Fail fast `jsonError` with code | Ziina route fail closed per §5.2 |
 
 ## 6. Approaches considered
 
 ### A. Thin router + fat providers (recommended)
 
-**Idea:** `getActivePaymentConfig()` reads env. `lib/payments/registry.ts` (or similar) exports `getCheckoutAdapter()`, `getWebhookVerifierForPath()`, `getRefundAdapter()`. Each provider module implements the same **narrow internal contracts** (checkout session result, normalized webhook event, refund call). Shared module **`applyPaymentWebhookEvent(tx, normalized)`** contains the state machine currently embedded in `webhooks/paddle/route.ts`.
+**Idea:** `getActivePaymentConfig()` reads env. `lib/payments/registry.ts` (or similar) exports checkout creation, **per-route** webhook verify+normalize (see below), refund initiation. Shared **`applyPaymentWebhookEvent(tx, normalized)`** owns the state machine now in `webhooks/paddle/route.ts`.
 
-**Pros:** Clear boundaries; Paddle file shrinks to verification + normalize + delegate; Ziina adds parallel files; tests can target `applyPaymentWebhookEvent` with synthetic normalized events.  
-**Cons:** One refactor pass to extract shared webhook logic from the existing Paddle route.
+**Webhook routing:** **No** single URL that dynamically picks provider from payload — **two routes** (`/api/webhooks/paddle`, `/api/webhooks/ziina`) so misconfiguration cannot route a Paddle payload through Ziina verification.
 
-### B. Single `PaymentProvider` interface forcing all methods
+**Pros:** Clear boundaries; tests target `applyPaymentWebhookEvent` with synthetic normalized events.  
+**Cons:** One refactor to extract shared webhook logic.
 
-**Idea:** Expand one interface until Paddle and Ziina both satisfy it.
+### B. Single `PaymentProvider` mega-interface — not recommended
 
-**Pros:** One type name.  
-**Cons:** Leaky abstractions (`verifyWebhookSignature` signatures differ); fake “unified” event types obscure real payloads; harder to maintain.
+### C. Duplicated Ziina webhook handler — not recommended
 
-### C. Separate top-level API routes only (no shared webhook core)
-
-**Idea:** Copy-paste Paddle webhook state machine into `webhooks/ziina`.
-
-**Pros:** Fast first paste.  
-**Cons:** Drift risk; duplicate bugs; violates DRY for invariants (amount check, resurrection guard, doc retention).
-
-**Recommendation:** **A** — thin registry + shared `applyPaymentWebhookEvent` + provider-specific verify/normalize.
+**Recommendation:** **A**.
 
 ## 7. Architecture
 
 ### 7.1 Configuration
 
-- **`PAYMENT_PROVIDER`**: `paddle` (default for backward compatibility) \| `ziina`.
-- **Paddle:** existing `PADDLE_*`, `NEXT_PUBLIC_PADDLE_*` unchanged.
-- **Ziina:** `ZIINA_API_BASE_URL` default `https://api-v2.ziina.com/api`, `ZIINA_ACCESS_TOKEN`, optional `ZIINA_WEBHOOK_SECRET`, optional `ZIINA_ENFORCE_WEBHOOK_IP_ALLOWLIST=true|false` (default **false** in dev, **true** in prod recommendation documented with caveat for unusual proxies).
+- **`PAYMENT_PROVIDER`**: `paddle` (default) \| `ziina`.
+- **Paddle:** existing env vars unchanged.
+- **Ziina:** `ZIINA_API_BASE_URL` (default `https://api-v2.ziina.com/api`), `ZIINA_ACCESS_TOKEN`, `ZIINA_WEBHOOK_SECRET` (required prod), `ZIINA_ENFORCE_WEBHOOK_IP_ALLOWLIST`, `ZIINA_TEST_MODE` → `test: true` on intents/refunds as applicable.
 
-Startup / first request: if `PAYMENT_PROVIDER=ziina`, require Ziina vars; do not require Paddle keys unless provider is paddle (document matrix in Netlify/env docs when implemented).
+Pin **base URL** in config; document upgrade path when Ziina versions API.
 
 ### 7.2 Checkout (`POST /api/checkout`)
 
 1. Resolve active provider from env.
-2. Unchanged: access control, checkout lock, pricing, `price_quote` insert, `payment` insert with **`provider`** = active value, `status: checkout_created`, `application.payment_status` update.
-3. Call **provider checkout module**:
-   - **Paddle:** current `paddleAdapter.createCheckout` → store `provider_checkout_id` = transaction id → response `{ provider: "paddle", transactionId, clientToken }`.
-   - **Ziina:** `POST /payment_intent` with `amount` (minor units), `currency_code`, `message` (e.g. service label), **`success_url` / `cancel_url` / `failure_url`** built from `NEXT_PUBLIC_APP_URL` (or dedicated `APP_BASE_URL`) + routes that include **`{PAYMENT_INTENT_ID}`** substitution per Ziina docs, **`test: true`** when env says sandbox/test. Store **`provider_checkout_id`** = payment intent **id** from response. Return **`{ provider: "ziina", redirectUrl }`** (from `redirect_url` field).
+2. Access control, pricing resolution, unchanged business rules.
+3. DB: checkout lock, `price_quote`, `payment` (`provider` = active), `application.payment_status` / `checkout_state` per existing semantics.
 
-**Idempotency / retries:** Ziina supports **`operation_id`** (client UUID); generate once per payment row attempt and send on create to safe retries (specify in implementation plan).
+#### 7.2.1 External provider call and DB transaction boundary
+
+**Today:** Paddle `createCheckout` runs **inside** the same transaction as inserts. **Implications:** long lock hold if Paddle/Ziina is slow; on provider **timeout**, entire transaction rolls back — **good** for consistency, **bad** for lock contention.
+
+**Spec options (implementation plan picks one and documents):**
+
+1. **Status quo (v1 acceptable):** Keep single transaction including provider HTTP; document **SLO** (“provider create must complete within N s”) and monitor; ensure HTTP client timeouts < DB statement timeout to avoid orphan locks.
+2. **Two-phase (recommended for scale follow-up):** Short tx: lock + quote + `payment` in **`creating_provider_session`** (new status) or reuse `checkout_created` with explicit sub-state; commit; call provider; second tx attaches `provider_checkout_id` or marks **`failed`** with cleanup. Requires **stale cleanup** job or TTL for abandoned rows.
+
+**Rollback:** If Ziina returns 5xx **inside** single-tx model, full rollback — no `payment` row. If two-phase, spec **§5.1** error semantics + user retry copy.
+
+#### 7.2.2 Provider integrity (R8)
+
+Immediately after resolving `payment` row (by ids / fallback rules):
+
+1. Assert **`payment.provider === normalizedEvent.provider`** where `normalizedEvent.provider` is set from the **route** (`paddle` \| `ziina`), not from client-supplied webhook JSON alone.
+2. On mismatch: **log + audit**, return **401** or **400**; **no** `payment` / `application` updates.
+
+Optional: if provider payload includes structured metadata and Ziina gains parity, assert **`priceQuoteId` / `applicationId`** match the `payment` row.
 
 ### 7.3 Client UX
 
-- **`PaddleCheckoutButton`:** unchanged when response is `paddle` (overlay).
-- **Ziina:** new small component or branch inside apply panel: on `ziina`, **`window.location.href = redirectUrl`** (or link with same effect). **`onOverlayClosed`-style refetch:** on return pages (`/apply/.../payment-return` or reuse submitted flow with query params), refetch application; **do not** treat query param “success” as paid—only **`paymentStatus === "paid"`** from API after webhook.
+- **Paddle:** unchanged overlay when `data.provider === "paddle"`.
+- **Ziina:** redirect to `data.redirectUrl`; return pages poll API (**§7.4**).
 
-### 7.4 Return URLs (Ziina redirect)
+#### 7.3.1 Cancel and abandon
 
-- Dedicated **return routes** (exact paths in implementation plan): e.g. success and cancel pages under `apply/applications/[id]/…` that show “Processing…” vs “Cancelled / try again” and poll **`GET`** application until paid or timeout.
-- URLs must be **https** in production for Ziina.
+- **In-app cancel:** `POST /api/applications/[id]/checkout-cancel` today marks **`checkout_created`** payment / resets checkout — keep for Ziina when user returns **without** paying and hits cancel in your UI.
+- **Ziina host abandon:** user may never hit your cancel API. **Authoritative** release of `checkout_created` / failure semantics comes from **Ziina webhook** terminal statuses (`failed`, `canceled`, etc.) mapped like Paddle **`transaction.payment_failed`**. Cancel URL on the intent is **UX alignment** (show “cancelled”) — **not** required to duplicate server state if webhook will follow; if webhook is delayed, return page polling (**§7.4**) still applies.
+
+### 7.4 Return URLs and polling contract (Ziina)
+
+- Routes under `apply/applications/[id]/…` (exact paths in implementation plan): **success** and **cancel/failure** interstitials.
+- **Polling:** `GET` the same application fetch API the draft panel uses (or dedicated lightweight status endpoint if added), interval with **backoff** (e.g. 1s → 2s cap), **max duration** (e.g. 120s product-tunable), then show **timeout** copy (“Payment may still be processing; refresh or contact support”) with **support** path.
+- **Terminal states:** `paid` → redirect to success UX; `failed` / back to unpaid per product rules; still **`checkout_created`** at timeout → message + link back to draft.
+- **Auth:** same rules as application workspace (**401** → sign-in / guest token flow) — do not leak payment existence across tenants.
 
 ### 7.5 Webhooks
 
-- **Keep** `POST /api/webhooks/paddle` for Paddle (URL stable for existing dashboard config).
-- **Add** `POST /api/webhooks/ziina` for Ziina.
-- **Pipeline:** raw body string → **provider verify** (Paddle signature vs Ziina HMAC + optional IP) → **provider parse** → **`NormalizedPaymentWebhookEvent`** (internal type: at minimum `provider`, `kind` e.g. `payment_completed` \| `payment_failed`, `providerPaymentId`, `amountMinor`, `currency`, `metadata` map with `applicationId` when available) → **payload hash** → insert `payment_event` ON CONFLICT DO NOTHING → if new, **`applyPaymentWebhookEvent(tx, event)`**.
+- **`POST /api/webhooks/paddle`** — unchanged URL for Paddle dashboard.
+- **`POST /api/webhooks/ziina`** — new; register in Ziina with secret for HMAC.
 
-**Ziina event:** `payment_intent.status.updated` — map `completed` → same branch as Paddle `transaction.paid` / `transaction.completed`; map terminal failure/cancel to align with `transaction.payment_failed` behavior (`payment.failed`, release `checkout_state`, etc.). Parser must read Ziina **`data`** shape from docs and extract intent id + status + amounts for verification against `payment` row.
+**Pipeline:** raw body → verify (per provider) → parse → **`NormalizedPaymentWebhookEvent`** → **`payload_hash`** per **§5.3** → `payment_event` INSERT ON CONFLICT DO NOTHING → **`applyPaymentWebhookEvent`**.
 
-### 7.6 Refunds
+**Ziina:** `payment_intent.status.updated` → map **`completed`** to same **idempotent** paid path as Paddle (`UPDATE ... WHERE status != paid` pattern); terminal failure/cancel → failed path; **no double-fire** of doc retention / first-paid audit (mirror Paddle’s `paymentBecamePaid` / `applicationBecamePaid` logic).
 
-- Admin refund route: after loading latest `payment` for application, **`switch (payment.provider)`**:
-  - `paddle`: existing Paddle adjustment flow.
-  - `ziina`: call Ziina **`POST /refund`** with persisted ids; handle **`refund.status.updated`** if Ziina sends it (webhook index mentions it); align `payment_status` / `payment.status` with existing refund semantics.
+### 7.6 Refunds — baseline vs unified (R7)
+
+**Baseline (honest, shippable v1):**
+
+- **Paddle:** keep **current** behavior: admin initiates refund → **`refund_pending`** (or current status); **do not** claim webhook-driven `refunded` unless implementation adds **`refund.completed`** handling on the same release.
+- **Ziina:** admin calls Ziina refund API; same **`refund_pending`** semantics as Paddle unless webhooks are implemented **for both** providers in the same change.
+
+**Elevated option (single follow-up epic):** Unified **`refund.completed` / `refund.status.updated`** handling moves **`refund_pending` → `refunded`** (or final) with shared audit — **must** include **Paddle** parity, not Ziina-only.
+
+The implementation plan must **name** which baseline is in scope for the first merge.
 
 ### 7.7 Observability and safety
 
-- Structured logs: `payment_provider`, `application_id`, `payment_id`, never log secrets or full PAN.
-- Amount mismatch: same **`admin_attention_required`** pattern as Paddle webhook when event amount ≠ quoted `payment.amount`.
-- Ziina test mode: env **`ZIINA_TEST_MODE=true`** maps to `test: true` on intent (and refund if applicable).
+- Structured logs: `payment_provider`, `application_id`, `payment_id`, `request_id` (from `x-request-id` or generated), `rawEventType`, never secrets/PAN.
+- **Counters / metrics (P1, logs-only v1 OK):** webhook verify failures, dedupe hits (`onConflictDoNothing`), amount mismatch, no payment row, **provider mismatch** (R8).
+- Amount mismatch: preserve **`admin_attention_required`** pattern.
+- **Alignment with `visa-payments-paddle`:** provider IDs and secrets are **server-only**; client receives only **`transactionId` + `clientToken` (Paddle)** or **`redirectUrl` (Ziina)** — never raw Ziina tokens on the client.
 
 ## 8. Data model
 
-- **No migration required for v1** if `payment.provider` remains free text and both `paddle` / `ziina` values are allowed.
-- **Optional follow-up:** check constraint or enum in DB for `provider` — out of scope unless desired for safety.
+- **`payment.provider`** text: `paddle` \| `ziina`.
+- **`provider_operation_id` (recommended v1 for Ziina):** nullable **`text`** column on **`payment`** storing the UUID sent as Ziina **`operation_id`** for safe retries. **Avoid** “UUIDv5 derived from CUID `payment.id`” — awkward and error-prone. Checkout today uses **`createId()`** for payment PK; keep PK as-is, store operation id separately.
 
-**Field mapping (Ziina):**
+**Ziina column mapping:**
 
-| Column | Ziina meaning |
-|--------|----------------|
-| `provider_checkout_id` | Payment intent id (created) |
-| `provider_transaction_id` | Set when webhook confirms paid to same intent id (or Ziina’s canonical “completed” id if distinct — **implementation must verify API response** and document actual field) |
+| Column | Ziina |
+|--------|--------|
+| `provider_checkout_id` | Payment intent id |
+| `provider_transaction_id` | Set on paid confirmation (intent id or distinct id per API — verify against webhook payload) |
+| `provider_operation_id` | Client UUID sent to Ziina create intent |
 
 ## 9. Security
 
-- Secrets only on server; Ziina token never exposed to client.
-- Webhook: HMAC verification mandatory when secret configured; document IP allowlist option and operational risk of spoofing if disabled.
-- CSRF: return pages are GET; do not trust them for state changes.
+- Server-only secrets.
+- **§5.2** HMAC fail-closed rules.
+- **§7.2.2** provider binding.
+- Return pages are **GET** — never trust query string alone for financial state; **poll** server state.
 
 ## 10. Testing strategy
 
-- Unit tests: `applyPaymentWebhookEvent` with normalized events (paid, failed, duplicate payload, amount mismatch, cancelled application).
-- Integration (manual or e2e): Ziina test intent + test cards / `test: true` per Ziina docs.
-- Regression: full Paddle checkout path unchanged when `PAYMENT_PROVIDER=paddle`.
+- Unit: `applyPaymentWebhookEvent` — paid, failed, duplicate hash, amount mismatch, cancelled application resurrection, **provider mismatch**.
+- Contract tests: normalized event parser fixtures per provider.
+- Manual / e2e: Ziina test mode; Paddle regression with `PAYMENT_PROVIDER=paddle`.
 
 ## 11. Rollout
 
-1. Ship refactor extracting shared webhook core + registry with **only Paddle** wired (no behavior change).
-2. Add Ziina modules + webhook route behind env; staging uses `ziina` + test mode.
-3. Production: set env per region/product line as needed.
+1. Extract `applyPaymentWebhookEvent` + hash rule migration decision (**§5.3**); Paddle-only, no behavior change.
+2. Add Ziina checkout + webhook + return pages behind env.
+3. Prod env matrix (**§16**).
 
 ## 12. Risks and mitigations
 
 | Risk | Mitigation |
 |------|------------|
-| Drift between two webhook parsers | Normalized event type + single `applyPaymentWebhookEvent`. |
-| User lands on success URL before webhook | Return page polls API; copy explains delay. |
-| Wrong env in production | Document env matrix; optional startup assert. |
-| Ziina webhook body shape changes | Version lock in client; monitor Ziina changelog; log raw type field. |
+| Webhook misrouted to wrong row | R8 + intent id lookup + signed payload |
+| Lock held too long | §7.2.1 monitoring; two-phase follow-up |
+| User trusts success URL | Polling + copy |
+| Hash collision across providers | §5.3 prefixed hash |
 
-## 13. Open decisions (defaults suggested)
+## 13. Resolved / remaining product decisions
 
-1. **IP allowlist for Ziina webhooks:** Recommended **on** in production if infrastructure uses predictable egress; **off** in local dev. Document in env template.
-2. **Exact return routes:** Product choice between minimal “return to draft panel” vs dedicated interstitial pages — **default:** dedicated **`…/checkout/return`** and **`…/checkout/cancel`** under apply for clear polling UX.
-3. **`operation_id` for Ziina:** **Default:** generate UUID per `payment` row at insert, store in memory for request only vs persist — **persist** on `payment` table only if a column exists; if not, pass deterministic hash from `payment.id` as UUID v5 — **prefer** storing `ziina_operation_id` in `payment` only if migration acceptable; else use **`payment.id`** mapped to UUID format or add nullable column `provider_operation_id` in a small migration. **Spec recommendation:** add optional **`provider_operation_id`** text column for clean Ziina retries (implementation plan decides).
+1. **IP allowlist:** prod recommendation remains **on** when egress is known; **off** local; document in **§16**.
+2. **Return routes:** default dedicated **`…/checkout/return`** and **`…/checkout/cancel`** (or single page with query) — finalize paths in implementation plan.
+3. **`operation_id`:** **v1 default = add `provider_operation_id` column** + populate on Ziina checkout (see **§8**).
+
+## 14. Approval checklist
+
+- [ ] Product: redirect-away UX + return page polling + **timeout copy** approved.
+- [ ] Legal / product: what users see on Ziina-hosted pages acceptable.
+- [ ] Security: **R8** provider mismatch + **§5.2** fail-closed signed off.
+- [ ] Data: **`provider_operation_id` migration** approved (or explicit waiver with single-flight checkout only).
+- [ ] Support: delayed webhook / polling timeout playbook.
+- [ ] Engineering: **refund baseline** for first merge explicitly chosen (**§7.6**).
+- [ ] Ops: **§16** env matrix + webhook registration checklist.
+
+**Next step after approval:** **writing-plans** → `docs/superpowers/plans/2026-04-24-payment-provider-env-switch-implementation.md`.
+
+## 15. Implementation readiness (review fold-in)
+
+This section captures **P0 / P1** items so engineering does not rediscover them in PR review.
+
+**P0 — contract and safety**
+
+- Provider integrity **§7.2.2**; correlation **R9** (no fake metadata on Ziina create today).
+- Wire envelope **§5.1**; misconfig **§5.4**.
+- Transaction boundary and rollback **§7.2.1** + **§5.1** errors.
+- Payload hash input **§5.3** (prefix + raw body).
+- HMAC details **§5.2**.
+- Cancel vs abandon **§7.3.1**.
+- Refund honesty **§7.6**.
+
+**P1 — robustness**
+
+- **`NormalizedPaymentWebhookEvent` required fields:** `provider`, `kind`, `providerPaymentId`, `amountMinor`, `currency`, `metadata` (may be empty for Ziina v1), **`rawEventType`**, optional **`providerEventId`** for `payment_event.provider_event_id` (null if absent).
+- **Idempotent paid transition:** same `UPDATE ... WHERE ne(status, 'paid')` pattern for Ziina completed events as Paddle paid/completed.
+- **Polling:** **§7.4** backoff, max duration, terminals, auth.
+- **Metrics:** **§7.7** minimal log counters.
+
+**P2 — ops docs (same release or immediately after)**
+
+- **§16** env matrix, webhook URL checklist, CS copy for delayed confirmation, API base URL pinning.
+
+## 16. Ops and documentation
+
+| Layer | `PAYMENT_PROVIDER=paddle` | `PAYMENT_PROVIDER=ziina` |
+|-------|---------------------------|---------------------------|
+| Dev | Paddle sandbox keys | Ziina test token + `ZIINA_TEST_MODE` |
+| Staging | Per env | Ziina staging/test + webhook secret |
+| Prod | Live Paddle | Live Ziina + **required** webhook secret + IP allowlist decision |
+
+**Webhook checklist**
+
+- Paddle: existing URL unchanged.
+- Ziina: register **`/api/webhooks/ziina`**, store secret, verify HMAC in staging before prod.
+
+**Health / on-call**
+
+- “Paid delayed”: return page polling + CS script referencing `requestId` in logs.
+
+**Versioning**
+
+- Pin `ZIINA_API_BASE_URL`; document bump process when Ziina ships API revisions.
 
 ---
 
-## 14. Approval checklist (brainstorming gate)
+## Minor consistency (repo vs types)
 
-- [ ] Product accepts redirect-away UX for Ziina v1.
-- [ ] Engineering accepts refactor extracting shared webhook application logic.
-- [ ] Ops accepts env matrix and Ziina webhook URL registration (`/api/webhooks/ziina`).
-
-**Next step after approval:** Use **writing-plans** skill to produce `docs/superpowers/plans/2026-04-24-payment-provider-env-switch-implementation.md` with file-by-file tasks.
+- **`refund.completed`:** listed in `ParsedWebhookEvent` union but **not** applied in `webhooks/paddle/route.ts` — treat as **future** or implement under **§7.6** unified option; do not document as “handled” today.
