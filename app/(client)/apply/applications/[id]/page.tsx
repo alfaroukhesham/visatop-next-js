@@ -22,12 +22,15 @@ export default async function ApplyApplicationPage({ params }: Props) {
     redirect(`/apply/applications/${encodeURIComponent(id)}/submitted`);
   }
   return (
-    <div className="space-y-8">
-      <header className="space-y-2">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">Draft workspace</h1>
-        <p className="text-muted-foreground max-w-prose text-sm leading-relaxed">
-          Load your application, optionally register document metadata after upload, then queue extraction.
-          Totals shown at catalog selection remain server-side; this screen is for integration checks.
+    <div className="theme-client-rise mx-auto max-w-4xl space-y-10">
+      <header className="space-y-3">
+        <p className="text-secondary text-xs font-semibold uppercase tracking-[0.2em]">Draft workspace</p>
+        <h1 className="font-heading text-foreground text-[clamp(1.65rem,3.5vw,2.35rem)] font-semibold leading-tight tracking-tight">
+          Documents, extraction &amp; payment
+        </h1>
+        <p className="text-muted-foreground max-w-[62ch] text-base leading-relaxed">
+          Upload required files, run passport extraction, complete your profile, then pay when the checklist
+          shows ready. Your catalog quote stays locked server-side.
         </p>
       </header>
       <ApplicationDraftPanel applicationId={id} />

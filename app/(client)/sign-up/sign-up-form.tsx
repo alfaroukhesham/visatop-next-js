@@ -1,22 +1,25 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
 import { authClient } from "@/lib/auth-client";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { ClientAppHeader } from "@/components/client/client-app-header";
 import {
-  Card,
+  ClientButton,
+  ClientButtonLink,
+} from "@/components/client/client-button";
+import {
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
+  ClientCard,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@/components/client/client-card";
+import { ClientField } from "@/components/client/client-field";
+import { ClientInput } from "@/components/client/client-input";
+import { ClientHeroPanel } from "@/components/client/client-surface";
 
 type SocialProvider = "google" | "facebook";
 
@@ -61,154 +64,144 @@ export function SignUpForm({ facebookEnabled }: { facebookEnabled: boolean }) {
     facebookEnabled ? "sm:grid-cols-2" : "sm:grid-cols-1 max-w-xs sm:max-w-none";
 
   return (
-    <div className="bg-background text-foreground flex flex-1 flex-col">
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-4">
-          <div className="min-w-0">
-            <p className="text-muted-foreground text-xs tracking-wider uppercase">
-              Visa &amp; residency services
-            </p>
-            <Link href="/" className="font-heading text-lg font-semibold tracking-tight">
-              Visatop
-            </Link>
-          </div>
-          <Link
-            href="/admin/sign-in"
-            className={cn(buttonVariants({ variant: "ghost" }), "h-8 px-3 text-xs")}
-          >
-            Admin
-          </Link>
-        </div>
-      </header>
+    <div className="text-foreground flex min-h-0 flex-1 flex-col">
+      <ClientAppHeader />
 
-      <main className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-8 px-6 py-10 lg:grid-cols-2 lg:gap-12 lg:py-16">
-        <section className="space-y-6">
-          <div className="space-y-3">
-            <h1 className="font-heading text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-              Create your account.
+      <main className="relative flex flex-1 flex-col overflow-hidden">
+        <div
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_70%_at_10%_20%,rgba(252,205,100,0.2),transparent_55%)]"
+          aria-hidden
+        />
+        <div className="relative mx-auto grid w-full max-w-[calc(1300px+3rem)] flex-1 items-center gap-10 px-5 py-12 lg:grid-cols-[1fr_420px] lg:gap-16 lg:py-20 xl:gap-24">
+          <div className="space-y-2 lg:hidden">
+            <h1 className="font-heading text-2xl font-semibold tracking-tight text-[#012031]">Create your account</h1>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              Secure portal for documents, payments, and status.
+            </p>
+          </div>
+          <ClientHeroPanel className="border-secondary/20 hidden bg-gradient-to-br from-white via-[#F2F9FC] to-white p-8 shadow-[0_12px_48px_rgba(1,32,49,0.08)] lg:block lg:p-10">
+            <p className="text-secondary text-xs font-semibold uppercase tracking-[0.2em]">Create account</p>
+            <h1 className="font-heading mt-4 text-[clamp(1.85rem,3.5vw,3rem)] font-semibold leading-[1.1] tracking-tight text-[#012031]">
+              Your portal for every document and update.
             </h1>
-            <p className="text-muted-foreground text-base leading-relaxed sm:text-lg max-w-[65ch]">
-              Get a secure portal where you can upload documents, review details,
-              and track progress.
+            <p className="text-muted-foreground mt-5 max-w-[48ch] text-lg leading-relaxed">
+              One secure place to upload files, review extracted fields, pay, and track status — built for
+              clarity under pressure.
             </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="border-border bg-card border p-4">
-              <p className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
-                Built for clarity
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-                Everything left-aligned and easy to scan — even on busy days.
-              </p>
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              <div className="border-secondary/15 rounded-[5px] border bg-white/60 p-4">
+                <p className="text-secondary text-[10px] font-bold uppercase tracking-widest">Built for clarity</p>
+                <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+                  Left-aligned rhythm and generous spacing for busy days.
+                </p>
+              </div>
+              <div className="border-secondary/15 rounded-[5px] border bg-white/60 p-4">
+                <p className="text-secondary text-[10px] font-bold uppercase tracking-widest">Translation-ready</p>
+                <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+                  Layouts stay resilient with longer labels and RTL.
+                </p>
+              </div>
             </div>
-            <div className="border-border bg-card border p-4">
-              <p className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
-                Translation-ready
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-                Layouts are resilient to longer labels and RTL languages.
-              </p>
-            </div>
-          </div>
-        </section>
+          </ClientHeroPanel>
 
-        <aside className="lg:justify-self-end w-full">
-          <Card className="w-full max-w-md border-border">
-            <CardHeader className="border-b border-border">
-              <CardTitle>Create account</CardTitle>
-              <CardDescription>Sign up with email and password.</CardDescription>
-            </CardHeader>
-            <form onSubmit={onSubmit}>
-              <CardContent className="space-y-4 py-6">
-                {error ? (
-                  <p className="text-destructive text-sm" role="alert">
-                    {error}
-                  </p>
-                ) : null}
-                <div className={cn("grid gap-2", socialCols)}>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={pending}
-                    onClick={() => signInWith("google")}
-                  >
-                    Continue with Google
-                  </Button>
-                  {facebookEnabled ? (
-                    <Button
+          <div className="w-full">
+            <ClientCard className="border-secondary/20 overflow-hidden shadow-[0_16px_48px_rgba(1,32,49,0.1)]">
+              <CardHeader className="border-b border-border bg-muted/30 pb-6">
+                <CardTitle className="font-heading text-2xl text-[#012031]">Create account</CardTitle>
+                <CardDescription className="text-muted-foreground text-base">
+                  Email and password, or continue with a provider.
+                </CardDescription>
+              </CardHeader>
+              <form onSubmit={onSubmit}>
+                <CardContent className="space-y-4 py-6">
+                  {error ? (
+                    <p className="text-error text-sm" role="alert">
+                      {error}
+                    </p>
+                  ) : null}
+                  <div className={`grid gap-2 ${socialCols}`}>
+                    <ClientButton
                       type="button"
                       variant="outline"
                       disabled={pending}
-                      onClick={() => signInWith("facebook")}
+                      onClick={() => signInWith("google")}
                     >
-                      Continue with Facebook
-                    </Button>
-                  ) : null}
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="h-px flex-1 bg-border" />
-                  <span className="text-muted-foreground text-xs">or</span>
-                  <div className="h-px flex-1 bg-border" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    autoComplete="name"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
+                      Continue with Google
+                    </ClientButton>
+                    {facebookEnabled ? (
+                      <ClientButton
+                        type="button"
+                        variant="outline"
+                        disabled={pending}
+                        onClick={() => signInWith("facebook")}
+                      >
+                        Continue with Facebook
+                      </ClientButton>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="bg-border h-px flex-1" />
+                    <span className="text-muted-foreground text-xs">or</span>
+                    <div className="bg-border h-px flex-1" />
+                  </div>
+                  <ClientField id="name" label="Name">
+                    <ClientInput
+                      id="name"
+                      autoComplete="name"
+                      required
+                      value={name}
+                      invalid={!!error}
+                      onChange={(e) => setName(e.target.value)}
+                    />
+                  </ClientField>
+                  <ClientField id="email" label="Email">
+                    <ClientInput
+                      id="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      invalid={!!error}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </ClientField>
+                  <ClientField
                     id="password"
-                    type="password"
-                    autoComplete="new-password"
-                    required
-                    minLength={8}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                  <p className="text-muted-foreground text-xs leading-relaxed">
-                    Use at least 8 characters.
-                  </p>
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-                <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-                  {pending ? "Creating…" : "Create account"}
-                </Button>
-                <Link
-                  href={
-                    searchParams.get("callbackUrl")
-                      ? `/sign-in?callbackUrl=${encodeURIComponent(searchParams.get("callbackUrl")!)}`
-                      : "/sign-in"
-                  }
-                  className={cn(
-                    buttonVariants({ variant: "ghost" }),
-                    "w-full sm:w-auto inline-flex items-center justify-center",
-                  )}
-                >
-                  I already have an account
-                </Link>
-              </CardFooter>
-            </form>
-          </Card>
-        </aside>
+                    label="Password"
+                    hint="Use at least 8 characters."
+                  >
+                    <ClientInput
+                      id="password"
+                      type="password"
+                      autoComplete="new-password"
+                      required
+                      minLength={8}
+                      value={password}
+                      invalid={!!error}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </ClientField>
+                </CardContent>
+                <CardFooter className="flex flex-col gap-3 border-t border-border bg-muted/20 pt-6 sm:flex-row sm:justify-between">
+                  <ClientButton type="submit" brand="cta" disabled={pending} className="w-full sm:w-auto">
+                    {pending ? "Creating…" : "Create account"}
+                  </ClientButton>
+                  <ClientButtonLink
+                    href={
+                      searchParams.get("callbackUrl")
+                        ? `/sign-in?callbackUrl=${encodeURIComponent(searchParams.get("callbackUrl")!)}`
+                        : "/sign-in"
+                    }
+                    brand="white"
+                    className="w-full sm:w-auto"
+                  >
+                    I already have an account
+                  </ClientButtonLink>
+                </CardFooter>
+              </form>
+            </ClientCard>
+          </div>
+        </div>
       </main>
     </div>
   );

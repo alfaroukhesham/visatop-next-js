@@ -14,6 +14,137 @@ import { ArrowLeft, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
+type AuditRow = {
+  id: string;
+  action: string;
+  actorId: string | null;
+  actorType: string;
+  createdAt: Date;
+  _derived?: boolean;
+  beforeJson?: string | null;
+  afterJson?: string | null;
+};
+
+function tryParseJson(v: string | null | undefined): unknown {
+  if (!v) return null;
+  try {
+    return JSON.parse(v);
+  } catch {
+    return null;
+  }
+}
+
+function titleCaseFromSnake(v: string): string {
+  return v
+    .split("_")
+    .filter(Boolean)
+    .map((p) => p.slice(0, 1).toUpperCase() + p.slice(1))
+    .join(" ");
+}
+
+function formatDocType(v: unknown): string {
+  if (typeof v !== "string" || !v) return "unknown";
+  // Common internal doc keys -> human labels
+  switch (v) {
+    case "passport_copy":
+      return "Passport copy";
+    case "personal_photo":
+      return "Personal photo";
+    default:
+      return titleCaseFromSnake(v);
+  }
+}
+
+function formatAuditActionTitle(action: string): string {
+  switch (action) {
+    case "payment_marked_paid":
+      return "Payment confirmed (marked as paid)";
+    case "payment_amount_mismatch_flagged":
+      return "Payment amount mismatch (flagged for review)";
+    case "payment_paid_docs_retain_failed_flagged":
+      return "Post-payment document retention failed (flagged)";
+    case "payment_paid_but_application_cancelled":
+      return "Paid event received for a cancelled application (flagged)";
+    case "payment_failed":
+      return "Payment failed";
+    case "guest_application_linked":
+      return "Guest application linked to user account";
+    case "application.attention.cleared":
+      return "Admin cleared the attention flag";
+    default:
+      if (action.startsWith("application.transition.")) return "Application status changed";
+      if (action.startsWith("application.profile.")) return "Applicant profile updated";
+      if (action.startsWith("catalog.")) return "Catalog updated";
+      if (action.startsWith("pricing.")) return "Pricing updated";
+      if (action.startsWith("settings.")) return "Settings updated";
+      return action;
+  }
+}
+
+function formatAuditActionHint(log: AuditRow): string | null {
+  switch (log.action) {
+    case "payment_marked_paid":
+      return "Webhook confirmed payment; app moved into processing.";
+    case "payment_amount_mismatch_flagged":
+      return "Paid, but the amount didn’t match what we expected. Check pricing + payment records.";
+    case "payment_paid_docs_retain_failed_flagged":
+      return "Paid, but required docs could not be retained. Check document storage + required docs.";
+    case "payment_paid_but_application_cancelled":
+      return "Paid webhook arrived after cancellation. Validate intent and decide next steps.";
+    case "payment_failed":
+      return "Paddle reported payment failure. Customer may need to retry checkout.";
+    case "guest_application_linked":
+      return "User account now owns this previously-guest application.";
+    default:
+      return null;
+  }
+}
+
+function formatAuditInlineDetails(log: AuditRow): string | null {
+  const after = tryParseJson(log.afterJson) as Record<string, unknown> | null;
+  if (!after) return null;
+
+  if (log.action === "payment_amount_mismatch_flagged") {
+    const expected = after.expectedAmountMinor ?? after.paymentAmountMinor;
+    const received = after.receivedAmountMinor ?? after.eventAmountMinor;
+    if (typeof expected === "number" && typeof received === "number") {
+      return `Expected ${expected} (minor units), received ${received}.`;
+    }
+  }
+
+  if (log.action === "payment_paid_docs_retain_failed_flagged") {
+    // Newer audit rows store `retention` payload from retainRequiredDocuments().
+    const { retention } = after;
+    if (retention && typeof retention === "object") {
+      const r = retention as Record<string, unknown>;
+      const { reason } = r;
+      const missing = Array.isArray(r.missing) ? r.missing : null;
+
+      if (reason === "MISSING_REQUIRED_DOCUMENT" && missing?.length) {
+        return `Missing required: ${missing.map(formatDocType).join(", ")}.`;
+      }
+      if (reason === "BLOB_BYTES_MISSING" && missing?.length) {
+        return `Uploaded, but bytes missing for: ${missing.map(formatDocType).join(", ")}.`;
+      }
+      if (typeof reason === "string" && reason) {
+        return `Retention failed: ${titleCaseFromSnake(reason)}.`;
+      }
+    }
+
+    // Backwards compat: older rows may have `error`.
+    const err = after.error;
+    if (typeof err === "string" && err) return `Error: ${err}`;
+    if (err && typeof err === "object") return "Error: see details JSON";
+  }
+
+  if (log.action === "payment_marked_paid") {
+    const { transactionId: txn, providerEventId } = after;
+    if (typeof txn === "string" && txn) return `Transaction: ${txn}${typeof providerEventId === "string" ? ` · Event: ${providerEventId}` : ""}`;
+  }
+
+  return null;
+}
+
 function StatusBadge({ label, value }: { label: string; value: string }) {
   const isGood = ["paid", "in_progress", "completed", "fulfilled", "retained"].includes(value);
   const isWarn = ["checkout_created", "refund_pending", "pending"].includes(value);
@@ -99,6 +230,44 @@ export default async function AdminApplicationDetailPage({
   );
 
   if (!app) notFound();
+
+  const derivedAuditLogs: AuditRow[] = [
+    {
+      id: `legacy:${app.id}:created`,
+      action: "legacy.application_created",
+      actorType: "system",
+      actorId: app.userId ?? null,
+      createdAt: app.createdAt,
+      _derived: true,
+    },
+    ...(app.paymentStatus === "paid"
+      ? [
+          {
+            id: `legacy:${app.id}:paid`,
+            action: "legacy.payment_paid",
+            actorType: "system",
+            actorId: app.userId ?? null,
+            createdAt: payments[0]?.createdAt ?? app.updatedAt ?? app.createdAt,
+            _derived: true,
+          } satisfies AuditRow,
+        ]
+      : []),
+    ...(app.adminAttentionRequired
+      ? [
+          {
+            id: `legacy:${app.id}:attention`,
+            action: "legacy.admin_attention_required",
+            actorType: "system",
+            actorId: null,
+            createdAt: app.updatedAt ?? app.createdAt,
+            _derived: true,
+          } satisfies AuditRow,
+        ]
+      : []),
+  ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+  const shownAuditLogs: AuditRow[] =
+    auditLogs.length > 0 ? (auditLogs as unknown as AuditRow[]) : derivedAuditLogs;
 
   return (
     <AdminShell
@@ -232,7 +401,7 @@ export default async function AdminApplicationDetailPage({
           <h2 className="font-heading text-base font-semibold tracking-tight border-l-4 border-primary pl-3">
             Audit Log
           </h2>
-          {auditLogs.length === 0 ? (
+          {shownAuditLogs.length === 0 ? (
             <p className="text-muted-foreground text-sm italic">No audit entries.</p>
           ) : (
             <div className="overflow-x-auto">
@@ -246,9 +415,31 @@ export default async function AdminApplicationDetailPage({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {auditLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-muted/40">
-                      <td className="px-4 py-2 font-mono text-xs">{log.action}</td>
+                  {shownAuditLogs.map((log) => (
+                    <tr
+                      key={log.id}
+                      className={cn("hover:bg-muted/40", log._derived ? "opacity-80" : "")}
+                      title={log._derived ? "Derived from legacy records (not an audit_log row)" : undefined}
+                    >
+                      <td className="px-4 py-2 font-mono text-xs">
+                        <div className="space-y-1">
+                          <div className="font-sans text-xs font-semibold text-foreground">
+                            {log._derived ? (
+                              <span className="text-muted-foreground mr-2 font-mono">derived</span>
+                            ) : null}
+                            {formatAuditActionTitle(log.action)}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground">
+                            <span className="font-mono">{log.action}</span>
+                          </div>
+                          {formatAuditActionHint(log) ? (
+                            <div className="text-[11px] text-muted-foreground">{formatAuditActionHint(log)}</div>
+                          ) : null}
+                          {formatAuditInlineDetails(log) ? (
+                            <div className="text-[11px] text-muted-foreground">{formatAuditInlineDetails(log)}</div>
+                          ) : null}
+                        </div>
+                      </td>
                       <td className="px-4 py-2 text-xs text-muted-foreground">
                         {log.actorId?.slice(0, 8) ?? "—"}
                       </td>

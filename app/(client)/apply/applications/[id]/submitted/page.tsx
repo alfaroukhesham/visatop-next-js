@@ -24,7 +24,7 @@ export default async function SubmittedApplicationPage({ params }: Props) {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">
+    <div className="theme-client-rise mx-auto w-full max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
       <SubmittedApplicationClient applicationId={id} initialApplication={toPublicApplication(row)} />
     </div>
   );

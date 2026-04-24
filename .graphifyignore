@@ -1,0 +1,7 @@
+# graphify: do not index generated outputs or heavy deps
+graphify-out/
+node_modules/
+.next/
+out/
+coverage/
+.git/

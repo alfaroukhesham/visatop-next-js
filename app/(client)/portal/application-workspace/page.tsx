@@ -4,9 +4,8 @@ import { headers } from "next/headers";
 import { desc, eq } from "drizzle-orm";
 import { ArrowLeft, FileText } from "lucide-react";
 import { auth } from "@/lib/auth";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { buttonVariants } from "@/components/ui/button-variants";
-import { cn } from "@/lib/utils";
+import { ClientButtonLink } from "@/components/client/client-button";
+import { ClientSurface } from "@/components/client/client-surface";
 import { withClientDbActor } from "@/lib/db/actor-context";
 import { application } from "@/lib/db/schema";
 
@@ -60,27 +59,24 @@ export default async function ApplicationWorkspacePage({
     }
 
     return (
-      <div className="bg-background text-foreground flex min-h-screen flex-col">
-        <header className="border-border bg-card sticky top-0 z-10 flex h-16 w-full shrink-0 items-center border-b px-6">
+      <div className="text-foreground flex min-h-[calc(100vh-4rem)] flex-1 flex-col">
+        <header className="sticky top-0 z-10 flex h-14 w-full shrink-0 items-center border-b border-[#224D64]/12 bg-white/90 px-5 shadow-sm backdrop-blur-md sm:px-8">
           <Link
             href="/portal/client-dashboard"
-            className="text-foreground hover:text-primary mr-6 flex items-center gap-2 text-sm font-medium transition-colors"
+            className="text-secondary hover:text-foreground mr-5 flex items-center gap-2 text-sm font-semibold transition-colors duration-200"
           >
-            <ArrowLeft className="size-5" />
+            <ArrowLeft className="size-5 shrink-0" aria-hidden />
             <span className="hidden sm:inline">Dashboard</span>
           </Link>
-          <div className="bg-border mx-2 hidden h-6 w-px sm:block" />
-          <div className="flex items-center gap-3">
-            <FileText className="text-primary size-5" aria-hidden />
-            <h1 className="font-heading text-lg font-semibold tracking-tight">Application workspace</h1>
-          </div>
-          <div className="ml-auto">
-            <ThemeToggle />
+          <div className="bg-border mx-1 hidden h-6 w-px sm:block" />
+          <div className="flex min-w-0 items-center gap-2">
+            <FileText className="text-primary size-5 shrink-0" aria-hidden />
+            <h1 className="font-heading truncate text-lg font-semibold text-[#012031]">Application workspace</h1>
           </div>
         </header>
 
-        <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-12">
-          <p className="text-muted-foreground text-sm">
+        <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-5 py-10 sm:px-8">
+          <p className="text-muted-foreground text-sm leading-relaxed">
             Applications linked to your account. The highlighted row matches your deep link.
           </p>
           <ul className="space-y-3">
@@ -90,12 +86,11 @@ export default async function ApplicationWorkspacePage({
                 <li key={a.id}>
                   <Link
                     href={`/apply/applications/${encodeURIComponent(a.id)}`}
-                    className={cn(
-                      "border-border bg-card block border p-4 transition-colors",
-                      active && "border-l-primary border-l-4",
-                    )}
+                    className={`border-border bg-card block rounded-[10px] border p-4 shadow-sm transition-all duration-200 hover:border-secondary/30 hover:shadow-[0_8px_28px_rgba(1,32,49,0.08)] ${
+                      active ? "border-l-[3px] border-l-[#FCCD64] ring-1 ring-[#FCCD64]/20" : ""
+                    }`}
                   >
-                    <p className="font-mono text-xs">{a.referenceNumber ?? a.id.slice(0, 8)}</p>
+                    <p className="font-mono text-xs text-[#012031]">{a.referenceNumber ?? a.id.slice(0, 8)}</p>
                     <p className="text-muted-foreground mt-1 text-xs">
                       {a.applicationStatus.replaceAll("_", " ")} · {a.paymentStatus}
                     </p>
@@ -110,60 +105,49 @@ export default async function ApplicationWorkspacePage({
   }
 
   return (
-    <div className="bg-background text-foreground flex min-h-screen flex-col">
-      <header className="border-border bg-card sticky top-0 z-10 flex h-16 w-full shrink-0 items-center border-b px-6">
+    <div className="text-foreground flex min-h-[calc(100vh-4rem)] flex-1 flex-col">
+      <header className="sticky top-0 z-10 flex h-14 w-full shrink-0 items-center border-b border-[#224D64]/12 bg-white/90 px-5 shadow-sm backdrop-blur-md sm:px-8">
         <Link
           href="/portal/client-dashboard"
-          className="text-foreground hover:text-primary mr-6 flex items-center gap-2 text-sm font-medium transition-colors"
+          className="text-secondary hover:text-foreground mr-5 flex items-center gap-2 text-sm font-semibold transition-colors duration-200"
         >
-          <ArrowLeft className="size-5" />
+          <ArrowLeft className="size-5 shrink-0" aria-hidden />
           <span className="hidden sm:inline">Dashboard</span>
         </Link>
-        <div className="bg-border mx-2 hidden h-6 w-px sm:block" />
-        <div className="flex items-center gap-3">
-          <FileText className="text-primary size-5" aria-hidden />
-          <h1 className="font-heading text-lg font-semibold tracking-tight">Application workspace</h1>
-        </div>
-        <div className="ml-auto">
-          <ThemeToggle />
+        <div className="bg-border mx-1 hidden h-6 w-px sm:block" />
+        <div className="flex items-center gap-2">
+          <FileText className="text-primary size-5 shrink-0" aria-hidden />
+          <h1 className="font-heading text-lg font-semibold text-[#012031]">Application workspace</h1>
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-6 py-12">
-        <div className="border-border bg-card border border-l-4 border-l-primary p-6">
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-5 py-10 sm:px-8">
+        <ClientSurface
+          preset="highlight"
+          className="border-secondary/20 from-card to-muted/25 border-l-[3px] border-l-[#FCCD64] bg-gradient-to-br p-6 shadow-[0_8px_32px_rgba(1,32,49,0.07)]"
+        >
           <p className="text-muted-foreground text-sm leading-relaxed">
             The interactive draft flow lives under{" "}
             <span className="text-foreground font-mono text-xs">/apply</span> so guests are not blocked by
             portal authentication. Use{" "}
-            <Link href="/apply/start" className="text-link font-medium">
+            <Link href="/apply/start" className="text-link font-semibold hover:underline">
               Start application
             </Link>{" "}
             to create a draft, then manage documents and extraction on the next screen.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link
-              href="/apply/start"
-              className={cn(
-                buttonVariants({ variant: "default" }),
-                "rounded-none px-6 font-semibold",
-              )}
-            >
+            <ClientButtonLink href="/apply/start" brand="cta" className="px-6 font-semibold">
               Open start flow
-            </Link>
-            <Link
-              href="/portal"
-              className={cn(buttonVariants({ variant: "outline" }), "rounded-none px-6 font-semibold")}
-            >
-              Portal overview
-            </Link>
+            </ClientButtonLink>
+            <ClientButtonLink href="/portal" brand="white" className="px-6 font-semibold">
+              Portal hub
+            </ClientButtonLink>
           </div>
-        </div>
-        <p className="text-muted-foreground text-center text-xs">
+        </ClientSurface>
+        <p className="text-muted-foreground text-center text-xs leading-relaxed">
           Deep-link with{" "}
-          <span className="font-mono">
-            ?applicationId=&lt;uuid&gt;
-          </span>{" "}
-          to jump straight into the live workspace.
+          <span className="font-mono text-[11px] text-foreground">?applicationId=&lt;uuid&gt;</span> to jump
+          straight into the live workspace.
         </p>
       </main>
     </div>

@@ -45,6 +45,9 @@ next-env.d.ts
 # local Stitch HTML cache (development only)
 .stitch-cache/
 
+# graphify generated graph + Obsidian export (regenerate with /graphify or graphify CLI)
+graphify-out/
+
 # Agent / local AI bundles (do not commit)
 .agents/
 skills-lock.json

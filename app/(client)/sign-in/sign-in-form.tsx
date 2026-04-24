@@ -1,22 +1,25 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
 import { authClient } from "@/lib/auth-client";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { ClientAppHeader } from "@/components/client/client-app-header";
 import {
-  Card,
+  ClientButton,
+  ClientButtonLink,
+} from "@/components/client/client-button";
+import {
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
+  ClientCard,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@/components/client/client-card";
+import { ClientField } from "@/components/client/client-field";
+import { ClientInput } from "@/components/client/client-input";
+import { ClientHeroPanel } from "@/components/client/client-surface";
 
 type SocialProvider = "google" | "facebook";
 
@@ -68,131 +71,121 @@ export function SignInForm({ facebookEnabled }: { facebookEnabled: boolean }) {
     facebookEnabled ? "sm:grid-cols-2" : "sm:grid-cols-1 max-w-xs sm:max-w-none";
 
   return (
-    <div className="bg-background text-foreground flex flex-1 flex-col">
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-6 py-4">
-          <div className="min-w-0">
-            <p className="text-muted-foreground text-xs tracking-wider uppercase">
-              Visa &amp; residency services
-            </p>
-            <Link href="/" className="font-heading text-lg font-semibold tracking-tight">
-              Visatop
-            </Link>
-          </div>
-          <Link
-            href="/admin/sign-in"
-            className={cn(buttonVariants({ variant: "ghost" }), "h-8 px-3 text-xs")}
-          >
-            Admin
-          </Link>
-        </div>
-      </header>
+    <div className="text-foreground flex min-h-0 flex-1 flex-col">
+      <ClientAppHeader />
 
-      <main className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-8 px-6 py-10 lg:grid-cols-2 lg:gap-12 lg:py-16">
-        <section className="space-y-6">
-          <div className="space-y-3">
-            <h1 className="font-heading text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
-              Welcome back.
+      <main className="relative flex flex-1 flex-col overflow-hidden">
+        <div
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_70%_at_10%_20%,rgba(252,205,100,0.2),transparent_55%)]"
+          aria-hidden
+        />
+        <div className="relative mx-auto grid w-full max-w-[calc(1300px+3rem)] flex-1 items-center gap-10 px-5 py-12 lg:grid-cols-[1fr_420px] lg:gap-16 lg:py-20 xl:gap-24">
+          <div className="space-y-2 lg:hidden">
+            <h1 className="font-heading text-2xl font-semibold tracking-tight text-[#012031]">Welcome back</h1>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              Sign in to pick up your application where you left off.
+            </p>
+          </div>
+          <ClientHeroPanel className="border-secondary/20 hidden bg-gradient-to-br from-white via-[#F2F9FC] to-white p-8 shadow-[0_12px_48px_rgba(1,32,49,0.08)] lg:block lg:p-10">
+            <p className="text-secondary text-xs font-semibold uppercase tracking-[0.2em]">Welcome back</p>
+            <h1 className="font-heading mt-4 text-[clamp(1.85rem,3.5vw,3rem)] font-semibold leading-[1.1] tracking-tight text-[#012031]">
+              Continue your application in one place.
             </h1>
-            <p className="text-muted-foreground text-base leading-relaxed sm:text-lg max-w-[65ch]">
-              Sign in to continue your application and see your current status.
+            <p className="text-muted-foreground mt-5 max-w-[48ch] text-lg leading-relaxed">
+              Documents, payments, and status — structured so you always know what happens next.
             </p>
-          </div>
+            <div className="border-secondary/15 bg-secondary/5 mt-8 rounded-[5px] border p-4">
+              <p className="text-secondary text-[10px] font-bold uppercase tracking-widest">Tip</p>
+              <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
+                Use the same email you registered with. For admin access, use{" "}
+                <span className="text-foreground font-semibold">Admin</span> in the top bar.
+              </p>
+            </div>
+          </ClientHeroPanel>
 
-          <div className="border-border bg-card border p-4">
-            <p className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
-              Tip
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-              Use the same email you used to create your account. If you were given
-              an admin account, use the <span className="font-medium">Admin</span>{" "}
-              switch in the header.
-            </p>
-          </div>
-        </section>
-
-        <aside className="lg:justify-self-end w-full">
-          <Card className="w-full max-w-md border-border">
-            <CardHeader className="border-b border-border">
-              <CardTitle>Sign in</CardTitle>
-              <CardDescription>Use your email and password.</CardDescription>
-            </CardHeader>
-            <form onSubmit={onSubmit}>
-              <CardContent className="space-y-4 py-6">
-                {error ? (
-                  <p className="text-destructive text-sm" role="alert">
-                    {error}
-                  </p>
-                ) : null}
-                <div className={cn("grid gap-2", socialCols)}>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={pending}
-                    onClick={() => signInWith("google")}
-                  >
-                    Continue with Google
-                  </Button>
-                  {facebookEnabled ? (
-                    <Button
+          <div className="w-full lg:max-w-none">
+            <ClientCard className="border-secondary/20 overflow-hidden shadow-[0_16px_48px_rgba(1,32,49,0.1)]">
+              <CardHeader className="border-b border-border bg-muted/30 pb-6">
+                <CardTitle className="font-heading text-2xl text-[#012031]">Sign in</CardTitle>
+                <CardDescription className="text-muted-foreground text-base">
+                  Email, password, or a social provider.
+                </CardDescription>
+              </CardHeader>
+              <form onSubmit={onSubmit}>
+                <CardContent className="space-y-4 py-6">
+                  {error ? (
+                    <p className="text-error text-sm" role="alert">
+                      {error}
+                    </p>
+                  ) : null}
+                  <div className={`grid gap-2 ${socialCols}`}>
+                    <ClientButton
                       type="button"
                       variant="outline"
                       disabled={pending}
-                      onClick={() => signInWith("facebook")}
+                      onClick={() => signInWith("google")}
                     >
-                      Continue with Facebook
-                    </Button>
-                  ) : null}
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="h-px flex-1 bg-border" />
-                  <span className="text-muted-foreground text-xs">or</span>
-                  <div className="h-px flex-1 bg-border" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
-              </CardContent>
-              <CardFooter className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-                <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-                  {pending ? "Signing in…" : "Sign in"}
-                </Button>
-                <Link
-                  href={
-                    searchParams.get("callbackUrl")
-                      ? `/sign-up?callbackUrl=${encodeURIComponent(searchParams.get("callbackUrl")!)}`
-                      : "/sign-up"
-                  }
-                  className={cn(
-                    buttonVariants({ variant: "ghost" }),
-                    "w-full sm:w-auto inline-flex items-center justify-center",
-                  )}
-                >
-                  Create account
-                </Link>
-              </CardFooter>
-            </form>
-          </Card>
-        </aside>
+                      Continue with Google
+                    </ClientButton>
+                    {facebookEnabled ? (
+                      <ClientButton
+                        type="button"
+                        variant="outline"
+                        disabled={pending}
+                        onClick={() => signInWith("facebook")}
+                      >
+                        Continue with Facebook
+                      </ClientButton>
+                    ) : null}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="bg-border h-px flex-1" />
+                    <span className="text-muted-foreground text-xs">or</span>
+                    <div className="bg-border h-px flex-1" />
+                  </div>
+                  <ClientField id="email" label="Email">
+                    <ClientInput
+                      id="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      value={email}
+                      invalid={!!error}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </ClientField>
+                  <ClientField id="password" label="Password">
+                    <ClientInput
+                      id="password"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                      value={password}
+                      invalid={!!error}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </ClientField>
+                </CardContent>
+                <CardFooter className="flex flex-col gap-3 border-t border-border bg-muted/20 pt-6 sm:flex-row sm:justify-between">
+                  <ClientButton type="submit" brand="cta" disabled={pending} className="w-full sm:w-auto">
+                    {pending ? "Signing in…" : "Sign in"}
+                  </ClientButton>
+                  <ClientButtonLink
+                    href={
+                      searchParams.get("callbackUrl")
+                        ? `/sign-up?callbackUrl=${encodeURIComponent(searchParams.get("callbackUrl")!)}`
+                        : "/sign-up"
+                    }
+                    brand="white"
+                    className="w-full sm:w-auto"
+                  >
+                    Create account
+                  </ClientButtonLink>
+                </CardFooter>
+              </form>
+            </ClientCard>
+          </div>
+        </div>
       </main>
     </div>
   );

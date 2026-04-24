@@ -7,7 +7,7 @@ import {
   initializePaddle,
   type PaddleEventData,
 } from "@paddle/paddle-js";
-import { Button } from "@/components/ui/button";
+import { ClientButton } from "@/components/client/client-button";
 import { Loader2 } from "lucide-react";
 
 interface PaddleCheckoutButtonProps {
@@ -57,7 +57,11 @@ export function PaddleCheckoutButton({
       });
 
       const raw = await res.text();
-      let envelope: { ok?: boolean; data?: { transactionId?: string; clientToken?: string }; error?: { message?: string } };
+      let envelope: {
+        ok?: boolean;
+        data?: { transactionId?: string; clientToken?: string };
+        error?: { message?: string };
+      };
       try {
         envelope = raw ? (JSON.parse(raw) as typeof envelope) : {};
       } catch {
@@ -149,10 +153,10 @@ export function PaddleCheckoutButton({
   };
 
   return (
-    <Button
+    <ClientButton
       onClick={handleCheckout}
       disabled={disabled || isInitializing}
-      className="w-full font-bold h-12 text-lg shadow-lg hover:shadow-xl transition-all"
+      className="h-12 w-full text-lg font-bold shadow-lg transition-all hover:shadow-xl"
     >
       {isInitializing ? (
         <>
@@ -162,6 +166,6 @@ export function PaddleCheckoutButton({
       ) : (
         "Pay & Submit Application"
       )}
-    </Button>
+    </ClientButton>
   );
 }

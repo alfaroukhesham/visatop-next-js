@@ -3,14 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { buttonVariants } from "@/components/ui/button-variants";
+import { ClientButton, ClientButtonLink } from "@/components/client/client-button";
 import { authClient } from "@/lib/auth-client";
 import { GUEST_LINK_EVENTS, trackGuestLinkEvent } from "@/lib/analytics/guest-link-events";
 import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
 import { buildPostLinkLocation } from "@/lib/applications/post-link-redirect";
 import type { PublicApplication } from "@/lib/applications/public-application";
-import { cn } from "@/lib/utils";
 
 type Props = {
   applicationId: string;
@@ -109,10 +107,10 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
           : res.status === 503
             ? "Account linking is temporarily unavailable. Try again later."
             : res.status === 404
-            ? "We could not verify this application on this device. Use the same browser where you paid, or check your connection."
-            : detail === "INTENT_REQUIRES_PAID" || detail === "LINK_NOT_ALLOWED"
-              ? "This application cannot be linked in its current state. Refresh the page or contact support."
-              : base;
+              ? "We could not verify this application on this device. Use the same browser where you paid, or check your connection."
+              : detail === "INTENT_REQUIRES_PAID" || detail === "LINK_NOT_ALLOWED"
+                ? "This application cannot be linked in its current state. Refresh the page or contact support."
+                : base;
       return { ok: false, message: msg };
     }
     const idToStore = json.data.applicationId;
@@ -190,12 +188,18 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
   const signedIn = Boolean(session?.user?.id);
 
   return (
-    <div className="space-y-8">
-      <header className="space-y-2">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl" tabIndex={-1}>
+    <div className="space-y-10">
+      <header className="space-y-3">
+        <p className="text-secondary text-xs font-semibold uppercase tracking-[0.2em]">
+          {paid ? "Complete" : confirming ? "Processing" : "Status"}
+        </p>
+        <h1
+          className="font-heading text-foreground text-[clamp(1.65rem,3.5vw,2.25rem)] font-semibold leading-tight tracking-tight"
+          tabIndex={-1}
+        >
           {paid ? "Payment received" : confirming ? "Confirming payment" : "Application update"}
         </h1>
-        <p className="text-muted-foreground max-w-prose text-sm leading-relaxed" role="status" aria-live="polite">
+        <p className="text-muted-foreground max-w-prose text-base leading-relaxed" role="status" aria-live="polite">
           {paid && (
             <>
               Your payment is confirmed. Reference{" "}
@@ -213,92 +217,108 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
         </p>
       </header>
 
+      {showGuestLink ? (
+        <section className="space-y-5 rounded-[12px] border border-border border-l-[3px] border-l-primary bg-card p-6 shadow-[0_4px_24px_rgba(0,0,0,0.07)]">
+          <div className="space-y-2">
+            <p className="text-secondary text-[11px] font-bold uppercase tracking-[0.2em]">Stay in control</p>
+            <h2 className="font-heading text-xl font-semibold tracking-tight text-[#012031] sm:text-2xl">
+              Save this application to your account
+            </h2>
+          </div>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            {signedIn
+              ? "You are signed in. Attach this paid application to your profile on this device so it appears in your portal alongside anything else you start later."
+              : "You paid as a guest—great. Creating a free account (or signing in) on this same device lets us attach this paid application to your profile so you can open it from the portal, get updates on any device after linking, and start the next visa without hunting through email."}
+          </p>
+          {!signedIn ? (
+            <ul className="text-muted-foreground list-inside list-disc space-y-1.5 border-y border-border py-4 text-sm leading-relaxed">
+              <li>One place for status, documents, and messages</li>
+              <li>Pick up on a new phone or laptop after you link once</li>
+              <li>Faster checkout the next time you apply</li>
+            </ul>
+          ) : null}
+          {linkActionError ? (
+            <p className="text-error text-sm leading-relaxed" role="alert">
+              {linkActionError}
+            </p>
+          ) : null}
+          {!sessionPending && signedIn ? (
+            <ClientButton
+              type="button"
+              brand="cta"
+              disabled={authBusy}
+              onClick={() => void attachWhileSignedIn()}
+            >
+              {authBusy ? "Attaching…" : "Attach to my account"}
+            </ClientButton>
+          ) : (
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <ClientButton
+                type="button"
+                brand="cta"
+                disabled={authBusy || sessionPending}
+                onClick={() => void goAuth("sign-up")}
+              >
+                {authBusy ? "Working…" : "Create account"}
+              </ClientButton>
+              <ClientButton
+                type="button"
+                variant="outline"
+                brand="white"
+                disabled={authBusy || sessionPending}
+                onClick={() => void goAuth("sign-in")}
+              >
+                {authBusy ? "Working…" : "I already have an account"}
+              </ClientButton>
+            </div>
+          )}
+        </section>
+      ) : null}
+
       {app.adminAttentionRequired && paid && (
-        <div className="border-border bg-muted/40 text-muted-foreground rounded-none border p-4 text-sm">
+        <div className="rounded-[12px] border border-border bg-muted/50 p-4 text-sm text-muted-foreground leading-relaxed shadow-sm">
           We&apos;re reviewing your file. You can still continue below; our team may reach out if anything is
           unclear.
         </div>
       )}
 
       {confirming && terminal && (
-        <div className="border-border bg-card flex flex-col gap-3 rounded-none border p-4">
+        <div className="flex flex-col gap-4 rounded-[12px] border border-border bg-card p-5 shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
           <p className="text-sm font-medium">We&apos;re still confirming your payment</p>
-          <Button type="button" variant="outline" className="rounded-none self-start" onClick={() => void load()}>
+          <ClientButton
+            type="button"
+            variant="outline"
+            className="self-start font-medium"
+            onClick={() => void load()}
+          >
             Refresh status
-          </Button>
+          </ClientButton>
           <Link href="/help" className="text-link text-sm font-medium">
             Contact support
           </Link>
         </div>
       )}
 
-      {showGuestLink && (
-        <section className="border-border bg-card space-y-4 rounded-none border p-6">
-          <h2 className="font-heading text-lg font-semibold">Save this application to your account</h2>
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            {signedIn
-              ? "You are signed in. Attach this paid application to your profile on this device."
-              : "Create an account or sign in on this device so we can attach this paid application to your profile."}
-          </p>
-          {linkActionError ? (
-            <p className="text-destructive text-sm leading-relaxed" role="alert">
-              {linkActionError}
-            </p>
-          ) : null}
-          {!sessionPending && signedIn ? (
-            <Button
-              type="button"
-              className="rounded-none"
-              disabled={authBusy}
-              onClick={() => void attachWhileSignedIn()}
-            >
-              {authBusy ? "Attaching…" : "Attach to my account"}
-            </Button>
-          ) : (
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button
-                type="button"
-                className="rounded-none"
-                disabled={authBusy || sessionPending}
-                onClick={() => void goAuth("sign-up")}
-              >
-                {authBusy ? "Working…" : "Create account"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-none"
-                disabled={authBusy || sessionPending}
-                onClick={() => void goAuth("sign-in")}
-              >
-                {authBusy ? "Working…" : "I already have an account"}
-              </Button>
-            </div>
-          )}
-        </section>
-      )}
-
       {paid && !app.isGuest && (
-        <section className="border-border bg-card rounded-none border p-6">
-          <h2 className="font-heading text-lg font-semibold">Next steps</h2>
-          <p className="text-muted-foreground mt-2 text-sm">
+        <section className="rounded-[12px] border border-border bg-card p-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
+          <h2 className="font-heading text-lg font-semibold text-[#012031]">Next steps</h2>
+          <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
             Open your workspace to continue with this application.
           </p>
-          <Link
-            href="/portal/application-workspace"
-            className={cn(buttonVariants({ variant: "default" }), "mt-4 inline-flex rounded-none")}
-          >
+          <ClientButtonLink href="/portal/application-workspace" brand="cta" className="mt-5 inline-flex">
             Open workspace
-          </Link>
+          </ClientButtonLink>
         </section>
       )}
 
-      <footer className="text-muted-foreground flex flex-wrap gap-4 text-xs">
-        <Link href="/apply/start" className="text-link">
+      <footer className="text-muted-foreground flex flex-wrap items-center justify-center gap-4 border-t border-border pt-8 text-xs sm:justify-start">
+        <Link href="/apply/start" className="text-link font-medium transition-colors hover:underline">
           Browse services
         </Link>
-        <span aria-hidden>·</span>
-        <Link href="/help" className="text-link">
+        <span aria-hidden className="text-border">
+          ·
+        </span>
+        <Link href="/help" className="text-link font-medium transition-colors hover:underline">
           Help
         </Link>
       </footer>

@@ -7,8 +7,8 @@ import {
   PaymentWebhookSchemaDeploymentError,
   requirePaymentEventPayloadHashDedupeIndex,
 } from "@/lib/payments/payment-webhook-db-guard";
-import { application, payment, paymentEvent } from "@/lib/db/schema";
-import { and, desc, eq, or } from "drizzle-orm";
+import { application, auditLog, payment, paymentEvent } from "@/lib/db/schema";
+import { and, desc, eq, ne, or } from "drizzle-orm";
 import { retainRequiredDocuments } from "@/lib/applications/retain-required-documents";
 import { createId } from "@paralleldrive/cuid2";
 import crypto from "crypto";
@@ -107,38 +107,148 @@ export async function POST(req: Request) {
         // 1. Resurrection Guard
         if (appRow.applicationStatus === "cancelled") {
           await tx.update(application).set({ adminAttentionRequired: true }).where(eq(application.id, appRow.id));
+          await tx.insert(auditLog).values({
+            actorType: "system",
+            actorId: null,
+            action: "payment_paid_but_application_cancelled",
+            entityType: "application",
+            entityId: appRow.id,
+            beforeJson: JSON.stringify({
+              applicationStatus: appRow.applicationStatus,
+              paymentStatus: appRow.paymentStatus,
+              adminAttentionRequired: appRow.adminAttentionRequired,
+            }),
+            afterJson: JSON.stringify({
+              providerEventId,
+              transactionId: event.transactionId ?? null,
+              paymentId: payRow.id,
+              paymentAmountMinor: Number(payRow.amount),
+              eventAmountMinor: event.amountMinor,
+              metadata: event.metadata ?? {},
+            }),
+          });
           return;
         }
 
         // 2. Amount verification
-        if (event.amountMinor !== Number(payRow.amount)) {
+        const amountMismatch = event.amountMinor !== Number(payRow.amount);
+        if (amountMismatch) {
           await tx.update(application).set({ adminAttentionRequired: true }).where(eq(application.id, appRow.id));
           // We still consider it paid to release locks, but flag it
+          await tx.insert(auditLog).values({
+            actorType: "system",
+            actorId: null,
+            action: "payment_amount_mismatch_flagged",
+            entityType: "application",
+            entityId: appRow.id,
+            beforeJson: JSON.stringify({
+              adminAttentionRequired: appRow.adminAttentionRequired,
+              expectedAmountMinor: Number(payRow.amount),
+            }),
+            afterJson: JSON.stringify({
+              providerEventId,
+              transactionId: event.transactionId ?? null,
+              paymentId: payRow.id,
+              expectedAmountMinor: Number(payRow.amount),
+              receivedAmountMinor: event.amountMinor,
+              metadata: event.metadata ?? {},
+            }),
+          });
         }
 
-        // 3. Mark paid and release checkout lock (persist txn id for support / refunds)
-        await tx
+        // 3. Mark paid + release checkout lock (atomic).
+        //
+        // Paddle can send `transaction.paid` and `transaction.completed` back-to-back, and they can
+        // be handled concurrently. Make the paid transition idempotent at the DB level so only
+        // one handler performs the "first paid" side effects (audit + doc retention).
+        const paymentBecamePaid = await tx
           .update(payment)
           .set({
             status: "paid",
             providerTransactionId: event.transactionId || payRow.providerTransactionId,
           })
-          .where(eq(payment.id, payRow.id));
-        await tx.update(application).set({
-          paymentStatus: "paid",
-          checkoutState: "none",
-          applicationStatus: "in_progress",
-          fulfillmentStatus: "automation_running"
-        }).where(eq(application.id, appRow.id));
+          .where(and(eq(payment.id, payRow.id), ne(payment.status, "paid")))
+          .returning({ id: payment.id });
 
-        // 4. Retain docs
-        const retainRes = await retainRequiredDocuments(tx, appRow.id);
-        if (!retainRes.ok) {
-          await tx.update(application).set({ adminAttentionRequired: true }).where(eq(application.id, appRow.id));
+        const applicationBecamePaid = await tx
+          .update(application)
+          .set({
+            paymentStatus: "paid",
+            checkoutState: "none",
+            applicationStatus: "in_progress",
+            fulfillmentStatus: "automation_running",
+          })
+          .where(and(eq(application.id, appRow.id), ne(application.paymentStatus, "paid")))
+          .returning({ id: application.id });
+
+        const isFirstPaidTransition = paymentBecamePaid.length > 0 || applicationBecamePaid.length > 0;
+
+        if (isFirstPaidTransition) {
+          await tx.insert(auditLog).values({
+            actorType: "system",
+            actorId: null,
+            action: "payment_marked_paid",
+            entityType: "application",
+            entityId: appRow.id,
+            beforeJson: JSON.stringify({
+              paymentStatus: appRow.paymentStatus,
+              checkoutState: appRow.checkoutState,
+              applicationStatus: appRow.applicationStatus,
+              fulfillmentStatus: appRow.fulfillmentStatus,
+              adminAttentionRequired: appRow.adminAttentionRequired,
+            }),
+            afterJson: JSON.stringify({
+              providerEventId,
+              transactionId: event.transactionId ?? null,
+              paymentId: payRow.id,
+              amountMismatch,
+              paymentAmountMinor: Number(payRow.amount),
+              eventAmountMinor: event.amountMinor,
+              metadata: event.metadata ?? {},
+            }),
+          });
+
+          // 4. Retain docs (spec: do not silently partially-paid; flag for ops)
+          const retainRes = await retainRequiredDocuments(tx, appRow.id);
+          if (!retainRes.ok) {
+            await tx.update(application).set({ adminAttentionRequired: true }).where(eq(application.id, appRow.id));
+            await tx.insert(auditLog).values({
+              actorType: "system",
+              actorId: null,
+              action: "payment_paid_docs_retain_failed_flagged",
+              entityType: "application",
+              entityId: appRow.id,
+              beforeJson: JSON.stringify({ adminAttentionRequired: appRow.adminAttentionRequired }),
+              afterJson: JSON.stringify({
+                providerEventId,
+                transactionId: event.transactionId ?? null,
+                paymentId: payRow.id,
+                retention: retainRes,
+              }),
+            });
+          }
         }
       } else if (event.type === "transaction.payment_failed") {
         await tx.update(payment).set({ status: "failed" }).where(eq(payment.id, payRow.id));
         await tx.update(application).set({ checkoutState: "none" }).where(eq(application.id, appRow.id));
+        await tx.insert(auditLog).values({
+          actorType: "system",
+          actorId: null,
+          action: "payment_failed",
+          entityType: "application",
+          entityId: appRow.id,
+          beforeJson: JSON.stringify({
+            paymentStatus: appRow.paymentStatus,
+            checkoutState: appRow.checkoutState,
+            adminAttentionRequired: appRow.adminAttentionRequired,
+          }),
+          afterJson: JSON.stringify({
+            providerEventId,
+            transactionId: event.transactionId ?? null,
+            paymentId: payRow.id,
+            metadata: event.metadata ?? {},
+          }),
+        });
       }
     });
   } catch (e) {

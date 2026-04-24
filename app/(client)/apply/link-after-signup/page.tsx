@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import {
   GUEST_LINK_EVENTS,
@@ -9,6 +10,7 @@ import {
   trackGuestLinkEvent,
 } from "@/lib/analytics/guest-link-events";
 import { buildPostLinkLocation } from "@/lib/applications/post-link-redirect";
+import { ClientSurface } from "@/components/client/client-surface";
 
 export default function LinkAfterSignupPage() {
   const router = useRouter();
@@ -98,31 +100,49 @@ export default function LinkAfterSignupPage() {
 
   if (isPending) {
     return (
-      <div className="bg-background text-muted-foreground flex min-h-[40vh] items-center justify-center px-6 text-sm">
-        Checking your session…
+      <div className="flex min-h-[min(60vh,520px)] flex-col items-center justify-center px-6 py-16">
+        <Loader2 className="text-secondary mb-4 size-10 animate-spin" aria-hidden />
+        <p className="text-muted-foreground text-sm font-medium" role="status">
+          Checking your session…
+        </p>
       </div>
     );
   }
 
   if (!session?.user?.id) {
     return (
-      <div className="bg-background mx-auto max-w-md px-6 py-16 text-center text-sm">
-        <p className="text-muted-foreground">You are not signed in. Start from your submitted page.</p>
+      <div className="mx-auto flex min-h-[min(50vh,420px)] max-w-md flex-col justify-center px-6 py-16">
+        <ClientSurface preset="panel" className="border-secondary/20 bg-white/90 p-8 text-center shadow-md">
+          <AlertCircle className="text-secondary mx-auto mb-4 size-10" aria-hidden />
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            You are not signed in. Return to your submitted confirmation page and choose{" "}
+            <span className="text-foreground font-semibold">Create account</span> or{" "}
+            <span className="text-foreground font-semibold">Sign in</span>.
+          </p>
+        </ClientSurface>
       </div>
     );
   }
 
   if (message) {
     return (
-      <div className="bg-background mx-auto max-w-md px-6 py-16 text-center text-sm">
-        <p className="text-muted-foreground">{message}</p>
+      <div className="mx-auto flex min-h-[min(50vh,420px)] max-w-lg flex-col justify-center px-6 py-16">
+        <ClientSurface preset="highlight" className="border-error/25 bg-white/95 p-8 text-center shadow-md">
+          <AlertCircle className="text-error mx-auto mb-4 size-10" aria-hidden />
+          <p className="text-foreground text-sm leading-relaxed" role="alert">
+            {message}
+          </p>
+        </ClientSurface>
       </div>
     );
   }
 
   return (
-    <div className="bg-background text-muted-foreground flex min-h-[40vh] items-center justify-center px-6 text-sm">
-      Linking your application…
+    <div className="flex min-h-[min(50vh,420px)] flex-col items-center justify-center px-6 py-16">
+      <Loader2 className="text-secondary mb-4 size-10 animate-spin" aria-hidden />
+      <p className="text-muted-foreground text-sm font-medium" role="status" aria-live="polite">
+        Linking your application…
+      </p>
     </div>
   );
 }

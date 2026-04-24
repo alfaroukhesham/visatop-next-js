@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { signOutAction } from "@/app/actions/auth";
-import { Button } from "@/components/ui/button";
+import { ClientPortalHeader } from "@/components/client/client-portal-header";
 
 export const metadata: Metadata = {
   title: "Portal",
@@ -31,15 +31,9 @@ export default async function PortalLayout({
   }
 
   return (
-    <>
-      <div className="fixed top-4 right-4 z-50">
-        <form action={signOutAction}>
-          <Button type="submit" variant="outline" size="sm">
-            Sign out
-          </Button>
-        </form>
-      </div>
+    <div className="text-foreground flex min-h-0 flex-1 flex-col">
+      <ClientPortalHeader signOutAction={signOutAction} />
       {children}
-    </>
+    </div>
   );
 }

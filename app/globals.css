@@ -42,6 +42,7 @@
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-link: var(--link);
+  --color-error: var(--error);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -71,6 +72,7 @@
   --accent: #e3eef9;
   --accent-foreground: #0066cc;
   --destructive: #c9190b;
+  --error: #c9190b;
   --border: #d2d2d2;
   --input: #d2d2d2;
   --ring: #0066cc;
@@ -109,6 +111,7 @@
   --accent: #1a2e45;
   --accent-foreground: #73bcf7;
   --destructive: #ff6b6b;
+  --error: #ff6b6b;
   --border: #4d5258;
   --input: #4d5258;
   --ring: #73bcf7;
@@ -128,6 +131,149 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #4d5258;
   --sidebar-ring: #73bcf7;
+}
+
+.theme-client {
+  color-scheme: light;
+  --background: #ffffff;
+  --foreground: #012031;
+  --card: #ffffff;
+  --card-foreground: #012031;
+  --popover: #ffffff;
+  --popover-foreground: #012031;
+  --primary: #fccd64;
+  --primary-foreground: #012031;
+  --secondary: #224d64;
+  --secondary-foreground: #ffffff;
+  --muted: #f2f9fc;
+  --muted-foreground: #375c6f;
+  --accent: #f2f9fc;
+  --accent-foreground: #224d64;
+  --border: #e7e7e7;
+  --input: #e1e1e1;
+  --ring: #92c0d7;
+  --link: #ce8e00;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --error: #ff6262;
+  --success: #3e8635;
+  --success-foreground: #ffffff;
+  --radius: 5px;
+  --chart-1: #224d64;
+  --chart-2: #7095a7;
+  --chart-3: #92c0d7;
+  --chart-4: #fccd64;
+  --chart-5: #375c6f;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #012031;
+  --sidebar-primary: #fccd64;
+  --sidebar-primary-foreground: #012031;
+  --sidebar-accent: #f2f9fc;
+  --sidebar-accent-foreground: #224d64;
+  --sidebar-border: #e7e7e7;
+  --sidebar-ring: #92c0d7;
+}
+
+.theme-client h1,
+.theme-client h2,
+.theme-client h3,
+.theme-client h4,
+.theme-client .font-heading {
+  font-family: var(--font-display), ui-serif, Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.theme-client h1 {
+  font-size: 2.25rem;
+  line-height: 1.15;
+}
+
+@media (min-width: 768px) {
+  .theme-client h1 {
+    font-size: 3.5rem;
+  }
+}
+
+.theme-client h2 {
+  font-size: 2.25rem;
+  line-height: 1.2;
+}
+
+.theme-client h3 {
+  font-size: 1.25rem;
+  line-height: 1.35;
+}
+
+.theme-client h4 {
+  font-size: 1.125rem;
+  line-height: 1.4;
+}
+
+/* Layered ink / gold / blue atmosphere — client routes only (use on pages under .theme-client) */
+.theme-client-page-canvas {
+  background-color: var(--muted);
+  background-image:
+    radial-gradient(ellipse 95% 60% at 10% -18%, color-mix(in srgb, var(--primary) 24%, transparent), transparent 52%),
+    linear-gradient(
+      108deg,
+      color-mix(in srgb, var(--foreground) 6%, transparent) 0%,
+      transparent 40%,
+      color-mix(in srgb, var(--secondary) 12%, transparent) 100%
+    ),
+    repeating-linear-gradient(
+      -14deg,
+      transparent 0 80px,
+      color-mix(in srgb, var(--foreground) 2.5%, transparent) 80px 81px
+    );
+}
+
+@keyframes theme-client-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .theme-client-rise {
+    animation: theme-client-rise 0.68s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .theme-client-rise-delay-1 {
+    animation-delay: 0.1s;
+  }
+
+  .theme-client-rise-delay-2 {
+    animation-delay: 0.2s;
+  }
+
+  .theme-client-rise-delay-3 {
+    animation-delay: 0.28s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-client-rise,
+  .theme-client-rise-delay-1,
+  .theme-client-rise-delay-2,
+  .theme-client-rise-delay-3 {
+    animation: none !important;
+  }
+}
+
+.theme-client ::selection {
+  background-color: color-mix(in srgb, var(--primary) 38%, white);
+  color: var(--foreground);
+}
+
+.theme-client :where(a, button, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
 }
 
 @layer base {
