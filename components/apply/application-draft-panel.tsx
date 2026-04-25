@@ -458,6 +458,9 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
             </p>
             <PaddleCheckoutButton
               applicationId={applicationId}
+              onExternalRedirect={() =>
+                setActionMsg("Redirecting to our payment partner to complete checkout securely…")
+              }
               onOverlayClosed={() => void load({ silent: true })}
               onSuccess={() => {
                 setCountdown(null);
@@ -493,6 +496,9 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
               <div className="flex-1">
                 <PaddleCheckoutButton
                   applicationId={applicationId}
+                  onExternalRedirect={() =>
+                    setActionMsg("Redirecting to our payment partner to complete checkout securely…")
+                  }
                   onOverlayClosed={() => void load({ silent: true })}
                   onSuccess={() => {
                     setCountdown(null);

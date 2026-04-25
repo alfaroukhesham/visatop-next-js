@@ -13,6 +13,8 @@ export const payment = pgTable(
       .references(() => application.id, { onDelete: "cascade" }),
     provider: text("provider").notNull(), // paddle
     providerCheckoutId: text("provider_checkout_id"),
+    /** Client idempotency key for Ziina create intent / refund (UUID). */
+    providerOperationId: text("provider_operation_id"),
     providerTransactionId: text("provider_transaction_id"),
     status: text("status").notNull(),
     amount: bigint("amount", { mode: "number" }).notNull(), // minor units

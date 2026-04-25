@@ -85,6 +85,20 @@
       "when": 1776472000000,
       "tag": "0011_guest_link_audit_system_insert",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1776550000000,
+      "tag": "0012_payment_provider_operation_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1776600000000,
+      "tag": "0013_platform_setting_webhook_health",
+      "breakpoints": true
     }
   ]
 }

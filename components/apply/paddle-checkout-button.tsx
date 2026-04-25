@@ -14,6 +14,8 @@ interface PaddleCheckoutButtonProps {
   applicationId: string;
   disabled?: boolean;
   onSuccess?: () => void;
+  /** Called when Ziina mode is about to redirect the browser to the hosted checkout page. */
+  onExternalRedirect?: () => void;
   /** Runs whenever the Paddle overlay closes (success, cancel, or dismiss). Use to refetch server payment state. */
   onOverlayClosed?: () => void;
   onCancel?: () => void;
@@ -24,6 +26,7 @@ export function PaddleCheckoutButton({
   applicationId,
   disabled,
   onSuccess,
+  onExternalRedirect,
   onOverlayClosed,
   onCancel,
   onError,
@@ -59,7 +62,10 @@ export function PaddleCheckoutButton({
       const raw = await res.text();
       let envelope: {
         ok?: boolean;
-        data?: { transactionId?: string; clientToken?: string };
+        data?:
+          | { provider: "paddle"; transactionId: string; clientToken: string }
+          | { provider: "ziina"; redirectUrl: string }
+          | { transactionId?: string; clientToken?: string };
         error?: { message?: string };
       };
       try {
@@ -76,11 +82,22 @@ export function PaddleCheckoutButton({
         throw new Error(envelope.error?.message || `Failed to initiate checkout (HTTP ${res.status})`);
       }
 
-      if (!envelope.ok || !envelope.data?.transactionId) {
+      if (!envelope.ok || !envelope.data) {
         throw new Error(envelope.error?.message || "Invalid checkout response from server");
       }
 
-      const { transactionId, clientToken } = envelope.data;
+      const data = envelope.data;
+      if ("provider" in data && data.provider === "ziina") {
+        onExternalRedirect?.();
+        window.location.assign(data.redirectUrl);
+        return;
+      }
+
+      if (!("transactionId" in data) || !data.transactionId) {
+        throw new Error(envelope.error?.message || "Invalid checkout response from server");
+      }
+
+      const { transactionId, clientToken } = data;
 
       const paddleEnv =
         process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "production" ? "production" : "sandbox";

@@ -1,8 +1,11 @@
+import { randomUUID } from "node:crypto";
 import { headers } from "next/headers";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { runAdminDbJson } from "@/lib/admin-api/require-admin-db";
 import { writeAdminAudit } from "@/lib/admin-api/write-admin-audit";
 import { PaddleProviderError, paddleAdapter } from "@/lib/payments/paddle-adapter";
+import { getZiinaServerConfig } from "@/lib/payments/resolve-payment-provider";
+import { initiateZiinaRefund, ZiinaProviderError } from "@/lib/payments/ziina-client";
 import * as schema from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import type { PaddleRefundReason } from "@/lib/payments/types";
@@ -66,6 +69,68 @@ export async function POST(
         .where(eq(schema.payment.applicationId, applicationId))
         .orderBy(desc(schema.payment.createdAt))
         .limit(1);
+
+      if (payment.provider === "ziina") {
+        const intentId = payment.providerCheckoutId?.trim();
+        if (!intentId) {
+          return jsonError("VALIDATION_ERROR", "No Ziina payment intent id for this application", {
+            status: 400,
+            requestId,
+          });
+        }
+
+        let ziinaCfg;
+        try {
+          ziinaCfg = getZiinaServerConfig();
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : "Ziina is not configured";
+          return jsonError("PAYMENT_PROVIDER_ERROR", msg, { status: 503, requestId });
+        }
+
+        try {
+          const result = await initiateZiinaRefund({
+            baseUrl: ziinaCfg.apiBaseUrl,
+            accessToken: ziinaCfg.accessToken,
+            refundClientId: randomUUID(),
+            paymentIntentId: intentId,
+            test: ziinaCfg.testMode,
+            timeoutMs: 8000,
+          });
+
+          await tx
+            .update(schema.application)
+            .set({ paymentStatus: "refund_pending" })
+            .where(eq(schema.application.id, applicationId));
+
+          await writeAdminAudit(tx, {
+            adminUserId,
+            action: "application.refund.initiate",
+            entityType: "application",
+            entityId: applicationId,
+            afterJson: JSON.stringify({
+              reason,
+              provider: "ziina",
+              refundId: result.refundId,
+              refundStatus: result.status,
+            }),
+          });
+
+          return jsonOk(
+            { refundId: result.refundId, status: result.status },
+            { requestId },
+          );
+        } catch (err: unknown) {
+          console.error("Ziina refund failed:", err instanceof Error ? err.message : err);
+          if (err instanceof ZiinaProviderError) {
+            return jsonError("ZIINA_UNAVAILABLE", err.message, {
+              status: err.httpStatus,
+              requestId,
+            });
+          }
+          const message = err instanceof Error ? err.message : "Refund initiation failed";
+          return jsonError("PAYMENT_PROVIDER_ERROR", message, { status: 502, requestId });
+        }
+      }
 
       if (!payment?.providerTransactionId) {
         return jsonError(
