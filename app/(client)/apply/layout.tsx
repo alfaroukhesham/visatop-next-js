@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { ClientAppHeader } from "@/components/client/client-app-header";
 
 export const metadata: Metadata = {
-  title: "Apply",
+  title: "Apply | Visatop",
   description:
-    "Choose nationality and visa service to open a draft — works for guests and signed-in applicants.",
+    "Choose your nationality and visa service to open your application—available for guests and signed-in customers.",
 };
 
 export default function ApplyLayout({ children }: { children: React.ReactNode }) {

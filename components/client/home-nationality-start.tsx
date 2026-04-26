@@ -46,9 +46,9 @@ export function HomeNationalityStart() {
 
   return (
     <div className="mt-10 w-full max-w-2xl">
-      <div className="border-border bg-card overflow-visible rounded-[12px] border-2 shadow-[0_16px_48px_rgba(1,32,49,0.1)]">
-        <div className="bg-primary text-primary-foreground rounded-t-[10px] px-4 py-3 text-center text-xs font-bold uppercase tracking-[0.18em] sm:text-sm">
-          Apply visa — step 1 of 5
+      <div className="border-secondary/35 bg-card overflow-visible rounded-[12px] border-[3px] shadow-[0_20px_56px_rgba(1,32,49,0.14)]">
+        <div className="bg-secondary text-secondary-foreground rounded-t-[9px] px-4 py-3.5 text-center text-[11px] font-bold uppercase tracking-[0.22em] sm:text-xs">
+          Step 1 of 5 — nationality
         </div>
         <div className="p-4 sm:p-6 md:p-8">
           <label htmlFor="home-nationality-input" className="sr-only">
@@ -75,9 +75,9 @@ export function HomeNationalityStart() {
           )}
         </div>
       </div>
-      <p className="text-muted-foreground mt-4 max-w-prose text-xs leading-relaxed sm:text-sm">
-        We take you to visa options for that nationality. No account needed to begin; you can save everything after you
-        pay.
+      <p className="text-muted-foreground mt-4 max-w-prose text-sm leading-relaxed">
+        Next you choose your visa and currency. An account is optional until after payment if you want your file on
+        every device.
       </p>
     </div>
   );

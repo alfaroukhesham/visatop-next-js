@@ -29,7 +29,7 @@ export function ApplyJourneyStepBar({
   return (
     <div
       className={cn(
-        "border-border bg-card/95 supports-[backdrop-filter]:bg-card/85 fixed bottom-4 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 items-center gap-3 rounded-[14px] border px-3 py-2.5 shadow-[0_12px_40px_rgba(1,32,49,0.14)] backdrop-blur-md sm:px-4 sm:py-3",
+        "border-secondary/40 bg-card/95 supports-[backdrop-filter]:bg-card/88 fixed bottom-4 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 items-center gap-3 rounded-[14px] border-2 px-3 py-2.5 shadow-[0_16px_48px_rgba(1,32,49,0.18)] backdrop-blur-md sm:px-4 sm:py-3",
         className,
       )}
     >

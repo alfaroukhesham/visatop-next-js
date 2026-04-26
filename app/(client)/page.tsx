@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { signOutAction } from "@/app/actions/auth";
 import { auth } from "@/lib/auth";
-import { adminAuth } from "@/lib/admin-auth";
 import { ClientAppHeader } from "@/components/client/client-app-header";
 import {
   ClientButton,
@@ -21,9 +20,9 @@ import { HomeNationalityStart } from "@/components/client/home-nationality-start
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Home",
+  title: "Home | Visatop",
   description:
-    "Choose your nationality to start a visa draft—upload documents, pay securely, and track progress in one workspace.",
+    "Start your UAE visa from your nationality—upload documents, pay securely, and track your application in one place.",
 };
 
 export const dynamic = "force-dynamic";
@@ -32,27 +31,27 @@ const steps = [
   {
     kicker: "Step 1",
     title: "Nationality",
-    body: "Search your passport nationality on the home page, then continue to currency and visa type.",
+    body: "Tell us which passport you travel on so we only show eligible visa options.",
   },
   {
     kicker: "Step 2",
     title: "Currency & visa type",
-    body: "Pick USD or AED for on-screen prices and choose your service card—then open your draft.",
+    body: "Choose how prices are shown, pick your visa, and we open your file.",
   },
   {
     kicker: "Step 3",
-    title: "Submit documents",
-    body: "Keep everything organized in a single workspace.",
+    title: "Documents",
+    body: "Upload what we ask for in one place—clear checklists, fewer mistakes.",
   },
   {
     kicker: "Step 4",
     title: "Review & pay",
-    body: "Confirm extracted details before submission.",
+    body: "Check your details, pay securely, then submit when you are ready.",
   },
   {
     kicker: "Step 5",
-    title: "Track status",
-    body: "See progress updates without back-and-forth.",
+    title: "Status",
+    body: "Follow progress here instead of chasing updates by email.",
   },
 ] as const;
 
@@ -61,34 +60,34 @@ export default async function Home() {
   const session = await auth.api.getSession({
     headers: hdrs,
   });
-  const adminSession = await adminAuth.api.getSession({
-    headers: hdrs,
-  });
-
   return (
     <div className="text-foreground flex min-h-0 flex-1 flex-col">
       <ClientAppHeader />
 
       <div className="relative flex-1 overflow-hidden">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-[min(52vh,520px)] bg-[radial-gradient(ellipse_90%_80%_at_0%_0%,rgba(252,205,100,0.22),transparent_55%)]"
+          aria-hidden
+        />
         <div className="relative mx-auto w-full max-w-[calc(1300px+3rem)] px-5 pb-16 pt-10 sm:px-8 md:pb-24 md:pt-14">
           <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(200px,260px)] lg:gap-14">
             <ClientHeroPanel
               className={cn(
-                "theme-client-rise border-secondary/30 from-card via-card to-muted/50 relative border-2 p-8 shadow-[0_20px_60px_rgba(1,32,49,0.12)] md:p-12 lg:p-14",
+                "theme-client-rise border-secondary/40 from-card via-card to-muted/60 relative border-[3px] p-8 shadow-[0_28px_72px_rgba(1,32,49,0.16)] md:p-12 lg:p-14",
               )}
             >
-              <p className="text-secondary text-xs font-semibold uppercase tracking-[0.22em]">
-                Visa &amp; residency services
+              <p className="text-secondary text-[11px] font-bold uppercase tracking-[0.28em]">
+                UAE visa &amp; residency
               </p>
-              <h2 className="font-heading text-foreground mt-5 max-w-[18ch] text-[clamp(2.35rem,6.2vw,4.25rem)] font-semibold leading-[1.02] tracking-tight">
-                Start with your nationality.
-                <span className="text-secondary mt-1 block max-w-[22ch] text-[clamp(1.35rem,3.8vw,2.1rem)] leading-snug tracking-tight">
-                  We open your draft and carry it into the next step automatically.
+              <h2 className="font-heading text-foreground mt-6 max-w-[14ch] text-[clamp(2.5rem,6.8vw,4.5rem)] font-semibold leading-[0.98] tracking-[-0.03em]">
+                Your nationality first.
+                <span className="text-secondary mt-3 block max-w-[20ch] text-[clamp(1.4rem,3.6vw,2.15rem)] font-semibold leading-snug tracking-tight">
+                  Then visa, documents, and payment—one guided path.
                 </span>
               </h2>
-              <p className="text-muted-foreground mt-6 max-w-[52ch] text-base leading-relaxed md:text-lg">
-                Choose the passport you travel on, then pick your visa service on the next screen—same flow as Apply,
-                with your nationality already set.
+              <p className="text-muted-foreground mt-7 max-w-[52ch] text-base leading-relaxed md:text-lg">
+                Select the passport you travel on. We show only what you can apply for, then keep your file in one
+                workspace until you pay and submit.
               </p>
 
               <HomeNationalityStart />
@@ -105,7 +104,7 @@ export default async function Home() {
                 {session?.user ? (
                   <>
                     <ClientButtonLink href="/portal" brand="cta" className="min-w-[148px] justify-center">
-                      Go to portal
+                      My applications
                     </ClientButtonLink>
                     <form action={signOutAction} className="sm:ml-1">
                       <ClientButton
@@ -118,15 +117,6 @@ export default async function Home() {
                       </ClientButton>
                     </form>
                   </>
-                ) : null}
-                {adminSession?.user ? (
-                  <ClientButtonLink
-                    href="/admin"
-                    variant="outline"
-                    className="justify-center border-secondary/40 text-secondary hover:bg-secondary hover:text-white"
-                  >
-                    Admin console
-                  </ClientButtonLink>
                 ) : null}
               </div>
             </ClientHeroPanel>
@@ -161,12 +151,12 @@ export default async function Home() {
         <section className="relative mx-auto w-full max-w-[calc(1300px+3rem)] px-5 pb-20 sm:px-8">
           <div className="grid gap-14 lg:grid-cols-[minmax(0,1fr)_minmax(280px,380px)] lg:items-start">
             <div>
-              <h3 className="text-secondary text-xs font-semibold uppercase tracking-[0.22em]">How it works</h3>
-              <p className="font-heading text-foreground mt-3 max-w-[20ch] text-3xl font-semibold tracking-tight md:text-4xl">
-                Five stages, zero guesswork
+              <h3 className="text-secondary text-[11px] font-bold uppercase tracking-[0.28em]">How it works</h3>
+              <p className="font-heading text-foreground mt-4 max-w-[18ch] text-[clamp(1.85rem,4vw,2.75rem)] font-semibold leading-[1.08] tracking-tight">
+                Five clear steps to submission
               </p>
-              <p className="text-muted-foreground mt-4 max-w-[52ch] text-base">
-                Same flow you would expect from a modern visa portal—linear, explicit, and easy to resume.
+              <p className="text-muted-foreground mt-4 max-w-[52ch] text-base leading-relaxed">
+                No hidden screens—nationality, visa choice, documents, payment, then tracking.
               </p>
 
               <ol className="relative mt-12 space-y-0">
@@ -180,7 +170,7 @@ export default async function Home() {
                     )}
                   >
                     <span
-                      className="font-heading border-secondary bg-primary text-primary-foreground relative z-[1] flex size-11 shrink-0 items-center justify-center rounded-[5px] border-2 text-sm font-bold shadow-[0_6px_0_rgba(1,32,49,0.12)] sm:size-12 sm:text-base"
+                      className="font-heading border-secondary bg-primary text-primary-foreground relative z-[1] flex size-12 shrink-0 items-center justify-center rounded-[5px] border-[2.5px] text-base font-bold shadow-[0_10px_0_rgba(1,32,49,0.14)] sm:size-[3.25rem] sm:text-lg"
                       aria-hidden
                     >
                       {index + 1}
@@ -199,11 +189,10 @@ export default async function Home() {
 
             <aside className="lg:sticky lg:top-28">
               <ClientCard className="border-secondary/25 overflow-hidden bg-card shadow-[0_16px_48px_rgba(1,32,49,0.08)] ring-1 ring-foreground/5">
-                <CardHeader className="border-secondary/15 from-card via-card to-muted/40 border-b bg-gradient-to-b pb-5">
-                  <CardTitle className="font-heading text-foreground text-xl">Account</CardTitle>
+                <CardHeader className="border-secondary/20 from-card via-card to-muted/40 border-b bg-gradient-to-b pb-5">
+                  <CardTitle className="font-heading text-foreground text-xl">Your account</CardTitle>
                   <CardDescription className="text-muted-foreground text-base leading-relaxed">
-                    Customer access. Team members use{" "}
-                    <span className="text-secondary font-semibold">Admin</span> in the header.
+                    Sign in to see all applications on any device. You can still begin without an account.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 py-6">
@@ -214,19 +203,10 @@ export default async function Home() {
                     </p>
                   ) : (
                     <p className="text-muted-foreground text-sm leading-relaxed">
-                      Start from your nationality above, or use Sign in / Create account in the header or the section
-                      at the bottom of this page. Guest drafts stay on this browser until you link after payment.
+                      Use the nationality form above to start, or sign in from the header or below. If you begin as a
+                      guest, complete payment and follow the email we send to connect this application to an account.
                     </p>
                   )}
-                  {adminSession?.user ? (
-                    <p className="text-muted-foreground border-border rounded-[5px] border bg-muted/40 p-3 text-xs leading-relaxed">
-                      Admin session:{" "}
-                      <span className="text-foreground font-medium">{adminSession.user.email}</span>
-                    </p>
-                  ) : null}
-                  <p className="text-muted-foreground border-t border-border pt-4 text-xs leading-relaxed">
-                    Admin signup stays closed. Use admin sign-in when you have credentials.
-                  </p>
                 </CardContent>
               </ClientCard>
             </aside>
@@ -238,14 +218,14 @@ export default async function Home() {
             className="border-secondary/20 relative mx-auto mt-6 w-full max-w-[calc(1300px+3rem)] border-t px-5 pb-24 pt-14 sm:px-8"
             aria-label="Sign in or create an account"
           >
-            <div className="theme-client-rise border-secondary/25 from-card via-card to-muted/40 mx-auto max-w-2xl rounded-[12px] border-2 bg-gradient-to-b p-8 text-center shadow-[0_16px_48px_rgba(1,32,49,0.08)] sm:p-10">
-              <p className="text-secondary text-xs font-semibold uppercase tracking-[0.22em]">Returning customer</p>
-              <h3 className="font-heading text-foreground mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-                Sign in to see every application in one place
+            <div className="theme-client-rise border-secondary/35 from-card via-card to-muted/50 mx-auto max-w-2xl rounded-[12px] border-[3px] bg-gradient-to-b p-8 text-center shadow-[0_20px_56px_rgba(1,32,49,0.12)] sm:p-10">
+              <p className="text-secondary text-[11px] font-bold uppercase tracking-[0.28em]">Returning customer</p>
+              <h3 className="font-heading text-foreground mt-4 text-[clamp(1.5rem,3.5vw,2.25rem)] font-semibold leading-tight tracking-tight">
+                One sign-in for every application
               </h3>
-              <p className="text-muted-foreground mx-auto mt-3 max-w-[48ch] text-sm leading-relaxed sm:text-base">
-                You can still start a guest draft from the top of this page. Accounts make it easier to resume on a new
-                device after you have paid and linked your file.
+              <p className="text-muted-foreground mx-auto mt-4 max-w-[48ch] text-sm leading-relaxed sm:text-base">
+                You can still start from the top without an account. After payment, signing in lets you open the same
+                file on another phone or laptop.
               </p>
               <div className="mt-8 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:flex-wrap">
                 <ClientButtonLink href="/sign-in" brand="cta" className="min-w-[160px] justify-center">

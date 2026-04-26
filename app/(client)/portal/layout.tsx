@@ -6,9 +6,8 @@ import { signOutAction } from "@/app/actions/auth";
 import { ClientPortalHeader } from "@/components/client/client-portal-header";
 
 export const metadata: Metadata = {
-  title: "Portal",
-  description:
-    "Your signed-in area — open the client dashboard or application workspace.",
+  title: "Portal | Visatop",
+  description: "Signed-in area to start a new visa, open your dashboard, or continue an existing application.",
 };
 
 export const dynamic = "force-dynamic";

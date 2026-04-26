@@ -219,7 +219,7 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
         {loadingList ? (
           <p className="text-muted-foreground flex items-center gap-2 text-sm">
             <Loader2 className="size-4 animate-spin" aria-hidden />
-            Loading catalog…
+            Loading countries…
           </p>
         ) : (
           <NationalityCombobox
@@ -235,7 +235,9 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
           />
         )}
         {selectedNat ? (
-          <p className="text-muted-foreground text-xs">Eligibility is enforced again when the draft is created.</p>
+          <p className="text-muted-foreground text-xs">
+            We double-check eligibility when your application file is created.
+          </p>
         ) : null}
       </section>
 
@@ -243,11 +245,9 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
         <section className="space-y-6">
           <div>
             <h2 className="font-heading text-foreground text-lg font-semibold tracking-tight">Pay in</h2>
-            <p className="text-muted-foreground mt-1 text-sm">
-              Same visa services — prices load from the catalog in the currency you pick (USD and AED rows after
-              migration). If only one currency exists in data, use{" "}
-              <code className="text-foreground">NEXT_PUBLIC_DISPLAY_FX_AED_PER_USD</code> for rough on-screen estimates
-              on the other tab.
+            <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
+              Prices follow the currency you select. If we show an estimate in the other currency, we confirm the exact
+              total at checkout.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -365,11 +365,11 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
 
       <ClientField
         id="email"
-        label={session?.user ? "Contact email override (optional)" : "Email (required)"}
+        label={session?.user ? "Contact email (optional)" : "Email"}
         hint={
           session?.user
-            ? "Optional. We normally use your account email for notifications."
-            : "Required. Use the same browser to return — we set an HttpOnly cookie (no token in page markup)."
+            ? "Leave blank to use your account email for updates."
+            : "Required. We send status and payment updates here. Continue on this device until you pay, or sign in to sync across devices."
         }
       >
         <ClientInput
@@ -401,7 +401,7 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
           )}
         </ClientButton>
         <ClientNavLink href="/portal" className="text-muted-foreground hover:text-foreground text-sm pb-1">
-          Signed in? Portal →
+          My applications
         </ClientNavLink>
         <ClientNavLink href="/apply/track" className="text-muted-foreground hover:text-foreground text-sm pb-1">
           Track an application →

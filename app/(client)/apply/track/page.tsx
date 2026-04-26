@@ -9,15 +9,14 @@ export const metadata: Metadata = {
 export default function TrackApplicationPage() {
   return (
     <div className="theme-client-rise mx-auto w-full max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
-      <header className="mb-10 space-y-3">
-        <p className="text-secondary text-xs font-semibold uppercase tracking-[0.2em]">Guests &amp; applicants</p>
-        <h1 className="font-heading text-foreground text-[clamp(1.65rem,3.5vw,2.25rem)] font-semibold leading-tight tracking-tight">
+      <header className="mb-10 space-y-4">
+        <p className="text-secondary text-[11px] font-bold uppercase tracking-[0.28em]">Status lookup</p>
+        <h1 className="font-heading text-foreground text-[clamp(1.85rem,3.8vw,2.45rem)] font-semibold leading-tight tracking-tight">
           Track your application
         </h1>
         <p className="text-muted-foreground max-w-prose text-base leading-relaxed">
-          Enter the email you used as a guest (or your account email after linking), or the phone number saved on your
-          application profile. We list every matching application and show high-level progress only — not internal
-          processing codes.
+          Enter the email you used when you applied (guest or account), or the phone number on your profile. We list
+          every match with a clear, plain-language status for each one.
         </p>
       </header>
       <ApplicationTrackLookupForm />
