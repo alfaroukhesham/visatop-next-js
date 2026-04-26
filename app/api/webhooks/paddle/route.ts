@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { paddleAdapter } from "@/lib/payments/paddle-adapter";
@@ -17,6 +18,7 @@ import { application, auditLog, paymentEvent } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { markWebhookReceivedNow, PLATFORM_KEY_LAST_WEBHOOK_PADDLE } from "@/lib/payments/webhook-health";
+import { sendPaymentReceivedInProgressEmail } from "@/lib/email/send-application-transactional-emails";
 
 export const runtime = "nodejs";
 
@@ -41,6 +43,7 @@ export async function POST(req: Request) {
   const rawPayload = JSON.parse(bodyText) as { event_id?: string };
   const providerEventId = typeof rawPayload.event_id === "string" ? rawPayload.event_id : "unknown";
 
+  let firstPaidApplicationId: string | null = null;
   try {
     const handleResult = await withSystemDbActor(async (tx) => {
       await markWebhookReceivedNow(tx, PLATFORM_KEY_LAST_WEBHOOK_PADDLE);
@@ -52,7 +55,7 @@ export async function POST(req: Request) {
           transactionId: normalized.providerPaymentId,
           applicationId: normalized.metadata.applicationId,
         });
-        return { kind: "noop" as const };
+        return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
       }
 
       if (payRow.provider !== "paddle") {
@@ -73,11 +76,11 @@ export async function POST(req: Request) {
             rawEventType: normalized.rawEventType,
           }),
         });
-        return { kind: "reject" as const, status: 401 as const };
+        return { kind: "reject" as const, status: 401 as const, firstPaidApplicationId: null as string | null };
       }
 
       const [appRow] = await tx.select().from(application).where(eq(application.id, payRow.applicationId)).limit(1);
-      if (!appRow) return { kind: "noop" as const };
+      if (!appRow) return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
 
       await requirePaymentEventPayloadHashDedupeIndex(tx);
 
@@ -92,11 +95,18 @@ export async function POST(req: Request) {
         })
         .onConflictDoNothing({ target: paymentEvent.payloadHash })
         .returning();
-      if (!insertedEvent) return { kind: "noop" as const };
+      if (!insertedEvent) return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
 
-      await applyPaymentWebhookEvent(tx, normalized, payRow, appRow, providerEventId, { requestId });
-      return { kind: "noop" as const };
+      const payApply = await applyPaymentWebhookEvent(tx, normalized, payRow, appRow, providerEventId, {
+        requestId,
+      });
+      return {
+        kind: "noop" as const,
+        firstPaidApplicationId: payApply.didFirstPaidTransition ? payRow.applicationId : null,
+      };
     });
+
+    firstPaidApplicationId = handleResult.firstPaidApplicationId ?? null;
 
     if (handleResult.kind === "reject") {
       return jsonError("UNAUTHORIZED", "Provider mismatch", { status: 401, requestId });
@@ -121,6 +131,18 @@ export async function POST(req: Request) {
       );
     }
     throw e;
+  }
+
+  if (firstPaidApplicationId) {
+    after(() => {
+      void sendPaymentReceivedInProgressEmail(firstPaidApplicationId!, requestId).catch((err) => {
+        console.error("[webhooks/paddle] payment_received_in_progress email failed", {
+          applicationId: firstPaidApplicationId,
+          requestId,
+          err: err instanceof Error ? err.message : err,
+        });
+      });
+    });
   }
 
   return jsonOk({ received: true }, { requestId });

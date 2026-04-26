@@ -41,7 +41,7 @@ export const applicationDocument = pgTable(
     extractionStatus: text("extraction_status").default("pending"),
 
     // New (spec §9.1).
-    documentType: text("document_type"), // passport_copy | personal_photo | supporting
+    documentType: text("document_type"), // passport_copy | personal_photo | supporting | admin_step_attachment | outcome_approval | outcome_authority_rejection
     status: text("status"), // uploaded_temp | retained | rejected | deleted
     contentType: text("content_type"),
     byteLength: bigint("byte_length", { mode: "number" }),
@@ -141,6 +141,12 @@ export const DOCUMENT_TYPE = {
   PASSPORT_COPY: "passport_copy",
   PERSONAL_PHOTO: "personal_photo",
   SUPPORTING: "supporting",
+  /** Optional admin uploads while processing (non-terminal steps). */
+  ADMIN_STEP_ATTACHMENT: "admin_step_attachment",
+  /** Required when marking application completed (visa / approval pack). */
+  OUTCOME_APPROVAL: "outcome_approval",
+  /** Required when marking UAE authority rejection. */
+  OUTCOME_AUTHORITY_REJECTION: "outcome_authority_rejection",
 } as const;
 export type DocumentType = (typeof DOCUMENT_TYPE)[keyof typeof DOCUMENT_TYPE];
 

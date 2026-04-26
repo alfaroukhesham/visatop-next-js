@@ -32,7 +32,7 @@ const guestRow = {
   serviceId: "svc-1",
   isGuest: true,
   userId: null,
-  guestEmail: null,
+  guestEmail: "guest@example.com",
   resumeTokenHash: "hash",
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -70,7 +70,11 @@ describe("POST /api/applications", () => {
       new Request("http://localhost/api/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nationalityCode: "US", serviceId: "svc-1" }),
+        body: JSON.stringify({
+          nationalityCode: "US",
+          serviceId: "svc-1",
+          guestEmail: "guest@example.com",
+        }),
       }),
     );
     expect(res.status).toBe(201);
@@ -81,6 +85,21 @@ describe("POST /api/applications", () => {
     const setCookie = res.headers.get("set-cookie");
     expect(setCookie).toBeTruthy();
     expect(setCookie?.toLowerCase()).toContain("httponly");
+  });
+
+  it("guest create rejects missing email", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue(null as never);
+
+    const res = await POST(
+      new Request("http://localhost/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nationalityCode: "US", serviceId: "svc-1" }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
   });
 
   it("signed-in create returns 201 without Set-Cookie", async () => {

@@ -75,6 +75,26 @@ describe("guest-link-gating", () => {
     ).toBe(false);
   });
 
+  it("matrix denies completed", () => {
+    expect(
+      guestLinkMatrixAllowsLink({
+        paymentStatus: "paid",
+        applicationStatus: "completed",
+        userId: null,
+      }).ok,
+    ).toBe(false);
+  });
+
+  it("matrix denies UAE authority rejection", () => {
+    expect(
+      guestLinkMatrixAllowsLink({
+        paymentStatus: "paid",
+        applicationStatus: "rejection_by_uae_authorities",
+        userId: null,
+      }).ok,
+    ).toBe(false);
+  });
+
   it("matrix allows paid + admin_attention_required on unclaimed row", () => {
     expect(
       guestLinkMatrixAllowsLink({

@@ -71,6 +71,15 @@ export async function POST(req: Request) {
         });
       }
 
+      if (lockedApp.isGuest && !lockedApp.guestEmail?.trim()) {
+        await tx.update(schema.application).set({ checkoutState: "none" }).where(eq(schema.application.id, applicationId));
+        return jsonError(
+          "VALIDATION_ERROR",
+          "Guest email is required on the application before checkout.",
+          { status: 400, requestId },
+        );
+      }
+
       const price = await resolveAdminPricingBreakdown(tx, lockedApp.serviceId);
       if (!price) {
         await tx.update(schema.application).set({ checkoutState: "none" }).where(eq(schema.application.id, applicationId));

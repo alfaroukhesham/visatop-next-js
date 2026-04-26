@@ -99,6 +99,13 @@
       "when": 1776600000000,
       "tag": "0013_platform_setting_webhook_health",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1776700000000,
+      "tag": "0014_admin_ops_transactional_email",
+      "breakpoints": true
     }
   ]
 }

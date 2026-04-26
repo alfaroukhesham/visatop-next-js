@@ -4,6 +4,7 @@ import { eq, desc } from "drizzle-orm";
 import { adminAuth } from "@/lib/admin-auth";
 import { withAdminDbActor } from "@/lib/db/actor-context";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminApplicationOpsPanel } from "@/components/admin/admin-application-ops-panel";
 import { ApplicationActions } from "@/components/admin/application-actions";
 import { ApplicationRefundForm } from "@/components/admin/application-refund-form";
 import * as schema from "@/lib/db/schema";
@@ -50,6 +51,12 @@ function formatDocType(v: unknown): string {
       return "Passport copy";
     case "personal_photo":
       return "Personal photo";
+    case "admin_step_attachment":
+      return "Admin step attachment";
+    case "outcome_approval":
+      return "Outcome (approval)";
+    case "outcome_authority_rejection":
+      return "Outcome (UAE rejection)";
     default:
       return titleCaseFromSnake(v);
   }
@@ -71,6 +78,10 @@ function formatAuditActionTitle(action: string): string {
       return "Guest application linked to user account";
     case "application.attention.cleared":
       return "Admin cleared the attention flag";
+    case "application.admin_ops_step":
+      return "Admin ops step updated";
+    case "application_document.admin_upload":
+      return "Admin uploaded a document";
     default:
       if (action.startsWith("application.transition.")) return "Application status changed";
       if (action.startsWith("application.profile.")) return "Applicant profile updated";
@@ -146,7 +157,14 @@ function formatAuditInlineDetails(log: AuditRow): string | null {
 }
 
 function StatusBadge({ label, value }: { label: string; value: string }) {
-  const isGood = ["paid", "in_progress", "completed", "fulfilled", "retained"].includes(value);
+  const isGood = [
+    "paid",
+    "in_progress",
+    "awaiting_authority",
+    "completed",
+    "fulfilled",
+    "retained",
+  ].includes(value);
   const isWarn = ["checkout_created", "refund_pending", "pending"].includes(value);
   return (
     <div className="flex flex-col gap-0.5">
@@ -200,7 +218,7 @@ export default async function AdminApplicationDetailPage({
     redirect(`/admin/sign-in?callbackUrl=/admin/applications/${applicationId}`);
   }
 
-  const { app, payments, auditLogs } = await withAdminDbActor(
+  const { app, payments, auditLogs, adminDocuments } = await withAdminDbActor(
     session.user.id,
     async ({ tx }) => {
       const rows = await tx
@@ -210,7 +228,7 @@ export default async function AdminApplicationDetailPage({
         .limit(1);
 
       const app = rows[0];
-      if (!app) return { app: null, payments: [], auditLogs: [] };
+      if (!app) return { app: null, payments: [], auditLogs: [], adminDocuments: [] };
 
       const payments = await tx
         .select()
@@ -225,7 +243,19 @@ export default async function AdminApplicationDetailPage({
         .orderBy(desc(schema.auditLog.createdAt))
         .limit(30);
 
-      return { app, payments, auditLogs };
+      const adminDocuments = await tx
+        .select({
+          id: schema.applicationDocument.id,
+          documentType: schema.applicationDocument.documentType,
+          status: schema.applicationDocument.status,
+          createdAt: schema.applicationDocument.createdAt,
+        })
+        .from(schema.applicationDocument)
+        .where(eq(schema.applicationDocument.applicationId, applicationId))
+        .orderBy(desc(schema.applicationDocument.createdAt))
+        .limit(40);
+
+      return { app, payments, auditLogs, adminDocuments };
     }
   );
 
@@ -325,8 +355,28 @@ export default async function AdminApplicationDetailPage({
             <ProfileRow label="Reference No." value={app.referenceNumber} />
             <ProfileRow label="Guest" value={app.isGuest ? "Yes" : "No"} />
             <ProfileRow label="Guest Email" value={app.guestEmail} />
+            <ProfileRow label="Admin ops step" value={app.adminOpsStep} />
             <ProfileRow label="Created" value={app.createdAt.toLocaleString()} />
           </dl>
+        </div>
+
+        {/* Admin ops + uploads */}
+        <div className="border border-border bg-card p-5 space-y-4">
+          <h2 className="font-heading text-base font-semibold tracking-tight border-l-4 border-primary pl-3">
+            Fulfillment & outcomes
+          </h2>
+          <AdminApplicationOpsPanel
+            applicationId={app.id}
+            paymentStatus={app.paymentStatus}
+            applicationStatus={app.applicationStatus}
+            adminOpsStep={app.adminOpsStep}
+            documents={adminDocuments.map((d) => ({
+              id: d.id,
+              documentType: d.documentType,
+              status: d.status,
+              createdAt: d.createdAt.toISOString(),
+            }))}
+          />
         </div>
 
         {/* Applicant Profile */}

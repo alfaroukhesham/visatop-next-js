@@ -59,6 +59,11 @@ export async function resolvePaymentRowForWebhook(
  * Core paid / failed transitions shared by Paddle and Ziina webhooks.
  * Caller must insert `payment_event` with dedupe and only invoke this when a new row was inserted.
  */
+export type ApplyPaymentWebhookEventResult = {
+  /** True when this invocation performed the first transition to paid + in_progress for the application. */
+  didFirstPaidTransition: boolean;
+};
+
 export async function applyPaymentWebhookEvent(
   tx: DbTransaction,
   event: NormalizedPaymentWebhookEvent,
@@ -66,14 +71,14 @@ export async function applyPaymentWebhookEvent(
   appRow: typeof application.$inferSelect,
   providerEventId: string,
   _ctx?: ApplyPaymentWebhookContext,
-): Promise<void> {
+): Promise<ApplyPaymentWebhookEventResult> {
   if (payRow.provider !== event.provider) {
     console.warn("[applyPaymentWebhookEvent] provider mismatch — caller should reject before insert", {
       paymentId: payRow.id,
       rowProvider: payRow.provider,
       eventProvider: event.provider,
     });
-    return;
+    return { didFirstPaidTransition: false };
   }
 
   if (event.kind === "payment_completed") {
@@ -99,7 +104,7 @@ export async function applyPaymentWebhookEvent(
           metadata: event.metadata ?? {},
         }),
       });
-      return;
+      return { didFirstPaidTransition: false };
     }
 
     const amountMismatch = event.amountMinor !== Number(payRow.amount);
@@ -192,7 +197,7 @@ export async function applyPaymentWebhookEvent(
         });
       }
     }
-    return;
+    return { didFirstPaidTransition: isFirstPaidTransition };
   }
 
   if (event.kind === "payment_failed") {
@@ -216,5 +221,8 @@ export async function applyPaymentWebhookEvent(
         metadata: event.metadata ?? {},
       }),
     });
+    return { didFirstPaidTransition: false };
   }
+
+  return { didFirstPaidTransition: false };
 }

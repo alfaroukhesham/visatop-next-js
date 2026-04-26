@@ -9,6 +9,7 @@ import { ClientInput } from "@/components/client/client-input";
 import { ClientNavLink } from "@/components/client/client-nav-link";
 import { ClientSelect } from "@/components/client/client-select";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
+import { authClient } from "@/lib/auth-client";
 
 type Nationality = { code: string; name: string };
 type Service = {
@@ -41,6 +42,7 @@ type StartApplicationFormProps = {
 };
 
 export function StartApplicationForm({ initialNationalityCode }: StartApplicationFormProps = {}) {
+  const { data: session } = authClient.useSession();
   const router = useRouter();
   const [nationalities, setNationalities] = useState<Nationality[]>([]);
   const [nationality, setNationality] = useState("");
@@ -123,6 +125,13 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
     if (!nationality || !serviceId) {
       setError("Choose a nationality and a service.");
       return;
+    }
+    if (!session?.user) {
+      const ge = guestEmail.trim();
+      if (!ge) {
+        setError("Email is required when you are not signed in.");
+        return;
+      }
     }
     setSubmitting(true);
     const body: Record<string, unknown> = {
@@ -213,8 +222,12 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
 
       <ClientField
         id="email"
-        label="Guest email (optional)"
-        hint="If you are not signed in, use the same browser to return — we set an HttpOnly cookie (no token in page markup)."
+        label={session?.user ? "Contact email override (optional)" : "Email (required)"}
+        hint={
+          session?.user
+            ? "Optional. We normally use your account email for notifications."
+            : "Required. Use the same browser to return — we set an HttpOnly cookie (no token in page markup)."
+        }
       >
         <ClientInput
           id="email"
@@ -223,6 +236,7 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
           placeholder="you@example.com"
           value={guestEmail}
           onChange={(e) => setGuestEmail(e.target.value)}
+          required={!session?.user}
           className="rounded-[5px] border-border"
         />
       </ClientField>

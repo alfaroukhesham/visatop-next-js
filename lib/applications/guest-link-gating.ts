@@ -20,6 +20,8 @@ export function canMintGuestLinkIntent(
   if (BLOCKED_PAYMENT.has(row.paymentStatus)) return { ok: false, reason: "payment_blocked" };
   if (row.paymentStatus !== "paid") return { ok: false, reason: "intent_requires_paid" };
   if (row.applicationStatus === "cancelled") return { ok: false, reason: "cancelled" };
+  if (row.applicationStatus === "rejection_by_uae_authorities") return { ok: false, reason: "terminal_rejected" };
+  if (row.applicationStatus === "completed") return { ok: false, reason: "terminal_completed" };
   return { ok: true };
 }
 
@@ -31,5 +33,7 @@ export function guestLinkMatrixAllowsLink(
   if (BLOCKED_PAYMENT.has(row.paymentStatus)) return { ok: false, reason: "payment_blocked" };
   if (row.paymentStatus !== "paid") return { ok: false, reason: "link_requires_paid" };
   if (row.applicationStatus === "cancelled") return { ok: false, reason: "cancelled" };
+  if (row.applicationStatus === "rejection_by_uae_authorities") return { ok: false, reason: "terminal_rejected" };
+  if (row.applicationStatus === "completed") return { ok: false, reason: "terminal_completed" };
   return { ok: true };
 }

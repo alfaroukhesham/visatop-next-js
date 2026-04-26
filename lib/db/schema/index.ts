@@ -4,6 +4,7 @@ export * from "./rbac";
 export * from "./visa";
 export * from "./application-document";
 export * from "./applications";
+export * from "./transactional-email-sent";
 export * from "./platform-setting";
 export * from "./payments";
 export * from "./affiliate";

@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import {
@@ -21,6 +22,7 @@ import { application, auditLog, paymentEvent } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { markWebhookReceivedNow, PLATFORM_KEY_LAST_WEBHOOK_ZIINA } from "@/lib/payments/webhook-health";
+import { sendPaymentReceivedInProgressEmail } from "@/lib/email/send-application-transactional-emails";
 
 export const runtime = "nodejs";
 
@@ -77,6 +79,7 @@ export async function POST(req: Request) {
       normalized.providerEventId
     : normalized.providerPaymentId;
 
+  let firstPaidApplicationId: string | null = null;
   try {
     const handleResult = await withSystemDbActor(async (tx) => {
       await markWebhookReceivedNow(tx, PLATFORM_KEY_LAST_WEBHOOK_ZIINA);
@@ -87,7 +90,7 @@ export async function POST(req: Request) {
         console.info("[webhooks/ziina] Webhook received but no matching payment row", {
           intentId: normalized.providerPaymentId,
         });
-        return { kind: "noop" as const };
+        return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
       }
 
       if (payRow.provider !== "ziina") {
@@ -108,11 +111,11 @@ export async function POST(req: Request) {
             rawEventType: normalized.rawEventType,
           }),
         });
-        return { kind: "reject" as const };
+        return { kind: "reject" as const, firstPaidApplicationId: null as string | null };
       }
 
       const [appRow] = await tx.select().from(application).where(eq(application.id, payRow.applicationId)).limit(1);
-      if (!appRow) return { kind: "noop" as const };
+      if (!appRow) return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
 
       await requirePaymentEventPayloadHashDedupeIndex(tx);
 
@@ -127,11 +130,16 @@ export async function POST(req: Request) {
         })
         .onConflictDoNothing({ target: paymentEvent.payloadHash })
         .returning();
-      if (!insertedEvent) return { kind: "noop" as const };
+      if (!insertedEvent) return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
 
-      await applyPaymentWebhookEvent(tx, normalized, payRow, appRow, providerEventId, { requestId });
-      return { kind: "noop" as const };
+      const payApply = await applyPaymentWebhookEvent(tx, normalized, payRow, appRow, providerEventId, { requestId });
+      return {
+        kind: "noop" as const,
+        firstPaidApplicationId: payApply.didFirstPaidTransition ? payRow.applicationId : null,
+      };
     });
+
+    firstPaidApplicationId = handleResult.firstPaidApplicationId ?? null;
 
     if (handleResult.kind === "reject") {
       return jsonError("UNAUTHORIZED", "Provider mismatch", { status: 401, requestId });
@@ -156,6 +164,18 @@ export async function POST(req: Request) {
       );
     }
     throw e;
+  }
+
+  if (firstPaidApplicationId) {
+    after(() => {
+      void sendPaymentReceivedInProgressEmail(firstPaidApplicationId!, requestId).catch((err) => {
+        console.error("[webhooks/ziina] payment_received_in_progress email failed", {
+          applicationId: firstPaidApplicationId,
+          requestId,
+          err: err instanceof Error ? err.message : err,
+        });
+      });
+    });
   }
 
   return jsonOk({ received: true }, { requestId });
