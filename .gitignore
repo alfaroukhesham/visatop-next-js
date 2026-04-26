@@ -58,3 +58,4 @@ skills-lock.json
 !.cursor/rules/**
 .superpowers/
 .worktrees/
+todo.md
