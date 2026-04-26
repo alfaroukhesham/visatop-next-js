@@ -11,10 +11,13 @@ type AppPoll = { paymentStatus: string };
 export function CheckoutReturnClient({ applicationId }: { applicationId: string }) {
   const router = useRouter();
   const [message, setMessage] = useState("Confirming payment with our servers…");
-  const startedAt = useRef(Date.now());
+  const startedAt = useRef(0);
   const nextDelayMs = useRef(1000);
 
   useEffect(() => {
+    if (startedAt.current === 0) {
+      startedAt.current = Date.now();
+    }
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
 

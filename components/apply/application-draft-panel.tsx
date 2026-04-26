@@ -21,7 +21,6 @@ import { PaddleCheckoutButton } from "./paddle-checkout-button";
 import { computeValidation } from "@/lib/documents/validation-readiness";
 
 type ApplicantProfile = PublicApplication["applicant"];
-type PassportExtractionSummary = PublicApplication["passportExtraction"];
 
 type PublicDocument = {
   id: string;

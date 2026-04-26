@@ -70,8 +70,9 @@ export async function applyPaymentWebhookEvent(
   payRow: typeof payment.$inferSelect,
   appRow: typeof application.$inferSelect,
   providerEventId: string,
-  _ctx?: ApplyPaymentWebhookContext,
+  ctx?: ApplyPaymentWebhookContext,
 ): Promise<ApplyPaymentWebhookEventResult> {
+  void ctx;
   if (payRow.provider !== event.provider) {
     console.warn("[applyPaymentWebhookEvent] provider mismatch — caller should reject before insert", {
       paymentId: payRow.id,

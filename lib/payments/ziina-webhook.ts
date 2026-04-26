@@ -29,12 +29,6 @@ export function verifyZiinaWebhookSignature(
   return timingSafeEqualHex(expected, signatureHeader);
 }
 
-function readForwardedClientIp(forwardedFor: string | null): string | null {
-  if (!forwardedFor) return null;
-  const first = forwardedFor.split(",")[0]?.trim();
-  return first || null;
-}
-
 export function assertZiinaWebhookSourceIpAllowed(
   forwardedFor: string | null,
   remoteAddr: string | null,
