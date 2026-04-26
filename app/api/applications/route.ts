@@ -46,7 +46,7 @@ export async function POST(req: Request) {
           .values({
             userId,
             isGuest: false,
-            guestEmail: body.guestEmail ?? null,
+            guestEmail: body.guestEmail?.trim() ? body.guestEmail.trim().toLowerCase() : null,
             nationalityCode: body.nationalityCode,
             serviceId: body.serviceId,
             applicationStatus: "draft",

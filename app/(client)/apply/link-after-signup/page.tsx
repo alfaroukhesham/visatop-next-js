@@ -45,10 +45,8 @@ export default function LinkAfterSignupPage() {
 
     void (async () => {
       if (!applicationId) {
-        queueMicrotask(() =>
-          setMessage(
-            "We could not read your saved application id in this browser. Return to your submitted page and run “Create account” or “Sign in” again.",
-          ),
+        setMessage(
+          "We could not read your saved application id in this browser. Return to your submitted page and run “Create account” or “Sign in” again.",
         );
         return;
       }
@@ -84,17 +82,15 @@ export default function LinkAfterSignupPage() {
           : undefined;
       const reason = mapLinkFailureDetailsCodeToReason(code);
       trackGuestLinkEvent(GUEST_LINK_EVENTS.linkAfterAuthFail, { applicationId, reason });
-      queueMicrotask(() =>
-        setMessage(
-          "We could not attach this application to your account from this browser. Try again from the submitted page, or contact support with your reference number.",
-        ),
+      setMessage(
+        "We could not attach this application to your account from this browser. Try again from the submitted page, or contact support with your reference number.",
       );
     })().catch(() => {
       trackGuestLinkEvent(GUEST_LINK_EVENTS.linkAfterAuthFail, {
         applicationId: applicationId ?? "",
         reason: "unknown",
       });
-      queueMicrotask(() => setMessage("Something went wrong. Please try again."));
+      setMessage("Something went wrong. Please try again.");
     });
   }, [isPending, router, session?.user?.id]);
 

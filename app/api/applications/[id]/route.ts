@@ -82,7 +82,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     const updated = await withClientDbActor(session.user.id, async (tx) => {
       return tx
         .update(application)
-        .set({ guestEmail: parsed.data.guestEmail })
+        .set({ guestEmail: parsed.data.guestEmail.trim().toLowerCase() })
         .where(and(eq(application.id, id), eq(application.userId, session.user.id)))
         .returning();
     });
@@ -105,7 +105,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const updated = await withSystemDbActor(async (tx) => {
     return tx
       .update(application)
-      .set({ guestEmail: parsed.data.guestEmail })
+      .set({ guestEmail: parsed.data.guestEmail.trim().toLowerCase() })
       .where(and(eq(application.id, id), eq(application.isGuest, true)))
       .returning();
   });

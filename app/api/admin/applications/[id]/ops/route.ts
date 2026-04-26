@@ -99,6 +99,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     let emailJob: EmailJob | null = null;
     let workingStatus = row.applicationStatus as ApplicationStatus;
 
+    let nextApplicationStatus: ApplicationStatus | undefined;
+    let nextAdminOpsStep: string | null | undefined;
+    let statusAudit:
+      | { from: ApplicationStatus; to: ApplicationStatus; outcomeDocumentId: string | undefined }
+      | undefined;
+    let adminOpsAudit: { before: string | null; after: string | null } | undefined;
+
     if (body.applicationStatus !== undefined) {
       const toStatus = body.applicationStatus as ApplicationStatus;
       const fromStatus = row.applicationStatus as ApplicationStatus;
@@ -156,20 +163,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         emailJob = { kind: "outcome_uae_rejection", outcomeDocumentId: doc.id };
       }
 
-      await tx
-        .update(schema.application)
-        .set({ applicationStatus: toStatus })
-        .where(eq(schema.application.id, applicationId));
-
-      await writeAdminAudit(tx, {
-        adminUserId,
-        action: "application.transition.applicationStatus",
-        entityType: "application",
-        entityId: applicationId,
-        beforeJson: JSON.stringify({ applicationStatus: fromStatus }),
-        afterJson: JSON.stringify({ applicationStatus: toStatus, outcomeDocumentId: body.outcomeDocumentId }),
-      });
-
+      nextApplicationStatus = toStatus;
+      statusAudit = { from: fromStatus, to: toStatus, outcomeDocumentId: body.outcomeDocumentId };
       workingStatus = toStatus;
     }
 
@@ -182,19 +177,47 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         );
       }
       const nextStep = body.adminOpsStep === "" ? null : body.adminOpsStep;
-      const beforeStep = row.adminOpsStep;
-      await tx.update(schema.application).set({ adminOpsStep: nextStep }).where(eq(schema.application.id, applicationId));
+      nextAdminOpsStep = nextStep;
+      adminOpsAudit = { before: row.adminOpsStep, after: nextStep };
+    }
+
+    if (nextApplicationStatus !== undefined || nextAdminOpsStep !== undefined) {
+      const patch: { applicationStatus?: ApplicationStatus; adminOpsStep?: string | null } = {};
+      if (nextApplicationStatus !== undefined) patch.applicationStatus = nextApplicationStatus;
+      if (nextAdminOpsStep !== undefined) patch.adminOpsStep = nextAdminOpsStep;
+      await tx.update(schema.application).set(patch).where(eq(schema.application.id, applicationId));
+    }
+
+    if (statusAudit) {
+      await writeAdminAudit(tx, {
+        adminUserId,
+        action: "application.transition.applicationStatus",
+        entityType: "application",
+        entityId: applicationId,
+        beforeJson: JSON.stringify({ applicationStatus: statusAudit.from }),
+        afterJson: JSON.stringify({
+          applicationStatus: statusAudit.to,
+          outcomeDocumentId: statusAudit.outcomeDocumentId,
+        }),
+      });
+    }
+
+    if (adminOpsAudit) {
       await writeAdminAudit(tx, {
         adminUserId,
         action: "application.admin_ops_step",
         entityType: "application",
         entityId: applicationId,
-        beforeJson: JSON.stringify({ adminOpsStep: beforeStep }),
-        afterJson: JSON.stringify({ adminOpsStep: nextStep }),
+        beforeJson: JSON.stringify({ adminOpsStep: adminOpsAudit.before }),
+        afterJson: JSON.stringify({ adminOpsStep: adminOpsAudit.after }),
       });
     }
 
-    const [updated] = await tx.select().from(schema.application).where(eq(schema.application.id, applicationId)).limit(1);
+    const mergedForResponse = {
+      id: row.id,
+      applicationStatus: (nextApplicationStatus ?? row.applicationStatus) as ApplicationStatus,
+      adminOpsStep: nextAdminOpsStep !== undefined ? nextAdminOpsStep : row.adminOpsStep,
+    };
 
     let transactionalEmail: string | null = null;
     if (emailJob) {
@@ -205,7 +228,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           { applicationId },
         );
       } else {
-        const to = await resolveApplicantEmailTx(tx, updated!);
+        const to = await resolveApplicantEmailTx(tx, row);
         if (!to) {
           transactionalEmail = "skipped_no_recipient";
           console.warn(
@@ -244,11 +267,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
     return jsonOk(
       {
-        application: {
-          id: updated!.id,
-          applicationStatus: updated!.applicationStatus,
-          adminOpsStep: updated!.adminOpsStep,
-        },
+        application: mergedForResponse,
         transactionalEmail,
       },
       { requestId },

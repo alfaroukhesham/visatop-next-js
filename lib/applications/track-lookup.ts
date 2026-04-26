@@ -37,6 +37,11 @@ export function isValidTrackContact(raw: string): boolean {
 /**
  * Lists applications matching the given email (guest or account) or profile phone digits.
  * Ordered by most recently updated. Intended for the public track page only.
+ *
+ * Guest email: `eq` on the stored value (writes are normalized) plus a lower(trim) fallback for
+ * legacy rows. Linked-account email may differ in casing; user side uses lower(trim) in SQL.
+ * Phone uses regexp_replace on read; a dedicated digits column + index would scale better if
+ * this endpoint becomes hot.
  */
 export async function findApplicationsForContactTrackLookup(
   tx: DbTransaction,
@@ -53,6 +58,7 @@ export async function findApplicationsForContactTrackLookup(
       .leftJoin(user, eq(application.userId, user.id))
       .where(
         or(
+          eq(application.guestEmail, contact.email),
           sql`lower(trim(coalesce(${application.guestEmail}, ''))) = ${contact.email}`,
           sql`lower(trim(coalesce(${user.email}, ''))) = ${contact.email}`,
         ),
@@ -62,6 +68,7 @@ export async function findApplicationsForContactTrackLookup(
     return rows.map((r) => r.app);
   }
 
+  // Normalizes formatting at query time; index-friendly path would store digits-only on write.
   const rows = await tx
     .select({ app: application })
     .from(application)
