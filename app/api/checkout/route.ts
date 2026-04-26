@@ -1,9 +1,19 @@
+import { randomUUID } from "node:crypto";
 import { headers } from "next/headers";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor, withClientDbActor } from "@/lib/db/actor-context";
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
 import { resolveAdminPricingBreakdown } from "@/lib/pricing/resolve-catalog-pricing";
 import { PaddleProviderError, paddleAdapter } from "@/lib/payments/paddle-adapter";
+import {
+  assertPaymentsAllowedForOrigin,
+  assertPaddleServerConfigured,
+  getActivePaymentProvider,
+  getZiinaServerConfig,
+  requireCheckoutAppOrigin,
+} from "@/lib/payments/resolve-payment-provider";
+import { createZiinaPaymentIntent, ZiinaProviderError } from "@/lib/payments/ziina-client";
+import type { CheckoutSessionData } from "@/lib/payments/checkout-types";
 import * as schema from "@/lib/db/schema";
 import { eq, and, or, isNull } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
@@ -21,14 +31,27 @@ export async function POST(req: Request) {
 
     if (!applicationId) return jsonError("VALIDATION_ERROR", "Missing applicationId", { status: 400, requestId });
 
+    let origin: string;
+    try {
+      origin = requireCheckoutAppOrigin();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "App URL not configured";
+      return jsonError("PAYMENT_PROVIDER_ERROR", msg, { status: 400, requestId });
+    }
+    const gate = assertPaymentsAllowedForOrigin(origin);
+    if (!gate.ok) {
+      return jsonError("PAYMENT_PROVIDER_ERROR", gate.message, { status: 400, requestId });
+    }
+
     const accessRes = await resolveApplicationAccess(req, hdrs, applicationId);
     if (!accessRes.ok) {
       const status = accessRes.failure.kind === "not_found" ? 404 : 403;
       return jsonError("UNAUTHORIZED", "Cannot access application", { status, requestId });
     }
 
+    const provider = getActivePaymentProvider();
+
     const runTx = async (tx: DbTransaction) => {
-      // 1. Atomic checkout lock guard
       const [lockedApp] = await tx
         .update(schema.application)
         .set({ checkoutState: "pending" })
@@ -48,14 +71,21 @@ export async function POST(req: Request) {
         });
       }
 
-      // 2. Resolve pricing
+      if (lockedApp.isGuest && !lockedApp.guestEmail?.trim()) {
+        await tx.update(schema.application).set({ checkoutState: "none" }).where(eq(schema.application.id, applicationId));
+        return jsonError(
+          "VALIDATION_ERROR",
+          "Guest email is required on the application before checkout.",
+          { status: 400, requestId },
+        );
+      }
+
       const price = await resolveAdminPricingBreakdown(tx, lockedApp.serviceId);
       if (!price) {
         await tx.update(schema.application).set({ checkoutState: "none" }).where(eq(schema.application.id, applicationId));
         return jsonError("INTERNAL_ERROR", "Pricing unavailable", { status: 400, requestId });
       }
 
-      // 3. Create quote
       const quoteId = createId();
       await tx.insert(schema.priceQuote).values({
         id: quoteId,
@@ -71,41 +101,103 @@ export async function POST(req: Request) {
         lockedAt: new Date(),
       });
 
-      // 4. Create payment row
       const paymentId = createId();
       await tx.insert(schema.payment).values({
         id: paymentId,
         applicationId,
-        provider: "paddle",
+        provider,
         amount: Number(price.displayMinor),
         currency: price.currency,
         status: "checkout_created",
       });
 
-      // 5. Update app
       await tx
         .update(schema.application)
         .set({ paymentStatus: "checkout_created" })
         .where(eq(schema.application.id, applicationId));
 
-      // 6. Call provider
-      const result = await paddleAdapter.createCheckout({
-        applicationId,
-        priceQuoteId: quoteId,
-        totalAmount: Number(price.displayMinor),
-        currency: price.currency,
-        serviceLabel: `Visa Service for ${lockedApp.nationalityCode}`,
-        customerEmail: lockedApp.guestEmail,
-        metadata: { applicationId, serviceId: lockedApp.serviceId },
-      });
+      if (provider === "paddle") {
+        assertPaddleServerConfigured();
+        const result = await paddleAdapter.createCheckout({
+          applicationId,
+          priceQuoteId: quoteId,
+          totalAmount: Number(price.displayMinor),
+          currency: price.currency,
+          serviceLabel: `Visa Service for ${lockedApp.nationalityCode}`,
+          customerEmail: lockedApp.guestEmail,
+          metadata: { applicationId, serviceId: lockedApp.serviceId },
+        });
 
-      // 7. Store provider ID
+        await tx
+          .update(schema.payment)
+          .set({ providerCheckoutId: result.transactionId })
+          .where(eq(schema.payment.id, paymentId));
+
+        const data: CheckoutSessionData = {
+          provider: "paddle",
+          transactionId: result.transactionId,
+          clientToken: result.clientToken,
+        };
+        return jsonOk(data, { requestId });
+      }
+
+      let ziinaCfg;
+      try {
+        ziinaCfg = getZiinaServerConfig();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Ziina is not configured";
+        return jsonError("PAYMENT_PROVIDER_ERROR", msg, { status: 503, requestId });
+      }
+
+      const operationId = randomUUID();
       await tx
         .update(schema.payment)
-        .set({ providerCheckoutId: result.transactionId })
+        .set({ providerOperationId: operationId })
         .where(eq(schema.payment.id, paymentId));
 
-      return jsonOk(result, { requestId });
+      const encId = encodeURIComponent(applicationId);
+      const successUrl = `${origin}/apply/applications/${encId}/checkout/return?pi={PAYMENT_INTENT_ID}`;
+      const cancelUrl = `${origin}/apply/applications/${encId}/checkout/cancel?pi={PAYMENT_INTENT_ID}`;
+      const failureUrl = `${origin}/apply/applications/${encId}/checkout/cancel?pi={PAYMENT_INTENT_ID}&reason=failed`;
+
+      try {
+        const ziina = await createZiinaPaymentIntent({
+          baseUrl: ziinaCfg.apiBaseUrl,
+          accessToken: ziinaCfg.accessToken,
+          amountMinor: Number(price.displayMinor),
+          currencyCode: price.currency,
+          message: `Visa service — ${lockedApp.nationalityCode}`,
+          successUrl,
+          cancelUrl,
+          failureUrl,
+          test: ziinaCfg.testMode,
+          operationId,
+          // Important: this runs inside the DB tx; keep strictly below DB statement timeout.
+          timeoutMs: 8000,
+        });
+
+        await tx
+          .update(schema.payment)
+          .set({ providerCheckoutId: ziina.id })
+          .where(eq(schema.payment.id, paymentId));
+
+        const data: CheckoutSessionData = { provider: "ziina", redirectUrl: ziina.redirectUrl };
+        return jsonOk(data, { requestId });
+      } catch (e) {
+        if (e instanceof ZiinaProviderError) {
+          console.error("[api/checkout] Ziina error", {
+            requestId,
+            message: e.message,
+            httpStatus: e.httpStatus,
+            ziinaBody: e.ziinaBody,
+          });
+          return jsonError("ZIINA_UNAVAILABLE", e.message, {
+            status: e.httpStatus >= 500 ? 502 : e.httpStatus,
+            requestId,
+          });
+        }
+        throw e;
+      }
     };
 
     if (accessRes.access.kind === "user") {

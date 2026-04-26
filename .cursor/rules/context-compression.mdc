@@ -1,0 +1,27 @@
+---
+description: Long plans & sessions — structured handoffs; pair with graphify for tokens-per-task
+alwaysApply: false
+---
+
+# Context compression (Cursor)
+
+Use this for **multi-step implementation** and **long threads** so you optimize **tokens per task**, not only tokens per reply.
+
+## Structured handoff (new chat or mid-plan)
+
+When summarizing or starting a fresh thread, include explicit sections:
+
+- **Session intent** — what “done” looks like
+- **Files modified** — paths + one-line change
+- **Files only read** — if that matters for the next step
+- **Decisions** — constraints the next session must not violate
+- **Current state** — tests/build, known failures
+- **Next steps** — ordered list
+
+Avoid aggressive prose-only compression that drops **paths, error strings, and decisions**; that usually increases total tokens via rework.
+
+## Pairing with graphify
+
+- Use **graphify** outputs (`graphify-out/`, wiki) for **navigation and surprise discovery** across many files.
+- Use **structured summaries** above for **conversation / plan** continuity.
+- Do not treat the graph as a substitute for reading the exact source before a precise edit.

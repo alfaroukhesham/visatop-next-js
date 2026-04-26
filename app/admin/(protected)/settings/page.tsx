@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { SlidersHorizontal } from "lucide-react";
 import { adminAuth } from "@/lib/admin-auth";
 import { DraftTtlSettings } from "@/components/admin/draft-ttl-settings";
+import { PaymentsSettings } from "@/components/admin/payments-settings";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { withAdminDbActor } from "@/lib/db/actor-context";
 
@@ -58,6 +59,16 @@ export default async function AdminSettingsPage() {
           </div>
         </div>
         <DraftTtlSettings />
+      </section>
+
+      <section className="border-border mt-8 max-w-3xl space-y-4 border border-l-4 border-l-primary bg-card p-6">
+        <div className="space-y-1">
+          <h2 className="font-heading text-base font-semibold tracking-tight">Payments</h2>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            Environment-driven payment provider configuration and webhook setup. Secrets are never shown here.
+          </p>
+        </div>
+        <PaymentsSettings />
       </section>
     </AdminShell>
   );

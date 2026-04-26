@@ -2,9 +2,9 @@ import { headers } from "next/headers";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { loadGuestApplicationRowByResumeCookie } from "@/lib/applications/guest-resume-access";
 import { readResumeTokenFromRequestCookies } from "@/lib/applications/resume-cookie";
 import { toPublicApplication } from "@/lib/applications/public-application";
-import { verifyResumeToken } from "@/lib/applications/resume-token";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withClientDbActor, withSystemDbActor } from "@/lib/db/actor-context";
@@ -37,18 +37,7 @@ async function loadApplicationForGuest(
   applicationId: string,
   resumePlain: string,
 ): Promise<typeof application.$inferSelect | null> {
-  return withSystemDbActor(async (tx) => {
-    const rows = await tx
-      .select()
-      .from(application)
-      .where(eq(application.id, applicationId))
-      .limit(1);
-    const row = rows[0];
-    if (!row?.resumeTokenHash) return null;
-    if (!verifyResumeToken(resumePlain, row.resumeTokenHash)) return null;
-    if (!row.isGuest) return null;
-    return row;
-  });
+  return loadGuestApplicationRowByResumeCookie(applicationId, resumePlain);
 }
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -68,6 +57,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   const cookieHeader = req.headers.get("cookie");
   const token = readResumeTokenFromRequestCookies(cookieHeader);
   if (!token) {
+    // Guest without cookie: 403 (distinct from 404) so clients can distinguish
+    // “no possession proof” from unknown id. RSC `/submitted` uses unified 404.
     return jsonError("FORBIDDEN", "Missing resume session", { status: 403, requestId });
   }
   const row = await loadApplicationForGuest(id, token);
@@ -91,7 +82,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     const updated = await withClientDbActor(session.user.id, async (tx) => {
       return tx
         .update(application)
-        .set({ guestEmail: parsed.data.guestEmail })
+        .set({ guestEmail: parsed.data.guestEmail.trim().toLowerCase() })
         .where(and(eq(application.id, id), eq(application.userId, session.user.id)))
         .returning();
     });
@@ -114,7 +105,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   const updated = await withSystemDbActor(async (tx) => {
     return tx
       .update(application)
-      .set({ guestEmail: parsed.data.guestEmail })
+      .set({ guestEmail: parsed.data.guestEmail.trim().toLowerCase() })
       .where(and(eq(application.id, id), eq(application.isGuest, true)))
       .returning();
   });

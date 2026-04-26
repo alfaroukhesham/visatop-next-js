@@ -1,134 +1,149 @@
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { paddleAdapter } from "@/lib/payments/paddle-adapter";
-import { application, payment, paymentEvent } from "@/lib/db/schema";
-import { and, desc, eq, or } from "drizzle-orm";
-import { retainRequiredDocuments } from "@/lib/applications/retain-required-documents";
+import {
+  applyPaymentWebhookEvent,
+  resolvePaymentRowForWebhook,
+} from "@/lib/payments/apply-payment-webhook-event";
+import { parsePaddleWebhookBodyToNormalized } from "@/lib/payments/paddle-webhook-normalize";
+import { computePaymentEventPayloadHash } from "@/lib/payments/payment-event-hash";
+import {
+  isPostgresOnConflictMissingConstraintError,
+  PaymentWebhookSchemaDeploymentError,
+  requirePaymentEventPayloadHashDedupeIndex,
+} from "@/lib/payments/payment-webhook-db-guard";
+import { application, auditLog, paymentEvent } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
-import crypto from "crypto";
+import { markWebhookReceivedNow, PLATFORM_KEY_LAST_WEBHOOK_PADDLE } from "@/lib/payments/webhook-health";
+import { sendPaymentReceivedInProgressEmail } from "@/lib/email/send-application-transactional-emails";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   const bodyText = await req.text();
   const hdrs = await headers();
+  const requestId = hdrs.get("x-request-id");
   const signature = hdrs.get("paddle-signature");
 
   if (!signature || !(await paddleAdapter.verifyWebhookSignature(bodyText, signature))) {
-    return jsonError("UNAUTHORIZED", "Invalid signature", { status: 401 });
+    return jsonError("UNAUTHORIZED", "Invalid signature", { status: 401, requestId });
   }
 
-  const payloadHash = crypto.createHash("sha256").update(bodyText).digest("hex");
-  let event;
+  const payloadHash = computePaymentEventPayloadHash("paddle", bodyText);
+  let normalized;
   try {
-    event = paddleAdapter.parseWebhookEvent(bodyText);
+    normalized = parsePaddleWebhookBodyToNormalized(bodyText);
   } catch {
-    return jsonError("VALIDATION_ERROR", "Invalid webhook payload", { status: 400 });
+    return jsonError("VALIDATION_ERROR", "Invalid webhook payload", { status: 400, requestId });
   }
 
-  // Parse payload JSON to get raw payload
-  const rawPayload = JSON.parse(bodyText);
-  const providerEventId = rawPayload.event_id || "unknown";
+  const rawPayload = JSON.parse(bodyText) as { event_id?: string };
+  const providerEventId = typeof rawPayload.event_id === "string" ? rawPayload.event_id : "unknown";
 
-  await withSystemDbActor(async (tx) => {
-    // Checkout stores Paddle's transaction id on `provider_checkout_id`; after capture the same
-    // `txn_*` appears on webhooks. Do not look up only `provider_transaction_id` or no row matches.
-    let payRow =
-      event.transactionId ?
-        (
-          await tx
-            .select()
-            .from(payment)
-            .where(
-              or(
-                eq(payment.providerCheckoutId, event.transactionId),
-                eq(payment.providerTransactionId, event.transactionId),
-              ),
-            )
-            .limit(1)
-        )[0]
-      : undefined;
+  let firstPaidApplicationId: string | null = null;
+  try {
+    const handleResult = await withSystemDbActor(async (tx) => {
+      await markWebhookReceivedNow(tx, PLATFORM_KEY_LAST_WEBHOOK_PADDLE);
 
-    if (!payRow && typeof event.metadata.applicationId === "string" && event.metadata.applicationId) {
-      const rows = await tx
-        .select()
-        .from(payment)
-        .where(
-          and(
-            eq(payment.applicationId, event.metadata.applicationId),
-            eq(payment.status, "checkout_created"),
-          ),
-        )
-        .orderBy(desc(payment.createdAt))
-        .limit(1);
-      payRow = rows[0];
-    }
-
-    if (!payRow) {
-      console.warn("[webhooks/paddle] No payment row for event", {
-        type: event.type,
-        transactionId: event.transactionId,
-        applicationId: event.metadata.applicationId,
-      });
-      return;
-    }
-
-    // Lookup application
-    const [appRow] = await tx.select().from(application).where(eq(application.id, payRow.applicationId)).limit(1);
-    if (!appRow) return;
-
-    const [insertedEvent] = await tx
-      .insert(paymentEvent)
-      .values({
-        id: createId(),
-        paymentId: payRow.id,
-        providerEventId: providerEventId,
-        type: event.type,
-        payloadHash,
-      })
-      .onConflictDoNothing({ target: paymentEvent.payloadHash })
-      .returning();
-    if (!insertedEvent) return;
-
-    if (event.type === "transaction.completed") {
-      // 1. Resurrection Guard
-      if (appRow.applicationStatus === "cancelled") {
-        await tx.update(application).set({ adminAttentionRequired: true }).where(eq(application.id, appRow.id));
-        return;
+      const payRow = await resolvePaymentRowForWebhook(tx, normalized);
+      if (!payRow) {
+        console.warn("[webhooks/paddle] No payment row for event", {
+          type: normalized.rawEventType,
+          transactionId: normalized.providerPaymentId,
+          applicationId: normalized.metadata.applicationId,
+        });
+        return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
       }
 
-      // 2. Amount verification
-      if (event.amountMinor !== Number(payRow.amount)) {
-        await tx.update(application).set({ adminAttentionRequired: true }).where(eq(application.id, appRow.id));
-        // We still consider it paid to release locks, but flag it
+      if (payRow.provider !== "paddle") {
+        console.warn("[webhooks/paddle] payment row provider mismatch", {
+          paymentId: payRow.id,
+          rowProvider: payRow.provider,
+        });
+        await tx.insert(auditLog).values({
+          actorType: "system",
+          actorId: null,
+          action: "webhook_provider_mismatch",
+          entityType: "payment",
+          entityId: payRow.id,
+          beforeJson: JSON.stringify({ paymentProvider: payRow.provider }),
+          afterJson: JSON.stringify({
+            route: "paddle",
+            providerEventId,
+            rawEventType: normalized.rawEventType,
+          }),
+        });
+        return { kind: "reject" as const, status: 401 as const, firstPaidApplicationId: null as string | null };
       }
 
-      // 3. Mark paid and release checkout lock (persist txn id for support / refunds)
-      await tx
-        .update(payment)
-        .set({
-          status: "paid",
-          providerTransactionId: event.transactionId || payRow.providerTransactionId,
+      const [appRow] = await tx.select().from(application).where(eq(application.id, payRow.applicationId)).limit(1);
+      if (!appRow) return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
+
+      await requirePaymentEventPayloadHashDedupeIndex(tx);
+
+      const [insertedEvent] = await tx
+        .insert(paymentEvent)
+        .values({
+          id: createId(),
+          paymentId: payRow.id,
+          providerEventId,
+          type: normalized.rawEventType,
+          payloadHash,
         })
-        .where(eq(payment.id, payRow.id));
-      await tx.update(application).set({
-        paymentStatus: "paid",
-        checkoutState: "none",
-        applicationStatus: "in_progress",
-        fulfillmentStatus: "automation_running"
-      }).where(eq(application.id, appRow.id));
+        .onConflictDoNothing({ target: paymentEvent.payloadHash })
+        .returning();
+      if (!insertedEvent) return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
 
-      // 4. Retain docs
-      const retainRes = await retainRequiredDocuments(tx, appRow.id);
-      if (!retainRes.ok) {
-        await tx.update(application).set({ adminAttentionRequired: true }).where(eq(application.id, appRow.id));
-      }
-    } else if (event.type === "transaction.payment_failed") {
-      await tx.update(payment).set({ status: "failed" }).where(eq(payment.id, payRow.id));
-      await tx.update(application).set({ checkoutState: "none" }).where(eq(application.id, appRow.id));
+      const payApply = await applyPaymentWebhookEvent(tx, normalized, payRow, appRow, providerEventId, {
+        requestId,
+      });
+      return {
+        kind: "noop" as const,
+        firstPaidApplicationId: payApply.didFirstPaidTransition ? payRow.applicationId : null,
+      };
+    });
+
+    firstPaidApplicationId = handleResult.firstPaidApplicationId ?? null;
+
+    if (handleResult.kind === "reject") {
+      return jsonError("UNAUTHORIZED", "Provider mismatch", { status: 401, requestId });
     }
-  });
+  } catch (e) {
+    if (e instanceof PaymentWebhookSchemaDeploymentError || isPostgresOnConflictMissingConstraintError(e)) {
+      console.error("[webhooks/paddle] payment_event idempotency index missing or ON CONFLICT unusable", {
+        requestId,
+        err: e instanceof Error ? e.message : e,
+      });
+      return jsonError(
+        "SERVICE_UNAVAILABLE",
+        "Payment webhook storage is not migrated; cannot record Paddle events safely. Apply database migrations, then retry.",
+        {
+          status: 503,
+          requestId,
+          details: {
+            code: "payment_event_dedupe_index_missing",
+            requiredIndex: "payment_event_payload_hash_unique",
+          },
+        },
+      );
+    }
+    throw e;
+  }
 
-  return jsonOk({ received: true });
+  if (firstPaidApplicationId) {
+    after(() => {
+      void sendPaymentReceivedInProgressEmail(firstPaidApplicationId!, requestId).catch((err) => {
+        console.error("[webhooks/paddle] payment_received_in_progress email failed", {
+          applicationId: firstPaidApplicationId,
+          requestId,
+          err: err instanceof Error ? err.message : err,
+        });
+      });
+    });
+  }
+
+  return jsonOk({ received: true }, { requestId });
 }

@@ -25,6 +25,16 @@ export async function POST(req: Request) {
   const body = parsed.data;
   const now = new Date();
 
+  if (!session) {
+    const ge = body.guestEmail?.trim();
+    if (!ge) {
+      return jsonError("VALIDATION_ERROR", "Guest email is required to create an application.", {
+        status: 400,
+        requestId,
+      });
+    }
+  }
+
   if (session) {
     const userId = session.user.id;
     try {
@@ -36,7 +46,7 @@ export async function POST(req: Request) {
           .values({
             userId,
             isGuest: false,
-            guestEmail: body.guestEmail ?? null,
+            guestEmail: body.guestEmail?.trim() ? body.guestEmail.trim().toLowerCase() : null,
             nationalityCode: body.nationalityCode,
             serviceId: body.serviceId,
             applicationStatus: "draft",
@@ -72,12 +82,12 @@ export async function POST(req: Request) {
       const ttlHours = await getDraftTtlHoursFromTx(tx);
       const draftExpiresAt = computeDraftExpiresAt(now, ttlHours);
       const maxAge = ttlHours * 3600;
-      const inserted = await tx
-        .insert(application)
-        .values({
-          userId: null,
-          isGuest: true,
-          guestEmail: body.guestEmail ?? null,
+        const inserted = await tx
+          .insert(application)
+          .values({
+            userId: null,
+            isGuest: true,
+            guestEmail: body.guestEmail!.trim().toLowerCase(),
           nationalityCode: body.nationalityCode,
           serviceId: body.serviceId,
           applicationStatus: "draft",

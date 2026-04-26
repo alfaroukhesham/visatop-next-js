@@ -83,6 +83,9 @@ export const application = pgTable(
 
     adminAttentionRequired: boolean("admin_attention_required").default(false).notNull(),
 
+    /** Free-form ops label (e.g. embassy step); set from admin UI only. */
+    adminOpsStep: text("admin_ops_step"),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

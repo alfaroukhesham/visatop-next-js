@@ -58,6 +58,10 @@ export async function PATCH(
     return jsonError("VALIDATION_ERROR", "No fields to update", { status: 400, requestId });
   }
 
+  if (typeof updates.guestEmail === "string") {
+    updates.guestEmail = updates.guestEmail.trim().toLowerCase();
+  }
+
   const accessRes = await resolveApplicationAccess(req, hdrs, applicationId);
   if (!accessRes.ok) {
     const status = accessRes.failure.kind === "not_found" ? 404 : 403;

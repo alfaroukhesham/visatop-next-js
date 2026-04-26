@@ -7,13 +7,17 @@ import {
   initializePaddle,
   type PaddleEventData,
 } from "@paddle/paddle-js";
-import { Button } from "@/components/ui/button";
+import { ClientButton } from "@/components/client/client-button";
 import { Loader2 } from "lucide-react";
 
 interface PaddleCheckoutButtonProps {
   applicationId: string;
   disabled?: boolean;
   onSuccess?: () => void;
+  /** Called when Ziina mode is about to redirect the browser to the hosted checkout page. */
+  onExternalRedirect?: () => void;
+  /** Runs whenever the Paddle overlay closes (success, cancel, or dismiss). Use to refetch server payment state. */
+  onOverlayClosed?: () => void;
   onCancel?: () => void;
   onError?: (error: string) => void;
 }
@@ -22,6 +26,8 @@ export function PaddleCheckoutButton({
   applicationId,
   disabled,
   onSuccess,
+  onExternalRedirect,
+  onOverlayClosed,
   onCancel,
   onError,
 }: PaddleCheckoutButtonProps) {
@@ -54,7 +60,14 @@ export function PaddleCheckoutButton({
       });
 
       const raw = await res.text();
-      let envelope: { ok?: boolean; data?: { transactionId?: string; clientToken?: string }; error?: { message?: string } };
+      let envelope: {
+        ok?: boolean;
+        data?:
+          | { provider: "paddle"; transactionId: string; clientToken: string }
+          | { provider: "ziina"; redirectUrl: string }
+          | { transactionId?: string; clientToken?: string };
+        error?: { message?: string };
+      };
       try {
         envelope = raw ? (JSON.parse(raw) as typeof envelope) : {};
       } catch {
@@ -69,11 +82,22 @@ export function PaddleCheckoutButton({
         throw new Error(envelope.error?.message || `Failed to initiate checkout (HTTP ${res.status})`);
       }
 
-      if (!envelope.ok || !envelope.data?.transactionId) {
+      if (!envelope.ok || !envelope.data) {
         throw new Error(envelope.error?.message || "Invalid checkout response from server");
       }
 
-      const { transactionId, clientToken } = envelope.data;
+      const data = envelope.data;
+      if ("provider" in data && data.provider === "ziina") {
+        onExternalRedirect?.();
+        window.location.assign(data.redirectUrl);
+        return;
+      }
+
+      if (!("transactionId" in data) || !data.transactionId) {
+        throw new Error(envelope.error?.message || "Invalid checkout response from server");
+      }
+
+      const { transactionId, clientToken } = data;
 
       const paddleEnv =
         process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "production" ? "production" : "sandbox";
@@ -82,7 +106,11 @@ export function PaddleCheckoutButton({
         environment: paddleEnv,
         token: clientToken || process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "",
         eventCallback: (event: PaddleEventData) => {
-          const name = event.name;
+          const name =
+            event.name ??
+            (typeof (event as { event?: unknown }).event === "string"
+              ? ((event as { event: string }).event as PaddleEventData["name"])
+              : undefined);
 
           if (name === CheckoutEventNames.CHECKOUT_COMPLETED) {
             markSuccess();
@@ -108,6 +136,7 @@ export function PaddleCheckoutButton({
             if (!paymentFinished.current) {
               onCancel?.();
             }
+            onOverlayClosed?.();
             return;
           }
 
@@ -141,10 +170,10 @@ export function PaddleCheckoutButton({
   };
 
   return (
-    <Button
+    <ClientButton
       onClick={handleCheckout}
       disabled={disabled || isInitializing}
-      className="w-full font-bold h-12 text-lg shadow-lg hover:shadow-xl transition-all"
+      className="h-12 w-full text-lg font-bold shadow-lg transition-all hover:shadow-xl"
     >
       {isInitializing ? (
         <>
@@ -154,6 +183,6 @@ export function PaddleCheckoutButton({
       ) : (
         "Pay & Submit Application"
       )}
-    </Button>
+    </ClientButton>
   );
 }

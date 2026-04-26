@@ -16,6 +16,9 @@ export const UPLOAD_MIME_ALLOWLIST: Record<DocumentType, readonly string[]> = {
   passport_copy: ["image/jpeg", "image/png", "application/pdf"],
   personal_photo: ["image/jpeg", "image/png"],
   supporting: ["image/jpeg", "image/png", "application/pdf"],
+  admin_step_attachment: ["image/jpeg", "image/png", "application/pdf"],
+  outcome_approval: ["image/jpeg", "image/png", "application/pdf"],
+  outcome_authority_rejection: ["image/jpeg", "image/png", "application/pdf"],
 };
 
 export type FrozenCheckoutError = { code: "CHECKOUT_FROZEN" };

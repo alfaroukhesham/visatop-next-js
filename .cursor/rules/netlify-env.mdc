@@ -8,4 +8,5 @@ alwaysApply: false
 
 - Build: **`pnpm run build`** (see `netlify.toml`). Set **Node 22** via `NODE_VERSION` if not inherited from the file.
 - Required site env vars: **`DATABASE_URL`**, **`BETTER_AUTH_SECRET`**, **`BETTER_AUTH_URL`**, **`NEXT_PUBLIC_APP_URL`** (production URL must match Better Auth `baseURL` / trusted origins).
+- Payments: **`PAYMENT_PROVIDER`** (`paddle` default \| `ziina`). Ziina needs **`ZIINA_ACCESS_TOKEN`**, **`ZIINA_WEBHOOK_SECRET`** (required in prod for `/api/webhooks/ziina`), optional **`ZIINA_API_BASE_URL`**, **`ZIINA_TEST_MODE`**, **`ZIINA_ENFORCE_WEBHOOK_IP_ALLOWLIST`**. See `docs/superpowers/specs/2026-04-24-payment-provider-env-switch-design.md` §16.
 - Run **`pnpm run db:migrate`** (or apply SQL from `drizzle/`) against the Neon branch used by that deploy context before relying on auth.

@@ -1,6 +1,12 @@
 import { eq, and } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
-import { application, applicationDocument, DOCUMENT_STATUS, DOCUMENT_TYPE } from "@/lib/db/schema";
+import {
+  application,
+  applicationDocument,
+  DOCUMENT_STATUS,
+  DOCUMENT_TYPE,
+  user,
+} from "@/lib/db/schema";
 import { computeValidation } from "@/lib/documents/validation-readiness";
 
 /**
@@ -50,9 +56,15 @@ export async function evaluateApplicationReadiness(
   const hasPassport = uploads.some((u) => u.documentType === DOCUMENT_TYPE.PASSPORT_COPY);
   const hasPhoto = uploads.some((u) => u.documentType === DOCUMENT_TYPE.PERSONAL_PHOTO);
 
+  let profileEmail = app.guestEmail?.trim() || null;
+  if (!profileEmail && app.userId) {
+    const [u] = await tx.select({ email: user.email }).from(user).where(eq(user.id, app.userId)).limit(1);
+    profileEmail = u?.email?.trim() || null;
+  }
+
   const validation = computeValidation({
     profile: {
-      email: app.guestEmail,
+      email: profileEmail,
       phone: app.phone,
       fullName: app.fullName,
       dateOfBirth: app.dateOfBirth,

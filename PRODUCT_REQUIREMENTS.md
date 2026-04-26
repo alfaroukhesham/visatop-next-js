@@ -1,20 +1,29 @@
 # Unified Hybrid Portal — product requirements
 
-**Source of truth** for product intent, user flows, screen behavior, and design direction. When adding or changing UI, data models, or copy, align with this document. Implementation tokens live in [`DESIGN.md`](DESIGN.md) and [`app/globals.css`](app/globals.css).
+**Source of truth** for product intent, user flows, screen behavior, and **admin-facing** layout and visual direction. When adding or changing UI, data models, or copy, align with this document. **Implementation tokens** live in [`DESIGN.md`](DESIGN.md) and [`app/globals.css`](app/globals.css).
+
+**Two surfaces in one app:**
+
+| Surface | Who | Visual / UX source |
+|--------|-----|-------------------|
+| **Client** (`app/(client)/**`) | People applying for a visa (e.g. UAE) | **Visatop marketing brand** — [`website-brand-guidlines-summary.md`](website-brand-guidlines-summary.md) and [`docs/superpowers/specs/2026-04-20-client-brand-theme-design.md`](docs/superpowers/specs/2026-04-20-client-brand-theme-design.md). Application flow should feel **professional, easy, and modern**, with stepwise “apply online” clarity similar in spirit to consumer visa portals (e.g. [Dubai Visa Online](https://dubaivisa.com/)). |
+| **Admin** (`app/admin/**`) | Internal ops staff running the site | **This document** — Red Hat–inspired hierarchy, palette below, desktop-first density. |
+
+Client routes do **not** use the Red Hat palette or admin dark-mode behavior; admin routes do **not** pick up the Visatop client theme.
 
 ---
 
 ## Product overview
 
-**The pitch:** An enterprise-grade, role-aware portal for streamlining tourist visa applications. It combines user application tracking and back-office administrative operations under a single, unified interface governed by the Red Hat Design System (conceptually — sharp hierarchy, high contrast).
+**The pitch:** An enterprise-grade portal for streamlining tourist visa applications: applicants track and complete their visa online; **admins** run verification, catalog, and operations in a separate, tool-dense UI.
 
-**For:** Tourists seeking fast visa processing and immigration agents managing high-volume document pipelines.
+**For:** **Clients** (visa applicants) and **admins** (ops staff). No additional product personas beyond these two.
 
-**Device:** Desktop-first.
+**Device:** Desktop-first for both; client flows should remain usable on common mobile widths for apply/checkout where applicants start on a phone.
 
-**Design direction:** Balanced, unified architecture emphasizing clarity, structural hierarchy, and data density. High contrast, sharp corners, strictly left-aligned primary actions.
+**Admin design direction:** Clarity, structural hierarchy, and data density. High contrast, sharp corners (`--radius` baseline for admin skin), strictly left-aligned primary actions where the PRD specifies it.
 
-**Inspired by:** Red Hat Customer Portal, OpenShift Console.
+**Admin inspired by:** Red Hat Customer Portal, OpenShift Console.
 
 ---
 
@@ -45,7 +54,15 @@
 
 ---
 
-## Design system — color
+## Client UI — design (Visatop)
+
+Do **not** use the color/typography tables in the next section for client pages. Client implementation uses **scoped** `.theme-client` variables, **Inter** + **Noto Serif**, and the hex/radius/shadow language in [`website-brand-guidlines-summary.md`](website-brand-guidlines-summary.md). Client is **light-only** in current scope.
+
+Screen subsections below (“Client dashboard”, “Application workspace”) describe **IA, layout, and behavior**; replace any legacy “primary red” / Red Hat color callouts with **client semantic tokens** (`bg-primary`, `text-foreground`, etc.) per the client brand spec.
+
+---
+
+## Admin / operator UI — color
 
 ### Light mode (default)
 
@@ -107,13 +124,20 @@ Map these to shadcn tokens in `globals.css` when evolving the theme.
 
 ## Typography
 
+### Admin / operator UI
+
 - **Headings:** Red Hat Display, 700, 24–32px (PRD).
 - **Body:** Red Hat Text, 400, 16px (max ~120 chars per line where possible).
 - **Small:** Red Hat Text, 400, 14px.
 - **Data / code:** Red Hat Mono, 400, 14px.
 - **Buttons:** Red Hat Text, 600, 16px.
 
-**Style notes:** Sharp corners (`0px` radius). High contrast. One primary red button per view where possible. Buttons strictly left-aligned.
+**Admin style notes:** Sharp corners (`0px` radius on admin skin). High contrast. One primary action per view where possible. Buttons strictly left-aligned where specified below.
+
+### Client UI (Visatop)
+
+- **Body / UI:** Inter — baseline **18px**, relaxed line height (see `app/(client)/layout.tsx` and client theme spec).
+- **Headings / emphasis:** Noto Serif, weight **600**, scale per [`website-brand-guidlines-summary.md`](website-brand-guidlines-summary.md).
 
 ---
 
@@ -123,19 +147,19 @@ Map these to shadcn tokens in `globals.css` when evolving the theme.
 
 - **Purpose:** Portal entry — active applications and new visa options.
 - **Layout:** Global top nav, left sidebar (account / applications / help), main content: active applications banner, grid of destination cards.
-- **Key elements:** 64px header `#151515`, light/dark toggle, avatar. Active tracker: surface background, `#D2D2D2` border, success badge `#3E8635`. Catalog: left-aligned titles, `#0066CC` “View Requirements” links.
-- **Primary CTA:** “Start Application” — primary red.
-- **Cards:** ~300px width feel, `1px` border, hover: strong bottom border (`#151515` light / `#FFFFFF` dark).
+- **Key elements:** Clear header bar with nav and account affordances (use **client** `foreground` / `background` tokens, not admin hex). Active tracker: card surface, **border** token, success state via **success** token. Catalog: left-aligned titles; secondary links use **`text-link`** (gold on client skin).
+- **Primary CTA:** “Start application” — **`bg-primary`** / **`text-primary-foreground`** (yellow CTA on client theme).
+- **Cards:** ~300px width feel, border from tokens; hover elevation/shadow per brand guidelines where implemented.
 - **Responsive:** Desktop 250px sidebar, 3-col grid; tablet collapsed sidebar, 2-col; mobile hamburger, single column.
 
 ### Application workspace
 
 - **Purpose:** Upload, OCR verification, checkout.
 - **Layout:** Split: left form/upload, right extracted data (sticky on desktop).
-- **Upload:** ~200px dropzone height, dashed `2px #6A6E73`.
-- **Preview:** Red Hat Mono for extracted fields; labels 12px muted, values 14px text color.
-- **Payment:** Inline payment UI at bottom of left column (e.g. Stripe-shaped).
-- **CTA:** “Pay & Submit” — primary red, left-aligned.
+- **Upload:** ~200px dropzone height, dashed border using **muted** border tone.
+- **Preview:** **Mono** font for extracted fields where data alignment matters; labels small **muted-foreground**, values **foreground**.
+- **Payment:** Inline payment UI at bottom of left column (provider-specific).
+- **CTA:** “Pay & submit” — **primary** client token, left-aligned.
 - **Responsive:** Desktop 60/40; tablet stack; mobile dropzone full width, preview in accordion if needed.
 
 ### Admin operations
@@ -172,3 +196,4 @@ Map these to shadcn tokens in `globals.css` when evolving the theme.
 
 - Migrated from in-app `/portal/prd` page to this file as the canonical PRD for agents and humans.
 - Documented **admin CSV/XLSX** as the source for **reference pricing and catalog details**; **scraping-based** price retrieval is **out of scope**.
+- Clarified **client vs admin** design sources: Visatop client brand + online-apply UX goals vs Red Hat–style admin palette; client screen specs refer to semantic tokens instead of admin-only hex.

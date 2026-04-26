@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -10,47 +11,16 @@ import {
   RefreshCw,
   UploadCloud,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { ClientButton } from "@/components/client/client-button";
+import { ClientField } from "@/components/client/client-field";
+import { ClientInput } from "@/components/client/client-input";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
+import type { PublicApplication } from "@/lib/applications/public-application";
+import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
 import { PaddleCheckoutButton } from "./paddle-checkout-button";
 import { computeValidation } from "@/lib/documents/validation-readiness";
 
-type ApplicantProfile = {
-  fullName: string | null;
-  dateOfBirth: string | null;
-  placeOfBirth: string | null;
-  nationality: string | null;
-  passportNumber: string | null;
-  passportExpiryDate: string | null;
-  profession: string | null;
-  address: string | null;
-  phone: string | null;
-};
-
-type PassportExtractionSummary = {
-  status: string;
-  updatedAt: string | null;
-  documentId: string | null;
-  sha256: string | null;
-};
-
-type PublicApplication = {
-  id: string;
-  referenceNumber: string | null;
-  applicationStatus: string;
-  paymentStatus: string;
-  fulfillmentStatus: string;
-  draftExpiresAt: string | null;
-  nationalityCode: string;
-  serviceId: string;
-  isGuest: boolean;
-  guestEmail: string | null;
-  checkoutState: string | null;
-  applicant: ApplicantProfile;
-  passportExtraction: PassportExtractionSummary;
-};
+type ApplicantProfile = PublicApplication["applicant"];
 
 type PublicDocument = {
   id: string;
@@ -135,6 +105,7 @@ function customerFacingExtractionLabel(status: string | null | undefined): strin
 }
 
 export function ApplicationDraftPanel({ applicationId }: { applicationId: string }) {
+  const router = useRouter();
   const [app, setApp] = useState<PublicApplication | null>(null);
   const [docs, setDocs] = useState<PublicDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -193,6 +164,12 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
       return () => clearInterval(interval);
     }
   }, [app?.paymentStatus, load]);
+
+  // When the backend confirms payment, move the user into the submitted flow (where we show account-linking UX).
+  useEffect(() => {
+    if (app?.paymentStatus !== "paid") return;
+    router.replace(`/apply/applications/${encodeURIComponent(applicationId)}/submitted`);
+  }, [app?.paymentStatus, applicationId, router]);
 
   // Checkout TTL timer — cancel when countdown reaches zero.
   useEffect(() => {
@@ -286,15 +263,20 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
 
   if (error || !app) {
     return (
-      <div className="border-border bg-card space-y-4 border p-5">
-        <p className="text-destructive text-sm leading-relaxed">{error ?? "Not found."}</p>
+      <div className="space-y-4 rounded-[12px] border border-border bg-card p-5 shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
+        <p className="text-error text-sm leading-relaxed">{error ?? "Not found."}</p>
         <p className="text-muted-foreground text-sm">
-          Guests need the same browser session (resume cookie). Signed-in users must own this draft.
+          Guests need the same browser session (resume cookie). Signed-in users must own this draft. Lost the
+          cookie?{" "}
+          <Link href="/apply/track" className="text-link font-medium hover:underline">
+            Look up status with email or phone
+          </Link>
+          .
         </p>
-        <Button type="button" variant="outline" className="rounded-none" onClick={() => void load()}>
+        <ClientButton type="button" variant="outline" className="rounded-none" onClick={() => void load()}>
           <RefreshCw className="mr-2 size-4" aria-hidden />
           Retry
-        </Button>
+        </ClientButton>
         <Link href="/apply/start" className="text-link ml-4 text-sm font-medium">
           Start over
         </Link>
@@ -305,7 +287,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
   const gotBoth = Boolean(passport && photo);
   const canExtract = Boolean(passport) && !extracting && !extractionLocked && attemptsLeft > 0;
 
-  const currentValidation = computeValidation({
+  const { readiness, requiredFieldsMissing: missing } = computeValidation({
     profile: { ...app.applicant, email: app.guestEmail },
     uploads: {
       passportCopyPresent: Boolean(passport),
@@ -313,33 +295,33 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
     },
     now: new Date(),
   });
-  const readiness = currentValidation.readiness;
-  const missing = currentValidation.requiredFieldsMissing;
 
   return (
     <div className="space-y-8">
-      <section className="border-border bg-card border border-l-4 border-l-primary p-5 sm:p-6">
+      <section className="rounded-[12px] border border-border border-l-[3px] border-l-primary bg-card p-5 shadow-[0_4px_20px_rgba(0,0,0,0.06)] sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Application</p>
-            <p className="font-heading mt-1 text-lg font-semibold tracking-tight">{app.id}</p>
-            <dl className="text-muted-foreground mt-4 grid gap-2 text-sm sm:grid-cols-2">
-              <DtDd label="Status" value={app.applicationStatus} />
-              <DtDd label="Payment" value={app.paymentStatus} />
-              <DtDd label="Nationality" value={app.nationalityCode} />
-              <DtDd label="Service" value={app.serviceId} mono />
-              <DtDd label="Guest" value={app.isGuest ? "yes" : "no"} />
-              <DtDd
-                label="Draft expires"
-                value={app.draftExpiresAt ? new Date(app.draftExpiresAt).toLocaleString() : "—"}
-              />
-            </dl>
+          <div className="min-w-0 flex-1 space-y-4">
+            <div>
+              <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Application</p>
+              <p className="font-heading mt-1 font-mono text-sm font-semibold tracking-tight text-foreground">
+                {app.referenceNumber ?? app.id}
+              </p>
+              <dl className="text-muted-foreground mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                <DtDd label="Nationality" value={app.nationalityCode} />
+                <DtDd label="Service" value={app.serviceId} mono />
+                <DtDd
+                  label="Draft expires"
+                  value={app.draftExpiresAt ? new Date(app.draftExpiresAt).toLocaleString() : "—"}
+                />
+              </dl>
+            </div>
+            <ApplicationClientTracking tracking={app.clientTracking} />
           </div>
-          <Button
+          <ClientButton
             type="button"
             variant="outline"
             size="sm"
-            className="rounded-none"
+            className="rounded-none shrink-0"
             disabled={refreshing}
             onClick={() => void load({ silent: true })}
           >
@@ -349,7 +331,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
               <RefreshCw className="size-4" aria-hidden />
             )}
             Refresh
-          </Button>
+          </ClientButton>
         </div>
       </section>
 
@@ -359,7 +341,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
         </p>
       ) : null}
 
-      <section className="border-border bg-card space-y-4 border p-5 sm:p-6">
+      <section className="space-y-4 rounded-[12px] border border-border bg-card p-5 shadow-[0_4px_20px_rgba(0,0,0,0.06)] sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-heading flex items-center gap-2 text-base font-semibold tracking-tight">
             <FileStack className="text-primary size-5" aria-hidden />
@@ -400,7 +382,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
         </div>
 
         <div className="flex items-center gap-3 pt-2">
-          <Button
+          <ClientButton
             type="button"
             variant="secondary"
             className="rounded-none"
@@ -413,7 +395,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
               <UploadCloud className="mr-2 size-4" aria-hidden />
             )}
             Extract passport details
-          </Button>
+          </ClientButton>
           <p className="text-muted-foreground text-xs">
             Status:{" "}
             <span className="font-medium">{customerFacingExtractionLabel(app.passportExtraction.status)}</span>
@@ -443,7 +425,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
       {/* Payment Section */}
       <section className="space-y-4">
         {readiness === "ready" && app.paymentStatus === "unpaid" && (
-          <div className="border-2 border-primary bg-primary/5 p-5 sm:p-6 space-y-4">
+          <div className="space-y-4 rounded-[12px] border-2 border-primary bg-primary/5 p-5 shadow-[0_8px_32px_rgba(1,32,49,0.08)] sm:p-6">
             <h2 className="font-heading text-lg font-bold flex items-center gap-2">
               💳 Secure Payment
             </h2>
@@ -452,10 +434,14 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
             </p>
             <PaddleCheckoutButton
               applicationId={applicationId}
+              onExternalRedirect={() =>
+                setActionMsg("Redirecting to our payment partner to complete checkout securely…")
+              }
+              onOverlayClosed={() => void load({ silent: true })}
               onSuccess={() => {
                 setCountdown(null);
                 setActionMsg("Payment submitted. Confirming with our systems…");
-                void load({ silent: true });
+                router.push(`/apply/applications/${encodeURIComponent(applicationId)}/submitted`);
               }}
               onCancel={() => {
                 // We keep the state as checkout_created until they manually cancel or TTL expires
@@ -468,7 +454,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
         )}
 
         {app.paymentStatus === "checkout_created" && (
-          <div className="border-2 border-primary bg-primary/5 p-5 sm:p-6 space-y-6">
+          <div className="space-y-6 rounded-[12px] border-2 border-primary bg-primary/5 p-5 shadow-[0_8px_32px_rgba(1,32,49,0.08)] sm:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="font-heading text-lg font-bold">Complete your payment</h2>
@@ -486,21 +472,25 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
               <div className="flex-1">
                 <PaddleCheckoutButton
                   applicationId={applicationId}
+                  onExternalRedirect={() =>
+                    setActionMsg("Redirecting to our payment partner to complete checkout securely…")
+                  }
+                  onOverlayClosed={() => void load({ silent: true })}
                   onSuccess={() => {
                     setCountdown(null);
                     setActionMsg("Payment submitted. Confirming with our systems…");
-                    void load({ silent: true });
+                    router.push(`/apply/applications/${encodeURIComponent(applicationId)}/submitted`);
                   }}
                   onError={(msg) => setActionMsg(msg)}
                 />
               </div>
-              <Button
+              <ClientButton
                 variant="ghost"
                 className="rounded-none hover:bg-destructive/10 hover:text-destructive"
                 onClick={cancelCheckout}
               >
                 Cancel & Reset
-              </Button>
+              </ClientButton>
             </div>
           </div>
         )}
@@ -562,7 +552,7 @@ function DocumentUploadSlot({
   const tooLarge = pending ? pending.size > UPLOAD_MAX_BYTES : false;
   const inputId = `file-${docType}`;
   return (
-    <div className="border-border border p-4 space-y-3">
+    <div className="space-y-3 rounded-[12px] border border-border bg-card/80 p-4 shadow-sm">
       <div>
         <p className="text-sm font-semibold">{label}</p>
         <p className="text-muted-foreground text-xs">{description}</p>
@@ -591,10 +581,7 @@ function DocumentUploadSlot({
         <p className="text-muted-foreground text-xs">Not uploaded yet.</p>
       )}
 
-      <div className="space-y-2">
-        <Label htmlFor={inputId} className="sr-only">
-          {label}
-        </Label>
+      <ClientField id={inputId} label={label} labelClassName="sr-only">
         <input
           id={inputId}
           type="file"
@@ -603,9 +590,9 @@ function DocumentUploadSlot({
           className="text-muted-foreground block w-full text-xs file:mr-3 file:border file:border-border file:bg-muted file:px-3 file:py-2 file:text-sm file:font-medium file:text-foreground"
         />
         {tooLarge ? (
-          <p className="text-destructive text-xs">File exceeds 8MB limit.</p>
+          <p className="text-error text-xs">File exceeds 8MB limit.</p>
         ) : null}
-        <Button
+        <ClientButton
           type="button"
           size="sm"
           className="rounded-none"
@@ -618,8 +605,8 @@ function DocumentUploadSlot({
           }}
         >
           {uploading ? <Loader2 className="size-4 animate-spin" /> : "Upload"}
-        </Button>
-      </div>
+        </ClientButton>
+      </ClientField>
     </div>
   );
 }
@@ -725,14 +712,14 @@ function ApplicantReview({
   })();
 
   return (
-    <section className="border-border bg-card space-y-4 border p-5 sm:p-6">
+    <section className="space-y-4 rounded-[12px] border border-border bg-card p-5 shadow-[0_4px_20px_rgba(0,0,0,0.06)] sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-heading text-base font-semibold tracking-tight">Applicant details</h2>
         {readinessLabel ? (
           <span
             className={
               "text-xs font-medium inline-flex items-center gap-1 " +
-              (readinessLabel.tone === "success" ? "text-success" : "text-destructive")
+              (readinessLabel.tone === "success" ? "text-success" : "text-error")
             }
           >
             {readinessLabel.tone === "success" ? (
@@ -746,9 +733,9 @@ function ApplicantReview({
       </div>
 
       {missing.length > 0 && (
-        <div className="border-l-4 border-destructive bg-destructive/5 px-3 py-2 text-sm">
-          <p className="font-semibold text-destructive">Required fields missing:</p>
-          <p className="text-destructive/80 text-xs mt-1">{missing.join(", ")}</p>
+        <div className="border-error bg-error/5 border-l-4 px-3 py-2 text-sm">
+          <p className="text-error font-semibold">Required fields missing:</p>
+          <p className="mt-1 text-xs text-error/90">{missing.join(", ")}</p>
         </div>
       )}
 
@@ -780,7 +767,7 @@ function ApplicantReview({
                 )}
               </dt>
               <dd className="mt-1">
-                <Input
+                <ClientInput
                   type="text"
                   readOnly={locked}
                   value={values[r.apiKey] ?? ""}
@@ -788,10 +775,10 @@ function ApplicantReview({
                   onChange={(e) =>
                     setValues((prev) => ({ ...prev, [r.apiKey]: e.target.value }))
                   }
+                  invalid={isMissing && !values[r.apiKey]}
                   className={[
-                    "rounded-none",
-                    isMissing && !values[r.apiKey] ? "border-destructive ring-destructive/30" : "",
-                    locked ? "opacity-70 cursor-not-allowed" : "",
+                    "rounded-[5px]",
+                    locked ? "cursor-not-allowed opacity-70" : "",
                   ].join(" ")}
                 />
               </dd>
@@ -802,7 +789,7 @@ function ApplicantReview({
 
       {!locked && (
         <div className="flex items-center gap-3 pt-2">
-          <Button
+          <ClientButton
             type="button"
             disabled={!dirty || saving}
             onClick={() => void handleSave()}
@@ -810,9 +797,9 @@ function ApplicantReview({
           >
             {saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
             {saving ? "Saving…" : "Save changes"}
-          </Button>
-          {saveMsg && <p className="text-success text-xs">{saveMsg}</p>}
-          {saveError && <p className="text-destructive text-xs">{saveError}</p>}
+          </ClientButton>
+          {saveMsg ? <p className="text-success text-xs">{saveMsg}</p> : null}
+          {saveError ? <p className="text-error text-xs">{saveError}</p> : null}
         </div>
       )}
     </section>

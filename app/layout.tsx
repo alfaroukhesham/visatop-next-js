@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Red_Hat_Display, Red_Hat_Mono, Red_Hat_Text } from "next/font/google";
-import { ThemeProvider } from "@/components/theme-provider";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeClassSync } from "@/components/theme-class-sync";
 import { getAppOrigin } from "@/lib/app-url";
 import "./globals.css";
 
@@ -45,12 +44,8 @@ export default function RootLayout({
       className={`${bodySans.variable} ${headingSans.variable} ${mono.variable} h-full antialiased`}
     >
       <body className="relative flex min-h-full flex-col">
-        <ThemeProvider>
-          <div className="fixed top-4 right-4 z-50 flex justify-end">
-            <ThemeToggle />
-          </div>
-          {children}
-        </ThemeProvider>
+        <ThemeClassSync />
+        {children}
       </body>
     </html>
   );

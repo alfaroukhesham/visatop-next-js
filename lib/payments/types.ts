@@ -14,7 +14,13 @@ export type ProviderCheckoutResult = {
 };
 
 export type ParsedWebhookEvent = {
-  type: "transaction.completed" | "transaction.payment_failed" | "transaction.updated" | "refund.completed" | string;
+  type:
+    | "transaction.completed"
+    | "transaction.paid"
+    | "transaction.payment_failed"
+    | "transaction.updated"
+    | "refund.completed"
+    | string;
   transactionId: string;
   amountMinor: number;
   metadata: Record<string, string>;
