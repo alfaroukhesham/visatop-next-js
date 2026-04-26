@@ -6,6 +6,8 @@ import { ArrowLeft, FileText } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { ClientButtonLink } from "@/components/client/client-button";
 import { ClientSurface } from "@/components/client/client-surface";
+import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
+import { computeClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
 import { withClientDbActor } from "@/lib/db/actor-context";
 import { application } from "@/lib/db/schema";
 
@@ -45,6 +47,8 @@ export default async function ApplicationWorkspacePage({
           referenceNumber: application.referenceNumber,
           applicationStatus: application.applicationStatus,
           paymentStatus: application.paymentStatus,
+          fulfillmentStatus: application.fulfillmentStatus,
+          adminAttentionRequired: application.adminAttentionRequired,
           createdAt: application.createdAt,
         })
         .from(application)
@@ -82,6 +86,12 @@ export default async function ApplicationWorkspacePage({
           <ul className="space-y-3">
             {apps.map((a) => {
               const active = a.id === id;
+              const tracking = computeClientApplicationTracking({
+                applicationStatus: a.applicationStatus,
+                paymentStatus: a.paymentStatus,
+                fulfillmentStatus: a.fulfillmentStatus,
+                adminAttentionRequired: a.adminAttentionRequired,
+              });
               return (
                 <li key={a.id}>
                   <Link
@@ -91,9 +101,8 @@ export default async function ApplicationWorkspacePage({
                     }`}
                   >
                     <p className="font-mono text-xs text-[#012031]">{a.referenceNumber ?? a.id.slice(0, 8)}</p>
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {a.applicationStatus.replaceAll("_", " ")} · {a.paymentStatus}
-                    </p>
+                    <p className="text-foreground mt-2 text-sm font-medium leading-snug">{tracking.headline}</p>
+                    <ApplicationClientTracking tracking={tracking} stepsOnly className="mt-3" />
                   </Link>
                 </li>
               );

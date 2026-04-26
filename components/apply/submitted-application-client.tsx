@@ -9,6 +9,7 @@ import { GUEST_LINK_EVENTS, trackGuestLinkEvent } from "@/lib/analytics/guest-li
 import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
 import { buildPostLinkLocation } from "@/lib/applications/post-link-redirect";
 import type { PublicApplication } from "@/lib/applications/public-application";
+import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
 
 type Props = {
   applicationId: string;
@@ -189,32 +190,16 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
 
   return (
     <div className="space-y-10">
-      <header className="space-y-3">
-        <p className="text-secondary text-xs font-semibold uppercase tracking-[0.2em]">
-          {paid ? "Complete" : confirming ? "Processing" : "Status"}
-        </p>
-        <h1
-          className="font-heading text-foreground text-[clamp(1.65rem,3.5vw,2.25rem)] font-semibold leading-tight tracking-tight"
-          tabIndex={-1}
-        >
-          {paid ? "Payment received" : confirming ? "Confirming payment" : "Application update"}
-        </h1>
-        <p className="text-muted-foreground max-w-prose text-base leading-relaxed" role="status" aria-live="polite">
-          {paid && (
-            <>
-              Your payment is confirmed. Reference{" "}
-              <span className="text-foreground font-mono text-xs">
-                {app.referenceNumber ?? app.id.slice(0, 8)}
-              </span>
-              .
-            </>
-          )}
-          {confirming && !terminal && <> We are confirming your payment with our systems…</>}
-          {confirming && terminal && <>{pollMsg}</>}
-          {!paid && !confirming && (
-            <> Current status: {app.applicationStatus.replaceAll("_", " ")} — payment {app.paymentStatus}.</>
-          )}
-        </p>
+      <header className="space-y-6">
+        <div className="space-y-2">
+          <p className="text-muted-foreground text-sm leading-relaxed" role="status" aria-live="polite">
+            Reference{" "}
+            <span className="text-foreground font-mono text-xs">{app.referenceNumber ?? app.id.slice(0, 8)}</span>
+            {paid ? " · payment confirmed." : confirming && !terminal ? " · confirming payment…" : null}
+            {confirming && terminal ? ` · ${pollMsg ?? ""}` : null}
+          </p>
+        </div>
+        <ApplicationClientTracking tracking={app.clientTracking} />
       </header>
 
       {showGuestLink ? (

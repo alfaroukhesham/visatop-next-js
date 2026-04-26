@@ -260,6 +260,9 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
         <ClientNavLink href="/portal" className="text-muted-foreground hover:text-foreground text-sm pb-1">
           Signed in? Portal →
         </ClientNavLink>
+        <ClientNavLink href="/apply/track" className="text-muted-foreground hover:text-foreground text-sm pb-1">
+          Track an application →
+        </ClientNavLink>
       </div>
     </form>
   );

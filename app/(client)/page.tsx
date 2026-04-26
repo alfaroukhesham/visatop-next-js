@@ -88,6 +88,14 @@ export default async function Home() {
               <HomeNationalityStart />
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <ClientButtonLink
+                  href="/apply/track"
+                  variant="outline"
+                  brand="white"
+                  className="min-w-[148px] justify-center border-secondary/40 text-secondary hover:bg-secondary/10"
+                >
+                  Track application
+                </ClientButtonLink>
                 {session?.user ? (
                   <>
                     <ClientButtonLink href="/portal" brand="cta" className="min-w-[148px] justify-center">

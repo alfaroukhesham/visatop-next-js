@@ -1,5 +1,6 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type { application } from "@/lib/db/schema";
+import { computeClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
 
 type ApplicationRow = InferSelectModel<typeof application>;
 
@@ -11,12 +12,20 @@ type ApplicationRow = InferSelectModel<typeof application>;
  * auto-filled (server handles that internally).
  */
 export function toPublicApplication(row: ApplicationRow) {
+  const clientTracking = computeClientApplicationTracking({
+    applicationStatus: row.applicationStatus,
+    paymentStatus: row.paymentStatus,
+    fulfillmentStatus: row.fulfillmentStatus,
+    adminAttentionRequired: row.adminAttentionRequired,
+  });
+
   return {
     id: row.id,
     referenceNumber: row.referenceNumber,
     applicationStatus: row.applicationStatus,
     paymentStatus: row.paymentStatus,
     fulfillmentStatus: row.fulfillmentStatus,
+    clientTracking,
     draftExpiresAt: row.draftExpiresAt?.toISOString() ?? null,
     nationalityCode: row.nationalityCode,
     serviceId: row.serviceId,

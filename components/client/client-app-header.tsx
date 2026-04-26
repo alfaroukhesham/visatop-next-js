@@ -11,7 +11,12 @@ const NAV: { href: string; label: string; match: (path: string) => boolean }[] =
   {
     href: "/apply/start",
     label: "Apply",
-    match: (p) => p.startsWith("/apply"),
+    match: (p) => p.startsWith("/apply") && !p.startsWith("/apply/track"),
+  },
+  {
+    href: "/apply/track",
+    label: "Track",
+    match: (p) => p.startsWith("/apply/track"),
   },
   { href: "/portal", label: "Portal", match: (p) => p.startsWith("/portal") },
   {

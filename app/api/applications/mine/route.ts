@@ -4,6 +4,7 @@ import { withClientDbActor } from "@/lib/db/actor-context";
 import { application } from "@/lib/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { jsonError, jsonOk } from "@/lib/api/response";
+import { computeClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,6 +31,7 @@ export async function GET() {
         applicationStatus: application.applicationStatus,
         paymentStatus: application.paymentStatus,
         fulfillmentStatus: application.fulfillmentStatus,
+        adminAttentionRequired: application.adminAttentionRequired,
         createdAt: application.createdAt,
         updatedAt: application.updatedAt,
       })
@@ -40,6 +42,16 @@ export async function GET() {
     return rows;
   });
 
-  return jsonOk({ applications }, { requestId });
+  const withTracking = applications.map((row) => ({
+    ...row,
+    clientTracking: computeClientApplicationTracking({
+      applicationStatus: row.applicationStatus,
+      paymentStatus: row.paymentStatus,
+      fulfillmentStatus: row.fulfillmentStatus,
+      adminAttentionRequired: row.adminAttentionRequired,
+    }),
+  }));
+
+  return jsonOk({ applications: withTracking }, { requestId });
 }
 

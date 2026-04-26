@@ -15,43 +15,13 @@ import { ClientButton } from "@/components/client/client-button";
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
+import type { PublicApplication } from "@/lib/applications/public-application";
+import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
 import { PaddleCheckoutButton } from "./paddle-checkout-button";
 import { computeValidation } from "@/lib/documents/validation-readiness";
 
-type ApplicantProfile = {
-  fullName: string | null;
-  dateOfBirth: string | null;
-  placeOfBirth: string | null;
-  nationality: string | null;
-  passportNumber: string | null;
-  passportExpiryDate: string | null;
-  profession: string | null;
-  address: string | null;
-  phone: string | null;
-};
-
-type PassportExtractionSummary = {
-  status: string;
-  updatedAt: string | null;
-  documentId: string | null;
-  sha256: string | null;
-};
-
-type PublicApplication = {
-  id: string;
-  referenceNumber: string | null;
-  applicationStatus: string;
-  paymentStatus: string;
-  fulfillmentStatus: string;
-  draftExpiresAt: string | null;
-  nationalityCode: string;
-  serviceId: string;
-  isGuest: boolean;
-  guestEmail: string | null;
-  checkoutState: string | null;
-  applicant: ApplicantProfile;
-  passportExtraction: PassportExtractionSummary;
-};
+type ApplicantProfile = PublicApplication["applicant"];
+type PassportExtractionSummary = PublicApplication["passportExtraction"];
 
 type PublicDocument = {
   id: string;
@@ -297,7 +267,12 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
       <div className="space-y-4 rounded-[12px] border border-border bg-card p-5 shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
         <p className="text-error text-sm leading-relaxed">{error ?? "Not found."}</p>
         <p className="text-muted-foreground text-sm">
-          Guests need the same browser session (resume cookie). Signed-in users must own this draft.
+          Guests need the same browser session (resume cookie). Signed-in users must own this draft. Lost the
+          cookie?{" "}
+          <Link href="/apply/track" className="text-link font-medium hover:underline">
+            Look up status with email or phone
+          </Link>
+          .
         </p>
         <ClientButton type="button" variant="outline" className="rounded-none" onClick={() => void load()}>
           <RefreshCw className="mr-2 size-4" aria-hidden />
@@ -326,26 +301,28 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
     <div className="space-y-8">
       <section className="rounded-[12px] border border-border border-l-[3px] border-l-primary bg-card p-5 shadow-[0_4px_20px_rgba(0,0,0,0.06)] sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Application</p>
-            <p className="font-heading mt-1 text-lg font-semibold tracking-tight">{app.id}</p>
-            <dl className="text-muted-foreground mt-4 grid gap-2 text-sm sm:grid-cols-2">
-              <DtDd label="Status" value={app.applicationStatus} />
-              <DtDd label="Payment" value={app.paymentStatus} />
-              <DtDd label="Nationality" value={app.nationalityCode} />
-              <DtDd label="Service" value={app.serviceId} mono />
-              <DtDd label="Guest" value={app.isGuest ? "yes" : "no"} />
-              <DtDd
-                label="Draft expires"
-                value={app.draftExpiresAt ? new Date(app.draftExpiresAt).toLocaleString() : "—"}
-              />
-            </dl>
+          <div className="min-w-0 flex-1 space-y-4">
+            <div>
+              <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Application</p>
+              <p className="font-heading mt-1 font-mono text-sm font-semibold tracking-tight text-foreground">
+                {app.referenceNumber ?? app.id}
+              </p>
+              <dl className="text-muted-foreground mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                <DtDd label="Nationality" value={app.nationalityCode} />
+                <DtDd label="Service" value={app.serviceId} mono />
+                <DtDd
+                  label="Draft expires"
+                  value={app.draftExpiresAt ? new Date(app.draftExpiresAt).toLocaleString() : "—"}
+                />
+              </dl>
+            </div>
+            <ApplicationClientTracking tracking={app.clientTracking} />
           </div>
           <ClientButton
             type="button"
             variant="outline"
             size="sm"
-            className="rounded-none"
+            className="rounded-none shrink-0"
             disabled={refreshing}
             onClick={() => void load({ silent: true })}
           >
