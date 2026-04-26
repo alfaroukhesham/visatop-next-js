@@ -73,6 +73,36 @@ describe("pickEffectiveMarginPolicy", () => {
     expect(picked?.value).toBe("5");
   });
 
+  it("filters by catalogCurrency when provided", () => {
+    const t = new Date("2020-01-01");
+    const picked = pickEffectiveMarginPolicy(
+      "svc-1",
+      [
+        {
+          scope: "global",
+          serviceId: null,
+          mode: "percent",
+          value: "10",
+          currency: "USD",
+          enabled: true,
+          updatedAt: t,
+        },
+        {
+          scope: "global",
+          serviceId: null,
+          mode: "percent",
+          value: "15",
+          currency: "AED",
+          enabled: true,
+          updatedAt: t,
+        },
+      ],
+      "AED",
+    );
+    expect(picked?.value).toBe("15");
+    expect(picked?.currency).toBe("AED");
+  });
+
   it("picks newest global by updatedAt when multiple enabled globals", () => {
     const older = new Date("2019-01-01");
     const newer = new Date("2020-06-01");

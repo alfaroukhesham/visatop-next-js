@@ -3,14 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { ClientField } from "@/components/client/client-field";
-import { ClientSelect } from "@/components/client/client-select";
+import { NationalityCombobox } from "@/components/client/nationality-combobox";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 
 type Nationality = { code: string; name: string };
 
 /**
- * Home hero: pick nationality → continue on /apply/start with the same draft step as the apply flow.
+ * Home hero: searchable nationality → `/apply/start` with nationality query set.
  */
 export function HomeNationalityStart() {
   const router = useRouter();
@@ -40,43 +39,45 @@ export function HomeNationalityStart() {
     };
   }, []);
 
-  function onNationalityChange(code: string) {
+  function onSelectCode(code: string) {
     if (!code || code.length !== 2) return;
     router.push(`/apply/start?nationality=${encodeURIComponent(code)}`);
   }
 
   return (
-    <div className="mt-10 max-w-md space-y-3">
-      <ClientField id="home-nationality" label="Start with your nationality">
-        {loading ? (
-          <p className="text-muted-foreground flex items-center gap-2 text-sm">
-            <Loader2 className="size-4 animate-spin" aria-hidden />
-            Loading options…
-          </p>
-        ) : error ? (
-          <p className="text-error text-sm leading-relaxed" role="alert">
-            {error}
-          </p>
-        ) : (
-          <ClientSelect
-            id="home-nationality"
-            required={false}
-            value=""
-            onChange={(e) => onNationalityChange(e.target.value)}
-            className="w-full"
-          >
-            <option value="">Choose nationality — opens your draft</option>
-            {nationalities.map((n) => (
-              <option key={n.code} value={n.code}>
-                {n.name} ({n.code})
-              </option>
-            ))}
-          </ClientSelect>
-        )}
-      </ClientField>
-      <p className="text-muted-foreground text-xs leading-relaxed">
-        We take you to visa services for that nationality. No account needed to begin; you can save everything after
-        you pay.
+    <div className="mt-10 w-full max-w-2xl">
+      <div className="border-border bg-card overflow-visible rounded-[12px] border-2 shadow-[0_16px_48px_rgba(1,32,49,0.1)]">
+        <div className="bg-primary text-primary-foreground rounded-t-[10px] px-4 py-3 text-center text-xs font-bold uppercase tracking-[0.18em] sm:text-sm">
+          Apply visa — step 1 of 5
+        </div>
+        <div className="p-4 sm:p-6 md:p-8">
+          <label htmlFor="home-nationality-input" className="sr-only">
+            Nationality
+          </label>
+          {loading ? (
+            <p className="text-muted-foreground flex min-h-[3.5rem] items-center justify-center gap-2 text-sm">
+              <Loader2 className="size-5 animate-spin" aria-hidden />
+              Loading countries…
+            </p>
+          ) : error ? (
+            <p className="text-error min-h-[3.5rem] px-2 text-sm leading-relaxed" role="alert">
+              {error}
+            </p>
+          ) : (
+            <NationalityCombobox
+              id="home-nationality-input"
+              nationalities={nationalities}
+              valueCode={null}
+              onSelectCode={onSelectCode}
+              placeholder="Type your country and select to begin"
+              size="hero"
+            />
+          )}
+        </div>
+      </div>
+      <p className="text-muted-foreground mt-4 max-w-prose text-xs leading-relaxed sm:text-sm">
+        We take you to visa options for that nationality. No account needed to begin; you can save everything after you
+        pay.
       </p>
     </div>
   );

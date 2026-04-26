@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/client/client-card";
 import { ClientHeroPanel } from "@/components/client/client-surface";
+import { ApplyJourneyStepBar } from "@/components/apply/apply-journey-step-bar";
 import { HomeNationalityStart } from "@/components/client/home-nationality-start";
 import { cn } from "@/lib/utils";
 
@@ -30,21 +31,26 @@ export const dynamic = "force-dynamic";
 const steps = [
   {
     kicker: "Step 1",
-    title: "Nationality & visa service",
-    body: "Pick your passport nationality, choose a service, and open a draft—guest or signed-in.",
+    title: "Nationality",
+    body: "Search your passport nationality on the home page, then continue to currency and visa type.",
   },
   {
     kicker: "Step 2",
+    title: "Currency & visa type",
+    body: "Pick USD or AED for on-screen prices and choose your service card—then open your draft.",
+  },
+  {
+    kicker: "Step 3",
     title: "Submit documents",
     body: "Keep everything organized in a single workspace.",
   },
   {
-    kicker: "Step 3",
+    kicker: "Step 4",
     title: "Review & pay",
     body: "Confirm extracted details before submission.",
   },
   {
-    kicker: "Step 4",
+    kicker: "Step 5",
     title: "Track status",
     body: "See progress updates without back-and-forth.",
   },
@@ -157,7 +163,7 @@ export default async function Home() {
             <div>
               <h3 className="text-secondary text-xs font-semibold uppercase tracking-[0.22em]">How it works</h3>
               <p className="font-heading text-foreground mt-3 max-w-[20ch] text-3xl font-semibold tracking-tight md:text-4xl">
-                Four stages, zero guesswork
+                Five stages, zero guesswork
               </p>
               <p className="text-muted-foreground mt-4 max-w-[52ch] text-base">
                 Same flow you would expect from a modern visa portal—linear, explicit, and easy to resume.
@@ -253,6 +259,13 @@ export default async function Home() {
           </section>
         ) : null}
       </div>
+
+      <ApplyJourneyStepBar
+        step={1}
+        totalSteps={5}
+        title="Start your application"
+        subtitle="Type your country, pick from the list, then continue to currency and visa options."
+      />
     </div>
   );
 }

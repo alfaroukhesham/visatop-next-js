@@ -29,6 +29,7 @@ export function toPublicApplication(row: ApplicationRow) {
     draftExpiresAt: row.draftExpiresAt?.toISOString() ?? null,
     nationalityCode: row.nationalityCode,
     serviceId: row.serviceId,
+    catalogCurrency: row.catalogCurrency,
     isGuest: row.isGuest,
     guestEmail: row.guestEmail,
     checkoutState: row.checkoutState,

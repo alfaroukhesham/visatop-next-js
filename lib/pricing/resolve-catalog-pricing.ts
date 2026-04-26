@@ -17,9 +17,13 @@ export type MarginPolicyPickRow = {
 export function pickEffectiveMarginPolicy(
   serviceId: string,
   rows: MarginPolicyPickRow[],
+  catalogCurrency?: string,
 ): Pick<MarginPolicyPickRow, "mode" | "value" | "currency"> | null {
   const enabled = rows.filter((r) => r.enabled);
-  const serviceScoped = enabled.filter(
+  const scopedRows = catalogCurrency
+    ? enabled.filter((r) => r.currency === catalogCurrency)
+    : enabled;
+  const serviceScoped = scopedRows.filter(
     (r) => r.scope === "service" && r.serviceId === serviceId,
   );
   if (serviceScoped.length) {
@@ -28,7 +32,7 @@ export function pickEffectiveMarginPolicy(
     );
     return { mode: best.mode, value: best.value, currency: best.currency };
   }
-  const globals = enabled.filter((r) => r.scope === "global");
+  const globals = scopedRows.filter((r) => r.scope === "global");
   if (!globals.length) return null;
   const best = globals.reduce((a, b) => (a.updatedAt >= b.updatedAt ? a : b));
   return { mode: best.mode, value: best.value, currency: best.currency };
@@ -121,6 +125,7 @@ export async function batchLatestReferencesForServices(
   tx: SchemaDb,
   siteId: string,
   serviceIds: string[],
+  catalogCurrency: string = "USD",
 ): Promise<Map<string, ReferencePickRow>> {
   const map = new Map<string, ReferencePickRow>();
   if (!serviceIds.length) return map;
@@ -137,6 +142,7 @@ export async function batchLatestReferencesForServices(
       and(
         eq(schema.affiliateReferencePrice.siteId, siteId),
         inArray(schema.affiliateReferencePrice.serviceId, serviceIds),
+        eq(schema.affiliateReferencePrice.currency, catalogCurrency),
       ),
     )
     .orderBy(desc(schema.affiliateReferencePrice.observedAt));
@@ -234,6 +240,7 @@ export async function loadReferenceRowsForServiceSite(
   tx: SchemaDb,
   serviceId: string,
   siteId: string,
+  catalogCurrency: string = "USD",
 ): Promise<ReferencePickRow[]> {
   const rows = await tx
     .select({
@@ -246,6 +253,7 @@ export async function loadReferenceRowsForServiceSite(
       and(
         eq(schema.affiliateReferencePrice.serviceId, serviceId),
         eq(schema.affiliateReferencePrice.siteId, siteId),
+        eq(schema.affiliateReferencePrice.currency, catalogCurrency),
       ),
     )
     .orderBy(desc(schema.affiliateReferencePrice.observedAt));
@@ -288,6 +296,8 @@ export type ClientDisplayPrice = {
 export type ResolveClientDisplayPriceOptions = {
   /** When set, skips querying `affiliate_site` (caller resolved canonical site once). */
   canonicalSiteId?: string | null;
+  /** Reference + margin currency (default USD). */
+  catalogCurrency?: string;
 };
 
 /**
@@ -307,12 +317,13 @@ export async function resolveClientDisplayPrice(
   }
   if (!siteId) return null;
 
-  const refRows = await loadReferenceRowsForServiceSite(tx, serviceId, siteId);
+  const catalogCurrency = options?.catalogCurrency?.trim().toUpperCase() || "USD";
+  const refRows = await loadReferenceRowsForServiceSite(tx, serviceId, siteId, catalogCurrency);
   const latest = pickLatestReferenceRow(refRows);
   if (!latest) return null;
 
   const marginRows = await loadMarginPoliciesForService(tx, serviceId);
-  const margin = pickEffectiveMarginPolicy(serviceId, marginRows);
+  const margin = pickEffectiveMarginPolicy(serviceId, marginRows, catalogCurrency);
   if (!margin || (margin.mode !== "percent" && margin.mode !== "fixed")) {
     return null;
   }
@@ -355,11 +366,12 @@ export async function resolveAdminPricingBreakdown(
     siteId = await resolveCanonicalAffiliateSiteId(tx);
   }
   if (!siteId) return null;
-  const refRows = await loadReferenceRowsForServiceSite(tx, serviceId, siteId);
+  const catalogCurrency = options?.catalogCurrency?.trim().toUpperCase() || "USD";
+  const refRows = await loadReferenceRowsForServiceSite(tx, serviceId, siteId, catalogCurrency);
   const latest = pickLatestReferenceRow(refRows);
   if (!latest) return null;
   const marginRows = await loadMarginPoliciesForService(tx, serviceId);
-  const margin = pickEffectiveMarginPolicy(serviceId, marginRows);
+  const margin = pickEffectiveMarginPolicy(serviceId, marginRows, catalogCurrency);
   if (!margin || (margin.mode !== "percent" && margin.mode !== "fixed"))
     return null;
   if (margin.currency !== latest.currency) {
