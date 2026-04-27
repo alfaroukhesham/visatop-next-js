@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { ClientButtonLink } from "@/components/client/client-button";
 import { ClientNavLink } from "@/components/client/client-nav-link";
+import { authClient } from "@/lib/auth-client";
+import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { cn } from "@/lib/utils";
 
-const NAV: { href: string; label: string; match: (path: string) => boolean }[] = [
+const NAV_BASE: { href: string; label: string; match: (path: string) => boolean }[] = [
   { href: "/", label: "Home", match: (p) => p === "/" },
   {
     href: "/apply/start",
@@ -19,16 +22,6 @@ const NAV: { href: string; label: string; match: (path: string) => boolean }[] =
     match: (p) => p.startsWith("/apply/track"),
   },
   { href: "/portal", label: "Portal", match: (p) => p.startsWith("/portal") },
-  {
-    href: "/sign-in",
-    label: "Sign in",
-    match: (p) => p.startsWith("/sign-in"),
-  },
-  {
-    href: "/sign-up",
-    label: "Create account",
-    match: (p) => p.startsWith("/sign-up"),
-  },
 ];
 
 type Props = {
@@ -40,6 +33,39 @@ type Props = {
  */
 export function ClientAppHeader({ className }: Props) {
   const path = usePathname() ?? "";
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  const { data: session, isPending } = authClient.useSession();
+  const storeSession = useClientAuthStore((s) => s.session);
+  const storePending = useClientAuthStore((s) => s.isPending);
+  const setSession = useClientAuthStore((s) => s.setSession);
+  const setPending = useClientAuthStore((s) => s.setPending);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    setPending(isPending);
+    setSession((session ?? null) as any);
+  }, [isPending, session, setPending, setSession]);
+
+  const nav = useMemo(() => {
+    if (storePending) return NAV_BASE;
+    if (storeSession) {
+      return NAV_BASE;
+    }
+    return NAV_BASE;
+  }, [storePending, storeSession]);
+
+  async function onSignOut() {
+    try {
+      await (authClient as any).signOut?.();
+    } finally {
+      router.refresh();
+      router.push("/");
+    }
+  }
 
   return (
     <header
@@ -70,20 +96,55 @@ export function ClientAppHeader({ className }: Props) {
         </Link>
 
         <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm" aria-label="Primary">
-          {NAV.map(({ href, label, match }) => (
+          {nav.map(({ href, label, match }) => (
             <ClientNavLink key={href} href={href} onInk active={match(path)}>
               {label}
             </ClientNavLink>
           ))}
         </nav>
 
-        <ClientButtonLink
-          href="/admin/sign-in"
-          variant="ghost"
-          className="h-9 shrink-0 border border-white/15 px-3 text-xs font-medium text-white hover:border-[#FCCD64]/50 hover:bg-white/5 hover:text-white"
-        >
-          Admin
-        </ClientButtonLink>
+        <div className="flex shrink-0 items-center gap-2">
+          {!mounted || storePending ? (
+            <div className="flex items-center gap-2" aria-label="Loading account actions">
+              <div className="h-9 w-[92px] animate-pulse rounded-md bg-white/10" aria-hidden />
+              <div className="h-9 w-[120px] animate-pulse rounded-md bg-white/10" aria-hidden />
+            </div>
+          ) : storeSession ? (
+            <>
+              <ClientButtonLink
+                href="/portal/client-dashboard"
+                brand="cta"
+                className="h-9 shrink-0 px-3 text-xs font-bold"
+              >
+                Account
+              </ClientButtonLink>
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="h-9 shrink-0 rounded-md border border-white/15 bg-transparent px-3 text-xs font-medium text-white transition-colors hover:border-[#FCCD64]/50 hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#92C0D7]"
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <>
+              <ClientButtonLink
+                href="/sign-in"
+                variant="ghost"
+                className="h-9 shrink-0 border border-white/15 px-3 text-xs font-medium text-white hover:border-[#FCCD64]/50 hover:bg-white/5 hover:text-white"
+              >
+                Sign in
+              </ClientButtonLink>
+              <ClientButtonLink
+                href="/sign-up"
+                brand="cta"
+                className="h-9 shrink-0 px-3 text-xs font-bold"
+              >
+                Create account
+              </ClientButtonLink>
+            </>
+          )}
+        </div>
       </div>
     </header>
   );

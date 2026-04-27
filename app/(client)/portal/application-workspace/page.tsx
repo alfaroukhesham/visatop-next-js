@@ -64,22 +64,20 @@ export default async function ApplicationWorkspacePage({
 
     return (
       <div className="text-foreground flex min-h-[calc(100vh-4rem)] flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex h-14 w-full shrink-0 items-center border-b border-[#224D64]/12 bg-white/90 px-5 shadow-sm backdrop-blur-md sm:px-8">
-          <Link
-            href="/portal/client-dashboard"
-            className="text-secondary hover:text-foreground mr-5 flex items-center gap-2 text-sm font-semibold transition-colors duration-200"
-          >
-            <ArrowLeft className="size-5 shrink-0" aria-hidden />
-            <span className="hidden sm:inline">Dashboard</span>
-          </Link>
-          <div className="bg-border mx-1 hidden h-6 w-px sm:block" />
-          <div className="flex min-w-0 items-center gap-2">
-            <FileText className="text-primary size-5 shrink-0" aria-hidden />
-            <h1 className="font-heading truncate text-lg font-semibold text-[#012031]">My applications</h1>
-          </div>
-        </header>
-
         <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-5 py-10 sm:px-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Link
+              href="/portal/client-dashboard"
+              className="text-secondary hover:text-foreground inline-flex items-center gap-2 text-sm font-semibold transition-colors duration-200"
+            >
+              <ArrowLeft className="size-5 shrink-0" aria-hidden />
+              <span>Dashboard</span>
+            </Link>
+            <div className="flex min-w-0 items-center gap-2">
+              <FileText className="text-primary size-5 shrink-0" aria-hidden />
+              <h1 className="font-heading truncate text-lg font-semibold text-[#012031]">My applications</h1>
+            </div>
+          </div>
           <p className="text-muted-foreground text-sm leading-relaxed">
             Everything on your account is below. The highlighted row is the application you opened from your last
             link or receipt—tap any row to continue.
@@ -118,22 +116,20 @@ export default async function ApplicationWorkspacePage({
 
   return (
     <div className="text-foreground flex min-h-[calc(100vh-4rem)] flex-1 flex-col">
-      <header className="sticky top-0 z-10 flex h-14 w-full shrink-0 items-center border-b border-[#224D64]/12 bg-white/90 px-5 shadow-sm backdrop-blur-md sm:px-8">
-        <Link
-          href="/portal/client-dashboard"
-          className="text-secondary hover:text-foreground mr-5 flex items-center gap-2 text-sm font-semibold transition-colors duration-200"
-        >
-          <ArrowLeft className="size-5 shrink-0" aria-hidden />
-          <span className="hidden sm:inline">Dashboard</span>
-        </Link>
-        <div className="bg-border mx-1 hidden h-6 w-px sm:block" />
-        <div className="flex items-center gap-2">
-          <FileText className="text-primary size-5 shrink-0" aria-hidden />
-          <h1 className="font-heading text-lg font-semibold text-[#012031]">My applications</h1>
-        </div>
-      </header>
-
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-5 py-10 sm:px-8">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link
+            href="/portal/client-dashboard"
+            className="text-secondary hover:text-foreground inline-flex items-center gap-2 text-sm font-semibold transition-colors duration-200"
+          >
+            <ArrowLeft className="size-5 shrink-0" aria-hidden />
+            <span>Dashboard</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <FileText className="text-primary size-5 shrink-0" aria-hidden />
+            <h1 className="font-heading text-lg font-semibold text-[#012031]">My applications</h1>
+          </div>
+        </div>
         <ClientSurface
           preset="highlight"
           className="border-secondary/35 from-card to-muted/30 border-l-[4px] border-l-[#FCCD64] bg-gradient-to-br p-8 shadow-[0_14px_40px_rgba(1,32,49,0.09)]"

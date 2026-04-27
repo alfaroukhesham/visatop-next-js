@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { signOutAction } from "@/app/actions/auth";
-import { ClientPortalHeader } from "@/components/client/client-portal-header";
+import { ClientAppHeader } from "@/components/client/client-app-header";
 
 export const metadata: Metadata = {
   title: "Portal | Visatop",
@@ -31,7 +30,7 @@ export default async function PortalLayout({
 
   return (
     <div className="text-foreground flex min-h-0 flex-1 flex-col">
-      <ClientPortalHeader signOutAction={signOutAction} />
+      <ClientAppHeader />
       {children}
     </div>
   );
