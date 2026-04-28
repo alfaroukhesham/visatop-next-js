@@ -55,6 +55,8 @@ const devTunnelHosts =
   process.env.NODE_ENV === "development" ? mergeAllowedDevOrigins() : [];
 
 const nextConfig: NextConfig = {
+  basePath: "/visa-processing",
+  output: "standalone",
   images: {
     remotePatterns: [
       {

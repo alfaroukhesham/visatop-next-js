@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { apiHref } from "@/lib/app-href";
 
 export type AdminDocRow = {
   id: string;
@@ -56,7 +57,7 @@ export function AdminApplicationOpsPanel({
     setLoading(true);
     setMsg(null);
     try {
-      const res = await fetch(`/api/admin/applications/${applicationId}/ops`, {
+      const res = await fetch(apiHref(`/admin/applications/${applicationId}/ops`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ adminOpsStep: step }),
@@ -86,7 +87,7 @@ export function AdminApplicationOpsPanel({
       const fd = new FormData();
       fd.set("documentType", uploadType);
       fd.set("file", f);
-      const res = await fetch(`/api/admin/applications/${applicationId}/documents/upload`, {
+      const res = await fetch(apiHref(`/admin/applications/${applicationId}/documents/upload`), {
         method: "POST",
         body: fd,
       });
@@ -125,7 +126,7 @@ export function AdminApplicationOpsPanel({
     try {
       const body: Record<string, unknown> = { applicationStatus: nextStatus };
       if (needsOutcome) body.outcomeDocumentId = outcomeDocId.trim();
-      const res = await fetch(`/api/admin/applications/${applicationId}/ops`, {
+      const res = await fetch(apiHref(`/admin/applications/${applicationId}/ops`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

@@ -11,6 +11,7 @@ import { NationalityCombobox } from "@/components/client/nationality-combobox";
 import { convertMinorBetweenUsdAed, parsePublicDisplayFxAedPerUsd } from "@/lib/catalog/display-price";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { authClient } from "@/lib/auth-client";
+import { apiHref } from "@/lib/app-href";
 import { cn } from "@/lib/utils";
 
 type Nationality = { code: string; name: string };
@@ -94,7 +95,9 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
     queueMicrotask(() => {
       void (async () => {
         setLoadingList(true);
-        const res = await fetchApiEnvelope<{ nationalities: Nationality[] }>("/api/catalog/nationalities");
+        const res = await fetchApiEnvelope<{ nationalities: Nationality[] }>(
+          apiHref("/catalog/nationalities"),
+        );
         if (cancelled) return;
         if (!res.ok) {
           setError(res.error.message);
@@ -130,7 +133,9 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
       void (async () => {
         setLoadingServices(true);
         const res = await fetchApiEnvelope<{ services: Service[] }>(
-          `/api/catalog/services?nationality=${encodeURIComponent(nationality)}&currency=${encodeURIComponent(displayCurrency)}`,
+          apiHref(
+            `/catalog/services?nationality=${encodeURIComponent(nationality)}&currency=${encodeURIComponent(displayCurrency)}`,
+          ),
         );
         if (cancelled) return;
         if (!res.ok) {
@@ -176,7 +181,7 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
     };
     if (guestEmail.trim()) body.guestEmail = guestEmail.trim();
     const res = await fetchApiEnvelope<{ application: { id: string; isGuest: boolean } }>(
-      "/api/applications",
+      apiHref("/applications"),
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

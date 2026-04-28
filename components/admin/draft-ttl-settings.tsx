@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
+import { apiHref } from "@/lib/app-href";
 
 export function DraftTtlSettings() {
   const [hours, setHours] = useState("");
@@ -18,7 +19,9 @@ export function DraftTtlSettings() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const res = await fetchApiEnvelope<{ draftTtlHours: number }>("/api/admin/settings/draft-ttl");
+      const res = await fetchApiEnvelope<{ draftTtlHours: number }>(
+        apiHref("/admin/settings/draft-ttl"),
+      );
       if (cancelled) return;
       if (!res.ok) {
         setError(res.error.message);
@@ -39,7 +42,7 @@ export function DraftTtlSettings() {
     setMessage(null);
     setError(null);
     const n = Number.parseInt(hours, 10);
-    const res = await fetchApiEnvelope<{ draftTtlHours: number }>("/api/admin/settings/draft-ttl", {
+    const res = await fetchApiEnvelope<{ draftTtlHours: number }>(apiHref("/admin/settings/draft-ttl"), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ draftTtlHours: n }),

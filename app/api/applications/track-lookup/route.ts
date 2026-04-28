@@ -1,16 +1,22 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
+import { decodeCursor, encodeCursor, parseLimit } from "@/lib/api/cursor";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { computeClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
-import { findApplicationsForContactTrackLookup, isValidTrackContact } from "@/lib/applications/track-lookup";
+import {
+  findApplicationsForContactTrackLookupPaginated,
+  isValidTrackContact,
+} from "@/lib/applications/track-lookup";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
   contact: z.string().min(3).max(200),
+  limit: z.number().int().min(1).max(50).optional(),
+  cursor: z.string().nullable().optional(),
 });
 
 export async function POST(req: Request) {
@@ -29,8 +35,14 @@ export async function POST(req: Request) {
     );
   }
 
-  const rows = await withSystemDbActor(async (tx) => {
-    return findApplicationsForContactTrackLookup(tx, contact);
+  const limit = parseLimit(parsed.data.limit ? String(parsed.data.limit) : null, {
+    defaultLimit: 5,
+    max: 50,
+  });
+  const cursor = decodeCursor(parsed.data.cursor ?? null);
+
+  const { items: rows, hasMore } = await withSystemDbActor(async (tx) => {
+    return findApplicationsForContactTrackLookupPaginated(tx, contact, { limit, cursor });
   });
 
   const applications = rows.map((row) => ({
@@ -46,5 +58,9 @@ export async function POST(req: Request) {
     }),
   }));
 
-  return jsonOk({ applications }, { requestId });
+  const last = rows[rows.length - 1];
+  const nextCursor =
+    hasMore && last ? encodeCursor({ createdAt: last.createdAt.toISOString(), id: last.id }) : null;
+
+  return jsonOk({ applications, nextCursor }, { requestId });
 }

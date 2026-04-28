@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
+import { apiHref } from "@/lib/app-href";
 import type { ClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
 import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
 
@@ -18,7 +19,7 @@ type TrackApplicationRow = {
 
 type TrackOk = {
   ok: true;
-  data: { applications: TrackApplicationRow[] };
+  data: { applications: TrackApplicationRow[]; nextCursor: string | null };
 };
 
 type TrackErr = {
@@ -31,17 +32,20 @@ export function ApplicationTrackLookupForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<TrackApplicationRow[] | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
 
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function runLookup(opts: { reset: boolean; cursor: string | null }) {
     setError(null);
-    setResults(null);
     setLoading(true);
     try {
-      const res = await fetch("/api/applications/track-lookup", {
+      const res = await fetch(apiHref("/applications/track-lookup"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contact: contact.trim() }),
+        body: JSON.stringify({
+          contact: contact.trim(),
+          limit: 5,
+          cursor: opts.cursor,
+        }),
       });
       const json = (await res.json()) as TrackOk | TrackErr;
       if (!res.ok || !json.ok) {
@@ -52,12 +56,22 @@ export function ApplicationTrackLookupForm() {
         setError(msg);
         return;
       }
-      setResults(json.data.applications);
+      setNextCursor(json.data.nextCursor);
+      setResults((prev) =>
+        opts.reset ? json.data.applications : [...(prev ?? []), ...json.data.applications],
+      );
     } catch {
       setError("Network error. Check your connection and try again.");
     } finally {
       setLoading(false);
     }
+  }
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setResults(null);
+    setNextCursor(null);
+    await runLookup({ reset: true, cursor: null });
   }
 
   return (
@@ -125,6 +139,26 @@ export function ApplicationTrackLookupForm() {
               ))}
             </ul>
           )}
+          {nextCursor ? (
+            <div className="flex justify-center">
+              <ClientButton
+                type="button"
+                variant="secondary"
+                disabled={loading}
+                onClick={() => void runLookup({ reset: false, cursor: nextCursor })}
+                className="font-semibold"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
+                    Loading…
+                  </>
+                ) : (
+                  "Load more"
+                )}
+              </ClientButton>
+            </div>
+          ) : null}
           <p className="text-muted-foreground border-t border-border pt-4 text-xs leading-relaxed">
             To upload documents or pay, open the application from the same browser you started with, or sign in if you
             linked it to your account.

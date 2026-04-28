@@ -15,6 +15,7 @@ import { ClientButton } from "@/components/client/client-button";
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
+import { apiHref } from "@/lib/app-href";
 import type { PublicApplication } from "@/lib/applications/public-application";
 import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
 import { PaddleCheckoutButton } from "./paddle-checkout-button";
@@ -52,6 +53,17 @@ type ExtractResponse = {
 };
 
 type DocType = "passport_copy" | "personal_photo" | "supporting";
+type VaultRow = {
+  id: string;
+  documentType: string;
+  supportingCategory: string | null;
+  originalFilename: string | null;
+  byteLength: number | null;
+  contentType: string | null;
+  sha256: string;
+  createdAt: string;
+  expiresAt: string | null;
+};
 
 const UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
 
@@ -123,8 +135,8 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
     else setRefreshing(true);
     if (!silent) setError(null);
     const [appRes, docsRes] = await Promise.all([
-      fetchApiEnvelope<{ application: PublicApplication }>(`/api/applications/${applicationId}`),
-      fetchApiEnvelope<{ documents: PublicDocument[] }>(`/api/applications/${applicationId}/documents`),
+      fetchApiEnvelope<{ application: PublicApplication }>(apiHref(`/applications/${applicationId}`)),
+      fetchApiEnvelope<{ documents: PublicDocument[] }>(apiHref(`/applications/${applicationId}/documents`)),
     ]);
     if (!silent) setLoading(false);
     setRefreshing(false);
@@ -139,7 +151,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
 
   const cancelCheckout = useCallback(async () => {
     setActionMsg(null);
-    const res = await fetchApiEnvelope(`/api/applications/${applicationId}/checkout-cancel`, {
+    const res = await fetchApiEnvelope(apiHref(`/applications/${applicationId}/checkout-cancel`), {
       method: "POST",
     });
     if (!res.ok) {
@@ -203,7 +215,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
     const form = new FormData();
     form.set("documentType", type);
     form.set("file", file);
-    const res = await fetch(`/api/applications/${applicationId}/documents/upload`, {
+    const res = await fetch(apiHref(`/applications/${applicationId}/documents/upload`), {
       method: "POST",
       body: form,
       credentials: "include",
@@ -231,7 +243,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
     }
     setExtracting(true);
     setActionMsg(null);
-    const res = await fetchApiEnvelope<ExtractResponse>(`/api/applications/${applicationId}/extract`, {
+    const res = await fetchApiEnvelope<ExtractResponse>(apiHref(`/applications/${applicationId}/extract`), {
       method: "POST",
     });
     setExtracting(false);
@@ -369,6 +381,10 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
             applicationId={applicationId}
             uploading={uploading === "passport_copy"}
             onUpload={(f) => void onUpload("passport_copy", f)}
+            onAttachFromVault={async () => {
+              setActionMsg("Attached from My documents.");
+              await load({ silent: true });
+            }}
           />
           <DocumentUploadSlot
             label="Personal photo"
@@ -378,6 +394,10 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
             applicationId={applicationId}
             uploading={uploading === "personal_photo"}
             onUpload={(f) => void onUpload("personal_photo", f)}
+            onAttachFromVault={async () => {
+              setActionMsg("Attached from My documents.");
+              await load({ silent: true });
+            }}
           />
         </div>
 
@@ -426,9 +446,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
       <section className="space-y-4">
         {readiness === "ready" && app.paymentStatus === "unpaid" && (
           <div className="space-y-4 rounded-[12px] border-2 border-primary bg-primary/5 p-5 shadow-[0_8px_32px_rgba(1,32,49,0.08)] sm:p-6">
-            <h2 className="font-heading text-lg font-bold flex items-center gap-2">
-              💳 Secure Payment
-            </h2>
+            <h2 className="font-heading text-lg font-bold">Secure payment</h2>
             <p className="text-sm text-muted-foreground">
               Your application is complete and ready for submission. Please pay the service fee to begin processing.
             </p>
@@ -501,7 +519,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
             <div>
               <p className="text-success font-bold">Payment Confirmed</p>
               <p className="text-xs text-success/80 italic">
-                Your application is being processed by our automated systems.
+                We’re confirming your payment and starting processing.
               </p>
             </div>
           </div>
@@ -539,6 +557,7 @@ function DocumentUploadSlot({
   applicationId,
   uploading,
   onUpload,
+  onAttachFromVault,
 }: {
   label: string;
   description: string;
@@ -547,10 +566,58 @@ function DocumentUploadSlot({
   applicationId: string;
   uploading: boolean;
   onUpload: (file: File) => void;
+  onAttachFromVault?: () => Promise<void> | void;
 }) {
   const [pending, setPending] = useState<File | null>(null);
   const tooLarge = pending ? pending.size > UPLOAD_MAX_BYTES : false;
   const inputId = `file-${docType}`;
+
+  const [vaultOpen, setVaultOpen] = useState(false);
+  const [vaultItems, setVaultItems] = useState<VaultRow[]>([]);
+  const [vaultCursor, setVaultCursor] = useState<string | null>(null);
+  const [vaultLoading, setVaultLoading] = useState(false);
+  const [vaultError, setVaultError] = useState<string | null>(null);
+  const [attaching, setAttaching] = useState(false);
+
+  async function loadVault(cursor: string | null, reset: boolean) {
+    setVaultLoading(true);
+    setVaultError(null);
+    const url = new URL(apiHref("/portal/documents"));
+    url.searchParams.set("limit", "5");
+    url.searchParams.set("type", docType);
+    if (cursor) url.searchParams.set("cursor", cursor);
+
+    const res = await fetchApiEnvelope<{ items: VaultRow[]; nextCursor: string | null }>(
+      url.toString(),
+    );
+    setVaultLoading(false);
+    if (!res.ok) {
+      setVaultError(res.error.message);
+      return;
+    }
+    setVaultItems((prev) => (reset ? res.data.items : [...prev, ...res.data.items]));
+    setVaultCursor(res.data.nextCursor);
+  }
+
+  async function attachFromVault(userDocumentId: string) {
+    setAttaching(true);
+    const res = await fetchApiEnvelope<{ document: unknown; idempotent: boolean }>(
+      apiHref(`/applications/${encodeURIComponent(applicationId)}/documents/attach-from-vault`),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userDocumentId }),
+      },
+    );
+    setAttaching(false);
+    if (!res.ok) {
+      setVaultError(res.error.message);
+      return;
+    }
+    setVaultOpen(false);
+    await onAttachFromVault?.();
+  }
+
   return (
     <div className="space-y-3 rounded-[12px] border border-border bg-card/80 p-4 shadow-sm">
       <div>
@@ -568,7 +635,7 @@ function DocumentUploadSlot({
           </p>
           <div className="flex gap-3 pt-1">
             <a
-              href={`/api/applications/${applicationId}/documents/${currentDoc.id}/preview`}
+              href={apiHref(`/applications/${applicationId}/documents/${currentDoc.id}/preview`)}
               target="_blank"
               rel="noreferrer"
               className="text-link hover:underline"
@@ -606,7 +673,118 @@ function DocumentUploadSlot({
         >
           {uploading ? <Loader2 className="size-4 animate-spin" /> : "Upload"}
         </ClientButton>
+        <ClientButton
+          type="button"
+          size="sm"
+          variant="ghost"
+          className="rounded-none ml-2"
+          onClick={() => {
+            setVaultOpen(true);
+            void loadVault(null, true);
+          }}
+        >
+          Choose from My documents
+        </ClientButton>
       </ClientField>
+
+      {vaultOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10 p-4 supports-backdrop-filter:backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-[12px] border border-border bg-card p-5 shadow-[0_18px_48px_rgba(1,32,49,0.18)]">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1">
+                <p className="font-heading text-base font-semibold tracking-tight">My documents</p>
+                <p className="text-muted-foreground text-xs">
+                  Pick a saved file to attach to this application.
+                </p>
+              </div>
+              <ClientButton
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="rounded-none"
+                onClick={() => setVaultOpen(false)}
+              >
+                Close
+              </ClientButton>
+            </div>
+
+            {vaultError ? (
+              <p className="text-error mt-3 text-sm leading-relaxed" role="alert">
+                {vaultError}
+              </p>
+            ) : null}
+
+            <div className="mt-4 space-y-2">
+              {vaultItems.length === 0 && !vaultLoading ? (
+                <p className="text-muted-foreground text-sm">No saved documents of this type yet.</p>
+              ) : (
+                <ul className="max-h-[320px] space-y-2 overflow-auto pr-1">
+                  {vaultItems.map((d) => (
+                    <li
+                      key={d.id}
+                      className="flex items-start justify-between gap-3 rounded-[10px] border border-border bg-card/70 p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-foreground text-sm font-semibold">
+                          {d.originalFilename ?? d.id}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          Saved {new Date(d.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <a
+                          href={apiHref(`/portal/documents/${encodeURIComponent(d.id)}/preview`)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-link text-xs font-semibold hover:underline"
+                        >
+                          Preview
+                        </a>
+                        <ClientButton
+                          type="button"
+                          size="sm"
+                          className="rounded-none"
+                          disabled={attaching}
+                          onClick={() => void attachFromVault(d.id)}
+                        >
+                          {attaching ? <Loader2 className="size-4 animate-spin" /> : "Attach"}
+                        </ClientButton>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <ClientButton
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-none"
+                disabled={vaultLoading}
+                onClick={() => void loadVault(null, true)}
+              >
+                Refresh
+              </ClientButton>
+              {vaultCursor ? (
+                <ClientButton
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="rounded-none"
+                  disabled={vaultLoading}
+                  onClick={() => void loadVault(vaultCursor, false)}
+                >
+                  {vaultLoading ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+                  Load more
+                </ClientButton>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -672,6 +850,11 @@ function ApplicantReview({
     for (const r of ROWS) {
       const v = values[r.apiKey] ?? "";
       if (v !== (initial[r.apiKey] ?? "")) patch[r.apiKey] = v;
+    }
+    if (Object.keys(patch).length === 0) {
+      setSaving(false);
+      setSaveMsg("No changes to save.");
+      return;
     }
     const res = await fetchApiEnvelope<{ application: unknown }>(
       `/api/applications/${applicationId}/profile`,
@@ -741,7 +924,7 @@ function ApplicantReview({
 
       {extraction && (
         <p className="text-muted-foreground text-xs">
-          OCR {extraction.status} · {extraction.attemptsUsed} attempt(s)
+          Auto-fill {extraction.status} · {extraction.attemptsUsed} attempt(s)
           {extraction.ocrMissingFields.length > 0
             ? ` · could not read: ${extraction.ocrMissingFields.join(", ")}`
             : ""}
@@ -750,7 +933,7 @@ function ApplicantReview({
 
       {locked && (
         <p className="text-muted-foreground bg-muted px-3 py-2 text-xs rounded">
-          🔒 Fields are locked while payment is in progress.
+          Fields are locked while payment is in progress.
         </p>
       )}
 
@@ -763,7 +946,7 @@ function ApplicantReview({
               <dt className="text-foreground text-xs font-medium flex items-center gap-1">
                 {r.label}
                 {wasOcr && (
-                  <span className="text-[10px] text-primary bg-primary/10 px-1 rounded">OCR</span>
+                  <span className="text-[10px] text-primary bg-primary/10 px-1 rounded">Auto-filled</span>
                 )}
               </dt>
               <dd className="mt-1">

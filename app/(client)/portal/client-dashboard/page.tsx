@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, FolderOpen, HelpCircle, Plane, User } from "lucide-react";
+import { ArrowRight, HelpCircle, Plane, User } from "lucide-react";
 import { ClientButtonLink } from "@/components/client/client-button";
 import { ClientSurface } from "@/components/client/client-surface";
 import { ClientNavLink } from "@/components/client/client-nav-link";
@@ -21,10 +21,6 @@ export default function ClientDashboardPage() {
               <User className="text-secondary size-5 shrink-0" aria-hidden />
               <span className="text-sm font-medium">Account</span>
             </Link>
-            <span className="border-primary bg-muted/60 text-foreground mx-3 flex items-center gap-3 rounded-[5px] border-l-[3px] border-l-[#FCCD64] px-4 py-3">
-              <FolderOpen className="text-secondary size-5 shrink-0" aria-hidden />
-              <span className="text-sm font-bold">My applications</span>
-            </span>
             <Link
               href="/portal"
               className="text-foreground hover:bg-muted/80 mx-3 flex items-center gap-3 rounded-[5px] px-4 py-3 transition-colors duration-200"
@@ -94,10 +90,10 @@ export default function ClientDashboardPage() {
                       <ArrowRight className="size-4 shrink-0" aria-hidden />
                     </ClientButtonLink>
                     <ClientNavLink
-                      href="/portal/application-workspace"
+                      href="/apply/track"
                       className="text-link inline-flex items-center justify-center gap-1 text-sm font-semibold"
                     >
-                      View all on my account
+                      Track applications
                       <ArrowRight className="size-4 shrink-0" aria-hidden />
                     </ClientNavLink>
                   </div>

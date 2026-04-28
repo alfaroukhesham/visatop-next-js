@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
+import { apiHref } from "@/lib/app-href";
 
 export type MarginPolicyRow = {
   id: string;
@@ -189,7 +190,7 @@ export function AdminPricingWorkspace({
                           onClick={() =>
                             void run(`ref-del-${r.id}`, async () => {
                               const res = await fetchApiEnvelope<{ deleted: { id: string } }>(
-                                `/api/admin/pricing/reference-prices/${encodeURIComponent(r.id)}`,
+                                apiHref(`/admin/pricing/reference-prices/${encodeURIComponent(r.id)}`),
                                 { method: "DELETE" },
                               );
                               if (!res.ok) {
@@ -317,7 +318,7 @@ function MarginsCard({
                   onClick={() =>
                     void run("margin-create", async () => {
                       const res = await fetchApiEnvelope<{ marginPolicy: MarginPolicyRow }>(
-                        "/api/admin/pricing/margin-policies",
+                        apiHref("/admin/pricing/margin-policies"),
                         {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
@@ -382,7 +383,7 @@ function MarginsCard({
                           onClick={() =>
                             void run(`margin-en-${m.id}`, async () => {
                               const res = await fetchApiEnvelope<{ marginPolicy: MarginPolicyRow }>(
-                                `/api/admin/pricing/margin-policies/${encodeURIComponent(m.id)}`,
+                                apiHref(`/admin/pricing/margin-policies/${encodeURIComponent(m.id)}`),
                                 {
                                   method: "PATCH",
                                   headers: { "Content-Type": "application/json" },
@@ -414,7 +415,7 @@ function MarginsCard({
                           onClick={() =>
                             void run(`margin-del-${m.id}`, async () => {
                               const res = await fetchApiEnvelope<{ deleted: { id: string } }>(
-                                `/api/admin/pricing/margin-policies/${encodeURIComponent(m.id)}`,
+                                apiHref(`/admin/pricing/margin-policies/${encodeURIComponent(m.id)}`),
                                 { method: "DELETE" },
                               );
                               if (!res.ok) {
@@ -471,7 +472,7 @@ function AddReferenceForm({
           }
           const amountMinor = Math.round(n * 100);
           const res = await fetchApiEnvelope<{ referencePrice: { id: string } }>(
-            "/api/admin/pricing/reference-prices",
+            apiHref("/admin/pricing/reference-prices"),
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },

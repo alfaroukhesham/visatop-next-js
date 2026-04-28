@@ -60,13 +60,13 @@ Draft applications for a signed-in user are:
 - `draftExpiresAt IS NULL OR draftExpiresAt > now()`
 
 Notes:
-- Expired drafts may be hidden in v1. A future enhancement could show an “Expired drafts” section.
+- Only show drafts that can be resumed, meaning **non-expired** drafts only (i.e., hide expired drafts).
 
 ### Pagination
 
 - Cursor pagination (server-side), ordered by `(createdAt desc, id desc)`.
 - Query parameters:
-  - `limit` (default 20, max 50)
+  - `limit` (default 5, max 50)
   - `cursor` (opaque string encoding last `(createdAt, id)` pair)
 
 ### UI
@@ -97,7 +97,7 @@ Row:
 ### Guest behavior (deferred hardening)
 
 If not signed in:
-- keep current lookup form.
+- keep the current lookup form, but results must be **cursor paginated** using the same query shape as signed-in lists.
 - OTP-based safeguards are out-of-scope for this spec.
 
 ## My documents (vault) + immediate reuse into applications
@@ -109,7 +109,7 @@ Signed-in users can maintain a personal document vault so that when they start a
 Documents include:
 - Passport bio page (vault)
 - Personal photo (vault)
-- Supporting documents (tickets/hotel/passport additional page, etc.)
+- Supporting documents (e.g. air ticket, hotel reservation, additional passport page, other supporting files)
 
 Clarification:
 - “Passport cover/additional page” is **optional** and treated as **supporting**.
@@ -144,11 +144,23 @@ Sections:
 - Passport (bio page)
 - Personal photo
 - Supporting documents
+  - Air ticket
+  - Hotel reservation
+  - Additional passport page (optional)
+  - Other supporting documents
 
 Each section supports:
 - Upload (max size consistent with existing application upload constraints)
 - List items (filename, uploaded date, optional expiry, preview)
 - Optional delete in v1 (either soft-delete or “upload new version” preferred)
+
+### Application ↔ vault is bidirectional (guest-linking ingestion)
+
+When a user creates an application as a **guest**, then later creates an account and **links** that application to their user:
+
+- Any uploaded application documents that are eligible for reuse (passport copy, personal photo, supporting) must also be saved into the user vault.
+- This ingestion should be idempotent (avoid duplicates) using `sha256` + `documentType` + `userId`.
+- Provenance should be recorded so we can explain “Imported from application” in the vault UI (optional in v1).
 
 ### Reuse UX entrypoints
 

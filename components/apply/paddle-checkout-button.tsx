@@ -9,6 +9,7 @@ import {
 } from "@paddle/paddle-js";
 import { ClientButton } from "@/components/client/client-button";
 import { Loader2 } from "lucide-react";
+import { apiHref } from "@/lib/app-href";
 
 interface PaddleCheckoutButtonProps {
   applicationId: string;
@@ -53,7 +54,7 @@ export function PaddleCheckoutButton({
 
     setIsInitializing(true);
     try {
-      const res = await fetch("/api/checkout", {
+      const res = await fetch(apiHref("/checkout"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ applicationId }),

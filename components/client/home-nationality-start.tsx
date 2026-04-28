@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { NationalityCombobox } from "@/components/client/nationality-combobox";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
+import { apiHref } from "@/lib/app-href";
 
 type Nationality = { code: string; name: string };
 
@@ -22,7 +23,9 @@ export function HomeNationalityStart() {
     queueMicrotask(() => {
       void (async () => {
         setLoading(true);
-        const res = await fetchApiEnvelope<{ nationalities: Nationality[] }>("/api/catalog/nationalities");
+        const res = await fetchApiEnvelope<{ nationalities: Nationality[] }>(
+          apiHref("/catalog/nationalities"),
+        );
         if (cancelled) return;
         if (!res.ok) {
           setError(res.error.message);

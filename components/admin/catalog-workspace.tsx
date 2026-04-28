@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
+import { apiHref } from "@/lib/app-href";
 
 export type CatalogNationality = {
   code: string;
@@ -168,7 +169,7 @@ function NationalitiesSection({
               e.preventDefault();
               void run(`nat-add-${code}`, async () => {
                 const res = await fetchApiEnvelope<{ nationality: CatalogNationality }>(
-                  "/api/admin/catalog/nationalities",
+                  apiHref("/admin/catalog/nationalities"),
                   {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -271,7 +272,7 @@ function NationalityRow({
             onClick={() =>
               void run(`nat-${n.code}`, async () => {
                 const res = await fetchApiEnvelope<{ nationality: CatalogNationality }>(
-                  `/api/admin/catalog/nationalities/${encodeURIComponent(n.code)}`,
+                  apiHref(`/admin/catalog/nationalities/${encodeURIComponent(n.code)}`),
                   {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
@@ -359,7 +360,7 @@ function ServicesSection({
                     void run("svc-create", async () => {
                       const d = durationDays.trim() === "" ? null : Number.parseInt(durationDays, 10);
                       const res = await fetchApiEnvelope<{ service: CatalogService }>(
-                        "/api/admin/catalog/visa-services",
+                        apiHref("/admin/catalog/visa-services"),
                         {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
@@ -498,7 +499,7 @@ function ServiceRow({
                 const dRaw = durationDays.trim();
                 const d = dRaw === "" ? null : Number.parseInt(dRaw, 10);
                 const res = await fetchApiEnvelope<{ service: CatalogService }>(
-                  `/api/admin/catalog/visa-services/${encodeURIComponent(s.id)}`,
+                  apiHref(`/admin/catalog/visa-services/${encodeURIComponent(s.id)}`),
                   {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
@@ -559,7 +560,7 @@ function EligibilitySection({
             onSubmit={(e) => {
               e.preventDefault();
               void run("elig-add", async () => {
-                const res = await fetchApiEnvelope<{ eligibility: unknown }>("/api/admin/catalog/eligibility", {
+                const res = await fetchApiEnvelope<{ eligibility: unknown }>(apiHref("/admin/catalog/eligibility"), {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ serviceId, nationalityCode }),
@@ -635,7 +636,7 @@ function EligibilitySection({
                         onClick={() =>
                           void run(`elig-del-${e.serviceId}-${e.nationalityCode}`, async () => {
                             const res = await fetchApiEnvelope<{ deleted: unknown }>(
-                              "/api/admin/catalog/eligibility",
+                              apiHref("/admin/catalog/eligibility"),
                               {
                                 method: "DELETE",
                                 headers: { "Content-Type": "application/json" },
