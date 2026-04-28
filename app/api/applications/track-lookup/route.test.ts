@@ -9,7 +9,7 @@ vi.mock("@/lib/db/actor-context", () => ({
 }));
 
 vi.mock("@/lib/applications/track-lookup", () => ({
-  findApplicationsForContactTrackLookup: vi.fn(),
+  findApplicationsForContactTrackLookupPaginated: vi.fn(),
   isValidTrackContact: vi.fn(),
 }));
 
@@ -37,7 +37,10 @@ describe("POST /api/applications/track-lookup", () => {
 
   it("returns applications when contact matches", async () => {
     vi.mocked(trackLookup.isValidTrackContact).mockReturnValue(true);
-    vi.mocked(trackLookup.findApplicationsForContactTrackLookup).mockResolvedValue([row as never]);
+    vi.mocked(trackLookup.findApplicationsForContactTrackLookupPaginated).mockResolvedValue({
+      items: [row as never],
+      hasMore: false,
+    } as never);
 
     const res = await POST(
       new Request("http://localhost/api/applications/track-lookup", {
@@ -53,12 +56,16 @@ describe("POST /api/applications/track-lookup", () => {
     expect(body.data.applications[0].applicationId).toBe(row.id);
     expect(body.data.applications[0].referenceDisplay).toBe("REF-1");
     expect(body.data.applications[0].clientTracking.headline).toBeTruthy();
+    expect(body.data.nextCursor).toBeNull();
     expect(actor.withSystemDbActor).toHaveBeenCalledTimes(1);
   });
 
   it("returns empty list when none match", async () => {
     vi.mocked(trackLookup.isValidTrackContact).mockReturnValue(true);
-    vi.mocked(trackLookup.findApplicationsForContactTrackLookup).mockResolvedValue([]);
+    vi.mocked(trackLookup.findApplicationsForContactTrackLookupPaginated).mockResolvedValue({
+      items: [],
+      hasMore: false,
+    } as never);
 
     const res = await POST(
       new Request("http://localhost/api/applications/track-lookup", {
@@ -71,6 +78,7 @@ describe("POST /api/applications/track-lookup", () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.data.applications).toEqual([]);
+    expect(body.data.nextCursor).toBeNull();
   });
 
   it("returns 400 when contact is not a valid email or phone", async () => {

@@ -7,10 +7,9 @@ import { toPublicApplication } from "@/lib/applications/public-application";
 
 type Props = { params: Promise<{ id: string }> };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params;
+export async function generateMetadata(_props: Props): Promise<Metadata> {
   return {
-    title: `Submitted ${id.slice(0, 8)}…`,
+    title: "Thank you | Visatop",
     robots: { index: false, follow: false },
   };
 }

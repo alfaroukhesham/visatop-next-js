@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { apiHref } from "@/lib/app-href";
 
 const REFUND_REASONS = [
   { value: "fraud", label: "Fraud" },
@@ -22,7 +23,7 @@ export function ApplicationRefundForm({ applicationId }: { applicationId: string
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/applications/${applicationId}/refund`, {
+      const res = await fetch(apiHref(`/admin/applications/${applicationId}/refund`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),

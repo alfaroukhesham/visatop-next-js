@@ -31,6 +31,9 @@ export const application = pgTable(
       .notNull()
       .references(() => visaService.id),
 
+    /** Catalog / checkout price book: USD or AED (must match `affiliate_reference_price` + margin rows). */
+    catalogCurrency: text("catalog_currency").default("USD").notNull(),
+
     applicationStatus: text("application_status").notNull(),
     paymentStatus: text("payment_status").notNull(),
     fulfillmentStatus: text("fulfillment_status").notNull(),

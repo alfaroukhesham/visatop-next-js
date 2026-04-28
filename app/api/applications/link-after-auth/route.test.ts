@@ -52,16 +52,39 @@ function baseGuestRow(overrides: Record<string, unknown> = {}) {
 function txMock(rowList: unknown[], updateReturning?: { id: string }[]) {
   const first = rowList[0] as { id?: string } | undefined;
   const defaultReturning = first?.id ? [{ id: first.id }] : [];
+  const inserts: Array<{ table: unknown; values: unknown }> = [];
   return {
-    select: () => ({
-      from: () => ({
-        where: () => ({
-          for: () => ({
-            limit: async () => rowList,
+    __inserts: inserts,
+    select: (shape?: unknown) => {
+      // shape present => vault ingestion select; otherwise link select-for-update.
+      if (shape) {
+        return {
+          from: () => ({
+            innerJoin: () => ({
+              where: async () => [
+                {
+                  documentType: "passport_copy",
+                  contentType: "image/jpeg",
+                  byteLength: 10,
+                  originalFilename: "passport.jpg",
+                  sha256: "sha",
+                  bytes: Buffer.from("abc"),
+                },
+              ],
+            }),
+          }),
+        };
+      }
+      return {
+        from: () => ({
+          where: () => ({
+            for: () => ({
+              limit: async () => rowList,
+            }),
           }),
         }),
-      }),
-    }),
+      };
+    },
     update: () => ({
       set: () => ({
         where: () => ({
@@ -70,7 +93,16 @@ function txMock(rowList: unknown[], updateReturning?: { id: string }[]) {
         }),
       }),
     }),
-    insert: () => ({ values: async () => {} }),
+    insert: (table: unknown) => ({
+      values: (v: unknown) => {
+        inserts.push({ table, values: v });
+        return {
+          onConflictDoNothing: () => ({
+            returning: async () => [{ id: "udoc-1" }],
+          }),
+        };
+      },
+    }),
   };
 }
 
@@ -299,5 +331,29 @@ describe("POST /api/applications/link-after-auth", () => {
     );
     expect(res.status).toBe(404);
     expect(res.headers.get("set-cookie")).toContain("vt_link_intent=");
+  });
+
+  it("ingests eligible application documents into vault on link", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue({
+      user: { id: "user-1", email: "a@test.com" },
+    } as never);
+
+    const tx = txMock([baseGuestRow({ paymentStatus: "paid" })]);
+    withSystemMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(tx));
+
+    const res = await POST(
+      new Request("http://localhost:3000/api/applications/link-after-auth", {
+        method: "POST",
+        headers: {
+          Origin: "http://localhost:3000",
+          Cookie: `vt_link_intent=${encodeURIComponent(intent)}; vt_resume=ok`,
+        },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    // We should have attempted at least one insert (audit_log + user_document + user_document_blob).
+    expect(tx.__inserts.length).toBeGreaterThanOrEqual(2);
   });
 });

@@ -6,11 +6,15 @@ import { db } from "@/lib/db";
 import * as clientSchema from "@/lib/db/schema/auth";
 import { isFacebookOAuthConfigured } from "@/lib/social-oauth";
 
-const baseURL = (
+const appBaseURL = (
   process.env.BETTER_AUTH_URL ??
   process.env.NEXT_PUBLIC_APP_URL ??
   "http://localhost:3000"
 ).replace(/\/$/, "");
+
+// Better Auth expects the base URL of the auth handler (not just the site origin).
+// With `basePath`, BETTER_AUTH_URL / NEXT_PUBLIC_APP_URL should already include it (e.g. /visa-processing).
+const baseURL = `${appBaseURL}/api/auth`;
 
 function normalizeOrigin(input: string): string | null {
   const trimmed = input.replace(/\/$/, "").trim();
@@ -40,7 +44,8 @@ async function resolveTrustedOrigins(request?: Request) {
     if (o) origins.add(o);
   };
 
-  add(baseURL);
+  // `baseURL` includes `/api/auth`; origin checks should use the app base.
+  add(appBaseURL);
   add(process.env.BETTER_AUTH_URL);
   add(process.env.NEXT_PUBLIC_APP_URL);
   add("http://localhost:3000");
@@ -84,6 +89,7 @@ async function resolveTrustedOrigins(request?: Request) {
 }
 
 export const auth = betterAuth({
+  basePath: "/api/auth",
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: clientSchema,

@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, isNotNull } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { assertTrustedJsonPostOrigin } from "@/lib/api/json-post-origin";
 import { jsonError, jsonOk } from "@/lib/api/response";
@@ -15,7 +15,20 @@ import { consumeGuestLinkRateLimit } from "@/lib/applications/guest-link-rate-li
 import { readResumeTokenFromRequestCookies } from "@/lib/applications/resume-cookie";
 import { verifyResumeToken } from "@/lib/applications/resume-token";
 import { withSystemDbActor } from "@/lib/db/actor-context";
-import { application, auditLog } from "@/lib/db/schema";
+import {
+  application,
+  applicationDocument,
+  applicationDocumentBlob,
+  auditLog,
+  DOCUMENT_STATUS,
+  DOCUMENT_TYPE,
+} from "@/lib/db/schema";
+import {
+  userDocument,
+  userDocumentBlob,
+  userDocumentSourceApplication,
+} from "@/lib/db/schema/user-document";
+import { sql } from "drizzle-orm";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -180,6 +193,95 @@ export async function POST(req: Request) {
         emailsDiffer,
       }),
     });
+
+    // Bi-directional ingestion: copy eligible application docs into user vault.
+    // Idempotent by unique index (user_id, sha256, document_type).
+    const eligible = await tx
+      .select({
+        applicationDocumentId: applicationDocument.id,
+        documentType: applicationDocument.documentType,
+        contentType: applicationDocument.contentType,
+        byteLength: applicationDocument.byteLength,
+        originalFilename: applicationDocument.originalFilename,
+        sha256: applicationDocument.sha256,
+        bytes: applicationDocumentBlob.bytes,
+      })
+      .from(applicationDocument)
+      .innerJoin(applicationDocumentBlob, eq(applicationDocumentBlob.documentId, applicationDocument.id))
+      .where(
+        and(
+          eq(applicationDocument.applicationId, row.id),
+          isNotNull(applicationDocument.sha256),
+          inArray(applicationDocument.documentType, [
+            DOCUMENT_TYPE.PASSPORT_COPY,
+            DOCUMENT_TYPE.PERSONAL_PHOTO,
+            DOCUMENT_TYPE.SUPPORTING,
+          ]),
+          inArray(applicationDocument.status, [
+            DOCUMENT_STATUS.UPLOADED_TEMP,
+            DOCUMENT_STATUS.RETAINED,
+          ]),
+        ),
+      );
+
+    for (const d of eligible) {
+      const sha256 = d.sha256!;
+      const isSupporting = d.documentType === DOCUMENT_TYPE.SUPPORTING;
+      const [inserted] = isSupporting
+        ? await tx
+            .insert(userDocument)
+            .values({
+              userId: U,
+              documentType: d.documentType!,
+              supportingCategory: null,
+              contentType: d.contentType,
+              byteLength: d.byteLength,
+              originalFilename: d.originalFilename,
+              sha256,
+            })
+            .onConflictDoNothing({
+              target: [
+                userDocument.userId,
+                userDocument.sha256,
+                userDocument.documentType,
+                userDocument.supportingCategory,
+              ],
+              where: sql`${userDocument.documentType} = 'supporting'`,
+            })
+            .returning({ id: userDocument.id })
+        : await tx
+            .insert(userDocument)
+            .values({
+              userId: U,
+              documentType: d.documentType!,
+              supportingCategory: null,
+              contentType: d.contentType,
+              byteLength: d.byteLength,
+              originalFilename: d.originalFilename,
+              sha256,
+            })
+            .onConflictDoNothing({
+              target: [userDocument.userId, userDocument.sha256, userDocument.documentType],
+              where: sql`${userDocument.documentType} <> 'supporting'`,
+            })
+            .returning({ id: userDocument.id });
+
+      if (inserted?.id) {
+        await tx.insert(userDocumentBlob).values({
+          documentId: inserted.id,
+          bytes: Buffer.from(d.bytes),
+        });
+
+        await tx
+          .insert(userDocumentSourceApplication)
+          .values({
+            userDocumentId: inserted.id,
+            applicationId: row.id,
+            applicationDocumentId: d.applicationDocumentId,
+          })
+          .onConflictDoNothing();
+      }
+    }
 
     return { kind: "ok", emailsDiffer } as const;
   });

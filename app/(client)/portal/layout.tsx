@@ -2,13 +2,11 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { signOutAction } from "@/app/actions/auth";
-import { ClientPortalHeader } from "@/components/client/client-portal-header";
+import { ClientAppHeader } from "@/components/client/client-app-header";
 
 export const metadata: Metadata = {
-  title: "Portal",
-  description:
-    "Your signed-in area — open the client dashboard or application workspace.",
+  title: "Portal | Visatop",
+  description: "Signed-in area to start a new visa, open your dashboard, or continue an existing application.",
 };
 
 export const dynamic = "force-dynamic";
@@ -32,7 +30,7 @@ export default async function PortalLayout({
 
   return (
     <div className="text-foreground flex min-h-0 flex-1 flex-col">
-      <ClientPortalHeader signOutAction={signOutAction} />
+      <ClientAppHeader />
       {children}
     </div>
   );

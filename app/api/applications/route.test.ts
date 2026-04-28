@@ -30,10 +30,15 @@ const guestRow = {
   draftExpiresAt: new Date(),
   nationalityCode: "US",
   serviceId: "svc-1",
+  catalogCurrency: "USD",
   isGuest: true,
   userId: null,
   guestEmail: "guest@example.com",
   resumeTokenHash: "hash",
+  checkoutState: null,
+  passportExtractionStatus: "not_started",
+  passportExtractionRunId: 0,
+  adminAttentionRequired: false,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -81,6 +86,7 @@ describe("POST /api/applications", () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.data.application.id).toBe("app-1");
+    expect(body.data.application.catalogCurrency).toBe("USD");
     expect(JSON.stringify(body.data)).not.toMatch(/resumeToken/i);
     const setCookie = res.headers.get("set-cookie");
     expect(setCookie).toBeTruthy();
@@ -100,6 +106,24 @@ describe("POST /api/applications", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.ok).toBe(false);
+  });
+
+  it("rejects invalid catalog currency", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue(null as never);
+
+    const res = await POST(
+      new Request("http://localhost/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nationalityCode: "US",
+          serviceId: "svc-1",
+          guestEmail: "guest@example.com",
+          catalogCurrency: "EUR",
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
   });
 
   it("signed-in create returns 201 without Set-Cookie", async () => {

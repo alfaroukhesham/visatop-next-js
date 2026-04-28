@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ExternalLink, Loader2, RefreshCw, Webhook, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
+import { apiHref } from "@/lib/app-href";
 
 type PaymentsSettingsState = {
   activeProvider: "paddle" | "ziina";
@@ -25,7 +26,7 @@ export function PaymentsSettings() {
 
   async function load() {
     setLoading(true);
-    const res = await fetchApiEnvelope<PaymentsSettingsState>("/api/admin/settings/payments");
+    const res = await fetchApiEnvelope<PaymentsSettingsState>(apiHref("/admin/settings/payments"));
     if (!res.ok) {
       setError(res.error.message);
       setState(null);
@@ -52,7 +53,7 @@ export function PaymentsSettings() {
     setMessage(null);
     setError(null);
     const res = await fetchApiEnvelope<{ success: boolean; error?: string | null; url?: string }>(
-      "/api/admin/settings/payments/ziina/webhook",
+      apiHref("/admin/settings/payments/ziina/webhook"),
       { method },
     );
     setWorking(false);
@@ -76,7 +77,7 @@ export function PaymentsSettings() {
     setError(null);
     setTestRedirectUrl(null);
     const res = await fetchApiEnvelope<{ redirectUrl: string; paymentIntentId: string }>(
-      "/api/admin/settings/payments/ziina/test-intent",
+      apiHref("/admin/settings/payments/ziina/test-intent"),
       { method: "POST" },
     );
     setWorking(false);

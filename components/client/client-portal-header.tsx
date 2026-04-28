@@ -26,7 +26,7 @@ export function ClientPortalHeader({ signOutAction, className }: Props) {
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#92C0D7]">
             Signed in
           </p>
-          <p className="font-heading text-lg font-semibold tracking-tight text-white">Portal</p>
+          <p className="font-heading text-lg font-semibold tracking-tight text-white">My Visatop</p>
         </div>
         <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm" aria-label="Portal">
           <ClientNavLink href="/" onInk active={path === "/"}>
@@ -39,7 +39,7 @@ export function ClientPortalHeader({ signOutAction, className }: Props) {
             Track
           </ClientNavLink>
           <ClientNavLink href="/portal" onInk active={path === "/portal"}>
-            Hub
+            Overview
           </ClientNavLink>
         </nav>
         <form action={signOutAction}>

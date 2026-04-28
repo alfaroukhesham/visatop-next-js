@@ -1,15 +1,10 @@
 /**
- * Post–guest-link navigation (spec D1 / D11).
+ * Post–guest-link navigation.
  *
- * When **`WORKSPACE_APPLICATION_HIGHLIGHT_ENABLED`** is **`false`**, the primary
- * workspace highlight path is deferred and we use the slip URL instead
- * (session-owned apply screen).
+ * We no longer route users to the legacy portal "workspace" page. After linking,
+ * send the user to the track page where they can see status across applications.
  */
 export function buildPostLinkLocation(applicationId: string): string {
-  const flag = process.env.WORKSPACE_APPLICATION_HIGHLIGHT_ENABLED;
-  const useWorkspace = flag !== "false";
-  if (useWorkspace) {
-    return `/portal/application-workspace?applicationId=${encodeURIComponent(applicationId)}`;
-  }
-  return `/apply/applications/${encodeURIComponent(applicationId)}?linked=1`;
+  void applicationId;
+  return "/apply/track";
 }

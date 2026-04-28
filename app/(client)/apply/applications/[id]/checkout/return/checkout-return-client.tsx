@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
+import { apiHref } from "@/lib/app-href";
 
 type AppPoll = { paymentStatus: string };
 
@@ -38,7 +39,7 @@ export function CheckoutReturnClient({ applicationId }: { applicationId: string 
       }
 
       const res = await fetchApiEnvelope<{ application: AppPoll }>(
-        `/api/applications/${encodeURIComponent(applicationId)}`,
+        apiHref(`/applications/${encodeURIComponent(applicationId)}`),
       );
       if (cancelled) return;
       if (!res.ok) {

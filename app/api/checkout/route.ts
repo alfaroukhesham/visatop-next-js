@@ -80,7 +80,11 @@ export async function POST(req: Request) {
         );
       }
 
-      const price = await resolveAdminPricingBreakdown(tx, lockedApp.serviceId);
+      const catalogCurrency =
+        lockedApp.catalogCurrency?.trim().toUpperCase() === "AED" ? "AED" : "USD";
+      const price = await resolveAdminPricingBreakdown(tx, lockedApp.serviceId, {
+        catalogCurrency,
+      });
       if (!price) {
         await tx.update(schema.application).set({ checkoutState: "none" }).where(eq(schema.application.id, applicationId));
         return jsonError("INTERNAL_ERROR", "Pricing unavailable", { status: 400, requestId });
@@ -125,7 +129,11 @@ export async function POST(req: Request) {
           currency: price.currency,
           serviceLabel: `Visa Service for ${lockedApp.nationalityCode}`,
           customerEmail: lockedApp.guestEmail,
-          metadata: { applicationId, serviceId: lockedApp.serviceId },
+          metadata: {
+            applicationId,
+            serviceId: lockedApp.serviceId,
+            catalogCurrency,
+          },
         });
 
         await tx

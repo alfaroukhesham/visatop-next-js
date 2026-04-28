@@ -8,6 +8,7 @@ import { authClient } from "@/lib/auth-client";
 import { GUEST_LINK_EVENTS, trackGuestLinkEvent } from "@/lib/analytics/guest-link-events";
 import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
 import { buildPostLinkLocation } from "@/lib/applications/post-link-redirect";
+import { apiHref } from "@/lib/app-href";
 import type { PublicApplication } from "@/lib/applications/public-application";
 import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
 
@@ -44,7 +45,7 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
   }, [applicationId]);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/applications/${encodeURIComponent(applicationId)}`, {
+    const res = await fetch(apiHref(`/applications/${encodeURIComponent(applicationId)}`), {
       credentials: "include",
     });
     const json = (await res.json()) as { ok?: boolean; data?: { application: PublicApplication } };
@@ -83,7 +84,7 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
   const linkAfterPath = "/apply/link-after-signup";
 
   async function prepareGuestIntent(): Promise<{ ok: true } | { ok: false; message: string }> {
-    const res = await fetch(`${origin}/api/apply/prepare-guest-link-intent`, {
+    const res = await fetch(apiHref("/apply/prepare-guest-link-intent"), {
       method: "POST",
       credentials: "include",
       headers: {
@@ -159,7 +160,7 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
         setLinkActionError(prep.message);
         return;
       }
-      const res = await fetch(`${origin}/api/applications/link-after-auth`, {
+      const res = await fetch(apiHref("/applications/link-after-auth"), {
         method: "POST",
         credentials: "include",
         headers: {
@@ -288,11 +289,16 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
         <section className="rounded-[12px] border border-border bg-card p-6 shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
           <h2 className="font-heading text-lg font-semibold text-[#012031]">Next steps</h2>
           <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-            Open your workspace to continue with this application.
+            Your application is in progress. You can track updates any time, or start a new application.
           </p>
-          <ClientButtonLink href="/portal/application-workspace" brand="cta" className="mt-5 inline-flex">
-            Open workspace
-          </ClientButtonLink>
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <ClientButtonLink href="/apply/track" brand="cta" className="inline-flex">
+              Track application
+            </ClientButtonLink>
+            <ClientButtonLink href="/apply/start" brand="white" className="inline-flex">
+              Start new application
+            </ClientButtonLink>
+          </div>
         </section>
       )}
 

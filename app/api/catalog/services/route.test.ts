@@ -46,6 +46,27 @@ describe("GET /api/catalog/services", () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.data.nationality).toBe("US");
+    expect(body.data.currency).toBe("USD");
+  });
+
+  it("rejects invalid currency query", async () => {
+    const res = await GET(
+      new Request("http://localhost/api/catalog/services?nationality=US&currency=EUR"),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("passes AED to catalog query and echoes currency", async () => {
+    const spy = vi.spyOn(catalogQueries, "listPublicServicesForNationality").mockResolvedValue([]);
+    vi.spyOn(actorContext, "withSystemDbActor").mockImplementation(async (fn) => fn({} as never));
+
+    const res = await GET(
+      new Request("http://localhost/api/catalog/services?nationality=US&currency=aed"),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.currency).toBe("AED");
+    expect(spy.mock.calls[0]?.[2]).toBe("AED");
   });
 
   it("returns services without margin or reference fields", async () => {
@@ -69,6 +90,7 @@ describe("GET /api/catalog/services", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
+    expect(body.data.currency).toBe("USD");
     const svc = body.data.services[0];
     expect(Object.keys(svc).sort()).toEqual(
       ["currency", "displayPriceMinor", "durationDays", "entries", "id", "name"].sort(),

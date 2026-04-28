@@ -81,6 +81,24 @@ VALUES (
 ON CONFLICT ("id") DO NOTHING;
 --> statement-breakpoint
 
+INSERT INTO "margin_policy" ("id", "scope", "service_id", "mode", "value", "currency", "enabled")
+VALUES ('seed-margin-global-aed', 'global', NULL, 'percent', 20, 'AED', true)
+ON CONFLICT ("id") DO NOTHING;
+--> statement-breakpoint
+
+INSERT INTO "margin_policy" ("id", "scope", "service_id", "mode", "value", "currency", "enabled")
+VALUES (
+  'seed-margin-jp-service-aed',
+  'service',
+  'seed-svc-jp-tourist',
+  'percent',
+  12,
+  'AED',
+  true
+)
+ON CONFLICT ("id") DO NOTHING;
+--> statement-breakpoint
+
 INSERT INTO "affiliate_reference_price" (
   "id",
   "site_id",
@@ -117,5 +135,45 @@ VALUES
     'USD',
     now(),
     'seed://reference/schengen'
+  )
+ON CONFLICT ("id") DO NOTHING;
+--> statement-breakpoint
+
+INSERT INTO "affiliate_reference_price" (
+  "id",
+  "site_id",
+  "service_id",
+  "amount",
+  "currency",
+  "observed_at",
+  "source_url"
+)
+VALUES
+  (
+    'seed-ref-jp-aed',
+    'seed-affiliate-demo-1',
+    'seed-svc-jp-tourist',
+    53360,
+    'AED',
+    now(),
+    'seed://reference/jp-tourist-aed'
+  ),
+  (
+    'seed-ref-gb-aed',
+    'seed-affiliate-demo-1',
+    'seed-svc-gb-visitor',
+    69552,
+    'AED',
+    now(),
+    'seed://reference/gb-visitor-aed'
+  ),
+  (
+    'seed-ref-schengen-aed',
+    'seed-affiliate-demo-1',
+    'seed-svc-schengen-tourism',
+    36432,
+    'AED',
+    now(),
+    'seed://reference/schengen-aed'
   )
 ON CONFLICT ("id") DO NOTHING;

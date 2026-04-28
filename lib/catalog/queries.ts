@@ -65,6 +65,7 @@ export type PublicServiceRow = {
 export async function listPublicServicesForNationality(
   tx: SchemaDb,
   nationalityCode: string,
+  catalogCurrency: string = "USD",
 ): Promise<PublicServiceRow[]> {
   const services = await tx
     .select({
@@ -112,8 +113,9 @@ export async function listPublicServicesForNationality(
   }
 
   const serviceIds = services.map((s) => s.id);
+  const currency = catalogCurrency.trim().toUpperCase() || "USD";
   const [refMap, marginRows, addonRows] = await Promise.all([
-    batchLatestReferencesForServices(tx, siteId, serviceIds),
+    batchLatestReferencesForServices(tx, siteId, serviceIds, currency),
     batchMarginPoliciesForServices(tx, serviceIds),
     batchAddonLinesForServices(tx, serviceIds),
   ]);
@@ -139,7 +141,7 @@ export async function listPublicServicesForNationality(
         currency: null,
       };
     }
-    const margin = pickEffectiveMarginPolicy(s.id, marginRows);
+    const margin = pickEffectiveMarginPolicy(s.id, marginRows, currency);
     if (!margin || (margin.mode !== "percent" && margin.mode !== "fixed")) {
       return {
         id: s.id,

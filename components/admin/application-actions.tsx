@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { apiHref } from "@/lib/app-href";
 
 export function ApplicationActions({
   applicationId,
@@ -20,7 +21,7 @@ export function ApplicationActions({
     setLoading(true);
     setMsg(null);
     try {
-      const res = await fetch(`/api/admin/applications/${applicationId}/clear-attention`, {
+      const res = await fetch(apiHref(`/admin/applications/${applicationId}/clear-attention`), {
         method: "POST",
       });
       if (!res.ok) {
@@ -44,7 +45,7 @@ export function ApplicationActions({
     setLoading(true);
     setMsg(null);
     try {
-      const res = await fetch(`/api/admin/applications/${applicationId}`, {
+      const res = await fetch(apiHref(`/admin/applications/${applicationId}`), {
         method: "DELETE",
       });
       if (!res.ok) {
