@@ -29,7 +29,14 @@ export async function POST(req: Request) {
 
   // Better Auth owns password verification + hashing. We call its API surface directly.
   try {
-    const api: any = auth.api as any;
+    type ChangePasswordResult = { ok?: boolean; error?: { message?: string } } | undefined | null;
+    type ChangePasswordApi = {
+      changePassword?: (args: {
+        headers: Headers;
+        body: { currentPassword: string; newPassword: string };
+      }) => Promise<ChangePasswordResult>;
+    };
+    const api = auth.api as unknown as ChangePasswordApi;
     if (typeof api.changePassword !== "function") {
       return jsonError(
         "SERVICE_UNAVAILABLE",
@@ -54,7 +61,7 @@ export async function POST(req: Request) {
     }
 
     return jsonOk({ changed: true }, { requestId });
-  } catch (e) {
+  } catch {
     return jsonError("INTERNAL_ERROR", "Unable to change password.", {
       status: 500,
       requestId,

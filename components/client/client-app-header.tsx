@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ClientButtonLink } from "@/components/client/client-button";
 import { ClientNavLink } from "@/components/client/client-nav-link";
 import { authClient } from "@/lib/auth-client";
-import { useClientAuthStore } from "@/lib/stores/client-auth-store";
+import { type ClientSession, useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { cn } from "@/lib/utils";
 
 const NAV_BASE: { href: string; label: string; match: (path: string) => boolean }[] = [
@@ -28,6 +28,21 @@ type Props = {
   className?: string;
 };
 
+function toClientSession(input: unknown): ClientSession {
+  if (!input || typeof input !== "object") return null;
+  const maybe = input as { user?: unknown };
+  if (!maybe.user || typeof maybe.user !== "object") return null;
+  const u = maybe.user as { id?: unknown; name?: unknown; email?: unknown };
+  if (typeof u.id !== "string") return null;
+  return {
+    user: {
+      id: u.id,
+      name: typeof u.name === "string" ? u.name : u.name == null ? null : null,
+      email: typeof u.email === "string" ? u.email : u.email == null ? null : null,
+    },
+  };
+}
+
 /**
  * Full-width ink bar + brand nav (yellow 3px hover/active indicator).
  */
@@ -47,7 +62,7 @@ export function ClientAppHeader({ className }: Props) {
 
   useEffect(() => {
     setPending(isPending);
-    setSession((session ?? null) as any);
+    setSession(toClientSession(session));
   }, [isPending, session, setPending, setSession]);
 
   const nav = useMemo(() => {
@@ -60,7 +75,8 @@ export function ClientAppHeader({ className }: Props) {
 
   async function onSignOut() {
     try {
-      await (authClient as any).signOut?.();
+      const api = authClient as unknown as { signOut?: () => Promise<unknown> };
+      await api.signOut?.();
     } finally {
       router.refresh();
       router.push("/");

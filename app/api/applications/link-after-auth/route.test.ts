@@ -354,6 +354,6 @@ describe("POST /api/applications/link-after-auth", () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     // We should have attempted at least one insert (audit_log + user_document + user_document_blob).
-    expect((tx as any).__inserts.length).toBeGreaterThanOrEqual(2);
+    expect(tx.__inserts.length).toBeGreaterThanOrEqual(2);
   });
 });

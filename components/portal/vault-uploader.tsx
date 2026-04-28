@@ -106,7 +106,7 @@ export function VaultUploader() {
             className="border-border bg-background h-10 w-full rounded-[5px] border px-3 text-sm disabled:opacity-60"
             value={supportingCategory}
             disabled={documentType !== "supporting"}
-            onChange={(e) => setSupportingCategory(e.target.value as any)}
+            onChange={(e) => setSupportingCategory(e.target.value as (typeof SUPPORTING)[number]["id"])}
           >
             {SUPPORTING.map((c) => (
               <option key={c.id} value={c.id}>

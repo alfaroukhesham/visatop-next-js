@@ -33,16 +33,27 @@ vi.mock("@/lib/applications/document-upload", () => ({
     replacedPriorId: null,
     wasIdempotent: false,
   })),
-  toPublicDocument: vi.fn((row: any) => ({
-    id: row.id,
-    documentType: row.documentType,
-    status: row.status,
-    sha256: row.sha256,
-    contentType: row.contentType,
-    byteLength: row.byteLength,
-    originalFilename: row.originalFilename,
-    createdAt: row.createdAt.toISOString(),
-  })),
+  toPublicDocument: vi.fn(
+    (row: {
+      id: string;
+      documentType: string;
+      status: string;
+      sha256: string;
+      contentType: string;
+      byteLength: number;
+      originalFilename: string | null;
+      createdAt: Date;
+    }) => ({
+      id: row.id,
+      documentType: row.documentType,
+      status: row.status,
+      sha256: row.sha256,
+      contentType: row.contentType,
+      byteLength: row.byteLength,
+      originalFilename: row.originalFilename,
+      createdAt: row.createdAt.toISOString(),
+    }),
+  ),
 }));
 
 import { auth } from "@/lib/auth";

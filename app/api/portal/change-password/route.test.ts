@@ -35,7 +35,8 @@ describe("POST /api/portal/change-password", () => {
 
   it("returns ok on successful change", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue({ user: { id: "user-1" } } as never);
-    (auth.api as any).changePassword = vi.fn().mockResolvedValue({ ok: true });
+    const api = auth.api as unknown as { changePassword?: unknown };
+    api.changePassword = vi.fn().mockResolvedValue({ ok: true });
 
     const res = await POST(
       new Request("http://localhost/api/portal/change-password", {

@@ -15,8 +15,10 @@ export default async function PortalSettingsPage() {
   const hdrs = await headers();
   const session = await auth.api.getSession({ headers: hdrs });
 
-  const email = (session?.user as any)?.email ?? null;
-  const name = (session?.user as any)?.name ?? null;
+  type SessionUserShape = { email?: string | null; name?: string | null };
+  const user = (session?.user as SessionUserShape | undefined) ?? undefined;
+  const email = user?.email ?? null;
+  const name = user?.name ?? null;
 
   return (
     <div className="text-foreground flex min-h-[calc(100vh-4rem)] flex-1 flex-col">

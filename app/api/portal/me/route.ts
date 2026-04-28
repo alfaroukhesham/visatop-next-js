@@ -13,12 +13,15 @@ export async function GET() {
   const session = await auth.api.getSession({ headers: hdrs });
   if (!session) return jsonError("UNAUTHORIZED", "Unauthorized", { status: 401, requestId });
 
+  type SessionUserShape = { name?: string | null; email?: string | null };
+  const user = session.user as unknown as SessionUserShape;
+
   return jsonOk(
     {
       user: {
         id: session.user.id,
-        name: (session.user as any).name ?? null,
-        email: (session.user as any).email ?? null,
+        name: user.name ?? null,
+        email: user.email ?? null,
       },
     },
     { requestId },

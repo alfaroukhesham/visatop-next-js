@@ -41,7 +41,9 @@ export async function GET(req: Request) {
   const session = await auth.api.getSession({ headers: hdrs });
   if (!session) return jsonError("UNAUTHORIZED", "Unauthorized", { status: 401, requestId });
 
-  const email = normalizeEmail((session.user as any).email);
+  type SessionUserShape = { email?: string | null };
+  const user = session.user as unknown as SessionUserShape;
+  const email = normalizeEmail(user.email);
   if (!email) {
     return jsonError("VALIDATION_ERROR", "Account email is required to track applications.", {
       status: 400,
