@@ -73,8 +73,6 @@ export function ApplyStepsRail({ currentStep, applicationId, className }: ApplyS
           const state = stepState(s.step, currentStep);
           const href = hrefForStep(s.step, applicationId);
           const isLink = Boolean(href) && state !== "future";
-          const Item = isLink ? Link : "div";
-          const itemProps = isLink ? ({ href: href! } as const) : ({} as const);
           return (
             <li
               key={s.kicker}
@@ -95,15 +93,20 @@ export function ApplyStepsRail({ currentStep, applicationId, className }: ApplyS
               </span>
               <div className="min-w-0 pt-1">
                 <p className="text-secondary text-[10px] font-bold uppercase tracking-widest">{s.kicker}</p>
-                <Item
-                  {...itemProps}
-                  className={cn(
-                    "font-heading text-foreground mt-1 block text-xl font-semibold sm:text-2xl",
-                    isLink && "hover:underline underline-offset-4",
-                  )}
-                >
-                  {s.title}
-                </Item>
+                {isLink ? (
+                  <Link
+                    href={href!}
+                    className={cn(
+                      "font-heading text-foreground mt-1 block text-xl font-semibold sm:text-2xl hover:underline underline-offset-4",
+                    )}
+                  >
+                    {s.title}
+                  </Link>
+                ) : (
+                  <div className={cn("font-heading text-foreground mt-1 block text-xl font-semibold sm:text-2xl")}>
+                    {s.title}
+                  </div>
+                )}
                 <p className="text-muted-foreground mt-2 max-w-[48ch] text-sm leading-relaxed sm:text-base">
                   {s.body}
                 </p>
