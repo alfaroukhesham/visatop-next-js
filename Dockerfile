@@ -1,7 +1,10 @@
+# syntax=docker/dockerfile:1.7
+# Default linux/arm64 when TARGETPLATFORM is unset (plain `docker build`); override: --build-arg TARGETPLATFORM=linux/amd64
+ARG TARGETPLATFORM=linux/arm64
 ############################################
 # Build stage
 ############################################
-FROM node:22-bookworm-slim AS builder
+FROM --platform=$TARGETPLATFORM node:22-bookworm-slim AS builder
 
 WORKDIR /app
 
@@ -20,12 +23,16 @@ RUN pnpm install --frozen-lockfile
 # Copy source and build
 COPY . .
 ENV NODE_ENV=production
-RUN pnpm build
+# Next collects page data at build time; DB env must exist. Do not COPY .env* (see .dockerignore).
+#   docker buildx build --secret id=env,src=.env.local --platform linux/arm64 ...
+RUN --mount=type=secret,id=env \
+  node scripts/docker-load-secret-env-and-build.mjs /run/secrets/env
 
 ############################################
 # Runtime stage (small, glibc-friendly)
 ############################################
-FROM node:22-bookworm-slim AS runner
+ARG TARGETPLATFORM=linux/arm64
+FROM --platform=$TARGETPLATFORM node:22-bookworm-slim AS runner
 
 ENV NODE_ENV=production
 ENV PORT=3000
