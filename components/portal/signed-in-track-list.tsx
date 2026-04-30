@@ -36,11 +36,16 @@ export function SignedInTrackList() {
     setError(null);
     setLoading(true);
     try {
-      const url = new URL(apiHref("/portal/track-applications"));
+      const href = apiHref("/portal/track-applications");
+      const url = new URL(
+        href,
+        typeof window !== "undefined" ? window.location.origin : "http://localhost",
+      );
       url.searchParams.set("limit", "5");
       if (cursor) url.searchParams.set("cursor", cursor);
 
-      const res = await fetch(url.toString());
+      const urlString = url.toString();
+      const res = await fetch(urlString);
       const json = (await res.json()) as Ok | Err;
       if (!res.ok || !json.ok) {
         setError(

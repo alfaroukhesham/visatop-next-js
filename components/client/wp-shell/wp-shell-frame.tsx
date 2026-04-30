@@ -2,6 +2,32 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+function safeRandomUUID(): string {
+  const c = globalThis.crypto as
+    | (Crypto & { randomUUID?: () => string })
+    | undefined;
+
+  if (typeof c?.randomUUID === "function") return c.randomUUID();
+
+  const getRandomValues = c?.getRandomValues?.bind(c);
+  if (getRandomValues) {
+    const bytes = new Uint8Array(16);
+    getRandomValues(bytes);
+    // RFC 4122 v4
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+    const hex = [...bytes].map((b) => b.toString(16).padStart(2, "0"));
+    return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex
+      .slice(6, 8)
+      .join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10, 16).join("")}`;
+  }
+
+  // Last resort (non-cryptographic)
+  const s4 = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).slice(1);
+  return `${s4()}${s4()}-${s4()}-${s4()}-${s4()}-${s4()}${s4()}${s4()}`;
+}
+
 function escapeAttr(value: string): string {
   return value.replace(/"/g, "&quot;");
 }
@@ -39,6 +65,46 @@ function buildSrcDoc(input: {
     <style>
       html, body { margin: 0; padding: 0; background: transparent !important; }
       body { overflow: hidden; }
+
+      /* Fallback alignment: in WP this is handled by theme/plugin CSS, but our headless CSS
+         bundle may omit those rules. This keeps "Time in UAE" pinned to the right. */
+      header#header .featured_on .inner { display: flex; align-items: center; }
+      header#header .featured_on .uae-time { margin-left: auto; }
+
+      /* Polylang language switcher (headless markup differs on prod: href="#pll_switcher" with no class). */
+      header#header nav.menu a[href="#pll_switcher"] {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 20px;
+        white-space: nowrap;
+        transition: border-color 0.2s linear, color 0.2s linear;
+      }
+      header#header nav.menu a[href="#pll_switcher"]:hover {
+        border-color: #FCCD64;
+        color: #FCCD64;
+      }
+      header#header nav.menu a[href="#pll_switcher"]::before,
+      header#header nav.menu a[href="#pll_switcher"]::after {
+        display: none !important;
+        content: none !important;
+      }
+
+      /* Logo whitening fallback: theme rule is gated by WP body classes we don't have in srcDoc. */
+      header#header .logo img {
+        filter: brightness(0) invert(1);
+      }
+
+      /* "Featured on" logos: WP theme constrains these; headless CSS path misses it. */
+      header#header .featured_on .inner a img {
+        height: 16px;
+        width: auto;
+        max-width: 100%;
+        object-fit: contain;
+        filter: brightness(0) invert(1);
+      }
     </style>
   </head>
   <body class="${bodyClass}">
@@ -161,7 +227,7 @@ export function WpShellFrame(props: {
 }) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [heightPx, setHeightPx] = useState<number>(props.kind === "header" ? 120 : 400);
-  const postMessageToken = useMemo(() => crypto.randomUUID(), []);
+  const postMessageToken = useMemo(() => safeRandomUUID(), []);
 
   const srcDoc = useMemo(
     () =>
@@ -180,13 +246,19 @@ export function WpShellFrame(props: {
     if (!iframe) return;
     const onMessage = (event: MessageEvent) => {
       if (event.source !== iframe.contentWindow) return;
-      const data = event.data as
-        | { type?: string; kind?: string; height?: number; baseHeight?: number; token?: string }
-        | null;
-      if (data?.token !== postMessageToken) return;
-      if (data?.type === "wp-shell:height" && data.kind === props.kind) {
-        const h = Number(data.height);
-        const baseH = Number(data.baseHeight);
+      const data: unknown = event.data;
+      if (typeof data !== "object" || data === null) return;
+      const msg = data as {
+        token?: unknown;
+        type?: unknown;
+        kind?: unknown;
+        height?: unknown;
+        baseHeight?: unknown;
+      };
+      if (msg.token !== postMessageToken) return;
+      if (msg.type === "wp-shell:height" && msg.kind === props.kind) {
+        const h = Number(msg.height);
+        const baseH = Number(msg.baseHeight);
         if (Number.isFinite(h) && h > 0) setHeightPx(h);
         if (props.kind === "header" && Number.isFinite(baseH) && baseH > 0) {
           document.documentElement.style.setProperty("--wp-shell-header-height", `${Math.ceil(baseH)}px`);
@@ -194,17 +266,20 @@ export function WpShellFrame(props: {
       }
     };
     window.addEventListener("message", onMessage);
+    // Ensure we attach `message` listener BEFORE the iframe loads `srcDoc`.
+    // Otherwise, early `postMessage` events (ready/height) can be missed.
+    iframe.srcdoc = srcDoc;
 
     return () => {
       window.removeEventListener("message", onMessage);
     };
-  }, [props.kind, srcDoc, postMessageToken]);
+  }, [props.kind, srcDoc, postMessageToken, props.baseHref, props.cssUrls, props.html]);
 
   return (
     <iframe
       ref={iframeRef}
       title={props.kind === "header" ? "WP Header" : "WP Footer"}
-      srcDoc={srcDoc}
+      srcDoc=""
       sandbox="allow-scripts allow-popups"
       style={{
         width: "100%",

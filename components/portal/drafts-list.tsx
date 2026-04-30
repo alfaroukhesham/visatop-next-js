@@ -36,7 +36,11 @@ export function DraftsList() {
     setError(null);
     setLoading(true);
     try {
-      const url = new URL(apiHref("/portal/drafts"));
+      const href = apiHref("/portal/drafts");
+      const url = new URL(
+        href,
+        typeof window !== "undefined" ? window.location.origin : "http://localhost",
+      );
       url.searchParams.set("limit", "5");
       if (cursor) url.searchParams.set("cursor", cursor);
 
