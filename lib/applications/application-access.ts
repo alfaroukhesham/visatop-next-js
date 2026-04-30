@@ -6,6 +6,8 @@
  *   `withClientDbActor(session.user.id, ...)` inside the returned wrapper.
  * - A guest `vt_resume` cookie matching the application's `resume_token_hash`
  *   → the caller must use `withSystemDbActor(...)`.
+ * - A signed-in user whose email matches a legacy guest row (`user_id` null,
+ *   same `guest_email` as track list) → same as guest: `withSystemDbActor(...)`.
  *
  * Returns a discriminated union so the route handler can switch on the actor
  * type and call the correct db wrapper.
@@ -16,6 +18,12 @@ import { readResumeTokenFromRequestCookies } from "@/lib/applications/resume-coo
 import { verifyResumeToken } from "@/lib/applications/resume-token";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { application } from "@/lib/db/schema";
+
+function normalizeAccountEmail(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const e = raw.trim().toLowerCase();
+  return e && e.includes("@") ? e : null;
+}
 
 export type ApplicationAccess =
   | {
@@ -94,6 +102,7 @@ export async function resolveApplicationAccess(
       .select({
         userId: application.userId,
         isGuest: application.isGuest,
+        guestEmail: application.guestEmail,
       })
       .from(application)
       .where(eq(application.id, applicationId))
@@ -102,6 +111,28 @@ export async function resolveApplicationAccess(
   });
 
   if (!owned) return { ok: false, failure: { kind: "not_found" } };
+
+  if (owned.userId && owned.userId === session.user.id) {
+    return {
+      ok: true,
+      access: { kind: "user", userId: session.user.id, isGuest: false },
+    };
+  }
+
+  const sessionEmail = normalizeAccountEmail(session.user.email);
+  const guestEmail = normalizeAccountEmail(owned.guestEmail);
+  if (
+    !owned.userId &&
+    sessionEmail &&
+    guestEmail &&
+    guestEmail === sessionEmail
+  ) {
+    return {
+      ok: true,
+      access: { kind: "guest", userId: null, isGuest: true },
+    };
+  }
+
   if (owned.isGuest) {
     return { ok: false, failure: { kind: "forbidden" } };
   }

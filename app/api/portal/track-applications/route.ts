@@ -1,22 +1,20 @@
 import { headers } from "next/headers";
 
-import { and, desc, eq, isNotNull, isNull, lte, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, lt, or } from "drizzle-orm";
 
 import { decodeCursor, encodeCursor, parseLimit } from "@/lib/api/cursor";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { auth } from "@/lib/auth";
+import {
+  normalizeSignedInTrackEmail,
+  signedInPortalTrackRowFilter,
+} from "@/lib/applications/portal-track-application-access";
+import { computeClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { application } from "@/lib/db/schema/applications";
-import { computeClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function normalizeEmail(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  const e = raw.trim().toLowerCase();
-  return e && e.includes("@") ? e : null;
-}
 
 /**
  * Signed-in tracking list:
@@ -35,7 +33,7 @@ export async function GET(req: Request) {
 
   type SessionUserShape = { email?: string | null };
   const user = session.user as unknown as SessionUserShape;
-  const email = normalizeEmail(user.email);
+  const email = normalizeSignedInTrackEmail(user.email);
   if (!email) {
     return jsonError("VALIDATION_ERROR", "Account email is required to track applications.", {
       status: 400,
@@ -48,20 +46,6 @@ export async function GET(req: Request) {
   const cursor = decodeCursor(url.searchParams.get("cursor"));
 
   const rows = await withSystemDbActor(async (tx) => {
-    const ownedOrEmailMatch = or(
-      eq(application.userId, session.user.id),
-      and(
-        isNull(application.userId),
-        sql`lower(trim(coalesce(${application.guestEmail}, ''))) = ${email}`,
-      ),
-    );
-
-    const expiredUnpaidDraft = and(
-      eq(application.paymentStatus, "unpaid"),
-      isNotNull(application.draftExpiresAt),
-      lte(application.draftExpiresAt, sql`now()`),
-    );
-
     const cursorWhere = cursor
       ? or(
           lt(application.createdAt, new Date(cursor.createdAt)),
@@ -69,7 +53,7 @@ export async function GET(req: Request) {
         )
       : undefined;
 
-    const where = and(ownedOrEmailMatch, sql`NOT (${expiredUnpaidDraft})`);
+    const where = signedInPortalTrackRowFilter(session.user.id, email);
 
     return tx
       .select({
