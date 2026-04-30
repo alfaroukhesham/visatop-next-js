@@ -34,6 +34,13 @@ const ALLOWED_TAGS = [
 
 const GLOBAL_ATTRS = ["class", "id", "title", "role", "aria-label", "aria-hidden"] as const;
 
+const COMMON_ARIA_ATTRS = [
+  "aria-current",
+  "aria-expanded",
+  "aria-controls",
+  "aria-haspopup",
+] as const;
+
 /**
  * Sanitizes WP-provided header/footer HTML using a strict allowlist.
  * This is intentionally conservative: no scripts, no event handlers, no inline styles.
@@ -42,11 +49,21 @@ export function sanitizeWpShellHtml(input: string): string {
   return sanitizeHtml(input, {
     allowedTags: [...ALLOWED_TAGS],
     allowedAttributes: {
-      "*": [...GLOBAL_ATTRS, /^aria-[\w-]+$/, /^data-[\w-]+$/],
-      a: ["href", "target", "rel", ...GLOBAL_ATTRS],
+      "*": [...GLOBAL_ATTRS],
+      a: ["href", "target", "rel", ...GLOBAL_ATTRS, ...COMMON_ARIA_ATTRS],
       img: ["src", "alt", "width", "height", "loading", "decoding", ...GLOBAL_ATTRS],
-      button: ["type", "aria-expanded", "aria-controls", ...GLOBAL_ATTRS],
-      svg: ["viewBox", "width", "height", "xmlns", "fill", "stroke", "aria-hidden", "focusable", ...GLOBAL_ATTRS],
+      button: ["type", ...GLOBAL_ATTRS, ...COMMON_ARIA_ATTRS],
+      svg: [
+        "viewBox",
+        "width",
+        "height",
+        "xmlns",
+        "fill",
+        "stroke",
+        "aria-hidden",
+        "focusable",
+        ...GLOBAL_ATTRS,
+      ],
       path: ["d", "fill", "stroke"],
     },
     allowedSchemes: ["http", "https", "mailto", "tel"],
