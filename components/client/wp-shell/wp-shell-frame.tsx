@@ -92,11 +92,6 @@ function buildSrcDoc(input: {
         content: none !important;
       }
 
-      /* Logo whitening fallback: theme rule is gated by WP body classes we don't have in srcDoc. */
-      header#header .logo img {
-        filter: brightness(0) invert(1);
-      }
-
       /* "Featured on" logos: WP theme constrains these; headless CSS path misses it. */
       header#header .featured_on .inner a img {
         height: 16px;
