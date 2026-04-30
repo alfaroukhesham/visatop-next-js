@@ -6,7 +6,7 @@ import { ClientAppHeader } from "@/components/client/client-app-header";
 
 export const metadata: Metadata = {
   title: "Portal | Visatop",
-  description: "Signed-in area to start a new visa, open your dashboard, or continue an existing application.",
+  description: "Signed-in area to track every application on your account in one place.",
 };
 
 export const dynamic = "force-dynamic";
@@ -22,9 +22,9 @@ export default async function PortalLayout({
   });
 
   if (!session) {
-    const path = hdrs.get("x-pathname") ?? "/portal";
+    const path = hdrs.get("x-pathname") ?? "/portal/track";
     const callback =
-      path.startsWith("/portal") && !path.startsWith("//") ? path : "/portal";
+      path.startsWith("/portal") && !path.startsWith("//") ? path : "/portal/track";
     redirect(`/sign-in?callbackUrl=${encodeURIComponent(callback)}`);
   }
 

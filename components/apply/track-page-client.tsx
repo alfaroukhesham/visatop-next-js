@@ -29,12 +29,8 @@ export function TrackPageClient() {
           </p>
         ) : authed ? (
           <p className="text-muted-foreground max-w-prose text-base leading-relaxed">
-            Below are applications that have moved beyond draft status (paid, in progress, or completed). If you want
-            to continue an incomplete draft that hasn’t been paid yet, go to{" "}
-            <Link href="/portal/drafts" className="text-link font-medium hover:underline">
-              Draft applications
-            </Link>
-            .
+            Every application on this account appears here—drafts waiting for payment, files in progress, and
+            completed cases—except drafts that have already expired.
           </p>
         ) : (
           <p className="text-muted-foreground max-w-prose text-base leading-relaxed">

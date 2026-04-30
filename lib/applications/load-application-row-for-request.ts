@@ -1,16 +1,21 @@
-import { eq, and } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { loadGuestApplicationRowByResumeCookie } from "@/lib/applications/guest-resume-access";
+import {
+  normalizeSignedInTrackEmail,
+  signedInPortalTrackRowFilter,
+} from "@/lib/applications/portal-track-application-access";
 import { readResumeTokenFromRequestCookies } from "@/lib/applications/resume-cookie";
-import { withClientDbActor } from "@/lib/db/actor-context";
-import { application } from "@/lib/db/schema";
+import { withSystemDbActor } from "@/lib/db/actor-context";
+import { application } from "@/lib/db/schema/applications";
 
 export type ApplicationRow = typeof application.$inferSelect;
 
 /**
- * Loads full `application` row for cookie/header context: signed-in owner or
- * guest with valid `vt_resume`. Returns null when there is no read access.
+ * Loads full `application` row for cookie/header context: signed-in owner,
+ * legacy guest rows visible by matching account email (same rule as track list),
+ * or guest with valid `vt_resume`. Returns null when there is no read access.
  */
 export async function loadApplicationRowForRequest(
   applicationId: string,
@@ -19,11 +24,17 @@ export async function loadApplicationRowForRequest(
   const hdrs = await headers();
   const session = await auth.api.getSession({ headers: hdrs });
   if (session) {
-    return withClientDbActor(session.user.id, async (tx) => {
+    const email = normalizeSignedInTrackEmail(session.user.email);
+    return withSystemDbActor(async (tx) => {
       const rows = await tx
         .select()
         .from(application)
-        .where(and(eq(application.id, applicationId), eq(application.userId, session.user.id)))
+        .where(
+          and(
+            eq(application.id, applicationId),
+            signedInPortalTrackRowFilter(session.user.id, email),
+          ),
+        )
         .limit(1);
       return rows[0] ?? null;
     });

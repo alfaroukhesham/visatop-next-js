@@ -30,6 +30,16 @@ export const metadata: Metadata = {
   },
   description:
     "Visa and residency services — manage your application, documents, and status in one place.",
+  icons: {
+    icon: [
+      {
+        url: "/visa-processing/favicon_visatop_com_32x32.png",
+        sizes: "32x32",
+        type: "image/png",
+      },
+    ],
+    shortcut: ["/visa-processing/favicon_visatop_com_32x32.png"],
+  },
 };
 
 export default function RootLayout({

@@ -1,36 +1,26 @@
 import { headers } from "next/headers";
 
-import { and, desc, eq, isNull, lt, or, sql, inArray } from "drizzle-orm";
+import { and, desc, eq, lt, or } from "drizzle-orm";
 
 import { decodeCursor, encodeCursor, parseLimit } from "@/lib/api/cursor";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { auth } from "@/lib/auth";
+import {
+  normalizeSignedInTrackEmail,
+  signedInPortalTrackRowFilter,
+} from "@/lib/applications/portal-track-application-access";
+import { computeClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { application } from "@/lib/db/schema/applications";
-import { computeClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const DRAFT_LIKE_APPLICATION_STATUSES = [
-  "draft",
-  "needs_docs",
-  "extracting",
-  "needs_review",
-  "ready_for_payment",
-] as const;
-
-function normalizeEmail(raw: string | null | undefined): string | null {
-  if (!raw) return null;
-  const e = raw.trim().toLowerCase();
-  return e && e.includes("@") ? e : null;
-}
 
 /**
  * Signed-in tracking list:
  * - Includes rows linked to the userId
  * - Also includes legacy guest rows whose guest_email matches the signed-in email
- * - Excludes unpaid drafts (handled on /portal/drafts)
+ * - Excludes unpaid rows whose draft TTL has passed (draftExpiresAt not null and <= now)
  *
  * Runs under system DB actor to allow reading guest rows; access is enforced by session email.
  */
@@ -43,7 +33,7 @@ export async function GET(req: Request) {
 
   type SessionUserShape = { email?: string | null };
   const user = session.user as unknown as SessionUserShape;
-  const email = normalizeEmail(user.email);
+  const email = normalizeSignedInTrackEmail(user.email);
   if (!email) {
     return jsonError("VALIDATION_ERROR", "Account email is required to track applications.", {
       status: 400,
@@ -56,19 +46,6 @@ export async function GET(req: Request) {
   const cursor = decodeCursor(url.searchParams.get("cursor"));
 
   const rows = await withSystemDbActor(async (tx) => {
-    const ownedOrEmailMatch = or(
-      eq(application.userId, session.user.id),
-      and(
-        isNull(application.userId),
-        sql`lower(trim(coalesce(${application.guestEmail}, ''))) = ${email}`,
-      ),
-    );
-
-    const excludeUnpaidDrafts = and(
-      eq(application.paymentStatus, "unpaid"),
-      inArray(application.applicationStatus, [...DRAFT_LIKE_APPLICATION_STATUSES]),
-    );
-
     const cursorWhere = cursor
       ? or(
           lt(application.createdAt, new Date(cursor.createdAt)),
@@ -76,7 +53,7 @@ export async function GET(req: Request) {
         )
       : undefined;
 
-    const where = and(ownedOrEmailMatch, sql`NOT (${excludeUnpaidDrafts})`);
+    const where = signedInPortalTrackRowFilter(session.user.id, email);
 
     return tx
       .select({
@@ -87,6 +64,7 @@ export async function GET(req: Request) {
         serviceId: application.serviceId,
         applicationStatus: application.applicationStatus,
         paymentStatus: application.paymentStatus,
+        draftExpiresAt: application.draftExpiresAt,
         fulfillmentStatus: application.fulfillmentStatus,
         adminAttentionRequired: application.adminAttentionRequired,
       })
@@ -109,6 +87,8 @@ export async function GET(req: Request) {
         referenceDisplay: r.referenceNumber ?? r.id.slice(0, 8),
         nationalityCode: r.nationalityCode,
         serviceId: r.serviceId,
+        paymentStatus: r.paymentStatus,
+        draftExpiresAt: r.draftExpiresAt ? r.draftExpiresAt.toISOString() : null,
         clientTracking: computeClientApplicationTracking({
           applicationStatus: r.applicationStatus,
           paymentStatus: r.paymentStatus,

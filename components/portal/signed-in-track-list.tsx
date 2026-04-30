@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
 
-import { ClientButton } from "@/components/client/client-button";
+import { ClientButton, ClientButtonLink } from "@/components/client/client-button";
 import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
 import type { ClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
 import { apiHref } from "@/lib/app-href";
@@ -13,6 +14,8 @@ type Row = {
   referenceDisplay: string;
   nationalityCode: string;
   serviceId: string;
+  paymentStatus: string;
+  draftExpiresAt: string | null;
   clientTracking: ClientApplicationTracking;
 };
 
@@ -26,6 +29,10 @@ type Err = {
   error?: { message?: string; code?: string };
 };
 
+function isContinueDraft(row: Row): boolean {
+  return row.paymentStatus === "unpaid";
+}
+
 export function SignedInTrackList() {
   const [items, setItems] = useState<Row[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -36,11 +43,16 @@ export function SignedInTrackList() {
     setError(null);
     setLoading(true);
     try {
-      const url = new URL(apiHref("/portal/track-applications"));
+      const href = apiHref("/portal/track-applications");
+      const url = new URL(
+        href,
+        typeof window !== "undefined" ? window.location.origin : "http://localhost",
+      );
       url.searchParams.set("limit", "5");
       if (cursor) url.searchParams.set("cursor", cursor);
 
-      const res = await fetch(url.toString());
+      const urlString = url.toString();
+      const res = await fetch(urlString);
       const json = (await res.json()) as Ok | Err;
       if (!res.ok || !json.ok) {
         setError(
@@ -75,13 +87,11 @@ export function SignedInTrackList() {
 
       {items.length === 0 && !loading ? (
         <div className="text-muted-foreground rounded-[12px] border border-border bg-card p-6 text-center text-sm leading-relaxed shadow-sm">
-          <p>No paid or submitted applications found for this account.</p>
-          <p className="mt-2">
-            Looking for an unpaid draft? Visit{" "}
-            <a href="/portal/drafts" className="text-link font-medium hover:underline">
-              Draft applications
-            </a>
-            .
+          <p>No applications found for this account yet.</p>
+          <p className="mt-3">
+            <Link href="/" className="text-link font-medium hover:underline">
+              Start a new application
+            </Link>
           </p>
         </div>
       ) : (
@@ -91,14 +101,42 @@ export function SignedInTrackList() {
               key={row.applicationId}
               className="space-y-6 rounded-[12px] border border-border border-l-[3px] border-l-primary bg-card p-6 shadow-[0_4px_24px_rgba(0,0,0,0.07)] sm:p-8"
             >
-              <div className="space-y-1">
-                <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">
-                  Reference
-                </p>
-                <p className="font-mono text-sm text-foreground">{row.referenceDisplay}</p>
-                <p className="text-muted-foreground text-xs">
-                  Service {row.serviceId} · Nationality {row.nationalityCode}
-                </p>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-1">
+                  <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+                    Reference
+                  </p>
+                  <p className="font-mono text-sm text-foreground">{row.referenceDisplay}</p>
+                  <p className="text-muted-foreground text-xs">
+                    Service {row.serviceId} · Nationality {row.nationalityCode}
+                  </p>
+                  {row.paymentStatus === "unpaid" && row.draftExpiresAt ? (
+                    <p className="text-muted-foreground text-xs">
+                      Draft expires {new Date(row.draftExpiresAt).toLocaleString()}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="shrink-0">
+                  {isContinueDraft(row) ? (
+                    <ClientButtonLink
+                      href={`/apply/applications/${encodeURIComponent(row.applicationId)}`}
+                      brand="cta"
+                      size="sm"
+                      className="h-9 px-4 text-xs font-bold"
+                    >
+                      Continue
+                    </ClientButtonLink>
+                  ) : (
+                    <ClientButtonLink
+                      href={`/apply/applications/${encodeURIComponent(row.applicationId)}`}
+                      variant="outline"
+                      size="sm"
+                      className="h-9 px-4 text-xs font-semibold"
+                    >
+                      Open
+                    </ClientButtonLink>
+                  )}
+                </div>
               </div>
               <ApplicationClientTracking tracking={row.clientTracking} />
             </li>
@@ -128,4 +166,3 @@ export function SignedInTrackList() {
     </section>
   );
 }
-

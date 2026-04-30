@@ -24,7 +24,7 @@ export default async function SignInLayout({
   ]);
 
   if (adminSession) redirect("/admin");
-  if (clientSession) redirect("/portal");
+  if (clientSession) redirect("/portal/track");
 
   return <Suspense fallback={<AuthFlowSkeleton />}>{children}</Suspense>;
 }
