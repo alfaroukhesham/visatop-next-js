@@ -23,7 +23,7 @@ export default async function AdminSignInLayout({
     adminAuth.api.getSession({ headers: hdrs }),
   ]);
 
-  if (clientSession) redirect("/portal");
+  if (clientSession) redirect("/portal/track");
   if (adminSession) redirect("/admin");
 
   return <Suspense fallback={<AdminSignInSkeleton />}>{children}</Suspense>;

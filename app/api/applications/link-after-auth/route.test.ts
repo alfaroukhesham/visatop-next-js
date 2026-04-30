@@ -55,36 +55,15 @@ function txMock(rowList: unknown[], updateReturning?: { id: string }[]) {
   const inserts: Array<{ table: unknown; values: unknown }> = [];
   return {
     __inserts: inserts,
-    select: (shape?: unknown) => {
-      // shape present => vault ingestion select; otherwise link select-for-update.
-      if (shape) {
-        return {
-          from: () => ({
-            innerJoin: () => ({
-              where: async () => [
-                {
-                  documentType: "passport_copy",
-                  contentType: "image/jpeg",
-                  byteLength: 10,
-                  originalFilename: "passport.jpg",
-                  sha256: "sha",
-                  bytes: Buffer.from("abc"),
-                },
-              ],
-            }),
-          }),
-        };
-      }
-      return {
-        from: () => ({
-          where: () => ({
-            for: () => ({
-              limit: async () => rowList,
-            }),
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          for: () => ({
+            limit: async () => rowList,
           }),
         }),
-      };
-    },
+      }),
+    }),
     update: () => ({
       set: () => ({
         where: () => ({
@@ -96,11 +75,7 @@ function txMock(rowList: unknown[], updateReturning?: { id: string }[]) {
     insert: (table: unknown) => ({
       values: (v: unknown) => {
         inserts.push({ table, values: v });
-        return {
-          onConflictDoNothing: () => ({
-            returning: async () => [{ id: "udoc-1" }],
-          }),
-        };
+        return Promise.resolve();
       },
     }),
   };
@@ -333,7 +308,7 @@ describe("POST /api/applications/link-after-auth", () => {
     expect(res.headers.get("set-cookie")).toContain("vt_link_intent=");
   });
 
-  it("ingests eligible application documents into vault on link", async () => {
+  it("writes audit log on successful link", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue({
       user: { id: "user-1", email: "a@test.com" },
     } as never);
@@ -353,7 +328,6 @@ describe("POST /api/applications/link-after-auth", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.ok).toBe(true);
-    // We should have attempted at least one insert (audit_log + user_document + user_document_blob).
-    expect(tx.__inserts.length).toBeGreaterThanOrEqual(2);
+    expect(tx.__inserts.length).toBeGreaterThanOrEqual(1);
   });
 });

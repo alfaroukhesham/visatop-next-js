@@ -102,7 +102,7 @@ export function ClientAppHeader({ className }: Props) {
           ) : storeSession ? (
             <>
               <ClientButtonLink
-                href="/portal/settings"
+                href="/portal/track"
                 brand="cta"
                 className="h-9 shrink-0 px-3 text-xs font-bold"
               >

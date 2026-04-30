@@ -42,7 +42,7 @@ export function ClientPortalHeader({ signOutAction, className }: Props) {
           <ClientNavLink href="/apply/track" onInk active={path.startsWith("/apply/track")}>
             Track
           </ClientNavLink>
-          <ClientNavLink href="/portal" onInk active={path === "/portal"}>
+          <ClientNavLink href="/portal/track" onInk active={path.startsWith("/portal/track")}>
             Overview
           </ClientNavLink>
         </nav>

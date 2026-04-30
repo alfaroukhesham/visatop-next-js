@@ -15,7 +15,7 @@ export function WpShellFallbackHeader() {
               </Link>
             </li>
             <li>
-              <Link href="/portal" className="hover:underline">
+              <Link href="/portal/track" className="hover:underline">
                 Portal
               </Link>
             </li>

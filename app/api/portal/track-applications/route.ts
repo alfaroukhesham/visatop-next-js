@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 
-import { and, desc, eq, isNull, lt, or, sql, inArray } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lte, lt, or, sql } from "drizzle-orm";
 
 import { decodeCursor, encodeCursor, parseLimit } from "@/lib/api/cursor";
 import { jsonError, jsonOk } from "@/lib/api/response";
@@ -12,14 +12,6 @@ import { computeClientApplicationTracking } from "@/lib/applications/user-facing
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const DRAFT_LIKE_APPLICATION_STATUSES = [
-  "draft",
-  "needs_docs",
-  "extracting",
-  "needs_review",
-  "ready_for_payment",
-] as const;
-
 function normalizeEmail(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const e = raw.trim().toLowerCase();
@@ -30,7 +22,7 @@ function normalizeEmail(raw: string | null | undefined): string | null {
  * Signed-in tracking list:
  * - Includes rows linked to the userId
  * - Also includes legacy guest rows whose guest_email matches the signed-in email
- * - Excludes unpaid drafts (handled on /portal/drafts)
+ * - Excludes unpaid rows whose draft TTL has passed (draftExpiresAt not null and <= now)
  *
  * Runs under system DB actor to allow reading guest rows; access is enforced by session email.
  */
@@ -64,9 +56,10 @@ export async function GET(req: Request) {
       ),
     );
 
-    const excludeUnpaidDrafts = and(
+    const expiredUnpaidDraft = and(
       eq(application.paymentStatus, "unpaid"),
-      inArray(application.applicationStatus, [...DRAFT_LIKE_APPLICATION_STATUSES]),
+      isNotNull(application.draftExpiresAt),
+      lte(application.draftExpiresAt, sql`now()`),
     );
 
     const cursorWhere = cursor
@@ -76,7 +69,7 @@ export async function GET(req: Request) {
         )
       : undefined;
 
-    const where = and(ownedOrEmailMatch, sql`NOT (${excludeUnpaidDrafts})`);
+    const where = and(ownedOrEmailMatch, sql`NOT (${expiredUnpaidDraft})`);
 
     return tx
       .select({
@@ -87,6 +80,7 @@ export async function GET(req: Request) {
         serviceId: application.serviceId,
         applicationStatus: application.applicationStatus,
         paymentStatus: application.paymentStatus,
+        draftExpiresAt: application.draftExpiresAt,
         fulfillmentStatus: application.fulfillmentStatus,
         adminAttentionRequired: application.adminAttentionRequired,
       })
@@ -109,6 +103,8 @@ export async function GET(req: Request) {
         referenceDisplay: r.referenceNumber ?? r.id.slice(0, 8),
         nationalityCode: r.nationalityCode,
         serviceId: r.serviceId,
+        paymentStatus: r.paymentStatus,
+        draftExpiresAt: r.draftExpiresAt ? r.draftExpiresAt.toISOString() : null,
         clientTracking: computeClientApplicationTracking({
           applicationStatus: r.applicationStatus,
           paymentStatus: r.paymentStatus,

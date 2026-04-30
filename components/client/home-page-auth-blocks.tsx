@@ -41,7 +41,7 @@ export function HomeHeroAuthActions() {
 
   return (
     <>
-      <ClientButtonLink href="/portal" brand="cta" className="min-w-[148px] justify-center">
+      <ClientButtonLink href="/portal/track" brand="cta" className="min-w-[148px] justify-center">
         My applications
       </ClientButtonLink>
       <form action={signOutAction} className="sm:ml-1">
