@@ -228,13 +228,8 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
   const passport = useMemo(() => latestByType(docs, "passport_copy"), [docs]);
   const photo = useMemo(() => latestByType(docs, "personal_photo"), [docs]);
 
-  const extractionStatus = app?.passportExtraction.status ?? null;
   const attemptsUsed = extractResult?.extraction.attemptsUsed ?? 0;
   const attemptsLeft = Math.max(0, 2 - attemptsUsed);
-  const extractionLocked =
-    extractionStatus === "succeeded" ||
-    (extractionStatus === "needs_manual" && attemptsUsed >= 2) ||
-    (extractionStatus === "failed" && attemptsUsed >= 2);
 
   async function onUpload(type: DocType, file: File) {
     if (file.size > UPLOAD_MAX_BYTES) {
@@ -908,12 +903,7 @@ function ApplicantReview({
     setSaveError(null);
     if (isGuest) {
       const em = (values.guestEmail ?? "").trim();
-      if (!em) {
-        setSaveError("Email is required.");
-        setSaving(false);
-        return;
-      }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
+      if (em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
         setSaveError("Please enter a valid email address.");
         setSaving(false);
         return;

@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ClientButtonLink } from "@/components/client/client-button";
 import { ClientNavLink } from "@/components/client/client-nav-link";
 import { authClient } from "@/lib/auth-client";
@@ -46,13 +45,7 @@ export function ClientAppHeader({ className }: Props) {
     setMounted(true);
   }, []);
 
-  const nav = useMemo(() => {
-    if (storePending) return NAV_BASE;
-    if (storeSession) {
-      return NAV_BASE;
-    }
-    return NAV_BASE;
-  }, [storePending, storeSession]);
+  const nav = NAV_BASE;
 
   async function onSignOut() {
     try {

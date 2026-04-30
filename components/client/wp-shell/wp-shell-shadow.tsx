@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 const cssTextCache = new Map<string, Promise<string>>();
 
@@ -12,7 +12,10 @@ function getCssText(href: string): Promise<string> {
       if (!r.ok) throw new Error(`Failed to fetch css: ${href}`);
       return await r.text();
     })
-    .catch(() => "");
+    .catch(() => {
+      cssTextCache.delete(href);
+      return "";
+    });
   cssTextCache.set(href, p);
   return p;
 }
@@ -51,7 +54,6 @@ export function WpShellShadow(props: {
   kind: "header" | "footer";
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
-  const cssKey = useMemo(() => props.cssUrls.join("|"), [props.cssUrls]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -78,8 +80,10 @@ export function WpShellShadow(props: {
     mount.innerHTML = props.html;
 
     // Load and inject full WP CSS (rewriting body selectors to :host for Shadow DOM).
+    let cancelled = false;
     (async () => {
       const texts = await Promise.all(props.cssUrls.map((u) => (u ? getCssText(u) : Promise.resolve(""))));
+      if (cancelled) return;
       const combined = texts.filter(Boolean).join("\n");
       const rewritten = rewriteWpCssForShadow(combined);
       if (!rewritten.trim()) return;
@@ -96,9 +100,15 @@ export function WpShellShadow(props: {
         document.documentElement.style.setProperty("--wp-shell-header-height", `${Math.ceil(h)}px`);
       });
       ro.observe(mount);
-      return () => ro.disconnect();
+      return () => {
+        cancelled = true;
+        ro.disconnect();
+      };
     }
-  }, [props.html, cssKey, props.kind]);
+    return () => {
+      cancelled = true;
+    };
+  }, [props.html, props.cssUrls, props.kind]);
 
   return <div ref={hostRef} />;
 }

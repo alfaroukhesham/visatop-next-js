@@ -111,6 +111,7 @@ describe("POST /api/applications", () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.data.application.id).toBe("app-1");
+    expect(body.data.application.guestEmail).toBeNull();
   });
 
   it("rejects invalid catalog currency", async () => {

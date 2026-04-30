@@ -1,17 +1,9 @@
 import type { Metadata } from "next";
 import { ClientAppHeader } from "@/components/client/client-app-header";
-import {
-  CardContent,
-  CardDescription,
-  CardHeader,
-  ClientCard,
-  CardTitle,
-} from "@/components/client/client-card";
 import { ClientHeroPanel } from "@/components/client/client-surface";
 import { ApplyJourneyStepBar } from "@/components/apply/apply-journey-step-bar";
 import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
 import {
-  HomeAccountCardBody,
   // HomeHeroAuthActions,
   HomeHeroGuestTrackLink,
   HomeReturningCustomerSection,

@@ -118,10 +118,17 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
   useEffect(() => {
     if (loadingList) return;
     const raw = initialNationalityCode.trim().toUpperCase();
-    if (raw.length !== 2) return;
-    if (nationalities.length === 0) return;
-    if (nationalities.some((n) => n.code === raw)) return;
-    router.replace("/");
+    if (raw.length !== 2) {
+      router.replace("/");
+      return;
+    }
+    if (nationalities.length === 0) {
+      router.replace("/");
+      return;
+    }
+    if (!nationalities.some((n) => n.code === raw)) {
+      router.replace("/");
+    }
   }, [initialNationalityCode, loadingList, nationalities, router]);
 
   useEffect(() => {

@@ -67,8 +67,9 @@ export async function fetchWpShellModel(input: {
   appBasePath: string;
   lang?: string;
   revalidateSeconds?: number;
+  includeHtml?: boolean;
 }): Promise<WpShellModel | null> {
-  const include = "menus,css,html";
+  const include = input.includeHtml ? "menus,css,html" : "menus,css";
   const url = new URL("/wp-json/headless/v1/layout", input.wpOrigin);
   url.searchParams.set("include", include);
   if (input.lang) url.searchParams.set("lang", input.lang);
@@ -104,8 +105,8 @@ export async function fetchWpShellModel(input: {
     { allowedHosts: resolveAllowedCssHosts({ wpOrigin: input.wpOrigin }) }
   );
 
-  const headerHtmlRaw = (json.html?.header ?? null) || null;
-  const footerHtmlRaw = (json.html?.footer ?? null) || null;
+  const headerHtmlRaw = input.includeHtml ? ((json.html?.header ?? null) || null) : null;
+  const footerHtmlRaw = input.includeHtml ? ((json.html?.footer ?? null) || null) : null;
 
   const headerHtml = headerHtmlRaw ? sanitizeWpShellHtml(headerHtmlRaw) : null;
   const footerHtml = footerHtmlRaw ? sanitizeWpShellHtml(footerHtmlRaw) : null;

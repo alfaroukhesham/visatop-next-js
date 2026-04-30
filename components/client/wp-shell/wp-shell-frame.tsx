@@ -11,6 +11,7 @@ function buildSrcDoc(input: {
   cssUrls: string[];
   kind: "header" | "footer";
   baseHref: string | null;
+  postMessageToken: string;
 }): string {
   const links = input.cssUrls
     .filter(Boolean)
@@ -43,9 +44,68 @@ function buildSrcDoc(input: {
   <body class="${bodyClass}">
     ${input.html}
     <script>
-      function notifyParentLayout() {
-        try { window.parent && window.parent.postMessage({ type: 'wp-shell:remeasure', kind: '${input.kind}' }, '*'); } catch (e) {}
+      var WP_SHELL_TOKEN = ${JSON.stringify(input.postMessageToken)};
+      var KIND = ${JSON.stringify(input.kind)};
+
+      function post(type, payload) {
+        try {
+          if (!window.parent) return;
+          window.parent.postMessage(Object.assign({ type: type, kind: KIND, token: WP_SHELL_TOKEN }, payload || {}), '*');
+        } catch (e) {}
       }
+
+      function pickTarget() {
+        try {
+          var doc = document;
+          if (KIND === 'header') return doc.querySelector('header#header') || doc.body;
+          if (KIND === 'footer') return doc.querySelector('footer#footer') || doc.body;
+          return doc.body;
+        } catch (e) {
+          return document.body;
+        }
+      }
+
+      function measureAndPost() {
+        try {
+          var target = pickTarget();
+          if (!target) return;
+          var rect = target.getBoundingClientRect();
+          var baseHeight = Math.max(0, Math.ceil(rect.height));
+          var expandedHeight = baseHeight;
+
+          if (KIND === 'header') {
+            var subs = Array.prototype.slice.call(document.querySelectorAll('header#header .sub-menu'));
+            for (var i = 0; i < subs.length; i++) {
+              var el = subs[i];
+              if (!el || !el.getBoundingClientRect) continue;
+              var cs = window.getComputedStyle(el);
+              if (!cs) continue;
+              if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+              var opacity = parseFloat(cs.opacity || '1');
+              if (opacity <= 0) continue;
+              var r = el.getBoundingClientRect();
+              expandedHeight = Math.max(expandedHeight, Math.ceil(r.bottom));
+            }
+          }
+
+          post('wp-shell:height', { height: expandedHeight, baseHeight: baseHeight });
+        } catch (e) {}
+      }
+
+      function notifyParentLayout() {
+        measureAndPost();
+        setTimeout(measureAndPost, 220);
+      }
+
+      try {
+        var ro = new ResizeObserver(function () { measureAndPost(); });
+        ro.observe(document.documentElement);
+      } catch (e) {}
+
+      try {
+        window.addEventListener('load', function () { measureAndPost(); });
+        document.addEventListener('DOMContentLoaded', function () { measureAndPost(); });
+      } catch (e) {}
 
       document.addEventListener('click', (e) => {
         const a = e.target && e.target.closest ? e.target.closest('a') : null;
@@ -101,6 +161,7 @@ export function WpShellFrame(props: {
 }) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [heightPx, setHeightPx] = useState<number>(props.kind === "header" ? 120 : 400);
+  const postMessageToken = useMemo(() => crypto.randomUUID(), []);
 
   const srcDoc = useMemo(
     () =>
@@ -109,100 +170,42 @@ export function WpShellFrame(props: {
         cssUrls: props.cssUrls,
         kind: props.kind,
         baseHref: props.baseHref ?? null,
+        postMessageToken,
       }),
-    [props.html, props.cssUrls, props.kind, props.baseHref]
+    [props.html, props.cssUrls, props.kind, props.baseHref, postMessageToken]
   );
 
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
-
-    let ro: ResizeObserver | null = null;
-    let raf = 0;
-
-    const measure = () => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        try {
-          const doc = iframe.contentDocument;
-          if (!doc) return;
-
-          // Prefer measuring the actual wp header/footer node if present.
-          const target =
-            (props.kind === "header"
-              ? (doc.querySelector("header#header") as HTMLElement | null)
-              : (doc.querySelector("footer#footer") as HTMLElement | null)) ?? doc.body;
-
-          const rect = target.getBoundingClientRect();
-          const baseHeight = Math.max(0, Math.ceil(rect.height));
-
-          // If dropdowns are open, they often overflow the header's base height.
-          // Expand the iframe so the dropdown isn't hidden behind app chrome.
-          let expandedHeight = baseHeight;
-          if (props.kind === "header") {
-            const subs = Array.from(doc.querySelectorAll("header#header .sub-menu")) as HTMLElement[];
-            for (const el of subs) {
-              const cs = doc.defaultView?.getComputedStyle(el);
-              if (!cs) continue;
-              if (cs.display === "none" || cs.visibility === "hidden") continue;
-              const opacity = Number.parseFloat(cs.opacity || "1");
-              if (opacity <= 0) continue;
-              const r = el.getBoundingClientRect();
-              expandedHeight = Math.max(expandedHeight, Math.ceil(r.bottom));
-            }
-          }
-
-          if (expandedHeight > 0) setHeightPx(expandedHeight);
-
-          if (props.kind === "header" && baseHeight > 0) {
-            document.documentElement.style.setProperty("--wp-shell-header-height", `${baseHeight}px`);
-          }
-        } catch {
-          // ignore
-        }
-      });
-    };
-
-    const onLoad = () => {
-      measure();
-      try {
-        const doc = iframe.contentDocument;
-        if (!doc) return;
-        ro = new ResizeObserver(measure);
-        ro.observe(doc.documentElement);
-      } catch {
-        // ignore
-      }
-    };
-
-    iframe.addEventListener("load", onLoad);
     const onMessage = (event: MessageEvent) => {
       if (event.source !== iframe.contentWindow) return;
-      const data = event.data as { type?: string; kind?: string } | null;
-      if (data?.type === "wp-shell:remeasure" && data.kind === props.kind) {
-        measure();
-        window.setTimeout(measure, 220);
+      const data = event.data as
+        | { type?: string; kind?: string; height?: number; baseHeight?: number; token?: string }
+        | null;
+      if (data?.token !== postMessageToken) return;
+      if (data?.type === "wp-shell:height" && data.kind === props.kind) {
+        const h = Number(data.height);
+        const baseH = Number(data.baseHeight);
+        if (Number.isFinite(h) && h > 0) setHeightPx(h);
+        if (props.kind === "header" && Number.isFinite(baseH) && baseH > 0) {
+          document.documentElement.style.setProperty("--wp-shell-header-height", `${Math.ceil(baseH)}px`);
+        }
       }
     };
     window.addEventListener("message", onMessage);
 
-    // In practice, srcDoc updates may not always trigger load; measure shortly after.
-    const t = window.setTimeout(measure, 50);
-
     return () => {
-      window.clearTimeout(t);
-      iframe.removeEventListener("load", onLoad);
       window.removeEventListener("message", onMessage);
-      if (ro) ro.disconnect();
-      cancelAnimationFrame(raf);
     };
-  }, [props.kind, srcDoc]);
+  }, [props.kind, srcDoc, postMessageToken]);
 
   return (
     <iframe
       ref={iframeRef}
       title={props.kind === "header" ? "WP Header" : "WP Footer"}
       srcDoc={srcDoc}
+      sandbox="allow-scripts allow-popups"
       style={{
         width: "100%",
         height: `${heightPx}px`,

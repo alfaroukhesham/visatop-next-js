@@ -27,6 +27,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
           appOrigin: getAppOrigin(),
           appBasePath: "/visa-processing",
           revalidateSeconds: 60,
+          includeHtml: true,
         })
       : null;
 

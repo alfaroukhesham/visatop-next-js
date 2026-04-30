@@ -38,9 +38,17 @@ export function normalizeWpMenuUrl(input: {
 
   // Relative path: internal only if it targets the app mount.
   if (url.startsWith("/")) {
-    const stripped = stripBasePath(url, basePath);
-    if (stripped == null) return { kind: "external", href: url, label };
-    return { kind: "internal", href: stripped || "/", label };
+    try {
+      const u = new URL(url, "http://local.invalid");
+      const stripped = stripBasePath(u.pathname, basePath);
+      if (stripped == null) return { kind: "external", href: url, label };
+      const href = (stripped || "/") + (u.search || "") + (u.hash || "");
+      return { kind: "internal", href, label };
+    } catch {
+      const stripped = stripBasePath(url, basePath);
+      if (stripped == null) return { kind: "external", href: url, label };
+      return { kind: "internal", href: stripped || "/", label };
+    }
   }
 
   // Absolute URL.

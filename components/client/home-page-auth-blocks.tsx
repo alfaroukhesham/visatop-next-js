@@ -2,7 +2,6 @@
 
 import { signOutAction } from "@/app/actions/auth";
 import { ClientButton, ClientButtonLink } from "@/components/client/client-button";
-import { CardContent } from "@/components/client/client-card";
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { cn } from "@/lib/utils";
 
