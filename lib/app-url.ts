@@ -7,5 +7,13 @@ export function getAppOrigin(): string {
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
     process.env.BETTER_AUTH_URL?.trim() ||
     "http://localhost:3000";
-  return raw.replace(/\/$/, "");
+  const trimmed = raw.replace(/\/$/, "");
+  try {
+    // Env URLs sometimes include Next `basePath` (e.g. https://visatop.com/visa-processing).
+    // Callers like `appHref` will append `basePath` again, so we must return only the origin.
+    return new URL(trimmed).origin;
+  } catch {
+    // Fallback: preserve prior behavior for non-URL inputs.
+    return trimmed;
+  }
 }

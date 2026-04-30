@@ -6,6 +6,9 @@ function joinUrl(base: string, path: string): string {
   return `${b}${p}`;
 }
 
+/** Matches `basePath` in `next.config.ts` when `NEXT_PUBLIC_BASE_PATH` is unset. */
+const DEFAULT_NEXT_BASE_PATH = "/visa-processing";
+
 function resolveClientBasePath(): string {
   // Prefer explicit configuration (used by local/ngrok/prod consistently).
   const env = process.env.NEXT_PUBLIC_BASE_PATH?.trim();
@@ -16,7 +19,8 @@ function resolveClientBasePath(): string {
     const p = window.location.pathname || "";
     if (p === "/visa-processing" || p.startsWith("/visa-processing/")) return "/visa-processing";
   }
-  return "";
+  // Server / build: same default as Next `basePath` so `appHref` / `apiHref` match real routes.
+  return DEFAULT_NEXT_BASE_PATH;
 }
 
 /**

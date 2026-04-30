@@ -2,14 +2,14 @@ import { dash } from "@better-auth/infra";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { apiHref, appHref } from "@/lib/app-href";
 import { db } from "@/lib/db";
 import * as adminSchema from "@/lib/db/schema/admin-auth";
 
-const baseURL = (
-  process.env.BETTER_AUTH_URL ??
-  process.env.NEXT_PUBLIC_APP_URL ??
-  "http://localhost:3000"
-).replace(/\/$/, "");
+// Full public URL of the admin auth handler (includes Next `basePath` + `/api/admin/auth`).
+// Must match `admin-auth-client` / `apiHref` so Better Auth routing and CSRF checks succeed.
+const baseURL = apiHref("admin/auth").replace(/\/$/, "");
+const appBaseURL = appHref("/").replace(/\/$/, "");
 
 function normalizeOrigin(input: string): string | null {
   const trimmed = input.replace(/\/$/, "").trim();
@@ -34,7 +34,7 @@ async function resolveTrustedOrigins(request?: Request) {
     if (o) origins.add(o);
   };
 
-  add(baseURL);
+  add(appBaseURL);
   add(process.env.BETTER_AUTH_URL);
   add(process.env.NEXT_PUBLIC_APP_URL);
   add("http://localhost:3000");
@@ -93,6 +93,15 @@ export const adminAuth = betterAuth({
   emailAndPassword: { enabled: true, disableSignUp: true },
   advanced: {
     cookiePrefix: "admin",
+    // `baseURL` comes from env and is often canonical `https://…` while dev/staging is
+    // reached over `http://` (e.g. droplet IP). Better Auth would then emit `Secure`
+    // cookies that the browser drops on HTTP — session never appears on `/admin`.
+    useSecureCookies:
+      process.env.BETTER_AUTH_SECURE_COOKIES === "true"
+        ? true
+        : process.env.BETTER_AUTH_SECURE_COOKIES === "false"
+          ? false
+          : process.env.NODE_ENV === "production",
   },
   plugins: [nextCookies(), dash()],
 });
