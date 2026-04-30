@@ -58,7 +58,7 @@ export default function ClientDashboardPage() {
                     to link your file to an account.
                   </p>
                 </div>
-                <ClientButtonLink href="/apply/start" brand="cta" className="shrink-0 justify-center px-8 py-6 text-base font-bold">
+                <ClientButtonLink href="/" brand="cta" className="shrink-0 justify-center px-8 py-6 text-base font-bold">
                   Start application
                 </ClientButtonLink>
               </div>
@@ -85,7 +85,7 @@ export default function ClientDashboardPage() {
                     </div>
                   </div>
                   <div className="flex shrink-0 flex-col gap-3 md:pt-2">
-                    <ClientButtonLink href="/apply/start" brand="blue" className="justify-center gap-2 px-6 font-semibold">
+                    <ClientButtonLink href="/" brand="blue" className="justify-center gap-2 px-6 font-semibold">
                       Browse &amp; apply
                       <ArrowRight className="size-4 shrink-0" aria-hidden />
                     </ClientButtonLink>

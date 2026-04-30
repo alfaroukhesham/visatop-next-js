@@ -40,7 +40,7 @@ export function ApplyJourneyStepBar({
         <p className="text-foreground truncate text-sm font-semibold sm:text-base">{title}</p>
         <p className="text-muted-foreground hidden truncate text-xs sm:block sm:text-sm">{subtitle}</p>
       </div>
-      {actions ? <div className="hidden shrink-0 sm:block">{actions}</div> : null}
+      {actions ? <div className="shrink-0">{actions}</div> : null}
       <button
         type="button"
         onClick={() => setHidden(true)}

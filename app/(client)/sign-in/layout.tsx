@@ -9,7 +9,7 @@ import { adminAuth } from "@/lib/admin-auth";
 export const metadata: Metadata = {
   title: "Sign in",
   description:
-    "Sign in to your Visatop portal to continue your visa or residency application.",
+    "Sign in to your Visatop portal to create, resume, or track your visa application.",
 };
 
 export default async function SignInLayout({

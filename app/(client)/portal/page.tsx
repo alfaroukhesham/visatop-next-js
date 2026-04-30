@@ -15,7 +15,7 @@ import {
 
 const links = [
   {
-    href: "/apply/start",
+    href: "/",
     title: "New application",
     description: "Nationality, visa type, documents, and payment in one guided flow.",
     icon: PenLine,

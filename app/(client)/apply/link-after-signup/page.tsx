@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
-import { authClient } from "@/lib/auth-client";
+import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import {
   GUEST_LINK_EVENTS,
   mapLinkFailureDetailsCodeToReason,
@@ -14,23 +14,23 @@ import { ClientSurface } from "@/components/client/client-surface";
 
 export default function LinkAfterSignupPage() {
   const router = useRouter();
-  const { data: session, isPending } = authClient.useSession();
+  const userId = useClientAuthStore((s) => s.session?.user?.id);
+  const isPending = useClientAuthStore((s) => s.isPending);
   const [message, setMessage] = useState<string | null>(null);
   const authLandFired = useRef(false);
   const linkStarted = useRef(false);
 
   useEffect(() => {
     if (isPending) return;
-    const uid = session?.user?.id;
-    if (!uid) return;
+    if (!userId) return;
     if (authLandFired.current) return;
     authLandFired.current = true;
     trackGuestLinkEvent(GUEST_LINK_EVENTS.authCallbackLand);
-  }, [isPending, session?.user?.id]);
+  }, [isPending, userId]);
 
   useEffect(() => {
     if (isPending) return;
-    if (!session?.user?.id) return;
+    if (!userId) return;
     if (linkStarted.current) return;
     linkStarted.current = true;
 
@@ -92,7 +92,7 @@ export default function LinkAfterSignupPage() {
       });
       setMessage("Something went wrong. Please try again.");
     });
-  }, [isPending, router, session?.user?.id]);
+  }, [isPending, router, userId]);
 
   if (isPending) {
     return (
@@ -105,7 +105,7 @@ export default function LinkAfterSignupPage() {
     );
   }
 
-  if (!session?.user?.id) {
+  if (!userId) {
     return (
       <div className="mx-auto flex min-h-[min(50vh,420px)] max-w-md flex-col justify-center px-6 py-16">
         <ClientSurface preset="panel" className="border-secondary/20 bg-white/90 p-8 text-center shadow-md">

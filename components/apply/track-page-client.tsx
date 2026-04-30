@@ -1,39 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
 
 import { ApplicationTrackLookupForm } from "@/components/apply/application-track-lookup-form";
 import { SignedInTrackList } from "@/components/portal/signed-in-track-list";
-import { authClient } from "@/lib/auth-client";
-import { type ClientSession, useClientAuthStore } from "@/lib/stores/client-auth-store";
-
-function toClientSession(input: unknown): ClientSession {
-  if (!input || typeof input !== "object") return null;
-  const maybe = input as { user?: unknown };
-  if (!maybe.user || typeof maybe.user !== "object") return null;
-  const u = maybe.user as { id?: unknown; name?: unknown; email?: unknown };
-  if (typeof u.id !== "string") return null;
-  return {
-    user: {
-      id: u.id,
-      name: typeof u.name === "string" ? u.name : u.name == null ? null : null,
-      email: typeof u.email === "string" ? u.email : u.email == null ? null : null,
-    },
-  };
-}
+import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 
 export function TrackPageClient() {
-  const { data: session, isPending } = authClient.useSession();
   const storeSession = useClientAuthStore((s) => s.session);
   const storePending = useClientAuthStore((s) => s.isPending);
-  const setSession = useClientAuthStore((s) => s.setSession);
-  const setPending = useClientAuthStore((s) => s.setPending);
-
-  useEffect(() => {
-    setPending(isPending);
-    setSession(toClientSession(session));
-  }, [isPending, session, setPending, setSession]);
 
   const authed = Boolean(storeSession);
   const pending = Boolean(storePending);
@@ -72,7 +47,7 @@ export function TrackPageClient() {
       {pending ? null : authed ? <SignedInTrackList /> : <ApplicationTrackLookupForm />}
 
       <p className="text-muted-foreground mt-10 text-center text-sm">
-        <Link href="/apply/start" className="text-link font-medium hover:underline">
+        <Link href="/" className="text-link font-medium hover:underline">
           Start a new application
         </Link>
         <span className="mx-2 text-border" aria-hidden>
