@@ -1,8 +1,6 @@
 import { headers } from "next/headers";
 
-import { and, desc, eq, isNull, lt, or } from "drizzle-orm";
-
-import { decodeCursor, encodeCursor, parseLimit } from "@/lib/api/cursor";
+import { and, eq, isNull } from "drizzle-orm";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { auth } from "@/lib/auth";
 import { withClientDbActor } from "@/lib/db/actor-context";

@@ -4,13 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
-import { ClientField } from "@/components/client/client-field";
-import { ClientInput } from "@/components/client/client-input";
-import { ClientNavLink } from "@/components/client/client-nav-link";
-import { NationalityCombobox } from "@/components/client/nationality-combobox";
 import { convertMinorBetweenUsdAed, parsePublicDisplayFxAedPerUsd } from "@/lib/catalog/display-price";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
-import { authClient } from "@/lib/auth-client";
 import { apiHref } from "@/lib/app-href";
 import { cn } from "@/lib/utils";
 
@@ -72,19 +67,17 @@ function entriesLabel(entries: string | null): string | null {
 }
 
 type StartApplicationFormProps = {
-  /** Prefill when opened from home via `/apply/start?nationality=XX`. */
-  initialNationalityCode?: string;
+  /** Set on home; this page is only reachable as `/apply/start?nationality=XX`. */
+  initialNationalityCode: string;
 };
 
-export function StartApplicationForm({ initialNationalityCode }: StartApplicationFormProps = {}) {
-  const { data: session } = authClient.useSession();
+export function StartApplicationForm({ initialNationalityCode }: StartApplicationFormProps) {
   const router = useRouter();
   const [nationalities, setNationalities] = useState<Nationality[]>([]);
   const [nationality, setNationality] = useState("");
   const [services, setServices] = useState<Service[]>([]);
   const [serviceId, setServiceId] = useState("");
   const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>("USD");
-  const [guestEmail, setGuestEmail] = useState("");
   const [loadingList, setLoadingList] = useState(true);
   const [loadingServices, setLoadingServices] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -121,6 +114,22 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
       cancelled = true;
     };
   }, [initialNationalityCode]);
+
+  useEffect(() => {
+    if (loadingList) return;
+    const raw = initialNationalityCode.trim().toUpperCase();
+    if (raw.length !== 2) {
+      router.replace("/");
+      return;
+    }
+    if (nationalities.length === 0) {
+      router.replace("/");
+      return;
+    }
+    if (!nationalities.some((n) => n.code === raw)) {
+      router.replace("/");
+    }
+  }, [initialNationalityCode, loadingList, nationalities, router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,15 +172,8 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
     e.preventDefault();
     setError(null);
     if (!nationality || !serviceId) {
-      setError("Choose a nationality and a service.");
+      setError("Choose a service.");
       return;
-    }
-    if (!session?.user) {
-      const ge = guestEmail.trim();
-      if (!ge) {
-        setError("Email is required when you are not signed in.");
-        return;
-      }
     }
     setSubmitting(true);
     const body: Record<string, unknown> = {
@@ -179,7 +181,6 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
       serviceId,
       catalogCurrency: displayCurrency,
     };
-    if (guestEmail.trim()) body.guestEmail = guestEmail.trim();
     const res = await fetchApiEnvelope<{ application: { id: string; isGuest: boolean } }>(
       apiHref("/applications"),
       {
@@ -207,39 +208,31 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <h2 className="font-heading text-foreground text-lg font-semibold tracking-tight">Nationality</h2>
-          {nationality ? (
-            <button
-              type="button"
-              className="text-link text-sm font-medium underline-offset-4 hover:underline"
-              onClick={() => {
-                setNationality("");
-                setServiceId("");
-                setServices([]);
-              }}
-            >
-              Change
-            </button>
-          ) : null}
+          <button
+            type="button"
+            className="text-link text-sm font-medium underline-offset-4 hover:underline"
+            onClick={() => router.push("/")}
+          >
+            Change nationality
+          </button>
         </div>
         {loadingList ? (
           <p className="text-muted-foreground flex items-center gap-2 text-sm">
             <Loader2 className="size-4 animate-spin" aria-hidden />
             Loading countries…
           </p>
-        ) : (
-          <NationalityCombobox
-            id="apply-start-nationality"
-            nationalities={nationalities}
-            valueCode={nationality || null}
-            onSelectCode={(code) => {
-              setNationality(code);
-              setServiceId("");
-            }}
-            placeholder="Type country name or ISO code…"
-            size="hero"
-          />
-        )}
-        {selectedNat ? (
+        ) : nationality ? (
+          <div className="border-border bg-muted/30 rounded-[12px] border px-4 py-4 sm:px-5 sm:py-5">
+            <p className="text-foreground text-sm font-semibold">
+              <span className="text-muted-foreground font-medium">Nationality</span>{" "}
+              <span className="font-heading tabular-nums tracking-tight">{nationality}</span>
+            </p>
+            {selectedNat ? (
+              <p className="text-muted-foreground mt-1 text-sm leading-relaxed">{selectedNat.name}</p>
+            ) : null}
+          </div>
+        ) : null}
+        {nationality ? (
           <p className="text-muted-foreground text-xs">
             We double-check eligibility when your application file is created.
           </p>
@@ -368,27 +361,6 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
         </section>
       ) : null}
 
-      <ClientField
-        id="email"
-        label={session?.user ? "Contact email (optional)" : "Email"}
-        hint={
-          session?.user
-            ? "Leave blank to use your account email for updates."
-            : "Required. We send status and payment updates here. Continue on this device until you pay, or sign in to sync across devices."
-        }
-      >
-        <ClientInput
-          id="email"
-          type="email"
-          autoComplete="email"
-          placeholder="you@example.com"
-          value={guestEmail}
-          onChange={(e) => setGuestEmail(e.target.value)}
-          required={!session?.user}
-          className="max-w-xl rounded-[5px] border-border"
-        />
-      </ClientField>
-
       <div className="flex flex-wrap items-center gap-3 pt-1">
         <ClientButton
           type="submit"
@@ -399,18 +371,18 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
           {submitting ? (
             <>
               <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
-              Creating…
+              Loading…
             </>
           ) : (
-            "Create draft"
+            "Next"
           )}
         </ClientButton>
-        <ClientNavLink href="/portal" className="text-muted-foreground hover:text-foreground text-sm pb-1">
+        {/* <ClientNavLink href="/portal" className="text-muted-foreground hover:text-foreground text-sm pb-1">
           My applications
         </ClientNavLink>
         <ClientNavLink href="/apply/track" className="text-muted-foreground hover:text-foreground text-sm pb-1">
           Track an application →
-        </ClientNavLink>
+        </ClientNavLink> */}
       </div>
     </form>
   );

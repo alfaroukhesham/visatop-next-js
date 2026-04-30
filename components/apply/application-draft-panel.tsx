@@ -9,19 +9,25 @@ import {
   FileStack,
   Loader2,
   RefreshCw,
-  UploadCloud,
 } from "lucide-react";
-import { ClientButton } from "@/components/client/client-button";
+import { ApplyJourneyStepBar } from "@/components/apply/apply-journey-step-bar";
+import { ClientButton, ClientButtonLink } from "@/components/client/client-button";
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 import type { PublicApplication } from "@/lib/applications/public-application";
-import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
 import { PaddleCheckoutButton } from "./paddle-checkout-button";
-import { computeValidation } from "@/lib/documents/validation-readiness";
+import {
+  computeValidation,
+  formatIsoDateAsDdMmYyyy,
+  parseDobInputToIsoUtc,
+} from "@/lib/documents/validation-readiness";
 
 type ApplicantProfile = PublicApplication["applicant"];
+
+/** Row keys for the applicant form; `"email"` maps to `application.guestEmail` on the server. */
+type ApplicantProfileFieldKey = keyof ApplicantProfile | "email";
 
 type PublicDocument = {
   id: string;
@@ -77,10 +83,22 @@ function latestByType(docs: PublicDocument[], type: DocType) {
   return docs.find((d) => d.documentType === type && d.status !== "deleted") ?? null;
 }
 
+function applicantFieldValue(
+  applicant: ApplicantProfile,
+  key: ApplicantProfileFieldKey,
+  guestEmail: string | null,
+): string {
+  if (key === "email") return guestEmail ?? "";
+  if (key === "dateOfBirth") return formatIsoDateAsDdMmYyyy(applicant.dateOfBirth ?? null);
+  if (key === "passportExpiryDate") return formatIsoDateAsDdMmYyyy(applicant.passportExpiryDate ?? null);
+  return applicant[key] ?? "";
+}
+
 /** Remount profile form when server-driven applicant / extraction data changes (avoids setState-in-effect). */
 function applicantFormResetKey(
   applicant: ApplicantProfile,
   extraction: ExtractResponse["extraction"] | null,
+  guestEmail: string | null,
 ): string {
   const stable = [
     applicant.fullName ?? "",
@@ -92,6 +110,7 @@ function applicantFormResetKey(
     applicant.profession ?? "",
     applicant.address ?? "",
     applicant.phone ?? "",
+    guestEmail ?? "",
   ].join("\u001e");
   const ex = extraction
     ? `${extraction.documentId ?? ""}\u001e${extraction.attemptsUsed}\u001e${extraction.status}`
@@ -129,25 +148,37 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
   const [extractResult, setExtractResult] = useState<ExtractResponse | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
 
-  const load = useCallback(async (opts?: { silent?: boolean }) => {
-    const silent = opts?.silent === true;
-    if (!silent) setLoading(true);
-    else setRefreshing(true);
-    if (!silent) setError(null);
-    const [appRes, docsRes] = await Promise.all([
-      fetchApiEnvelope<{ application: PublicApplication }>(apiHref(`/applications/${applicationId}`)),
-      fetchApiEnvelope<{ documents: PublicDocument[] }>(apiHref(`/applications/${applicationId}/documents`)),
-    ]);
-    if (!silent) setLoading(false);
-    setRefreshing(false);
-    if (!appRes.ok) {
-      setApp(null);
-      setError(appRes.error.message);
-      return;
-    }
-    setApp(appRes.data.application);
-    if (docsRes.ok) setDocs(docsRes.data.documents);
-  }, [applicationId]);
+  const load = useCallback(
+    async (opts?: { silent?: boolean }): Promise<{
+      application: PublicApplication;
+      documents: PublicDocument[];
+    } | null> => {
+      const silent = opts?.silent === true;
+      if (!silent) setLoading(true);
+      else setRefreshing(true);
+      if (!silent) setError(null);
+      const [appRes, docsRes] = await Promise.all([
+        fetchApiEnvelope<{ application: PublicApplication }>(apiHref(`/applications/${applicationId}`)),
+        fetchApiEnvelope<{ documents: PublicDocument[] }>(apiHref(`/applications/${applicationId}/documents`)),
+      ]);
+      if (!silent) setLoading(false);
+      setRefreshing(false);
+      if (!appRes.ok) {
+        setApp(null);
+        setError(appRes.error.message);
+        return null;
+      }
+      const nextApp = appRes.data.application;
+      setApp(nextApp);
+      let nextDocs: PublicDocument[] = [];
+      if (docsRes.ok) {
+        nextDocs = docsRes.data.documents;
+        setDocs(nextDocs);
+      }
+      return { application: nextApp, documents: nextDocs };
+    },
+    [applicationId],
+  );
 
   const cancelCheckout = useCallback(async () => {
     setActionMsg(null);
@@ -197,13 +228,8 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
   const passport = useMemo(() => latestByType(docs, "passport_copy"), [docs]);
   const photo = useMemo(() => latestByType(docs, "personal_photo"), [docs]);
 
-  const extractionStatus = app?.passportExtraction.status ?? null;
   const attemptsUsed = extractResult?.extraction.attemptsUsed ?? 0;
   const attemptsLeft = Math.max(0, 2 - attemptsUsed);
-  const extractionLocked =
-    extractionStatus === "succeeded" ||
-    (extractionStatus === "needs_manual" && attemptsUsed >= 2) ||
-    (extractionStatus === "failed" && attemptsUsed >= 2);
 
   async function onUpload(type: DocType, file: File) {
     if (file.size > UPLOAD_MAX_BYTES) {
@@ -232,15 +258,13 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
       return;
     }
     setActionMsg(`${type.replace("_", " ")} uploaded.`);
-    // Re-fetch doc list + application (extraction summary may have reset).
-    await load({ silent: true });
+    const data = await load({ silent: true });
+    if (type === "passport_copy" && data && latestByType(data.documents, "passport_copy")) {
+      void runExtract();
+    }
   }
 
-  async function onExtract() {
-    if (!passport) {
-      setActionMsg("Upload a passport page first.");
-      return;
-    }
+  async function runExtract() {
     setExtracting(true);
     setActionMsg(null);
     const res = await fetchApiEnvelope<ExtractResponse>(apiHref(`/applications/${applicationId}/extract`), {
@@ -249,6 +273,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
     setExtracting(false);
     if (!res.ok) {
       setActionMsg(res.error.message);
+      await load({ silent: true });
       return;
     }
     setExtractResult(res.data);
@@ -260,7 +285,6 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
     } else {
       setActionMsg("We couldn’t read your passport. Please enter the details manually.");
     }
-    // Application profile likely changed (prefill merged by server).
     await load({ silent: true });
   }
 
@@ -289,7 +313,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
           <RefreshCw className="mr-2 size-4" aria-hidden />
           Retry
         </ClientButton>
-        <Link href="/apply/start" className="text-link ml-4 text-sm font-medium">
+        <Link href="/" className="text-link ml-4 text-sm font-medium">
           Start over
         </Link>
       </div>
@@ -297,16 +321,23 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
   }
 
   const gotBoth = Boolean(passport && photo);
-  const canExtract = Boolean(passport) && !extracting && !extractionLocked && attemptsLeft > 0;
+
+  const validationEmail = app.isGuest ? app.guestEmail : "signed-in";
 
   const { readiness, requiredFieldsMissing: missing } = computeValidation({
-    profile: { ...app.applicant, email: app.guestEmail },
+    profile: { ...app.applicant, email: validationEmail },
     uploads: {
       passportCopyPresent: Boolean(passport),
       personalPhotoPresent: Boolean(photo),
     },
     now: new Date(),
   });
+
+  const journeyStep = (() => {
+    if (app.paymentStatus === "checkout_created") return 4 as const;
+    if (app.paymentStatus === "paid") return 4 as const;
+    return readiness === "ready" ? (4 as const) : (3 as const);
+  })();
 
   return (
     <div className="space-y-8">
@@ -327,7 +358,6 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
                 />
               </dl>
             </div>
-            <ApplicationClientTracking tracking={app.clientTracking} />
           </div>
           <ClientButton
             type="button"
@@ -383,7 +413,10 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
             onUpload={(f) => void onUpload("passport_copy", f)}
             onAttachFromVault={async () => {
               setActionMsg("Attached from My documents.");
-              await load({ silent: true });
+              const data = await load({ silent: true });
+              if (data && latestByType(data.documents, "passport_copy")) {
+                void runExtract();
+              }
             }}
           />
           <DocumentUploadSlot
@@ -401,28 +434,22 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
           />
         </div>
 
-        <div className="flex items-center gap-3 pt-2">
-          <ClientButton
-            type="button"
-            variant="secondary"
-            className="rounded-none"
-            disabled={!canExtract}
-            onClick={() => void onExtract()}
-          >
-            {extracting ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            ) : (
-              <UploadCloud className="mr-2 size-4" aria-hidden />
-            )}
-            Extract passport details
-          </ClientButton>
-          <p className="text-muted-foreground text-xs">
-            Status:{" "}
-            <span className="font-medium">{customerFacingExtractionLabel(app.passportExtraction.status)}</span>
-            {attemptsLeft > 0 && app.passportExtraction.status !== "succeeded"
-              ? ` · ${attemptsLeft} attempt${attemptsLeft === 1 ? "" : "s"} left`
-              : ""}
-          </p>
+        <div className="flex flex-wrap items-center gap-2 pt-2">
+          {extracting ? (
+            <p className="text-muted-foreground flex items-center gap-2 text-xs" role="status">
+              <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+              <span>Reading passport…</span>
+            </p>
+          ) : null}
+          {!extracting ? (
+            <p className="text-muted-foreground text-xs">
+              Passport OCR:{" "}
+              <span className="font-medium">{customerFacingExtractionLabel(app.passportExtraction.status)}</span>
+              {attemptsLeft > 0 && app.passportExtraction.status !== "succeeded"
+                ? ` · ${attemptsLeft} attempt${attemptsLeft === 1 ? "" : "s"} left`
+                : ""}
+            </p>
+          ) : null}
         </div>
         {attemptsLeft === 0 && app.passportExtraction.status !== "succeeded" ? (
           <p className="text-muted-foreground text-sm">
@@ -432,9 +459,11 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
       </section>
 
       <ApplicantReview
-        key={applicantFormResetKey(app.applicant, extractResult?.extraction ?? null)}
+        key={applicantFormResetKey(app.applicant, extractResult?.extraction ?? null, app.guestEmail)}
         applicationId={applicationId}
         applicant={app.applicant}
+        guestEmail={app.guestEmail}
+        isGuest={app.isGuest}
         extraction={extractResult?.extraction ?? null}
         readiness={readiness}
         missing={missing}
@@ -528,7 +557,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
 
 
       <p className="text-muted-foreground text-center text-xs">
-        <Link href="/apply/start" className="text-link hover:underline">
+        <Link href="/" className="text-link hover:underline">
           Start another draft
         </Link>
         {" · "}
@@ -536,6 +565,26 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
           Portal
         </Link>
       </p>
+
+      <ApplyJourneyStepBar
+        step={journeyStep}
+        totalSteps={5}
+        title={journeyStep === 4 ? "Review & pay" : "Upload documents"}
+        subtitle={
+          journeyStep === 4
+            ? "Confirm your details, then pay securely to submit."
+            : "Upload what we ask for, then confirm your passport details."
+        }
+        actions={
+          <ClientButtonLink
+            href={`/apply/start?nationality=${encodeURIComponent(app.nationalityCode)}`}
+            variant="outline"
+            size="sm"
+          >
+            Previous
+          </ClientButtonLink>
+        }
+      />
     </div>
   );
 }
@@ -792,6 +841,8 @@ function DocumentUploadSlot({
 function ApplicantReview({
   applicationId,
   applicant,
+  guestEmail,
+  isGuest,
   extraction,
   readiness,
   missing,
@@ -800,6 +851,8 @@ function ApplicantReview({
 }: {
   applicationId: string;
   applicant: ApplicantProfile;
+  guestEmail: string | null;
+  isGuest: boolean;
   extraction: ExtractResponse["extraction"] | null;
   readiness: string | null;
   missing: string[];
@@ -808,31 +861,33 @@ function ApplicantReview({
 }) {
   const prefilled = new Set<string>(Object.keys(extraction?.prefill ?? {}));
 
-  type ProfileKey =
-    | "fullName"
-    | "dateOfBirth"
-    | "nationality"
-    | "passportNumber"
-    | "passportExpiryDate"
-    | "placeOfBirth"
-    | "profession"
-    | "address"
-    | "phone";
-
-  const ROWS: Array<{ label: string; key: ProfileKey; apiKey: string; placeholder?: string }> = [
+  const ROWS: Array<{
+    label: string;
+    key: ApplicantProfileFieldKey;
+    apiKey: string;
+    placeholder?: string;
+    hint?: string;
+  }> = [
     { label: "Full name", key: "fullName", apiKey: "fullName", placeholder: "e.g. John Smith" },
-    { label: "Date of birth", key: "dateOfBirth", apiKey: "dateOfBirth", placeholder: "YYYY-MM-DD" },
+    { label: "Date of birth", key: "dateOfBirth", apiKey: "dateOfBirth", placeholder: "DD-MM-YYYY" },
     { label: "Nationality", key: "nationality", apiKey: "applicantNationality", placeholder: "e.g. Egyptian" },
     { label: "Passport number", key: "passportNumber", apiKey: "passportNumber", placeholder: "e.g. A12345678" },
-    { label: "Passport expiry", key: "passportExpiryDate", apiKey: "passportExpiryDate", placeholder: "YYYY-MM-DD" },
+    { label: "Passport expiry", key: "passportExpiryDate", apiKey: "passportExpiryDate", placeholder: "DD-MM-YYYY" },
     { label: "Place of birth", key: "placeOfBirth", apiKey: "placeOfBirth", placeholder: "e.g. Cairo" },
     { label: "Profession", key: "profession", apiKey: "profession", placeholder: "e.g. Engineer" },
     { label: "Address", key: "address", apiKey: "address", placeholder: "Full home address" },
     { label: "Phone", key: "phone", apiKey: "phone", placeholder: "+1 555 000 0000" },
+    {
+      label: "Email",
+      key: "email",
+      apiKey: "guestEmail",
+      placeholder: "you@example.com",
+      hint: "Optional — leave blank to use your account email for updates.",
+    },
   ];
 
   const initial: Record<string, string> = {};
-  for (const r of ROWS) initial[r.apiKey] = applicant[r.key] ?? "";
+  for (const r of ROWS) initial[r.apiKey] = applicantFieldValue(applicant, r.key, guestEmail);
 
   const [values, setValues] = useState<Record<string, string>>(initial);
   const [saving, setSaving] = useState(false);
@@ -846,10 +901,38 @@ function ApplicantReview({
     setSaving(true);
     setSaveMsg(null);
     setSaveError(null);
+    if (isGuest) {
+      const em = (values.guestEmail ?? "").trim();
+      if (em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
+        setSaveError("Please enter a valid email address.");
+        setSaving(false);
+        return;
+      }
+    }
     const patch: Record<string, string> = {};
     for (const r of ROWS) {
       const v = values[r.apiKey] ?? "";
-      if (v !== (initial[r.apiKey] ?? "")) patch[r.apiKey] = v;
+      if (v === (initial[r.apiKey] ?? "")) continue;
+      if (r.apiKey === "dateOfBirth" || r.apiKey === "passportExpiryDate") {
+        const trimmed = v.trim();
+        if (trimmed === "") {
+          patch[r.apiKey] = "";
+        } else {
+          const iso = parseDobInputToIsoUtc(trimmed);
+          if (!iso) {
+            setSaveError(
+              r.apiKey === "dateOfBirth"
+                ? "Date of birth must be DD-MM-YYYY."
+                : "Passport expiry must be DD-MM-YYYY.",
+            );
+            setSaving(false);
+            return;
+          }
+          patch[r.apiKey] = iso;
+        }
+      } else {
+        patch[r.apiKey] = v;
+      }
     }
     if (Object.keys(patch).length === 0) {
       setSaving(false);
@@ -857,7 +940,7 @@ function ApplicantReview({
       return;
     }
     const res = await fetchApiEnvelope<{ application: unknown }>(
-      `/api/applications/${applicationId}/profile`,
+      apiHref(`/applications/${applicationId}/profile`),
       { method: "PATCH", body: JSON.stringify(patch) }
     );
     setSaving(false);
@@ -889,6 +972,8 @@ function ApplicantReview({
         return { text: "Needs attention before checkout", tone: "warn" };
       case "blocked_missing_docs":
         return { text: "Upload remaining documents", tone: "warn" };
+      case "blocked_missing_required_fields":
+        return { text: "Complete required details", tone: "warn" };
       default:
         return null;
     }
@@ -943,15 +1028,21 @@ function ApplicantReview({
           const wasOcr = prefilled.has(r.key);
           return (
             <div key={r.key}>
-              <dt className="text-foreground text-xs font-medium flex items-center gap-1">
-                {r.label}
-                {wasOcr && (
-                  <span className="text-[10px] text-primary bg-primary/10 px-1 rounded">Auto-filled</span>
-                )}
+              <dt className="text-foreground flex flex-col gap-0.5 text-xs font-medium">
+                <span className="flex flex-wrap items-center gap-1">
+                  {r.label}
+                  {wasOcr && (
+                    <span className="text-[10px] text-primary bg-primary/10 px-1 rounded">Auto-filled</span>
+                  )}
+                </span>
+                {r.hint && !isGuest ? (
+                  <span className="text-muted-foreground text-[10px] font-normal leading-snug">{r.hint}</span>
+                ) : null}
               </dt>
               <dd className="mt-1">
                 <ClientInput
-                  type="text"
+                  type={r.apiKey === "guestEmail" ? "email" : "text"}
+                  autoComplete={r.apiKey === "guestEmail" ? "email" : undefined}
                   readOnly={locked}
                   value={values[r.apiKey] ?? ""}
                   placeholder={r.placeholder ?? "—"}
@@ -979,7 +1070,7 @@ function ApplicantReview({
             className="rounded-none"
           >
             {saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-            {saving ? "Saving…" : "Save changes"}
+            {saving ? "Saving…" : "Next"}
           </ClientButton>
           {saveMsg ? <p className="text-success text-xs">{saveMsg}</p> : null}
           {saveError ? <p className="text-error text-xs">{saveError}</p> : null}

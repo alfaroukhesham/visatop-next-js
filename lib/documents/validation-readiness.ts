@@ -94,6 +94,44 @@ export function parseIsoDateUtc(s: string | null | undefined): Date | null {
   return date;
 }
 
+/** Convert stored ISO calendar date `YYYY-MM-DD` to UK-style display `DD-MM-YYYY`. */
+export function formatIsoDateAsDdMmYyyy(iso: string | null | undefined): string {
+  if (!iso || typeof iso !== "string") return "";
+  const d = parseIsoDateUtc(iso.trim());
+  if (!d) return iso.trim();
+  const dd = String(d.getUTCDate()).padStart(2, "0");
+  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const yyyy = d.getUTCFullYear();
+  return `${dd}-${mm}-${yyyy}`;
+}
+
+/**
+ * Parse applicant date field input (DoB or passport expiry) to ISO `YYYY-MM-DD` for the API.
+ * Accepts `DD-MM-YYYY` (primary) or legacy `YYYY-MM-DD` pasted values.
+ */
+export function parseDobInputToIsoUtc(s: string | null | undefined): string | null {
+  if (!s || typeof s !== "string") return null;
+  const t = s.trim();
+  if (t === "") return null;
+  const isoCandidate = parseIsoDateUtc(t);
+  if (isoCandidate) return toUtcDateString(isoCandidate);
+  const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(t);
+  if (!m) return null;
+  const dd = Number(m[1]);
+  const mo = Number(m[2]);
+  const yyyy = Number(m[3]);
+  if (mo < 1 || mo > 12 || dd < 1 || dd > 31) return null;
+  const date = new Date(Date.UTC(yyyy, mo - 1, dd));
+  if (
+    date.getUTCFullYear() !== yyyy ||
+    date.getUTCMonth() !== mo - 1 ||
+    date.getUTCDate() !== dd
+  ) {
+    return null;
+  }
+  return toUtcDateString(date);
+}
+
 function isPresent(v: unknown): boolean {
   if (v === null || v === undefined) return false;
   if (typeof v === "string") return v.trim().length > 0;

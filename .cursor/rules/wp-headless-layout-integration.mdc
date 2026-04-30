@@ -1,0 +1,33 @@
+---
+description: WP headless layout integration for client shell
+globs: "{app/(client)/**/*.tsx,components/client/**/*.tsx}"
+alwaysApply: false
+---
+
+# WordPress Headless Layout (Client Shell)
+
+- Use WordPress as source of truth for header/footer menus and curated layout CSS via `GET /wp-json/headless/v1/layout`.
+- For default client-shell rendering, request `include=menus,css`. Only use `include=html` when exact WP-rendered header/footer markup is explicitly required.
+- Pass `lang` when locale-aware rendering is needed so menu/html matches WP translations.
+
+# Data Contract
+
+- Handle `menus.header_menu` and `menus.footer_menu` as nested trees with `children`.
+- Handle `css` as an array of stylesheet assets (`{ id, url }`) and inject only safe stylesheet URLs.
+- Treat endpoint/network failures as non-fatal: render fallback local shell components instead of breaking page rendering.
+
+# Rendering and Composition
+
+- Mount WP-driven header above app content, keep app navbar as a secondary menu directly below it.
+- Use WP footer as the primary footer in the client shell.
+- Avoid duplicating top navigation: page-level layouts/forms should not each re-render the global shell header.
+
+# Caching and Freshness
+
+- Fetch layout data server-side with ISR (`revalidate`, e.g. 60s) so WP updates appear without redeploy.
+- Keep fetch logic centralized in a server utility to enforce consistent query params and fallback behavior.
+
+# Link and Safety Rules
+
+- Normalize WP menu links so internal app routes preserve Next.js base path behavior; treat non-app links as external.
+- Never trust remote CSS blindly: allowlist host/protocol and dedupe URLs before rendering `<link>` tags.

@@ -93,8 +93,12 @@ describe("POST /api/applications", () => {
     expect(setCookie?.toLowerCase()).toContain("httponly");
   });
 
-  it("guest create rejects missing email", async () => {
+  it("guest create allows missing email (set in applicant details)", async () => {
     vi.mocked(auth.api.getSession).mockResolvedValue(null as never);
+    const rowNoEmail = { ...guestRow, guestEmail: null };
+    vi.mocked(actor.withSystemDbActor).mockImplementation(async (fn) =>
+      fn(mockTxReturning([rowNoEmail]) as never),
+    );
 
     const res = await POST(
       new Request("http://localhost/api/applications", {
@@ -103,9 +107,11 @@ describe("POST /api/applications", () => {
         body: JSON.stringify({ nationalityCode: "US", serviceId: "svc-1" }),
       }),
     );
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.ok).toBe(false);
+    expect(body.ok).toBe(true);
+    expect(body.data.application.id).toBe("app-1");
+    expect(body.data.application.guestEmail).toBeNull();
   });
 
   it("rejects invalid catalog currency", async () => {

@@ -16,7 +16,7 @@ export function ClientShellFooter() {
           <Link href="/" className="text-link font-medium transition-colors duration-200 hover:underline">
             Home
           </Link>
-          <Link href="/apply/start" className="text-link font-medium transition-colors duration-200 hover:underline">
+          <Link href="/" className="text-link font-medium transition-colors duration-200 hover:underline">
             Apply
           </Link>
           <Link href="/help" className="text-link font-medium transition-colors duration-200 hover:underline">

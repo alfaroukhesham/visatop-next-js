@@ -1,0 +1,29 @@
+---
+description: Keep changes ready for CI (lint, tests, build)
+alwaysApply: true
+---
+
+# CI readiness (required before “done”)
+
+This repo’s CI workflow runs:
+
+- `pnpm install`
+- `pnpm run lint`
+- `pnpm run test:ci`
+- `pnpm run build`
+
+## Rules
+
+- Before claiming a change is finished, ensure **all three** checks pass locally:
+  - `pnpm run lint`
+  - `pnpm run test:ci`
+  - `pnpm run build`
+- If `next build` fails TypeScript checking, treat it as a CI blocker (even if tests/lint pass).
+- After adding/updating dependencies, confirm `pnpm-lock.yaml` is updated and rerun the full CI command set.
+
+## Quick command set
+
+```bash
+pnpm run lint && pnpm run test:ci && pnpm run build
+```
+

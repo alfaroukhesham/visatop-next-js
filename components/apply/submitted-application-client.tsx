@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ClientButton, ClientButtonLink } from "@/components/client/client-button";
-import { authClient } from "@/lib/auth-client";
+import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { GUEST_LINK_EVENTS, trackGuestLinkEvent } from "@/lib/analytics/guest-link-events";
 import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
 import { buildPostLinkLocation } from "@/lib/applications/post-link-redirect";
@@ -30,7 +30,8 @@ function pollIntervalMs(elapsedMs: number): number {
 
 export function SubmittedApplicationClient({ applicationId, initialApplication }: Props) {
   const router = useRouter();
-  const { data: session, isPending: sessionPending } = authClient.useSession();
+  const sessionUser = useClientAuthStore((s) => s.session?.user);
+  const sessionPending = useClientAuthStore((s) => s.isPending);
   const [app, setApp] = useState(initialApplication);
   const [pollMsg, setPollMsg] = useState<string | null>(null);
   const [terminal, setTerminal] = useState(false);
@@ -187,7 +188,7 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
   const confirming = app.paymentStatus === "checkout_created";
   const paid = app.paymentStatus === "paid";
   const showGuestLink = paid && app.isGuest;
-  const signedIn = Boolean(session?.user?.id);
+  const signedIn = Boolean(sessionUser?.id);
 
   return (
     <div className="space-y-10">
@@ -295,7 +296,7 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
             <ClientButtonLink href="/apply/track" brand="cta" className="inline-flex">
               Track application
             </ClientButtonLink>
-            <ClientButtonLink href="/apply/start" brand="white" className="inline-flex">
+            <ClientButtonLink href="/" brand="white" className="inline-flex">
               Start new application
             </ClientButtonLink>
           </div>
@@ -303,7 +304,7 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
       )}
 
       <footer className="text-muted-foreground flex flex-wrap items-center justify-center gap-4 border-t border-border pt-8 text-xs sm:justify-start">
-        <Link href="/apply/start" className="text-link font-medium transition-colors hover:underline">
+        <Link href="/" className="text-link font-medium transition-colors hover:underline">
           Browse services
         </Link>
         <span aria-hidden className="text-border">

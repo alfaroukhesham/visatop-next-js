@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
 import { SubmittedApplicationClient } from "@/components/apply/submitted-application-client";
 import { loadApplicationRowForRequest } from "@/lib/applications/load-application-row-for-request";
 import { toPublicApplication } from "@/lib/applications/public-application";
 
 type Props = { params: Promise<{ id: string }> };
 
-export async function generateMetadata(_props: Props): Promise<Metadata> {
+export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Thank you | Visatop",
     robots: { index: false, follow: false },
@@ -23,8 +24,14 @@ export default async function SubmittedApplicationPage({ params }: Props) {
   }
 
   return (
-    <div className="theme-client-rise mx-auto w-full max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
-      <SubmittedApplicationClient applicationId={id} initialApplication={toPublicApplication(row)} />
+    <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+      <ApplyTwoColumn
+        currentStep={5}
+        applicationId={id}
+        contentClassName="theme-client-rise mx-auto w-full max-w-2xl"
+      >
+        <SubmittedApplicationClient applicationId={id} initialApplication={toPublicApplication(row)} />
+      </ApplyTwoColumn>
     </div>
   );
 }

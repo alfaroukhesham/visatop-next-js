@@ -1,47 +1,35 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ClientButtonLink } from "@/components/client/client-button";
 import { ClientNavLink } from "@/components/client/client-nav-link";
 import { authClient } from "@/lib/auth-client";
-import { type ClientSession, useClientAuthStore } from "@/lib/stores/client-auth-store";
+import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { cn } from "@/lib/utils";
 
+function applyNavActive(path: string): boolean {
+  return path === "/" || (path.startsWith("/apply") && !path.startsWith("/apply/track"));
+}
+
 const NAV_BASE: { href: string; label: string; match: (path: string) => boolean }[] = [
-  { href: "/", label: "Home", match: (p) => p === "/" },
+  // { href: "/", label: "Home", match: (p) => p === "/" },
   {
-    href: "/apply/start",
+    href: "/",
     label: "Apply",
-    match: (p) => p.startsWith("/apply") && !p.startsWith("/apply/track"),
+    match: applyNavActive,
   },
   {
     href: "/apply/track",
     label: "Track",
     match: (p) => p.startsWith("/apply/track"),
   },
-  { href: "/portal", label: "Portal", match: (p) => p.startsWith("/portal") },
+  // { href: "/portal", label: "Portal", match: (p) => p.startsWith("/portal") },
 ];
 
 type Props = {
   className?: string;
 };
-
-function toClientSession(input: unknown): ClientSession {
-  if (!input || typeof input !== "object") return null;
-  const maybe = input as { user?: unknown };
-  if (!maybe.user || typeof maybe.user !== "object") return null;
-  const u = maybe.user as { id?: unknown; name?: unknown; email?: unknown };
-  if (typeof u.id !== "string") return null;
-  return {
-    user: {
-      id: u.id,
-      name: typeof u.name === "string" ? u.name : u.name == null ? null : null,
-      email: typeof u.email === "string" ? u.email : u.email == null ? null : null,
-    },
-  };
-}
 
 /**
  * Full-width ink bar + brand nav (yellow 3px hover/active indicator).
@@ -50,28 +38,14 @@ export function ClientAppHeader({ className }: Props) {
   const path = usePathname() ?? "";
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const { data: session, isPending } = authClient.useSession();
   const storeSession = useClientAuthStore((s) => s.session);
   const storePending = useClientAuthStore((s) => s.isPending);
-  const setSession = useClientAuthStore((s) => s.setSession);
-  const setPending = useClientAuthStore((s) => s.setPending);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    setPending(isPending);
-    setSession(toClientSession(session));
-  }, [isPending, session, setPending, setSession]);
-
-  const nav = useMemo(() => {
-    if (storePending) return NAV_BASE;
-    if (storeSession) {
-      return NAV_BASE;
-    }
-    return NAV_BASE;
-  }, [storePending, storeSession]);
+  const nav = NAV_BASE;
 
   async function onSignOut() {
     try {
@@ -90,8 +64,8 @@ export function ClientAppHeader({ className }: Props) {
         className,
       )}
     >
-      <div className="mx-auto flex w-full max-w-[calc(1300px+3rem)] flex-wrap items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
-        <Link
+      <div className="mx-auto flex w-full max-w-[calc(1300px+3rem)] flex-wrap items-center justify-between gap-4 px-3 py-4">
+        {/* <Link
           href="/"
           className="group flex min-w-0 items-center gap-3 rounded-md outline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#92C0D7]"
         >
@@ -109,7 +83,7 @@ export function ClientAppHeader({ className }: Props) {
               Visa &amp; residency
             </span>
           </span>
-        </Link>
+        </Link> */}
 
         <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm" aria-label="Primary">
           {nav.map(({ href, label, match }) => (
@@ -144,19 +118,19 @@ export function ClientAppHeader({ className }: Props) {
             </>
           ) : (
             <>
-              <ClientButtonLink
+              {/* <ClientButtonLink
                 href="/sign-in"
                 variant="ghost"
                 className="h-9 shrink-0 border border-white/15 px-3 text-xs font-medium text-white hover:border-[#FCCD64]/50 hover:bg-white/5 hover:text-white"
               >
                 Sign in
-              </ClientButtonLink>
+              </ClientButtonLink> */}
               <ClientButtonLink
-                href="/sign-up"
+                href="/sign-in"
                 brand="cta"
                 className="h-9 shrink-0 px-3 text-xs font-bold"
               >
-                Create account
+                Login / Register
               </ClientButtonLink>
             </>
           )}

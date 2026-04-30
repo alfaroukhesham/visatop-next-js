@@ -25,16 +25,6 @@ export async function POST(req: Request) {
   const body = parsed.data;
   const now = new Date();
 
-  if (!session) {
-    const ge = body.guestEmail?.trim();
-    if (!ge) {
-      return jsonError("VALIDATION_ERROR", "Guest email is required to create an application.", {
-        status: 400,
-        requestId,
-      });
-    }
-  }
-
   if (session) {
     const userId = session.user.id;
     try {
@@ -88,7 +78,7 @@ export async function POST(req: Request) {
           .values({
             userId: null,
             isGuest: true,
-            guestEmail: body.guestEmail!.trim().toLowerCase(),
+            guestEmail: body.guestEmail?.trim() ? body.guestEmail.trim().toLowerCase() : null,
             nationalityCode: body.nationalityCode,
             serviceId: body.serviceId,
             catalogCurrency: body.catalogCurrency,

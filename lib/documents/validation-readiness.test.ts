@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   computeValidation,
+  formatIsoDateAsDdMmYyyy,
+  parseDobInputToIsoUtc,
   parseIsoDateUtc,
   PASSPORT_MIN_VALIDITY_DAYS,
   SUBMISSION_REQUIRED_FIELDS,
@@ -39,6 +41,31 @@ describe("parseIsoDateUtc", () => {
 describe("toUtcDateString", () => {
   it("formats UTC date regardless of local TZ", () => {
     expect(toUtcDateString(new Date(Date.UTC(2026, 3, 16)))).toBe("2026-04-16");
+  });
+});
+
+describe("formatIsoDateAsDdMmYyyy / parseDobInputToIsoUtc", () => {
+  it("formats ISO to DD-MM-YYYY", () => {
+    expect(formatIsoDateAsDdMmYyyy("1990-01-02")).toBe("02-01-1990");
+    expect(formatIsoDateAsDdMmYyyy("2024-02-29")).toBe("29-02-2024");
+    expect(formatIsoDateAsDdMmYyyy("2099-01-01")).toBe("01-01-2099");
+  });
+
+  it("parses DD-MM-YYYY to ISO", () => {
+    expect(parseDobInputToIsoUtc("02-01-1990")).toBe("1990-01-02");
+    expect(parseDobInputToIsoUtc("29-02-2024")).toBe("2024-02-29");
+    expect(parseDobInputToIsoUtc("01-01-2099")).toBe("2099-01-01");
+  });
+
+  it("still accepts pasted YYYY-MM-DD", () => {
+    expect(parseDobInputToIsoUtc("1990-01-02")).toBe("1990-01-02");
+  });
+
+  it("rejects invalid input", () => {
+    expect(parseDobInputToIsoUtc("")).toBeNull();
+    expect(parseDobInputToIsoUtc("32-01-2000")).toBeNull();
+    expect(parseDobInputToIsoUtc("01-13-2000")).toBeNull();
+    expect(parseDobInputToIsoUtc("not-a-date")).toBeNull();
   });
 });
 
