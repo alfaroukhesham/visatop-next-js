@@ -50,7 +50,8 @@ COPY --from=builder /app/public ./public
 
 # Next standalone output may include a copied `.env` from build time.
 # We always provide runtime config via environment variables.
-RUN rm -f .env
+RUN rm -f .env \
+  && chown -R nextjs:nodejs /app
 
 USER nextjs
 EXPOSE 3000
