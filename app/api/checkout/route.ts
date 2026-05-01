@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { headers } from "next/headers";
+import { appHref } from "@/lib/app-href";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor, withClientDbActor } from "@/lib/db/actor-context";
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
@@ -164,9 +165,9 @@ export async function POST(req: Request) {
         .where(eq(schema.payment.id, paymentId));
 
       const encId = encodeURIComponent(applicationId);
-      const successUrl = `${origin}/apply/applications/${encId}/checkout/return?pi={PAYMENT_INTENT_ID}`;
-      const cancelUrl = `${origin}/apply/applications/${encId}/checkout/cancel?pi={PAYMENT_INTENT_ID}`;
-      const failureUrl = `${origin}/apply/applications/${encId}/checkout/cancel?pi={PAYMENT_INTENT_ID}&reason=failed`;
+      const successUrl = `${appHref(`/apply/applications/${encId}/checkout/return`)}?pi={PAYMENT_INTENT_ID}`;
+      const cancelUrl = `${appHref(`/apply/applications/${encId}/checkout/cancel`)}?pi={PAYMENT_INTENT_ID}`;
+      const failureUrl = `${appHref(`/apply/applications/${encId}/checkout/cancel`)}?pi={PAYMENT_INTENT_ID}&reason=failed`;
 
       try {
         const ziina = await createZiinaPaymentIntent({

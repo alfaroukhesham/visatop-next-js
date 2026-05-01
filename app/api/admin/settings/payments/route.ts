@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { runAdminDbJson } from "@/lib/admin-api/require-admin-db";
 import { jsonOk } from "@/lib/api/response";
+import { apiHref } from "@/lib/app-href";
 import { getAppOrigin } from "@/lib/app-url";
 import { getActivePaymentProvider, isHttpsOrigin } from "@/lib/payments/resolve-payment-provider";
 import { getWebhookHealthFromTx } from "@/lib/payments/webhook-health";
@@ -26,7 +27,7 @@ export async function GET() {
     const ziinaMissing = missingEnv(["ZIINA_ACCESS_TOKEN", "ZIINA_WEBHOOK_SECRET"]);
     const paddleMissing = missingEnv(["PADDLE_API_KEY", "PADDLE_WEBHOOK_SECRET"]);
 
-    const webhookUrl = `${appOrigin.replace(/\/$/, "")}/api/webhooks/ziina`;
+    const webhookUrl = apiHref("webhooks/ziina");
     const canRegisterZiinaWebhook = isHttpsOrigin(appOrigin);
 
     const health = await getWebhookHealthFromTx(tx);

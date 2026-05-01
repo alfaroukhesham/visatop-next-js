@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { runAdminDbJson } from "@/lib/admin-api/require-admin-db";
 import { writeAdminAudit } from "@/lib/admin-api/write-admin-audit";
 import { jsonError, jsonOk } from "@/lib/api/response";
+import { appHref } from "@/lib/app-href";
 import { getAppOrigin } from "@/lib/app-url";
 import { getZiinaServerConfig, isHttpsOrigin } from "@/lib/payments/resolve-payment-provider";
 import { createZiinaPaymentIntent, ZiinaProviderError } from "@/lib/payments/ziina-client";
@@ -35,7 +36,7 @@ export async function POST() {
       }
 
       const operationId = randomUUID();
-      const returnUrl = `${origin.replace(/\/$/, "")}/admin/settings`;
+      const returnUrl = appHref("/admin/settings");
 
       try {
         const created = await createZiinaPaymentIntent({

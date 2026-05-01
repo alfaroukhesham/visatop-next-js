@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { runAdminDbJson } from "@/lib/admin-api/require-admin-db";
 import { writeAdminAudit } from "@/lib/admin-api/write-admin-audit";
 import { jsonError, jsonOk } from "@/lib/api/response";
+import { apiHref } from "@/lib/app-href";
 import { getAppOrigin } from "@/lib/app-url";
 import { getZiinaServerConfig, isHttpsOrigin } from "@/lib/payments/resolve-payment-provider";
 import { deleteZiinaWebhook, setZiinaWebhook, ZiinaProviderError } from "@/lib/payments/ziina-client";
@@ -41,7 +42,7 @@ export async function POST() {
         });
       }
 
-      const url = `${origin.replace(/\/$/, "")}/api/webhooks/ziina`;
+      const url = apiHref("webhooks/ziina");
 
       try {
         const res = await setZiinaWebhook({
