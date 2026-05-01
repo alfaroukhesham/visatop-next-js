@@ -204,10 +204,9 @@ function buildSrcDoc(input: {
           }
         }
 
-        // Normal links open in a new tab (user preference).
+        // Normal links: do not intercept. The injected <base target="_blank"> makes the browser open
+        // the same way as right-click Open link in new tab (avoids sandboxed window.open).
         if (!href || href.startsWith('#')) return;
-        e.preventDefault();
-        window.open(a.href, '_blank', 'noopener,noreferrer');
       }, true);
     </script>
   </body>
@@ -275,7 +274,7 @@ export function WpShellFrame(props: {
       ref={iframeRef}
       title={props.kind === "header" ? "WP Header" : "WP Footer"}
       srcDoc=""
-      sandbox="allow-scripts allow-popups"
+      sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
       style={{
         width: "100%",
         height: `${heightPx}px`,

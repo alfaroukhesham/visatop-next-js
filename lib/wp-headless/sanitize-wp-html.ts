@@ -74,14 +74,25 @@ export function sanitizeWpShellHtml(input: string): string {
     enforceHtmlBoundary: true,
     transformTags: {
       a: (tagName, attribs) => {
-        // Remove javascript: style links even if somehow encoded; sanitize-html already blocks schemes,
-        // but we also normalize noopener defaults for any external navigation.
+        // Remove javascript: style links even if somehow encoded; sanitize-html already blocks schemes.
         const next: Record<string, string> = { ...attribs };
-        if (next.target === "_blank") {
-          const rel = (next.rel ?? "").split(/\s+/).filter(Boolean);
-          if (!rel.includes("noopener")) rel.push("noopener");
-          if (!rel.includes("noreferrer")) rel.push("noreferrer");
-          next.rel = rel.join(" ");
+        const href = (next.href ?? "").trim();
+        // Shell renders inside a srcdoc iframe. WP often emits target="_self" for same-site links;
+        // that navigates *inside the iframe* (nested Next + HMR "Fast Refresh") instead of a real tab.
+        const shouldOpenInNewTab =
+          href.startsWith("http://") ||
+          href.startsWith("https://") ||
+          href.startsWith("/") ||
+          href.startsWith("mailto:") ||
+          href.startsWith("tel:");
+        if (shouldOpenInNewTab) {
+          next.target = "_blank";
+          if (href.startsWith("http://") || href.startsWith("https://")) {
+            const rel = (next.rel ?? "").split(/\s+/).filter(Boolean);
+            if (!rel.includes("noopener")) rel.push("noopener");
+            if (!rel.includes("noreferrer")) rel.push("noreferrer");
+            next.rel = rel.join(" ");
+          }
         }
         return { tagName, attribs: next };
       },
