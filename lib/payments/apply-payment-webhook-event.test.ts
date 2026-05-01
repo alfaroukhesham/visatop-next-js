@@ -46,7 +46,11 @@ function makeTx() {
 
 describe("applyPaymentWebhookEvent", () => {
   it("flags admin attention and audits when paid arrives for cancelled application", async () => {
-    vi.mocked(retainRequiredDocuments).mockResolvedValue({ ok: true } as never);
+    vi.mocked(retainRequiredDocuments).mockResolvedValue({
+      ok: true,
+      retainedDocumentIds: [],
+      retainedAt: new Date(),
+    } as never);
     const { tx, updates, inserts } = makeTx();
 
     await applyPaymentWebhookEvent(
@@ -74,7 +78,11 @@ describe("applyPaymentWebhookEvent", () => {
   });
 
   it("retains docs only on first paid transition", async () => {
-    vi.mocked(retainRequiredDocuments).mockResolvedValue({ ok: true } as never);
+    vi.mocked(retainRequiredDocuments).mockResolvedValue({
+      ok: true,
+      retainedDocumentIds: ["d1", "d2"],
+      retainedAt: new Date(),
+    } as never);
     const { tx } = makeTx();
 
     await applyPaymentWebhookEvent(
@@ -103,6 +111,86 @@ describe("applyPaymentWebhookEvent", () => {
     );
 
     expect(retainRequiredDocuments).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not write payment_paid_docs_retain_failed_flagged when retain succeeds with no document ids", async () => {
+    vi.mocked(retainRequiredDocuments).mockResolvedValue({
+      ok: true,
+      retainedDocumentIds: [],
+      retainedAt: new Date(),
+    } as never);
+    const { tx, inserts } = makeTx();
+
+    await applyPaymentWebhookEvent(
+      tx,
+      {
+        provider: "paddle",
+        kind: "payment_completed",
+        providerPaymentId: "txn_1",
+        amountMinor: 1000,
+        currency: "USD",
+        metadata: { applicationId: "app_1" },
+        rawEventType: "transaction.paid",
+        providerEventId: "evt_1",
+      },
+      { id: "pay_1", provider: "paddle", applicationId: "app_1", amount: 1000, providerTransactionId: null } as never,
+      {
+        id: "app_1",
+        applicationStatus: "ready_for_payment",
+        paymentStatus: "checkout_created",
+        checkoutState: "pending",
+        fulfillmentStatus: "none",
+        adminAttentionRequired: false,
+      } as never,
+      "evt_1",
+      {},
+    );
+
+    const retainFailedAudits = inserts.filter((row) => {
+      const v = row.values as { action?: string } | undefined;
+      return v?.action === "payment_paid_docs_retain_failed_flagged";
+    });
+    expect(retainFailedAudits).toHaveLength(0);
+  });
+
+  it("flags admin when retain returns BLOB_BYTES_MISSING", async () => {
+    vi.mocked(retainRequiredDocuments).mockResolvedValue({
+      ok: false,
+      reason: "BLOB_BYTES_MISSING",
+      missing: ["passport_copy"],
+    } as never);
+    const { tx, inserts } = makeTx();
+
+    await applyPaymentWebhookEvent(
+      tx,
+      {
+        provider: "paddle",
+        kind: "payment_completed",
+        providerPaymentId: "txn_1",
+        amountMinor: 1000,
+        currency: "USD",
+        metadata: { applicationId: "app_1" },
+        rawEventType: "transaction.paid",
+        providerEventId: "evt_1",
+      },
+      { id: "pay_1", provider: "paddle", applicationId: "app_1", amount: 1000, providerTransactionId: null } as never,
+      {
+        id: "app_1",
+        applicationStatus: "ready_for_payment",
+        paymentStatus: "checkout_created",
+        checkoutState: "pending",
+        fulfillmentStatus: "none",
+        adminAttentionRequired: false,
+      } as never,
+      "evt_1",
+      {},
+    );
+
+    const retainFailedAudits = inserts.filter((row) => {
+      const v = row.values as { action?: string } | undefined;
+      return v?.action === "payment_paid_docs_retain_failed_flagged";
+    });
+    expect(retainFailedAudits).toHaveLength(1);
   });
 });
 

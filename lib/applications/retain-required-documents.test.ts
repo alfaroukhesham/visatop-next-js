@@ -42,18 +42,17 @@ function makeTx(rowsInCallOrder: (SelectRow | null)[]) {
 }
 
 describe("retainRequiredDocuments", () => {
-  it("returns MISSING_REQUIRED_DOCUMENT when no passport exists", async () => {
+  it("succeeds with zero updates when both required types are absent", async () => {
     const { tx, updates } = makeTx([null, null]);
     const result = await retainRequiredDocuments(tx, "app-1");
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.reason).toBe("MISSING_REQUIRED_DOCUMENT");
-      expect(result.missing).toEqual(["passport_copy", "personal_photo"]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.retainedDocumentIds).toEqual([]);
     }
     expect(updates).toHaveLength(0);
   });
 
-  it("returns BLOB_BYTES_MISSING when latest row has no blob bytes", async () => {
+  it("returns BLOB_BYTES_MISSING when latest temp row has no blob bytes", async () => {
     const { tx, updates } = makeTx([
       { id: "d1", status: "uploaded_temp", hasBytes: null },
       { id: "d2", status: "uploaded_temp", hasBytes: "d2" },
@@ -64,21 +63,26 @@ describe("retainRequiredDocuments", () => {
       expect(result.reason).toBe("BLOB_BYTES_MISSING");
       expect(result.missing).toEqual(["passport_copy"]);
     }
-    expect(updates).toHaveLength(0);
+    const docUpdates = updates.filter((u) => u.table === applicationDocument);
+    const blobUpdates = updates.filter((u) => u.table === applicationDocumentBlob);
+    expect(docUpdates).toHaveLength(1);
+    expect(blobUpdates).toHaveLength(1);
+    expect(docUpdates[0]?.values.status).toBe("retained");
   });
 
-  it("treats a retained latest row as MISSING (invariant violation)", async () => {
+  it("skips passport when latest is retained but retains a later personal_photo temp", async () => {
     const { tx, updates } = makeTx([
       { id: "d1", status: "retained", hasBytes: "d1" },
       { id: "d2", status: "uploaded_temp", hasBytes: "d2" },
     ]);
     const result = await retainRequiredDocuments(tx, "app-1");
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.reason).toBe("MISSING_REQUIRED_DOCUMENT");
-      expect(result.missing).toEqual(["passport_copy"]);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.retainedDocumentIds).toEqual(["d2"]);
     }
-    expect(updates).toHaveLength(0);
+    const docUpdates = updates.filter((u) => u.table === applicationDocument);
+    expect(docUpdates).toHaveLength(1);
+    expect(docUpdates[0]?.values.status).toBe("retained");
   });
 
   it("flips status + sets retainedAt + clears tempExpiresAt for both required docs", async () => {
@@ -94,7 +98,6 @@ describe("retainRequiredDocuments", () => {
       expect(result.retainedDocumentIds).toEqual(["d1", "d2"]);
       expect(result.retainedAt).toBe(now);
     }
-    // Expect: update documentStatus, update blobRetention — for each of 2 docs.
     const docUpdates = updates.filter((u) => u.table === applicationDocument);
     const blobUpdates = updates.filter((u) => u.table === applicationDocumentBlob);
     expect(docUpdates).toHaveLength(2);

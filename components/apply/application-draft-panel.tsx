@@ -22,6 +22,7 @@ import {
   computeValidation,
   formatIsoDateAsDdMmYyyy,
   parseDobInputToIsoUtc,
+  type Readiness,
 } from "@/lib/documents/validation-readiness";
 
 type ApplicantProfile = PublicApplication["applicant"];
@@ -51,6 +52,7 @@ type ExtractResponse = {
   };
   validation: {
     readiness: "ready" | "blocked_validation" | "blocked_missing_docs" | string;
+    paymentReadiness?: Readiness;
     passportValid: boolean;
     dobValid: boolean;
     requiredFieldsComplete: boolean;
@@ -313,7 +315,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
 
   const validationEmail = app.isGuest ? app.guestEmail : "signed-in";
 
-  const { readiness, requiredFieldsMissing: missing } = computeValidation({
+  const { readiness, paymentReadiness, requiredFieldsMissing: missing } = computeValidation({
     profile: { ...app.applicant, email: validationEmail },
     uploads: {
       passportCopyPresent: Boolean(passport),
@@ -325,7 +327,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
   const journeyStep = (() => {
     if (app.paymentStatus === "checkout_created") return 4 as const;
     if (app.paymentStatus === "paid") return 4 as const;
-    return readiness === "ready" ? (4 as const) : (3 as const);
+    return paymentReadiness === "ready" ? (4 as const) : (3 as const);
   })();
 
   return (
@@ -386,7 +388,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
           ) : (
             <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
               <AlertTriangle className="size-4" aria-hidden />
-              Both required for submission
+              Passport and photo are required before we can submit to authorities; you can pay first.
             </span>
           )}
         </div>
@@ -444,6 +446,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
         isGuest={app.isGuest}
         extraction={extractResult?.extraction ?? null}
         readiness={readiness}
+        paymentReadiness={paymentReadiness}
         missing={missing}
         locked={app.checkoutState === "pending" || app.paymentStatus === "paid"}
         onSaved={() => void load({ silent: true })}
@@ -451,7 +454,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
 
       {/* Payment Section */}
       <section className="space-y-4">
-        {readiness === "ready" && app.paymentStatus === "unpaid" && (
+        {paymentReadiness === "ready" && app.paymentStatus === "unpaid" && (
           <div className="space-y-4 rounded-[12px] border-2 border-primary bg-primary/5 p-5 shadow-[0_8px_32px_rgba(1,32,49,0.08)] sm:p-6">
             <h2 className="font-heading text-lg font-bold">Secure payment</h2>
             <p className="text-sm text-muted-foreground">
@@ -664,6 +667,7 @@ function ApplicantReview({
   isGuest,
   extraction,
   readiness,
+  paymentReadiness,
   missing,
   locked,
   onSaved,
@@ -674,6 +678,7 @@ function ApplicantReview({
   isGuest: boolean;
   extraction: ExtractResponse["extraction"] | null;
   readiness: string | null;
+  paymentReadiness: Readiness;
   missing: string[];
   locked: boolean;
   onSaved: () => void;
@@ -784,15 +789,21 @@ function ApplicantReview({
   }
 
   const readinessLabel = (() => {
+    if (paymentReadiness === "ready" && readiness !== "ready") {
+      return {
+        text: "Ready for payment — add passport and photo when you can",
+        tone: "success" as const,
+      };
+    }
     switch (readiness) {
       case "ready":
-        return { text: "Ready for payment", tone: "success" };
+        return { text: "Ready for payment", tone: "success" as const };
       case "blocked_validation":
-        return { text: "Needs attention before checkout", tone: "warn" };
+        return { text: "Needs attention before checkout", tone: "warn" as const };
       case "blocked_missing_docs":
-        return { text: "Upload remaining documents", tone: "warn" };
+        return { text: "Upload remaining documents", tone: "warn" as const };
       case "blocked_missing_required_fields":
-        return { text: "Complete required details", tone: "warn" };
+        return { text: "Complete required details", tone: "warn" as const };
       default:
         return null;
     }

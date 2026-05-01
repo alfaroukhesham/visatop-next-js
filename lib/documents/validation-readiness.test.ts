@@ -79,6 +79,7 @@ describe("computeValidation", () => {
       now: NOW,
     });
     expect(v.readiness).toBe("ready");
+    expect(v.paymentReadiness).toBe("ready");
     expect(v.requiredFieldsMissing).toEqual([]);
     expect(v.validationFailures).toEqual([]);
     expect(v.nowUtcDate).toBe("2026-04-16");
@@ -91,6 +92,7 @@ describe("computeValidation", () => {
       now: NOW,
     });
     expect(v.readiness).toBe("blocked_validation");
+    expect(v.paymentReadiness).toBe("blocked_validation");
     expect(v.validationFailures.map((f) => f.code)).toContain("passport_expiry_date_invalid");
   });
 
@@ -105,6 +107,7 @@ describe("computeValidation", () => {
       now: NOW,
     });
     expect(v.readiness).toBe("blocked_validation");
+    expect(v.paymentReadiness).toBe("blocked_validation");
     expect(v.validationFailures.map((f) => f.code)).toContain(
       "passport_expired_or_insufficient_validity",
     );
@@ -122,6 +125,7 @@ describe("computeValidation", () => {
     });
     expect(v.validationFailures).toEqual([]);
     expect(v.readiness).toBe("ready");
+    expect(v.paymentReadiness).toBe("ready");
   });
 
   it("flags future DOBs as invalid", () => {
@@ -132,6 +136,7 @@ describe("computeValidation", () => {
     });
     expect(v.validationFailures.map((f) => f.code)).toContain("dob_invalid");
     expect(v.readiness).toBe("blocked_validation");
+    expect(v.paymentReadiness).toBe("blocked_validation");
   });
 
   it("flags DOB before 1900 as invalid", () => {
@@ -141,6 +146,7 @@ describe("computeValidation", () => {
       now: NOW,
     });
     expect(v.validationFailures.map((f) => f.code)).toContain("dob_invalid");
+    expect(v.paymentReadiness).toBe("blocked_validation");
   });
 
   it("marks missing required fields without validation failures as blocked_missing_required_fields", () => {
@@ -150,6 +156,7 @@ describe("computeValidation", () => {
       now: NOW,
     });
     expect(v.readiness).toBe("blocked_missing_required_fields");
+    expect(v.paymentReadiness).toBe("blocked_missing_required_fields");
     expect(v.requiredFieldsMissing.sort()).toEqual(["address", "profession"].sort());
     expect(v.validationFailures).toEqual([]);
   });
@@ -166,6 +173,7 @@ describe("computeValidation", () => {
       now: NOW,
     });
     expect(v.readiness).toBe("blocked_validation");
+    expect(v.paymentReadiness).toBe("blocked_validation");
     expect(v.requiredFieldsMissing).toContain("profession");
     expect(v.validationFailures.map((f) => f.code)).toContain(
       "passport_expired_or_insufficient_validity",
@@ -179,6 +187,17 @@ describe("computeValidation", () => {
       now: NOW,
     });
     expect(v.readiness).toBe("blocked_missing_required_fields");
+    expect(v.paymentReadiness).toBe("ready");
+  });
+
+  it("paymentReadiness stays blocked when profile incomplete even if uploads are present", () => {
+    const v = computeValidation({
+      profile: { ...COMPLETE_PROFILE, fullName: "" },
+      uploads: UPLOADS_OK,
+      now: NOW,
+    });
+    expect(v.readiness).toBe("blocked_missing_required_fields");
+    expect(v.paymentReadiness).toBe("blocked_missing_required_fields");
   });
 
   it("required field key list is the locked 10-field MVP set", () => {

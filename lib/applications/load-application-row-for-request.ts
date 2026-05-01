@@ -13,9 +13,10 @@ import { application } from "@/lib/db/schema/applications";
 export type ApplicationRow = typeof application.$inferSelect;
 
 /**
- * Loads full `application` row for cookie/header context: signed-in owner,
- * legacy guest rows visible by matching account email (same rule as track list),
- * or guest with valid `vt_resume`. Returns null when there is no read access.
+ * Loads full `application` row for cookie/header context: **valid `vt_resume`**
+ * for a guest application (same priority as [`resolveApplicationAccess`](./application-access.ts)),
+ * then signed-in owner or legacy guest row visible by matching account email
+ * (same rule as track list). Returns null when there is no read access.
  */
 export async function loadApplicationRowForRequest(
   applicationId: string,
@@ -23,6 +24,13 @@ export async function loadApplicationRowForRequest(
 ): Promise<ApplicationRow | null> {
   const hdrs = await headers();
   const session = await auth.api.getSession({ headers: hdrs });
+  const token = readResumeTokenFromRequestCookies(cookieHeader);
+
+  if (token) {
+    const guestRow = await loadGuestApplicationRowByResumeCookie(applicationId, token);
+    if (guestRow) return guestRow;
+  }
+
   if (session) {
     const email = normalizeSignedInTrackEmail(session.user.email);
     return withSystemDbActor(async (tx) => {
@@ -39,7 +47,6 @@ export async function loadApplicationRowForRequest(
       return rows[0] ?? null;
     });
   }
-  const token = readResumeTokenFromRequestCookies(cookieHeader);
-  if (!token) return null;
-  return loadGuestApplicationRowByResumeCookie(applicationId, token);
+
+  return null;
 }

@@ -7,15 +7,16 @@ import {
   DOCUMENT_TYPE,
   user,
 } from "@/lib/db/schema";
+import type { ValidationResult } from "@/lib/documents/validation-readiness";
 import { computeValidation } from "@/lib/documents/validation-readiness";
 
 /**
  * Re-evaluates application readiness and auto-advances the applicationStatus.
  *
- * When validation is "ready":
+ * When **`paymentReadiness` is `ready`** (profile + validation; uploads optional for this gate):
  * - From `needs_review`, or from early lifecycle (`draft`, `needs_docs`, `extracting`),
  *   move to `ready_for_payment` so `/api/checkout` can take the lock (it requires that status).
- * When validation is not ready and status is `ready_for_payment`, revert to `needs_review`.
+ * When **`paymentReadiness` is not `ready`** and status is `ready_for_payment`, revert to `needs_review`.
  */
 const READINESS_EVALUABLE_STATUSES = new Set([
   "draft",
@@ -24,6 +25,30 @@ const READINESS_EVALUABLE_STATUSES = new Set([
   "needs_review",
   "ready_for_payment",
 ]);
+
+/**
+ * Pure decision used by `evaluateApplicationReadiness` (exported for unit tests).
+ */
+export function readinessPromotionAction(
+  applicationStatus: string,
+  validation: Pick<ValidationResult, "paymentReadiness">,
+): "advance" | "revert" | "noop" {
+  if (!READINESS_EVALUABLE_STATUSES.has(applicationStatus)) {
+    return "noop";
+  }
+  const isPaymentReady = validation.paymentReadiness === "ready";
+  const canAdvanceToPayment =
+    isPaymentReady &&
+    applicationStatus !== "ready_for_payment" &&
+    (applicationStatus === "needs_review" ||
+      applicationStatus === "draft" ||
+      applicationStatus === "needs_docs" ||
+      applicationStatus === "extracting");
+
+  if (canAdvanceToPayment) return "advance";
+  if (!isPaymentReady && applicationStatus === "ready_for_payment") return "revert";
+  return "noop";
+}
 
 export async function evaluateApplicationReadiness(
   tx: DbTransaction,
@@ -82,22 +107,14 @@ export async function evaluateApplicationReadiness(
     now,
   });
 
-  const isReady = validation.readiness === "ready";
+  const action = readinessPromotionAction(app.applicationStatus, validation);
 
-  const canAdvanceToPayment =
-    isReady &&
-    app.applicationStatus !== "ready_for_payment" &&
-    (app.applicationStatus === "needs_review" ||
-      app.applicationStatus === "draft" ||
-      app.applicationStatus === "needs_docs" ||
-      app.applicationStatus === "extracting");
-
-  if (canAdvanceToPayment) {
+  if (action === "advance") {
     await tx
       .update(application)
       .set({ applicationStatus: "ready_for_payment" })
       .where(eq(application.id, applicationId));
-  } else if (!isReady && app.applicationStatus === "ready_for_payment") {
+  } else if (action === "revert") {
     await tx
       .update(application)
       .set({ applicationStatus: "needs_review" })

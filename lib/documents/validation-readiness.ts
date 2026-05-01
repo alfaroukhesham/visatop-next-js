@@ -5,7 +5,11 @@
  * - 180-day passport-validity rule (spec §7.1).
  * - DOB sanity 1900-01-01 ≤ dob ≤ today (spec §7.2).
  * - Readiness precedence: `validationFailures` dominates `requiredFieldsMissing`
- *   (spec §6.5); missing uploads contribute to `requiredFieldsMissing`.
+ *   (spec §6.5); missing uploads contribute to **case** `readiness` only.
+ * - **`paymentReadiness`:** same precedence for profile fields and validation,
+ *   but **passport_copy / personal_photo presence is not required** for `ready`
+ *   (checkout gate). **Full `readiness`** still requires both uploads when
+ *   profile + validation are satisfied (case-complete / submission-oriented).
  */
 
 export const VALIDATION_SCHEMA_VERSION = 1 as const;
@@ -43,7 +47,10 @@ export type ValidationFailure = {
 export type ValidationResult = {
   schemaVersion: typeof VALIDATION_SCHEMA_VERSION;
   nowUtcDate: string;
+  /** Profile + validation + both uploads; submission / case-complete gate. */
   readiness: Readiness;
+  /** Profile + validation only; ignores upload booleans (payment / checkout gate). */
+  paymentReadiness: Readiness;
   requiredFieldsMissing: SubmissionRequiredField[];
   validationFailures: ValidationFailure[];
 };
@@ -199,28 +206,30 @@ export function computeValidation(input: ComputeValidationInput): ValidationResu
     }
   }
 
-  // Required-document presence contributes to missing fields but under their
-  // dedicated pseudo-keys; however the spec §6.5 lists explicit profile
-  // keys — docs gating is surfaced by the `uploads` booleans already used by
-  // the route layer. Keep validation payload focused on profile keys.
-
   let readiness: Readiness;
+  let paymentReadiness: Readiness;
+
   if (validationFailures.length > 0) {
     readiness = "blocked_validation";
+    paymentReadiness = "blocked_validation";
   } else if (
     requiredFieldsMissing.length > 0 ||
     !input.uploads.passportCopyPresent ||
     !input.uploads.personalPhotoPresent
   ) {
     readiness = "blocked_missing_required_fields";
+    paymentReadiness =
+      requiredFieldsMissing.length > 0 ? "blocked_missing_required_fields" : "ready";
   } else {
     readiness = "ready";
+    paymentReadiness = "ready";
   }
 
   return {
     schemaVersion: VALIDATION_SCHEMA_VERSION,
     nowUtcDate,
     readiness,
+    paymentReadiness,
     requiredFieldsMissing,
     validationFailures,
   };

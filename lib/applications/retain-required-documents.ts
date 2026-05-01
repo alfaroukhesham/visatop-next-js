@@ -1,19 +1,15 @@
 /**
- * Retention-on-payment helper (spec §11.2).
+ * Retention-on-payment helper (post–optional-docs checkout).
  *
- * Intended to be invoked from the idempotent payment webhook inside the same
- * DB transaction that sets `paymentStatus = paid`. The caller must supply a
- * transaction (typically from `withSystemDbActor`) because webhooks arrive
- * without a user session.
+ * Invoked from the idempotent payment webhook in the same DB transaction that
+ * sets `paymentStatus = paid`. Callers use `withSystemDbActor` (no user session).
  *
- * Behavior:
- * - Verifies the application has the **latest** `passport_copy` AND
- *   `personal_photo` rows in `uploaded_temp` with blob bytes still present.
- * - If the precondition fails, returns `{ ok: false, reason: ... }` and DOES
- *   NOT mutate any rows. The caller MUST abort the `paid` transition and emit
- *   an ops alert (spec §1 / §11.2 "no silent partial paid").
- * - On success, flips the latest rows to `retained`, sets `retainedAt = now()`
- *   and clears `tempExpiresAt` on their blobs.
+ * **Partial retain:** For each of `passport_copy` and `personal_photo`, if the
+ * latest row is `uploaded_temp` **with** blob bytes, flip it to `retained` and
+ * set `retainedAt` / clear `tempExpiresAt`. Missing types are skipped (paid
+ * with no uploads yet is success with zero ids). If a type has `uploaded_temp`
+ * **without** bytes, retain **all good types first**, then return
+ * `BLOB_BYTES_MISSING` so the webhook can flag `adminAttentionRequired`.
  */
 import { and, desc, eq } from "drizzle-orm";
 
@@ -26,9 +22,7 @@ import {
   type DocumentType,
 } from "@/lib/db/schema";
 
-export type RetentionFailure =
-  | { ok: false; reason: "MISSING_REQUIRED_DOCUMENT"; missing: DocumentType[] }
-  | { ok: false; reason: "BLOB_BYTES_MISSING"; missing: DocumentType[] };
+export type RetentionFailure = { ok: false; reason: "BLOB_BYTES_MISSING"; missing: DocumentType[] };
 
 export type RetentionSuccess = {
   ok: true;
@@ -75,53 +69,39 @@ async function findLatestTempDocumentId(
 }
 
 /**
- * Verify + flip required docs to `retained`. Idempotent: if a required doc is
- * already `retained`, it is treated as an invariant violation (payment must
- * have already been retained) and returns `MISSING_REQUIRED_DOCUMENT` for
- * that slot rather than silently "re-retaining".
- *
- * Callers that want idempotency on webhook retries should short-circuit via
- * `application.paymentStatus === 'paid'` before invoking this helper.
+ * Retain each required document type that has a valid temp blob. Idempotent
+ * on webhook retries: caller should skip when `paymentStatus` is already `paid`
+ * before invoking again.
  */
 export async function retainRequiredDocuments(
   tx: DbTransaction,
   applicationId: string,
   now: Date = new Date(),
 ): Promise<RetentionResult> {
-  const missing: DocumentType[] = [];
+  const retainedDocumentIds: string[] = [];
   const missingBytes: DocumentType[] = [];
-  const targetIds: string[] = [];
 
   for (const type of REQUIRED_RETENTION_TYPES) {
     const latest = await findLatestTempDocumentId(tx, applicationId, type);
-    if (!latest) {
-      missing.push(type);
-      continue;
-    }
+    if (!latest) continue;
     if (!latest.hasBytes) {
       missingBytes.push(type);
       continue;
     }
-    targetIds.push(latest.id);
+    await tx
+      .update(applicationDocument)
+      .set({ status: DOCUMENT_STATUS.RETAINED })
+      .where(eq(applicationDocument.id, latest.id));
+    await tx
+      .update(applicationDocumentBlob)
+      .set({ retainedAt: now, tempExpiresAt: null })
+      .where(eq(applicationDocumentBlob.documentId, latest.id));
+    retainedDocumentIds.push(latest.id);
   }
 
-  if (missing.length > 0) {
-    return { ok: false, reason: "MISSING_REQUIRED_DOCUMENT", missing };
-  }
   if (missingBytes.length > 0) {
     return { ok: false, reason: "BLOB_BYTES_MISSING", missing: missingBytes };
   }
 
-  for (const id of targetIds) {
-    await tx
-      .update(applicationDocument)
-      .set({ status: DOCUMENT_STATUS.RETAINED })
-      .where(eq(applicationDocument.id, id));
-    await tx
-      .update(applicationDocumentBlob)
-      .set({ retainedAt: now, tempExpiresAt: null })
-      .where(eq(applicationDocumentBlob.documentId, id));
-  }
-
-  return { ok: true, retainedDocumentIds: targetIds, retainedAt: now };
+  return { ok: true, retainedDocumentIds, retainedAt: now };
 }
