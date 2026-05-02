@@ -13,6 +13,7 @@ import type { NextConfig } from "next";
  */
 const EXPLICIT_ALLOWED_DEV_ORIGINS: string[] = [
   "delois-preartistic-quincy.ngrok-free.dev",
+  "192.168.1.144",
   // Droplet + domains (for dev assets / HMR when accessed via reverse proxy)
   "138.68.184.84",
   "visatop.com",

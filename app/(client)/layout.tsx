@@ -20,6 +20,9 @@ const notoSerif = Noto_Serif({
 
 export default async function ClientLayout({ children }: { children: ReactNode }) {
   const wpOrigin = process.env.WP_ORIGIN ?? "";
+  const disableWpLangSwitcher =
+    process.env.DISABLE_WP_LANG_SWITCHER === "true" ||
+    process.env.DISABLE_WP_LANG_SWITCHER === "1";
   const model =
     wpOrigin.trim().length > 0
       ? await fetchWpShellModel({
@@ -37,7 +40,13 @@ export default async function ClientLayout({ children }: { children: ReactNode }
       className={`theme-client theme-client-page-canvas ${inter.variable} ${notoSerif.variable} flex min-h-dvh flex-col text-[18px] leading-[1.6] antialiased`}
     >
       {model?.headerHtml ? (
-        <WpShellFrame kind="header" html={model.headerHtml} cssUrls={model.cssUrls} baseHref={wpOrigin} />
+        <WpShellFrame
+          kind="header"
+          html={model.headerHtml}
+          cssUrls={model.cssUrls}
+          baseHref={wpOrigin}
+          hideLangSwitcher={disableWpLangSwitcher}
+        />
       ) : (
         <WpShellFallbackHeader />
       )}
@@ -55,7 +64,13 @@ export default async function ClientLayout({ children }: { children: ReactNode }
       </div>
 
       {model?.footerHtml ? (
-        <WpShellFrame kind="footer" html={model.footerHtml} cssUrls={model.cssUrls} baseHref={wpOrigin} />
+        <WpShellFrame
+          kind="footer"
+          html={model.footerHtml}
+          cssUrls={model.cssUrls}
+          baseHref={wpOrigin}
+          hideLangSwitcher={disableWpLangSwitcher}
+        />
       ) : (
         <WpShellFallbackFooter />
       )}

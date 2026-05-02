@@ -38,6 +38,7 @@ function buildSrcDoc(input: {
   kind: "header" | "footer";
   baseHref: string | null;
   postMessageToken: string;
+  hideLangSwitcher?: boolean;
 }): string {
   const links = input.cssUrls
     .filter(Boolean)
@@ -99,6 +100,20 @@ function buildSrcDoc(input: {
         max-width: 100%;
         object-fit: contain;
         filter: brightness(0) invert(1);
+      }
+      ${
+        input.hideLangSwitcher
+          ? `
+      /* DISABLE_WP_LANG_SWITCHER: hide Polylang / theme language UI in the embedded shell */
+      header#header nav.menu ul li.lang-switcher-item,
+      header#header nav.menu li:has(a[href="#pll_switcher"]) {
+        display: none !important;
+      }
+      footer#footer .footer-lang-dropdown {
+        display: none !important;
+      }
+      `
+          : ""
       }
     </style>
   </head>
@@ -218,6 +233,8 @@ export function WpShellFrame(props: {
   cssUrls: string[];
   kind: "header" | "footer";
   baseHref?: string;
+  /** When true, hides WP header/footer language controls (see DISABLE_WP_LANG_SWITCHER). */
+  hideLangSwitcher?: boolean;
 }) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [heightPx, setHeightPx] = useState<number>(props.kind === "header" ? 120 : 400);
@@ -231,8 +248,9 @@ export function WpShellFrame(props: {
         kind: props.kind,
         baseHref: props.baseHref ?? null,
         postMessageToken,
+        hideLangSwitcher: props.hideLangSwitcher === true,
       }),
-    [props.html, props.cssUrls, props.kind, props.baseHref, postMessageToken]
+    [props.html, props.cssUrls, props.kind, props.baseHref, postMessageToken, props.hideLangSwitcher]
   );
 
   useEffect(() => {
