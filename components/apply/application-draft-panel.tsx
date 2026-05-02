@@ -17,6 +17,7 @@ import { ClientInput } from "@/components/client/client-input";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 import type { PublicApplication } from "@/lib/applications/public-application";
+import { CheckoutOrderRecap } from "./checkout-order-recap";
 import { PaddleCheckoutButton } from "./paddle-checkout-button";
 import {
   computeValidation,
@@ -460,6 +461,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
             <p className="text-sm text-muted-foreground">
               Your application is complete and ready for submission. Please pay the service fee to begin processing.
             </p>
+            <CheckoutOrderRecap application={app} />
             <PaddleCheckoutButton
               applicationId={applicationId}
               onExternalRedirect={() =>
@@ -495,7 +497,9 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
                 </div>
               )}
             </div>
-            
+
+            <CheckoutOrderRecap application={app} />
+
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1">
                 <PaddleCheckoutButton
