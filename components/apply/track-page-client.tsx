@@ -49,8 +49,8 @@ export function TrackPageClient() {
         <span className="mx-2 text-border" aria-hidden>
           ·
         </span>
-        <Link href="/help" className="text-link font-medium hover:underline">
-          Help
+        <Link href="https://wa.me/971503156105" className="text-link font-medium hover:underline">
+          Contact support
         </Link>
       </p>
     </div>

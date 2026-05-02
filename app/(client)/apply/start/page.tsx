@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ApplyJourneyStepBar } from "@/components/apply/apply-journey-step-bar";
 import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
-import { ClientButtonLink } from "@/components/client/client-button";
 import { StartApplicationForm } from "@/components/apply/start-application-form";
 import { ClientSurface } from "@/components/client/client-surface";
 
@@ -59,11 +58,6 @@ export default async function ApplyStartPage({ searchParams }: PageProps) {
             totalSteps={5}
             title="Pick visa type"
             subtitle="Choose pay-in currency, then tap a service card."
-            actions={
-              <ClientButtonLink href="/" variant="outline" size="sm">
-                Previous
-              </ClientButtonLink>
-            }
           />
       </ApplyTwoColumn>
     </div>

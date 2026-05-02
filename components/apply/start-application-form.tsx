@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
@@ -163,11 +163,6 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
     };
   }, [nationality, displayCurrency]);
 
-  const selectedNat = useMemo(
-    () => nationalities.find((n) => n.code === nationality),
-    [nationalities, nationality],
-  );
-
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -205,44 +200,10 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
         </p>
       ) : null}
 
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 className="font-heading text-foreground text-lg font-semibold tracking-tight">Nationality</h2>
-          <button
-            type="button"
-            className="text-link text-sm font-medium underline-offset-4 hover:underline"
-            onClick={() => router.push("/")}
-          >
-            Change nationality
-          </button>
-        </div>
-        {loadingList ? (
-          <p className="text-muted-foreground flex items-center gap-2 text-sm">
-            <Loader2 className="size-4 animate-spin" aria-hidden />
-            Loading countries…
-          </p>
-        ) : nationality ? (
-          <div className="border-border bg-muted/30 rounded-[12px] border px-4 py-4 sm:px-5 sm:py-5">
-            <p className="text-foreground text-sm font-semibold">
-              <span className="text-muted-foreground font-medium">Nationality</span>{" "}
-              <span className="font-heading tabular-nums tracking-tight">{nationality}</span>
-            </p>
-            {selectedNat ? (
-              <p className="text-muted-foreground mt-1 text-sm leading-relaxed">{selectedNat.name}</p>
-            ) : null}
-          </div>
-        ) : null}
-        {nationality ? (
-          <p className="text-muted-foreground text-xs">
-            We double-check eligibility when your application file is created.
-          </p>
-        ) : null}
-      </section>
-
       {nationality ? (
         <section className="space-y-6">
           <div>
-            <h2 className="font-heading text-foreground text-lg font-semibold tracking-tight">Pay in</h2>
+            <h2 className="font-heading text-foreground text-lg font-semibold tracking-tight">Show prices in</h2>
             <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
               Prices follow the currency you select. If we show an estimate in the other currency, we confirm the exact
               total at checkout.
@@ -362,6 +323,14 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
       ) : null}
 
       <div className="flex flex-wrap items-center gap-3 pt-1">
+        <ClientButton
+          type="submit"
+          brand="cta"
+          onClick={() => router.push("/")}
+          className="justify-center font-semibold"
+        >
+          Previous
+        </ClientButton>
         <ClientButton
           type="submit"
           brand="cta"

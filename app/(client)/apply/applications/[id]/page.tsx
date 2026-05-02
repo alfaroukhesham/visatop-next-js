@@ -29,9 +29,8 @@ export default async function ApplyApplicationPage({ params }: Props) {
         contentClassName="theme-client-rise mx-auto w-full max-w-4xl space-y-10"
       >
         <header className="space-y-4">
-          <p className="text-secondary text-[11px] font-bold uppercase tracking-[0.28em]">Your application</p>
           <h1 className="font-heading text-foreground text-[clamp(1.85rem,3.8vw,2.55rem)] font-semibold leading-tight tracking-tight">
-            Documents, details &amp; payment
+            Upload documents &amp; Confirm details
           </h1>
           <p className="text-muted-foreground max-w-[62ch] text-base leading-relaxed">
             Upload what we ask for, confirm the details we pull from your passport, complete your profile, then pay

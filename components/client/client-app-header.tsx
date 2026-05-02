@@ -64,7 +64,7 @@ export function ClientAppHeader({ className }: Props) {
         className,
       )}
     >
-      <div className="mx-auto flex w-full max-w-[calc(1300px+3rem)] flex-wrap items-center justify-between gap-4 px-3 py-4">
+      <div className="mx-auto grid w-full max-w-[calc(1300px+3rem)] grid-cols-[1fr_auto_1fr] items-center gap-4 px-3 py-4 max-sm:grid-cols-1 max-sm:gap-3">
         {/* <Link
           href="/"
           className="group flex min-w-0 items-center gap-3 rounded-md outline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#92C0D7]"
@@ -85,7 +85,12 @@ export function ClientAppHeader({ className }: Props) {
           </span>
         </Link> */}
 
-        <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm" aria-label="Primary">
+        <div aria-hidden className="min-w-0 max-sm:hidden" />
+
+        <nav
+          className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm max-sm:justify-self-center"
+          aria-label="Primary"
+        >
           {nav.map(({ href, label, match }) => (
             <ClientNavLink key={href} href={href} onInk active={match(path)}>
               {label}
@@ -93,7 +98,7 @@ export function ClientAppHeader({ className }: Props) {
           ))}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex max-w-full shrink-0 flex-wrap items-center justify-end justify-self-end gap-x-2 gap-y-1 max-sm:justify-self-center">
           {!mounted || storePending ? (
             <div className="flex items-center gap-2" aria-label="Loading account actions">
               <div className="h-9 w-[92px] animate-pulse rounded-md bg-white/10" aria-hidden />
@@ -101,6 +106,19 @@ export function ClientAppHeader({ className }: Props) {
             </div>
           ) : storeSession ? (
             <>
+              <span
+                className="text-white/90 min-w-0 max-w-[10rem] truncate text-xs sm:max-w-[18rem] sm:text-sm"
+                title={
+                  storeSession.user.name?.trim() ||
+                  storeSession.user.email ||
+                  undefined
+                }
+              >
+                Welcome,{" "}
+                {storeSession.user.name?.trim() ||
+                  storeSession.user.email?.split("@")[0] ||
+                  "there"}
+              </span>
               <ClientButtonLink
                 href="/portal/track"
                 brand="cta"

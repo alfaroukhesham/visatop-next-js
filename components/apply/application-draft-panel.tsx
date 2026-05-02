@@ -1,17 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
+  Camera,
   CheckCircle2,
   FileStack,
   Loader2,
   RefreshCw,
 } from "lucide-react";
 import { ApplyJourneyStepBar } from "@/components/apply/apply-journey-step-bar";
-import { ClientButton, ClientButtonLink } from "@/components/client/client-button";
+import { ClientButton } from "@/components/client/client-button";
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
@@ -132,7 +133,6 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
   const [app, setApp] = useState<PublicApplication | null>(null);
   const [docs, setDocs] = useState<PublicDocument[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [uploading, setUploading] = useState<DocType | null>(null);
@@ -147,14 +147,12 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
     } | null> => {
       const silent = opts?.silent === true;
       if (!silent) setLoading(true);
-      else setRefreshing(true);
       if (!silent) setError(null);
       const [appRes, docsRes] = await Promise.all([
         fetchApiEnvelope<{ application: PublicApplication }>(apiHref(`/applications/${applicationId}`)),
         fetchApiEnvelope<{ documents: PublicDocument[] }>(apiHref(`/applications/${applicationId}/documents`)),
       ]);
       if (!silent) setLoading(false);
-      setRefreshing(false);
       if (!appRes.ok) {
         setApp(null);
         setError(appRes.error.message);
@@ -333,42 +331,6 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
 
   return (
     <div className="space-y-8">
-      <section className="rounded-[12px] border border-border border-l-[3px] border-l-primary bg-card p-5 shadow-[0_4px_20px_rgba(0,0,0,0.06)] sm:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0 flex-1 space-y-4">
-            <div>
-              <p className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Application</p>
-              <p className="font-heading mt-1 font-mono text-sm font-semibold tracking-tight text-foreground">
-                {app.referenceNumber ?? app.id}
-              </p>
-              <dl className="text-muted-foreground mt-3 grid gap-2 text-sm sm:grid-cols-2">
-                <DtDd label="Nationality" value={app.nationalityCode} />
-                <DtDd label="Service" value={app.serviceId} mono />
-                <DtDd
-                  label="Draft expires"
-                  value={app.draftExpiresAt ? new Date(app.draftExpiresAt).toLocaleString() : "—"}
-                />
-              </dl>
-            </div>
-          </div>
-          <ClientButton
-            type="button"
-            variant="outline"
-            size="sm"
-            className="rounded-none shrink-0"
-            disabled={refreshing}
-            onClick={() => void load({ silent: true })}
-          >
-            {refreshing ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden />
-            ) : (
-              <RefreshCw className="size-4" aria-hidden />
-            )}
-            Refresh
-          </ClientButton>
-        </div>
-      </section>
-
       {actionMsg ? (
         <p className="text-accent-foreground border-accent/30 bg-accent/15 text-sm border-l-4 border-l-accent px-3 py-2">
           {actionMsg}
@@ -442,6 +404,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
       <ApplicantReview
         key={applicantFormResetKey(app.applicant, extractResult?.extraction ?? null, app.guestEmail)}
         applicationId={applicationId}
+        nationalityCode={app.nationalityCode}
         applicant={app.applicant}
         guestEmail={app.guestEmail}
         isGuest={app.isGuest}
@@ -560,25 +523,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
             ? "Confirm your details, then pay securely to submit."
             : "Upload what we ask for, then confirm your passport details."
         }
-        actions={
-          <ClientButtonLink
-            href={`/apply/start?nationality=${encodeURIComponent(app.nationalityCode)}`}
-            variant="outline"
-            size="sm"
-          >
-            Previous
-          </ClientButtonLink>
-        }
       />
-    </div>
-  );
-}
-
-function DtDd({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div>
-      <dt className="text-foreground font-medium">{label}</dt>
-      <dd className={mono ? "font-mono text-xs break-all" : "font-mono text-xs"}>{value}</dd>
     </div>
   );
 }
@@ -603,6 +548,15 @@ function DocumentUploadSlot({
   const [pending, setPending] = useState<File | null>(null);
   const tooLarge = pending ? pending.size > UPLOAD_MAX_BYTES : false;
   const inputId = `file-${docType}`;
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  /** Prefer selfie for portrait; rear camera for passport and supporting images. */
+  const cameraFacing = docType === "personal_photo" ? "user" : "environment";
+
+  const handleFileChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setPending(file);
+    e.target.value = "";
+  };
 
   return (
     <div className="space-y-3 rounded-[12px] border border-border bg-card/80 p-4 shadow-sm">
@@ -636,12 +590,36 @@ function DocumentUploadSlot({
 
       <ClientField id={inputId} label={label} labelClassName="sr-only">
         <input
-          id={inputId}
+          ref={cameraInputRef}
           type="file"
-          accept={MIME_BY_TYPE[docType]}
-          onChange={(e) => setPending(e.target.files?.[0] ?? null)}
-          className="text-muted-foreground block w-full text-xs file:mr-3 file:border file:border-border file:bg-muted file:px-3 file:py-2 file:text-sm file:font-medium file:text-foreground"
+          accept="image/*"
+          capture={cameraFacing}
+          onChange={handleFileChosen}
+          className="sr-only"
+          tabIndex={-1}
+          aria-hidden
         />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <input
+            id={inputId}
+            type="file"
+            accept={MIME_BY_TYPE[docType]}
+            onChange={handleFileChosen}
+            className="text-muted-foreground block min-w-0 flex-1 text-xs file:mr-3 file:border file:border-border file:bg-muted file:px-3 file:py-2 file:text-sm file:font-medium file:text-foreground"
+          />
+          <ClientButton
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0 rounded-none"
+            disabled={uploading}
+            onClick={() => cameraInputRef.current?.click()}
+            aria-label={`Take a photo: ${label}`}
+          >
+            <Camera className="size-4" aria-hidden />
+            Take photo
+          </ClientButton>
+        </div>
         {tooLarge ? (
           <p className="text-error text-xs">File exceeds 8MB limit.</p>
         ) : null}
@@ -666,6 +644,7 @@ function DocumentUploadSlot({
 
 function ApplicantReview({
   applicationId,
+  nationalityCode,
   applicant,
   guestEmail,
   isGuest,
@@ -677,6 +656,7 @@ function ApplicantReview({
   onSaved,
 }: {
   applicationId: string;
+  nationalityCode: string;
   applicant: ApplicantProfile;
   guestEmail: string | null;
   isGuest: boolean;
@@ -687,6 +667,7 @@ function ApplicantReview({
   locked: boolean;
   onSaved: () => void;
 }) {
+  const router = useRouter();
   const prefilled = new Set<string>(Object.keys(extraction?.prefill ?? {}));
 
   const ROWS: Array<{
@@ -895,21 +876,35 @@ function ApplicantReview({
         })}
       </dl>
 
-      {!locked && (
-        <div className="flex items-center gap-3 pt-2">
-          <ClientButton
-            type="button"
-            disabled={!dirty || saving}
-            onClick={() => void handleSave()}
-            className="rounded-none"
-          >
-            {saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-            {saving ? "Saving…" : "Next"}
-          </ClientButton>
-          {saveMsg ? <p className="text-success text-xs">{saveMsg}</p> : null}
-          {saveError ? <p className="text-error text-xs">{saveError}</p> : null}
-        </div>
-      )}
+      <div className="flex flex-wrap items-center gap-3 pt-2">
+        <ClientButton
+          type="submit"
+          variant="outline"
+          brand="cta"
+          className="rounded-none"
+          onClick={() =>
+            router.push(`/apply/start?nationality=${encodeURIComponent(nationalityCode)}`)
+          }
+        >
+          Previous
+        </ClientButton>
+        {!locked ? (
+          <>
+            <ClientButton
+              type="button"
+              brand="cta"
+              disabled={!dirty || saving}
+              onClick={() => void handleSave()}
+              className="rounded-none"
+            >
+              {saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
+              {saving ? "Saving…" : "Next"}
+            </ClientButton>
+            {saveMsg ? <p className="text-success text-xs">{saveMsg}</p> : null}
+            {saveError ? <p className="text-error text-xs">{saveError}</p> : null}
+          </>
+        ) : null}
+      </div>
     </section>
   );
 }
