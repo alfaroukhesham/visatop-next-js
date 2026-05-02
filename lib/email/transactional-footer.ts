@@ -3,7 +3,7 @@ Visatop
 This is an automated message regarding your visa application.`;
 
 export function getTransactionalEmailFooter(): string {
-  const raw = process.env.EMAIL_TRANSACTIONAL_FOOTER?.trim();
+  const raw = 'Copyright © 2026 Visatop. All rights reserved.';
   return raw && raw.length > 0 ? raw : DEFAULT_FOOTER;
 }
 

@@ -8,6 +8,8 @@ export type MailgunSendTextInput = {
   to: string;
   subject: string;
   text: string;
+  /** Optional HTML body (multipart/alternative). */
+  html?: string;
   attachments?: { filename: string; contentType: string; bytes: Buffer }[];
 };
 
@@ -34,6 +36,9 @@ export async function mailgunSendText(input: MailgunSendTextInput): Promise<{ ok
   form.set("to", input.to);
   form.set("subject", input.subject);
   form.set("text", input.text);
+  if (input.html) {
+    form.set("html", input.html);
+  }
 
   for (const a of input.attachments ?? []) {
     const blob = new Blob([new Uint8Array(a.bytes)], { type: a.contentType || "application/octet-stream" });
