@@ -100,7 +100,7 @@ export async function applyPaymentWebhookEvent(
           providerEventId,
           transactionId: event.providerPaymentId ?? null,
           paymentId: payRow.id,
-          paymentAmountMinor: Number(payRow.amount),
+          paymentAmountMinor: payRow.amount.toString(),
           eventAmountMinor: event.amountMinor,
           metadata: event.metadata ?? {},
         }),
@@ -108,7 +108,7 @@ export async function applyPaymentWebhookEvent(
       return { didFirstPaidTransition: false };
     }
 
-    const amountMismatch = event.amountMinor !== Number(payRow.amount);
+    const amountMismatch = BigInt(event.amountMinor) !== payRow.amount;
     if (amountMismatch) {
       await tx.update(application).set({ adminAttentionRequired: true }).where(eq(application.id, appRow.id));
       await tx.insert(auditLog).values({
@@ -119,13 +119,13 @@ export async function applyPaymentWebhookEvent(
         entityId: appRow.id,
         beforeJson: JSON.stringify({
           adminAttentionRequired: appRow.adminAttentionRequired,
-          expectedAmountMinor: Number(payRow.amount),
+          expectedAmountMinor: payRow.amount.toString(),
         }),
         afterJson: JSON.stringify({
           providerEventId,
           transactionId: event.providerPaymentId ?? null,
           paymentId: payRow.id,
-          expectedAmountMinor: Number(payRow.amount),
+          expectedAmountMinor: payRow.amount.toString(),
           receivedAmountMinor: event.amountMinor,
           metadata: event.metadata ?? {},
         }),
@@ -173,7 +173,7 @@ export async function applyPaymentWebhookEvent(
           transactionId: event.providerPaymentId ?? null,
           paymentId: payRow.id,
           amountMismatch,
-          paymentAmountMinor: Number(payRow.amount),
+          paymentAmountMinor: payRow.amount.toString(),
           eventAmountMinor: event.amountMinor,
           metadata: event.metadata ?? {},
         }),

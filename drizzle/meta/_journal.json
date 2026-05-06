@@ -141,6 +141,13 @@
       "when": 1776942000000,
       "tag": "0019_user_document_supporting_dedupe",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1746519233000,
+      "tag": "0020_catalog_customer_price",
+      "breakpoints": true
     }
   ]
 }

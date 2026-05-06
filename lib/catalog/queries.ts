@@ -1,14 +1,11 @@
 import { and, eq, exists } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { computeDisplayPriceMinor } from "@/lib/pricing/compute-display-price";
 import {
-  batchAddonLinesForServices,
-  batchLatestReferencesForServices,
-  batchMarginPoliciesForServices,
-  pickEffectiveMarginPolicy,
-  resolveCanonicalAffiliateSiteId,
-} from "@/lib/pricing/resolve-catalog-pricing";
+  batchCustomerPricesForServices,
+  resolveDisplayPrice,
+} from "@/lib/pricing/resolve-customer-catalog-price";
+import { readFxRateString, FxRateMissingError } from "@/lib/pricing/fx-usd-aed";
 
 /** Matches `withSystemDbActor` / `withAdminDbActor` transaction handle typing. */
 type SchemaDb = DbTransaction;
@@ -32,16 +29,16 @@ export async function listPublicNationalities(
         eq(schema.nationality.enabled, true),
         exists(
           tx
-            .select({ x: schema.visaServiceEligibility.serviceId })
-            .from(schema.visaServiceEligibility)
+            .select({ x: schema.catalogCustomerPrice.serviceId })
+            .from(schema.catalogCustomerPrice)
             .innerJoin(
               schema.visaService,
-              eq(schema.visaService.id, schema.visaServiceEligibility.serviceId),
+              eq(schema.visaService.id, schema.catalogCustomerPrice.serviceId),
             )
             .where(
               and(
                 eq(
-                  schema.visaServiceEligibility.nationalityCode,
+                  schema.catalogCustomerPrice.nationalityCode,
                   schema.nationality.code,
                 ),
                 eq(schema.visaService.enabled, true),
@@ -62,11 +59,23 @@ export type PublicServiceRow = {
   currency: string | null;
 };
 
+/**
+ * List services offered to a nationality, with customer prices resolved via
+ * catalog_customer_price + env FX (§4 rules).
+ *
+ * NOTE: Add-ons are NOT applied here per spec §1 decision:
+ *   "checkout uses the locked quote amount [from the sheet]."
+ *   The catalog_customer_price IS the exact customer total.
+ */
 export async function listPublicServicesForNationality(
   tx: SchemaDb,
   nationalityCode: string,
   catalogCurrency: string = "USD",
 ): Promise<PublicServiceRow[]> {
+  const currency =
+    catalogCurrency.trim().toUpperCase() === "AED" ? "AED" : "USD";
+
+  // Services offered to this nationality: those with ≥1 published price row
   const services = await tx
     .select({
       id: schema.visaService.id,
@@ -75,14 +84,20 @@ export async function listPublicServicesForNationality(
       entries: schema.visaService.entries,
     })
     .from(schema.visaService)
-    .innerJoin(
-      schema.visaServiceEligibility,
-      eq(schema.visaServiceEligibility.serviceId, schema.visaService.id),
-    )
     .where(
       and(
-        eq(schema.visaServiceEligibility.nationalityCode, nationalityCode),
         eq(schema.visaService.enabled, true),
+        exists(
+          tx
+            .select({ x: schema.catalogCustomerPrice.serviceId })
+            .from(schema.catalogCustomerPrice)
+            .where(
+              and(
+                eq(schema.catalogCustomerPrice.serviceId, schema.visaService.id),
+                eq(schema.catalogCustomerPrice.nationalityCode, nationalityCode),
+              ),
+            ),
+        ),
         exists(
           tx
             .select({ x: schema.nationality.code })
@@ -100,83 +115,33 @@ export async function listPublicServicesForNationality(
 
   if (!services.length) return [];
 
-  const siteId = await resolveCanonicalAffiliateSiteId(tx);
-  if (!siteId) {
-    return services.map((s) => ({
-      id: s.id,
-      name: s.name,
-      durationDays: s.durationDays,
-      entries: s.entries,
-      displayPriceMinor: null,
-      currency: null,
-    }));
-  }
-
   const serviceIds = services.map((s) => s.id);
-  const currency = catalogCurrency.trim().toUpperCase() || "USD";
-  const [refMap, marginRows, addonRows] = await Promise.all([
-    batchLatestReferencesForServices(tx, siteId, serviceIds, currency),
-    batchMarginPoliciesForServices(tx, serviceIds),
-    batchAddonLinesForServices(tx, serviceIds),
-  ]);
+  const priceMap = await batchCustomerPricesForServices(
+    tx,
+    nationalityCode,
+    serviceIds,
+  );
 
-  const addonsByService = new Map<string, bigint[]>();
-  for (const line of addonRows) {
-    const ref = refMap.get(line.serviceId);
-    if (!ref || line.currency !== ref.currency) continue;
-    const arr = addonsByService.get(line.serviceId) ?? [];
-    arr.push(line.amount);
-    addonsByService.set(line.serviceId, arr);
+  // Read FX rate; if missing, still return direct-currency prices.
+  let fxRate: string | null = null;
+  try {
+    fxRate = readFxRateString();
+  } catch (e) {
+    if (!(e instanceof FxRateMissingError)) throw e;
+    // FX missing — only prices that need conversion will show null
   }
 
   return services.map((s) => {
-    const latest = refMap.get(s.id);
-    if (!latest) {
-      return {
-        id: s.id,
-        name: s.name,
-        durationDays: s.durationDays,
-        entries: s.entries,
-        displayPriceMinor: null,
-        currency: null,
-      };
-    }
-    const margin = pickEffectiveMarginPolicy(s.id, marginRows, currency);
-    if (!margin || (margin.mode !== "percent" && margin.mode !== "fixed")) {
-      return {
-        id: s.id,
-        name: s.name,
-        durationDays: s.durationDays,
-        entries: s.entries,
-        displayPriceMinor: null,
-        currency: null,
-      };
-    }
-    if (margin.currency !== latest.currency) {
-      return {
-        id: s.id,
-        name: s.name,
-        durationDays: s.durationDays,
-        entries: s.entries,
-        displayPriceMinor: null,
-        currency: null,
-      };
-    }
-    const addonMinorUnits = addonsByService.get(s.id) ?? [];
-    const { totalMinor } = computeDisplayPriceMinor({
-      referenceMinor: latest.amountMinor,
-      marginMode: margin.mode,
-      marginValue: margin.value,
-      addonMinorUnits,
-      discountMinor: BigInt(0),
-    });
+    const priceEntry = priceMap.get(s.id);
+    const resolved = resolveDisplayPrice(priceEntry, currency, fxRate);
+
     return {
       id: s.id,
       name: s.name,
       durationDays: s.durationDays,
       entries: s.entries,
-      displayPriceMinor: totalMinor.toString(),
-      currency: latest.currency,
+      displayPriceMinor: resolved ? resolved.displayMinor.toString() : null,
+      currency: resolved ? resolved.currency : null,
     };
   });
 }

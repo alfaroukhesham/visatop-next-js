@@ -17,7 +17,7 @@ export const payment = pgTable(
     providerOperationId: text("provider_operation_id"),
     providerTransactionId: text("provider_transaction_id"),
     status: text("status").notNull(),
-    amount: bigint("amount", { mode: "number" }).notNull(), // minor units
+    amount: bigint("amount", { mode: "bigint" }).notNull(), // minor units
     currency: text("currency").default("USD").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")

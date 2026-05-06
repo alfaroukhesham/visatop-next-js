@@ -8,3 +8,4 @@ export * from "./transactional-email-sent";
 export * from "./platform-setting";
 export * from "./payments";
 export * from "./affiliate";
+export * from "./catalog-customer-price";

@@ -8,7 +8,6 @@ import {
   jsonb,
   index,
   boolean,
-  numeric,
   bigint,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
@@ -31,7 +30,7 @@ export const application = pgTable(
       .notNull()
       .references(() => visaService.id),
 
-    /** Catalog / checkout price book: USD or AED (must match `affiliate_reference_price` + margin rows). */
+    /** Catalog / checkout price book: USD or AED (matched against catalog_customer_price). */
     catalogCurrency: text("catalog_currency").default("USD").notNull(),
 
     applicationStatus: text("application_status").notNull(),
@@ -111,31 +110,6 @@ export const application = pgTable(
   ],
 );
 
-export const marginPolicy = pgTable(
-  "margin_policy",
-  {
-    id: text("id")
-      .primaryKey()
-      .default(sql`gen_random_uuid()`),
-    scope: text("scope").notNull(), // global|service
-    serviceId: text("service_id").references(() => visaService.id, {
-      onDelete: "cascade",
-    }),
-    mode: text("mode").notNull(), // percent|fixed
-    value: numeric("value", { precision: 18, scale: 6 }).notNull(),
-    currency: text("currency").default("USD").notNull(),
-    enabled: boolean("enabled").default(true).notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-  },
-  (t) => [
-    index("margin_policy_scope_idx").on(t.scope),
-    index("margin_policy_serviceId_idx").on(t.serviceId),
-  ],
-);
 
 export const priceQuote = pgTable(
   "price_quote",
@@ -147,7 +121,7 @@ export const priceQuote = pgTable(
       .notNull()
       .references(() => application.id, { onDelete: "cascade" }),
     currency: text("currency").default("USD").notNull(),
-    totalAmount: bigint("total_amount", { mode: "number" }).notNull(), // minor units
+    totalAmount: bigint("total_amount", { mode: "bigint" }).notNull(), // minor units
     breakdownJson: text("breakdown_json").notNull(),
     lockedAt: timestamp("locked_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
