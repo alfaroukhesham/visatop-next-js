@@ -24,6 +24,8 @@ Create (or open) your project in the [Neon console](https://console.neon.tech) �
 
 When Neon offers both, see [direct vs pooled](https://neon.tech/docs/connect/connection-pooling).
 
+**Neon MCP (Cursor):** With the [Neon MCP server](https://neon.tech/docs/connect/mcp) enabled, you can run SQL and inspect schema directly against your Neon project (e.g. `list_projects`, `get_database_tables`, `run_sql`, `run_sql_transaction`). That targets the Neon project/branch you connect in MCP—use the same project as in your `.env` connection strings. If `drizzle.__drizzle_migrations` shows migration `0020` but `catalog_customer_price` is missing, the branch is out of sync; re-apply the `0020_catalog_customer_price.sql` migration (or fix the branch) before relying on local `db:migrate` / unseed.
+
 Apply the schema to that database:
 
 ```bash
@@ -36,6 +38,18 @@ Optional demo nationalities/services/pricing (not part of migrate):
 ```bash
 pnpm run db:seed:demo
 ```
+
+To **remove** that demo data and wipe imported customer prices so you can re-import from Excel on a clean catalog:
+
+```bash
+pnpm run db:unseed:demo
+```
+
+This clears `catalog_customer_price` and `catalog_customer_price_pending`, deletes demo seed rows, removes `visa_service` rows not referenced by any `application`, and drops seed nationalities (US/GB/JP/DE) only if no application uses them. Uses `DATABASE_URL_DIRECT` or `DATABASE_URL` like the seed script.
+
+If unseed errors on missing `catalog_customer_price` after migrate “succeeded”, **`db:migrate` and unseed were likely using different databases** (for example `DATABASE_URL` in your shell vs in `.env`). Both now load **`.env` / `.env.local` from the project root** (same as `drizzle.config.ts`). Re-run `pnpm run db:migrate`, then `pnpm run db:unseed:demo`. The unseed script prints the host/database it connects to so you can confirm it matches Neon.
+
+If the printed migrations look up-to-date but the table is still missing, the database is out of sync with Drizzle’s history; in development you can run `pnpm exec drizzle-kit push` (see Drizzle docs) or fix the branch in Neon.
 
 Then start the development server:
 
