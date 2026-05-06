@@ -1,10 +1,43 @@
 import { headers } from "next/headers";
 import { runAdminDbJson } from "@/lib/admin-api/require-admin-db";
 import { jsonOk, jsonError } from "@/lib/api/response";
-import { assignPendingCurrency } from "@/lib/admin/catalog/apply-customer-price-import";
+import {
+  assignPendingCurrency,
+  listPendingPriceImportPage,
+} from "@/lib/admin/catalog/apply-customer-price-import";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/** Paginated pending rows for the currency wizard (`batchId`, `limit`, `offset`). */
+export async function GET(req: Request) {
+  const hdrs = await headers();
+  const requestId = hdrs.get("x-request-id");
+  const url = new URL(req.url);
+  const batchId = url.searchParams.get("batchId")?.trim();
+  if (!batchId) {
+    return jsonError("VALIDATION_ERROR", "Query parameter batchId is required.", {
+      status: 400,
+      requestId,
+    });
+  }
+
+  const limitRaw = url.searchParams.get("limit");
+  const offsetRaw = url.searchParams.get("offset");
+  const limit = limitRaw != null ? Number(limitRaw) : 25;
+  const offset = offsetRaw != null ? Number(offsetRaw) : 0;
+  if (!Number.isFinite(limit) || !Number.isFinite(offset)) {
+    return jsonError("VALIDATION_ERROR", "limit and offset must be finite numbers.", {
+      status: 400,
+      requestId,
+    });
+  }
+
+  return runAdminDbJson(requestId, ["catalog.read"], async ({ tx }) => {
+    const result = await listPendingPriceImportPage(tx, batchId, { limit, offset });
+    return jsonOk(result, { requestId });
+  });
+}
 
 export async function POST(req: Request) {
   const hdrs = await headers();

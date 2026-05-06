@@ -1,7 +1,19 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useMemo, type Dispatch, type SetStateAction } from "react";
+import { apiHref } from "@/lib/app-href";
+import { normalizeCountryName } from "@/lib/admin/catalog/parse-price-sheet";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Card,
   CardContent,
@@ -29,12 +41,22 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 // ─── Types (mirror server response shapes) ───────────────────────────────────
 
+type MissingNationalityEntry = {
+  normKey: string;
+  exampleRaw: string;
+  exampleRowIdx: number;
+  suggestedAlpha2?: string | null;
+};
+
 type PreviewResult = {
   headerRowIndex: number;
+  missingNationalities: MissingNationalityEntry[];
   errors: { rowIdx: number; countryRaw: string; message: string }[];
   pending: {
     rowIdx: number;
@@ -62,6 +84,7 @@ type PreviewResult = {
 
 type ApplyResult = {
   batchId: string;
+  missingNationalities?: MissingNationalityEntry[];
   committed?: boolean;
   headerRowIndex?: number;
   partialApplied: boolean;
@@ -85,6 +108,95 @@ type ApplyResult = {
   errors: { rowIdx: number; countryRaw: string; message: string }[];
 };
 
+type PendingImportListRow = {
+  id: string;
+  nationalityCode: string;
+  serviceId: string;
+  serviceName: string;
+  amountMinor: string;
+  rowRef: string | null;
+  batchId: string;
+};
+
+type NationalityDraftRow = {
+  normKey: string;
+  exampleRowIdx: number;
+  code: string;
+  name: string;
+  /** Server ISO guess for hint text (unchanged when user edits). */
+  suggestedAlpha2: string | null;
+};
+
+type ListPaginatorBarProps = {
+  selectId: string;
+  page: number;
+  setPage: Dispatch<SetStateAction<number>>;
+  pageSize: number;
+  onPageSizeChange: (n: number) => void;
+  total: number;
+  disabled?: boolean;
+};
+
+function ListPaginatorBar({
+  selectId,
+  page,
+  setPage,
+  pageSize,
+  onPageSizeChange,
+  total,
+  disabled,
+}: ListPaginatorBarProps) {
+  const start = total === 0 ? 0 : page * pageSize + 1;
+  const end = Math.min(total, (page + 1) * pageSize);
+  return (
+    <div className="mt-3 flex flex-col gap-2 border-t pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between text-sm text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-2">
+        <Label htmlFor={selectId} className="text-xs whitespace-nowrap">
+          Rows per page
+        </Label>
+        <select
+          id={selectId}
+          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+          value={pageSize}
+          onChange={(e) => onPageSizeChange(Number(e.target.value))}
+          disabled={disabled}
+        >
+          {[10, 25, 50, 100].map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+      </div>
+      <span className="tabular-nums">
+        Showing {start}–{end} of {total}
+      </span>
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={disabled || page <= 0}
+          onClick={() => setPage((p) => Math.max(0, p - 1))}
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Previous
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={disabled || total === 0 || (page + 1) * pageSize >= total}
+          onClick={() => setPage((p) => p + 1)}
+        >
+          Next
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
@@ -97,13 +209,150 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [showAutoFix, setShowAutoFix] = useState(false);
   const [applyMode, setApplyMode] = useState<"strict" | "partial">("strict");
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [natDrafts, setNatDrafts] = useState<NationalityDraftRow[]>([]);
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkLocalError, setBulkLocalError] = useState<string | null>(null);
+  const [applyElapsedSec, setApplyElapsedSec] = useState(0);
+  const [assignElapsedSec, setAssignElapsedSec] = useState(0);
+  const [pendingListRows, setPendingListRows] = useState<PendingImportListRow[]>([]);
+  const [pendingListTotal, setPendingListTotal] = useState(0);
+  const [pendingListLoading, setPendingListLoading] = useState(false);
+  const [pendingPage, setPendingPage] = useState(0);
+  const [pendingPageSize, setPendingPageSize] = useState(25);
+  /** Shared page size for preview tables (matches currency wizard options). */
+  const [previewListPageSize, setPreviewListPageSize] = useState(25);
+  const [previewPendingPage, setPreviewPendingPage] = useState(0);
+  const [previewErrorsPage, setPreviewErrorsPage] = useState(0);
+  const [previewMissingNatPage, setPreviewMissingNatPage] = useState(0);
+  const [previewAutoFixPage, setPreviewAutoFixPage] = useState(0);
+
+  useEffect(() => {
+    if (phase !== "applying") return;
+    const t0 = Date.now();
+    const id = window.setInterval(() => {
+      setApplyElapsedSec(Math.floor((Date.now() - t0) / 1000));
+    }, 500);
+    return () => window.clearInterval(id);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== "assigning") return;
+    const t0 = Date.now();
+    const id = window.setInterval(() => {
+      setAssignElapsedSec(Math.floor((Date.now() - t0) / 1000));
+    }, 500);
+    return () => window.clearInterval(id);
+  }, [phase]);
+
+  useEffect(() => {
+    const batchId = applyResult?.batchId;
+    const pendingCount = applyResult?.pendingCreated ?? 0;
+    if (!batchId || pendingCount <= 0) {
+      setPendingListRows([]);
+      setPendingListTotal(0);
+      return;
+    }
+
+    let cancelled = false;
+    const offset = pendingPage * pendingPageSize;
+
+    void (async () => {
+      setPendingListLoading(true);
+      try {
+        const qs = new URLSearchParams({
+          batchId,
+          limit: String(pendingPageSize),
+          offset: String(offset),
+        });
+        const res = await fetch(
+          `${apiHref("admin/catalog/customer-prices/import/pending-currency")}?${qs}`,
+        );
+        const json = await res.json();
+        if (!res.ok || cancelled) {
+          if (!cancelled) {
+            setPendingListRows([]);
+            setPendingListTotal(0);
+          }
+          return;
+        }
+        const data = json.data as { rows: PendingImportListRow[]; total: number };
+        if (cancelled) return;
+        const total = typeof data.total === "number" ? data.total : 0;
+        if (total > 0 && offset >= total) {
+          const lastPage = Math.max(0, Math.ceil(total / pendingPageSize) - 1);
+          if (lastPage !== pendingPage) {
+            setPendingPage(lastPage);
+            return;
+          }
+        }
+        setPendingListRows(Array.isArray(data.rows) ? data.rows : []);
+        setPendingListTotal(total);
+      } catch {
+        if (!cancelled) {
+          setPendingListRows([]);
+          setPendingListTotal(0);
+        }
+      } finally {
+        if (!cancelled) setPendingListLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [applyResult?.batchId, applyResult?.pendingCreated, pendingPage, pendingPageSize]);
+
+  useEffect(() => {
+    setPreviewPendingPage(0);
+    setPreviewErrorsPage(0);
+    setPreviewMissingNatPage(0);
+    setPreviewAutoFixPage(0);
+  }, [previewListPageSize]);
+
+  useEffect(() => {
+    if (!preview) return;
+    setPreviewPendingPage(0);
+    setPreviewErrorsPage(0);
+    setPreviewMissingNatPage(0);
+    setPreviewAutoFixPage(0);
+  }, [preview]);
+
+  const previewSlices = useMemo(() => {
+    if (!preview) {
+      return {
+        missing: [] as PreviewResult["missingNationalities"],
+        errors: [] as PreviewResult["errors"],
+        pending: [] as PreviewResult["pending"],
+        autoFix: [] as PreviewResult["autoFixPreview"],
+      };
+    }
+    const ps = previewListPageSize;
+    const slice = <T,>(arr: T[], page: number) => arr.slice(page * ps, page * ps + ps);
+    return {
+      missing: slice(preview.missingNationalities, previewMissingNatPage),
+      errors: slice(preview.errors, previewErrorsPage),
+      pending: slice(preview.pending, previewPendingPage),
+      autoFix: slice(preview.autoFixPreview, previewAutoFixPage),
+    };
+  }, [
+    preview,
+    previewListPageSize,
+    previewMissingNatPage,
+    previewErrorsPage,
+    previewPendingPage,
+    previewAutoFixPage,
+  ]);
 
   const hasBlockingErrors =
     preview && preview.headerRowIndex === -1;
   const hasErrors = preview && preview.errors.length > 0;
+  const missingNationalities = preview?.missingNationalities ?? [];
+  const hasMissingNationalities = missingNationalities.length > 0;
   const canApply =
     !!preview &&
     !hasBlockingErrors &&
+    !hasMissingNationalities &&
     canWrite &&
     (!hasErrors || applyMode === "partial");
 
@@ -116,11 +365,11 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
     setPhase("previewing");
 
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/admin/catalog/customer-prices/import/preview", {
+      const body = await file.arrayBuffer();
+      const res = await fetch(apiHref("admin/catalog/customer-prices/import/preview"), {
         method: "POST",
-        body: fd,
+        headers: { "Content-Type": "application/octet-stream" },
+        body,
       });
       const json = await res.json();
       if (!res.ok) {
@@ -128,7 +377,11 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
         setPhase("idle");
         return;
       }
-      setPreview(json.data);
+      const data = json.data as PreviewResult;
+      setPreview({
+        ...data,
+        missingNationalities: data.missingNationalities ?? [],
+      });
       setPhase("previewed");
     } catch {
       setError("Network error during preview.");
@@ -139,23 +392,35 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
   async function handleApply() {
     if (!file) return;
     setError(null);
+    setApplyElapsedSec(0);
     setPhase("applying");
 
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("mode", applyMode);
-      const res = await fetch("/api/admin/catalog/customer-prices/import/apply", {
+      const body = await file.arrayBuffer();
+      const res = await fetch(apiHref("admin/catalog/customer-prices/import/apply"), {
         method: "POST",
-        body: fd,
+        headers: {
+          "Content-Type": "application/octet-stream",
+          "X-Import-Mode": applyMode,
+        },
+        body,
       });
       const json = await res.json();
       if (!res.ok) {
-        setError(json?.error?.message ?? "Apply failed.");
+        const details = json?.error?.details as { missingNationalities?: MissingNationalityEntry[] } | undefined;
+        if (details?.missingNationalities?.length) {
+          setError(
+            `${json?.error?.message ?? "Apply blocked."} Open “Create nationalities” below to add ${details.missingNationalities.length} missing entr${details.missingNationalities.length === 1 ? "y" : "ies"}.`,
+          );
+        } else {
+          setError(json?.error?.message ?? "Apply failed.");
+        }
         setPhase("previewed");
         return;
       }
       setApplyResult(json.data);
+      setPendingPage(0);
+      setPendingPageSize(previewListPageSize);
       setPhase("applied");
     } catch {
       setError("Network error during apply.");
@@ -166,10 +431,11 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
   async function handleAssignPendingCurrency() {
     if (!applyResult?.batchId) return;
     setError(null);
+    setAssignElapsedSec(0);
     setPhase("assigning");
 
     try {
-      const res = await fetch("/api/admin/catalog/customer-prices/import/pending-currency", {
+      const res = await fetch(apiHref("admin/catalog/customer-prices/import/pending-currency"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currency: pendingCurrency, batchId: applyResult.batchId }),
@@ -204,7 +470,120 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
     setError(null);
     setPhase("idle");
     setApplyMode("strict");
+    setBulkModalOpen(false);
+    setNatDrafts([]);
+    setBulkLocalError(null);
+    setPendingPage(0);
+    setPendingPageSize(25);
+    setPreviewListPageSize(25);
+    setPreviewPendingPage(0);
+    setPreviewErrorsPage(0);
+    setPreviewMissingNatPage(0);
+    setPreviewAutoFixPage(0);
+    setPendingListRows([]);
+    setPendingListTotal(0);
+    setAssignElapsedSec(0);
     if (fileRef.current) fileRef.current.value = "";
+  }
+
+  function openBulkNationalityModal() {
+    if (!preview?.missingNationalities?.length) return;
+    setNatDrafts(
+      preview.missingNationalities.map((m) => ({
+        normKey: m.normKey,
+        exampleRowIdx: m.exampleRowIdx,
+        code: m.suggestedAlpha2 ?? "",
+        name: m.exampleRaw,
+        suggestedAlpha2: m.suggestedAlpha2 ?? null,
+      })),
+    );
+    setBulkLocalError(null);
+    setBulkModalOpen(true);
+  }
+
+  async function handleBulkCreateNationalities() {
+    setBulkLocalError(null);
+    const codeRe = /^[A-Za-z]{2}$/;
+    const seenCodes = new Set<string>();
+    const seenNormNames = new Map<string, string>();
+    for (const d of natDrafts) {
+      const code = d.code.trim().toUpperCase();
+      const name = d.name.trim();
+      if (!codeRe.test(code)) {
+        setBulkLocalError(`Row “${name}”: ISO code must be exactly two letters (e.g. AE).`);
+        return;
+      }
+      if (!name) {
+        setBulkLocalError("Every nationality needs a display name.");
+        return;
+      }
+      if (seenCodes.has(code)) {
+        setBulkLocalError(`Duplicate ISO code in this list: ${code}.`);
+        return;
+      }
+      seenCodes.add(code);
+      const nk = normalizeCountryName(name);
+      const prev = seenNormNames.get(nk);
+      if (prev !== undefined && prev !== code) {
+        setBulkLocalError(`Duplicate display name after normalisation: “${name}”.`);
+        return;
+      }
+      seenNormNames.set(nk, code);
+    }
+
+    setBulkSaving(true);
+    try {
+      const res = await fetch(apiHref("admin/catalog/nationalities/bulk"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: natDrafts.map((d) => ({
+            code: d.code.trim().toUpperCase(),
+            name: d.name.trim(),
+          })),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setBulkLocalError(json?.error?.message ?? "Bulk create failed.");
+        setBulkSaving(false);
+        return;
+      }
+      setBulkModalOpen(false);
+      setNatDrafts([]);
+      setBulkSaving(false);
+      if (file) {
+        setError(null);
+        setApplyResult(null);
+        setPhase("previewing");
+        try {
+          const body = await file.arrayBuffer();
+          const previewRes = await fetch(apiHref("admin/catalog/customer-prices/import/preview"), {
+            method: "POST",
+            headers: { "Content-Type": "application/octet-stream" },
+            body,
+          });
+          const previewJson = await previewRes.json();
+          if (!previewRes.ok) {
+            setError(previewJson?.error?.message ?? "Preview failed after creating nationalities.");
+            setPhase("idle");
+            return;
+          }
+          const data = previewJson.data as PreviewResult;
+          setPreview({
+            ...data,
+            missingNationalities: data.missingNationalities ?? [],
+          });
+          setPhase("previewed");
+        } catch {
+          setError("Network error re-running preview.");
+          setPhase("idle");
+        }
+      }
+    } catch {
+      setBulkLocalError("Network error during bulk create.");
+      setBulkSaving(false);
+    }
   }
 
   return (
@@ -290,6 +669,19 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
         </Alert>
       )}
 
+      {phase === "applying" && (
+        <Alert>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <AlertTitle>Applying import…</AlertTitle>
+          <AlertDescription className="text-sm">
+            Large sheets can take a minute or more. This request runs entirely on the server; do not close the tab.
+            <span className="mt-1 block tabular-nums text-muted-foreground">
+              Elapsed {applyElapsedSec}s
+            </span>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Preview result */}
       {preview && phase !== "applied" && (
         <div className="space-y-4">
@@ -334,6 +726,63 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                 </ul>
               </AlertDescription>
             </Alert>
+          )}
+
+          {hasMissingNationalities && (
+            <Card className="border-amber-500/50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Info className="h-4 w-4 text-amber-600" />
+                  {missingNationalities.length} sheet{" "}
+                  {missingNationalities.length === 1 ? "country" : "countries"} not in the nationality catalog
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Apply is disabled until each country has a unique ISO 3166-1 alpha-2 code (same codes as IBAN
+                  country prefix) and display name in the catalog. The bulk-create dialog prefills codes from the
+                  official English dataset where possible; always verify.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Example row</TableHead>
+                      <TableHead>Country (sheet)</TableHead>
+                      <TableHead>Suggested ISO</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {previewSlices.missing.map((m) => (
+                      <TableRow key={m.normKey}>
+                        <TableCell className="tabular-nums">{m.exampleRowIdx}</TableCell>
+                        <TableCell>{m.exampleRaw}</TableCell>
+                        <TableCell>
+                          {m.suggestedAlpha2 ? (
+                            <Badge variant="secondary" className="font-mono">
+                              {m.suggestedAlpha2}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <ListPaginatorBar
+                  selectId="preview-missing-nat-page-size"
+                  page={previewMissingNatPage}
+                  setPage={setPreviewMissingNatPage}
+                  pageSize={previewListPageSize}
+                  onPageSizeChange={setPreviewListPageSize}
+                  total={missingNationalities.length}
+                  disabled={phase === "applying" || phase === "assigning"}
+                />
+                <Button type="button" variant="secondary" onClick={openBulkNationalityModal} disabled={!canWrite}>
+                  Create nationalities…
+                </Button>
+              </CardContent>
+            </Card>
           )}
 
           {/* Validation errors */}
@@ -388,8 +837,8 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {preview.errors.map((e) => (
-                      <TableRow key={`${e.rowIdx}-${e.countryRaw}`}>
+                    {previewSlices.errors.map((e) => (
+                      <TableRow key={`${e.rowIdx}-${e.countryRaw}-${e.message.slice(0, 24)}`}>
                         <TableCell>{e.rowIdx}</TableCell>
                         <TableCell>{e.countryRaw || "—"}</TableCell>
                         <TableCell className="text-destructive text-sm">{e.message}</TableCell>
@@ -397,6 +846,15 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                     ))}
                   </TableBody>
                 </Table>
+                <ListPaginatorBar
+                  selectId="preview-errors-page-size"
+                  page={previewErrorsPage}
+                  setPage={setPreviewErrorsPage}
+                  pageSize={previewListPageSize}
+                  onPageSizeChange={setPreviewListPageSize}
+                  total={preview.errors.length}
+                  disabled={phase === "applying" || phase === "assigning"}
+                />
               </CardContent>
             </Card>
           )}
@@ -425,8 +883,8 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {preview.pending.map((p, i) => (
-                      <TableRow key={i}>
+                    {previewSlices.pending.map((p) => (
+                      <TableRow key={`${p.rowIdx}-${p.rowRef}`}>
                         <TableCell>{p.rowIdx}</TableCell>
                         <TableCell>{p.serviceName}</TableCell>
                         <TableCell className="tabular-nums">{p.amountMinor}</TableCell>
@@ -435,6 +893,15 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                     ))}
                   </TableBody>
                 </Table>
+                <ListPaginatorBar
+                  selectId="preview-pending-page-size"
+                  page={previewPendingPage}
+                  setPage={setPreviewPendingPage}
+                  pageSize={previewListPageSize}
+                  onPageSizeChange={setPreviewListPageSize}
+                  total={preview.pending.length}
+                  disabled={phase === "applying" || phase === "assigning"}
+                />
               </CardContent>
             </Card>
           )}
@@ -471,8 +938,8 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {preview.autoFixPreview.map((f, i) => (
-                        <TableRow key={i}>
+                      {previewSlices.autoFix.map((f, i) => (
+                        <TableRow key={`${f.nationalityCode ?? ""}-${f.serviceName}-${previewAutoFixPage * previewListPageSize + i}`}>
                           <TableCell>{f.nationalityCode ?? "—"}</TableCell>
                           <TableCell>{f.serviceName}</TableCell>
                           <TableCell>
@@ -488,6 +955,15 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                       ))}
                     </TableBody>
                   </Table>
+                  <ListPaginatorBar
+                    selectId="preview-autofix-page-size"
+                    page={previewAutoFixPage}
+                    setPage={setPreviewAutoFixPage}
+                    pageSize={previewListPageSize}
+                    onPageSizeChange={setPreviewListPageSize}
+                    total={preview.autoFixPreview.length}
+                    disabled={phase === "applying" || phase === "assigning"}
+                  />
                 </CardContent>
               )}
             </Card>
@@ -498,18 +974,216 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
       {/* Apply result */}
       {applyResult && (
         <div className="space-y-4">
-          <Alert className="border-green-500/50">
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-            <AlertTitle>Import applied successfully</AlertTitle>
-            <AlertDescription className="grid grid-cols-2 gap-1 text-sm mt-2">
-              <span>Mode:</span><span className="font-medium">{applyResult.partialApplied ? "Partial" : "Strict"}</span>
-              <span>Rows processed:</span><span className="font-medium">{applyResult.rowsProcessed}</span>
-              <span>Rows skipped:</span><span className="font-medium">{applyResult.skippedRows}</span>
-              <span>Prices upserted:</span><span className="font-medium">{applyResult.pricesUpserted}</span>
-              <span>Prices deleted:</span><span className="font-medium">{applyResult.pricesDeleted}</span>
-              <span>Pending rows:</span><span className="font-medium">{applyResult.pendingCreated}</span>
-              <span>Eligibility added:</span><span className="font-medium">{applyResult.eligibilityAdded}</span>
-              <span>Eligibility removed:</span><span className="font-medium">{applyResult.eligibilityRemoved}</span>
+          {phase === "assigning" && (
+            <Alert>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <AlertTitle>Assigning currency…</AlertTitle>
+              <AlertDescription className="text-sm">
+                Updating live prices for every pending row in this batch. This can take a moment on large imports.
+                <span className="mt-1 block tabular-nums text-muted-foreground">
+                  Elapsed {assignElapsedSec}s
+                </span>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Currency wizard first when pending amounts need a currency */}
+          {applyResult.pendingCreated > 0 && (
+            <Card className="border-amber-500/50">
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Wand2 className="h-4 w-4 text-amber-500" />
+                  Currency wizard — {applyResult.pendingCreated} pending row
+                  {applyResult.pendingCreated === 1 ? "" : "s"}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Review the rows below, choose which currency the stored amounts represent, then assign once for the
+                  whole batch. The other currency is filled automatically from your FX rate.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Label htmlFor="pending-page-size" className="text-sm whitespace-nowrap">
+                      Rows per page
+                    </Label>
+                    <select
+                      id="pending-page-size"
+                      className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                      value={pendingPageSize}
+                      onChange={(e) => {
+                        setPendingPageSize(Number(e.target.value));
+                        setPendingPage(0);
+                      }}
+                      disabled={phase === "assigning"}
+                    >
+                      {[10, 25, 50, 100].map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Amounts are in:</span>
+                    <div className="flex gap-2">
+                      {(["USD", "AED"] as const).map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setPendingCurrency(c)}
+                          disabled={phase === "assigning"}
+                          className={`px-3 py-1 rounded border text-sm font-medium transition-colors ${
+                            pendingCurrency === c
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border hover:border-primary"
+                          }`}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-md border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[100px]">Nationality</TableHead>
+                        <TableHead>Service</TableHead>
+                        <TableHead className="text-right">Amount (minor)</TableHead>
+                        <TableHead className="min-w-[120px]">Sheet ref</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pendingListLoading && pendingListRows.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-muted-foreground py-8 text-center text-sm">
+                            <Loader2 className="inline h-4 w-4 animate-spin mr-2 align-text-bottom" />
+                            Loading pending rows…
+                          </TableCell>
+                        </TableRow>
+                      ) : pendingListRows.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-muted-foreground py-6 text-center text-sm">
+                            No rows on this page. Try another page or re-run apply if the batch changed.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        pendingListRows.map((r) => (
+                          <TableRow key={r.id}>
+                            <TableCell className="font-mono text-xs">{r.nationalityCode}</TableCell>
+                            <TableCell className="text-sm">{r.serviceName}</TableCell>
+                            <TableCell className="text-right tabular-nums text-sm">{r.amountMinor}</TableCell>
+                            <TableCell className="text-muted-foreground text-xs">{r.rowRef ?? "—"}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-muted-foreground">
+                  <span className="tabular-nums">
+                    Showing{" "}
+                    {pendingListTotal === 0
+                      ? 0
+                      : pendingPage * pendingPageSize + 1}
+                    –
+                    {Math.min(pendingListTotal, (pendingPage + 1) * pendingPageSize)} of {pendingListTotal}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={
+                        phase === "assigning" || pendingPage <= 0 || pendingListLoading
+                      }
+                      onClick={() => setPendingPage((p) => Math.max(0, p - 1))}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={
+                        phase === "assigning" ||
+                        pendingListLoading ||
+                        (pendingPage + 1) * pendingPageSize >= pendingListTotal
+                      }
+                      onClick={() => setPendingPage((p) => p + 1)}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="flex-col items-stretch gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  id="btn-assign-pending-currency"
+                  onClick={handleAssignPendingCurrency}
+                  disabled={phase === "assigning" || !canWrite || applyResult.pendingCreated <= 0}
+                >
+                  {phase === "assigning" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Assign {pendingCurrency} to all {applyResult.pendingCreated} pending row
+                  {applyResult.pendingCreated === 1 ? "" : "s"}
+                </Button>
+              </CardFooter>
+            </Card>
+          )}
+
+          <Alert
+            className={
+              applyResult.pendingCreated > 0
+                ? "border-muted bg-muted/30"
+                : "border-green-500/50"
+            }
+          >
+            <CheckCircle2
+              className={`h-4 w-4 ${applyResult.pendingCreated > 0 ? "text-muted-foreground" : "text-green-500"}`}
+            />
+            <AlertTitle>
+              {applyResult.pendingCreated > 0
+                ? "Import applied — finish the currency step above"
+                : "Import applied successfully"}
+            </AlertTitle>
+            <AlertDescription
+              className={
+                applyResult.pendingCreated > 0 ? "text-sm mt-2 space-y-1" : "grid grid-cols-2 gap-1 text-sm mt-2"
+              }
+            >
+              {applyResult.pendingCreated > 0 ? (
+                <p className="text-muted-foreground">
+                  Mode {applyResult.partialApplied ? "Partial" : "Strict"} · {applyResult.rowsProcessed} data rows ·{" "}
+                  {applyResult.pricesUpserted} prices upserted · {applyResult.pricesDeleted} cleared ·{" "}
+                  {applyResult.pendingCreated} still pending currency · eligibility +{applyResult.eligibilityAdded} / −
+                  {applyResult.eligibilityRemoved}. Details below.
+                </p>
+              ) : (
+                <>
+                  <span>Mode:</span>
+                  <span className="font-medium">{applyResult.partialApplied ? "Partial" : "Strict"}</span>
+                  <span>Rows processed:</span>
+                  <span className="font-medium">{applyResult.rowsProcessed}</span>
+                  <span>Rows skipped:</span>
+                  <span className="font-medium">{applyResult.skippedRows}</span>
+                  <span>Prices upserted:</span>
+                  <span className="font-medium">{applyResult.pricesUpserted}</span>
+                  <span>Prices deleted:</span>
+                  <span className="font-medium">{applyResult.pricesDeleted}</span>
+                  <span>Pending rows:</span>
+                  <span className="font-medium">{applyResult.pendingCreated}</span>
+                  <span>Eligibility added:</span>
+                  <span className="font-medium">{applyResult.eligibilityAdded}</span>
+                  <span>Eligibility removed:</span>
+                  <span className="font-medium">{applyResult.eligibilityRemoved}</span>
+                </>
+              )}
             </AlertDescription>
           </Alert>
 
@@ -584,54 +1258,103 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
               </AlertDescription>
             </Alert>
           )}
-
-          {/* Pending currency wizard */}
-          {applyResult.pendingCreated > 0 && (
-            <Card className="border-amber-500/50">
-              <CardHeader>
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Wand2 className="h-4 w-4 text-amber-500" />
-                  Currency Wizard — {applyResult.pendingCreated} pending row(s)
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  These rows have amounts but no currency. Assign a currency to make them live.
-                  The system will fill the missing sibling currency via FX auto-fill.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium">Assign all pending as:</span>
-                  <div className="flex gap-2">
-                    {(["USD", "AED"] as const).map((c) => (
-                      <button
-                        key={c}
-                        onClick={() => setPendingCurrency(c)}
-                        className={`px-3 py-1 rounded border text-sm font-medium transition-colors ${
-                          pendingCurrency === c
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border hover:border-primary"
-                        }`}
-                      >
-                        {c}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button
-                  id="btn-assign-pending-currency"
-                  onClick={handleAssignPendingCurrency}
-                  disabled={phase === "assigning" || !canWrite}
-                >
-                  {phase === "assigning" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Assign {pendingCurrency} to all pending rows
-                </Button>
-              </CardFooter>
-            </Card>
-          )}
         </div>
       )}
+
+      <Dialog open={bulkModalOpen} onOpenChange={setBulkModalOpen}>
+        <DialogContent className="flex max-h-[min(85vh,720px)] flex-col gap-0 p-0 sm:max-w-2xl" showCloseButton>
+          <div className="p-4 pb-0">
+            <DialogHeader>
+              <DialogTitle>Bulk create nationalities</DialogTitle>
+              <DialogDescription>
+                ISO 3166-1 alpha-2 codes are prefilled from the official English country list (same codes as IBAN
+                country prefix) plus a few common abbreviations. Display names start as the sheet cell — adjust if you
+                want the catalog spelling. Codes and normalised names must be unique; the server rejects names that
+                already map to a different code.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto border-y px-4 py-3">
+            {bulkLocalError && (
+              <Alert variant="destructive" className="mb-3">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Cannot submit</AlertTitle>
+                <AlertDescription>{bulkLocalError}</AlertDescription>
+              </Alert>
+            )}
+            <div className="space-y-4">
+              {(() => {
+                const prefilled = natDrafts.filter((d) => d.suggestedAlpha2).length;
+                if (prefilled === 0) return null;
+                return (
+                  <p className="text-xs text-muted-foreground">
+                    {prefilled} of {natDrafts.length} ISO code{prefilled === 1 ? "" : "s"} prefilled — review especially
+                    where the sheet label is informal or ambiguous.
+                  </p>
+                );
+              })()}
+              {natDrafts.map((row, idx) => (
+                <div
+                  key={row.normKey}
+                  className="grid gap-3 rounded-lg border bg-muted/30 p-3 sm:grid-cols-[auto_1fr_1fr]"
+                >
+                  <div className="text-xs text-muted-foreground sm:pt-2">
+                    Sheet row <span className="font-medium text-foreground">{row.exampleRowIdx}</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`nat-name-${idx}`}>Display name</Label>
+                    <Input
+                      id={`nat-name-${idx}`}
+                      value={row.name}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setNatDrafts((prev) =>
+                          prev.map((r, i) => (i === idx ? { ...r, name: v } : r)),
+                        );
+                      }}
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor={`nat-code-${idx}`}>ISO code (2 letters)</Label>
+                    <Input
+                      id={`nat-code-${idx}`}
+                      value={row.code}
+                      onChange={(e) => {
+                        const v = e.target.value.slice(0, 2);
+                        setNatDrafts((prev) =>
+                          prev.map((r, i) => (i === idx ? { ...r, code: v } : r)),
+                        );
+                      }}
+                      maxLength={2}
+                      className="uppercase font-mono"
+                      autoComplete="off"
+                      placeholder={row.suggestedAlpha2 ? row.suggestedAlpha2 : "e.g. AE"}
+                    />
+                    {row.suggestedAlpha2 ? (
+                      <p className="text-xs text-muted-foreground">
+                        Suggested: <span className="font-mono text-foreground">{row.suggestedAlpha2}</span>
+                        {row.code.trim().toUpperCase() !== row.suggestedAlpha2 ? " (you changed it)" : ""}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No automatic match — enter the ISO code manually.</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter className="rounded-b-xl border-0 bg-muted/40 p-4 sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => setBulkModalOpen(false)} disabled={bulkSaving}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleBulkCreateNationalities} disabled={bulkSaving || !canWrite}>
+              {bulkSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Create {natDrafts.length} nationalit{natDrafts.length === 1 ? "y" : "ies"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

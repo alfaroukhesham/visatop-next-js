@@ -7,7 +7,7 @@
  * All writes run inside a withAdminDbActor transaction.
  */
 
-import { eq, and, sql, inArray } from "drizzle-orm";
+import { eq, sql, inArray, asc } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
@@ -17,9 +17,12 @@ import {
   matchNationality,
   parseMoneyCell,
   normalizeCountryName,
+  collectMissingNationalityEntries,
   type RawRow,
+  type MissingNationalityEntry,
 } from "./parse-price-sheet";
 import { fxUsdToAed, fxAedToUsd, readFxRateString } from "@/lib/pricing/fx-usd-aed";
+import { withSuggestedAlpha2 } from "./suggest-country-alpha2";
 
 export type ImportRowError = {
   rowIdx: number; // 1-based display row
@@ -69,6 +72,8 @@ export type ApplyImportResult = {
   autoFix: AutoFix[];
   servicesCreated: ServiceCreated[];
   errors: ImportRowError[];
+  /** Country names from the sheet with no matching nationality row (apply blocked until resolved). */
+  missingNationalities: MissingNationalityEntry[];
 };
 
 export type PreviewImportResult = {
@@ -91,6 +96,8 @@ export type PreviewImportResult = {
     fxRate: string | null;
   }>;
   unknownServices: string[];
+  /** Distinct sheet countries not in the nationality catalog (bulk-create UX). */
+  missingNationalities: MissingNationalityEntry[];
   stats: {
     dataRows: number;
     pricedCells: number;
@@ -117,6 +124,149 @@ function splitNatServiceNormKey(key: string): { natCode: string; serviceNorm: st
     natCode: key.slice(0, i),
     serviceNorm: key.slice(i + IMPORT_PAIR_SEP.length),
   };
+}
+
+function natSvcIdKey(natCode: string, serviceId: string) {
+  return `${natCode}${IMPORT_PAIR_SEP}${serviceId}`;
+}
+
+/** Postgres parameter budget — keep batched statements well under limits. */
+const UPSERT_CHUNK = 400;
+const DELETE_PAIR_CHUNK = 400;
+const PENDING_INSERT_CHUNK = 500;
+const PENDING_DELETE_ID_CHUNK = 500;
+const ELIGIBILITY_PAIR_CHUNK = 350;
+/** Larger batches for assign-pending (fewer round trips; under PG param limits). */
+const ASSIGN_PRICE_UPSERT_CHUNK = 2500;
+/** Distinct (nat, service) pairs per INSERT…SELECT eligibility statement. */
+const ELIGIBILITY_INSERT_SELECT_CHUNK = 2000;
+
+/** Cap autoFix rows returned to the client and stored on audit (full list is redundant at scale). */
+const ASSIGN_PENDING_AUTOFIX_RESPONSE_CAP = 80;
+
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+function neonSqlRows(result: unknown): Record<string, unknown>[] {
+  if (
+    result &&
+    typeof result === "object" &&
+    "rows" in result &&
+    Array.isArray((result as { rows: unknown[] }).rows)
+  ) {
+    return (result as { rows: Record<string, unknown>[] }).rows;
+  }
+  return [];
+}
+
+/**
+ * Ensures visa_service_eligibility rows exist for every (nationality, service) that already has
+ * catalog_customer_price rows matching `pairs`. One INSERT…SELECT per chunk; counts newly inserted rows.
+ * Faster than GROUP BY counts + separate inserts when prices are already materialised (e.g. assign pending).
+ */
+async function bulkEnsureEligibilityFromCatalogPrices(
+  tx: SchemaDb,
+  pairs: { nationalityCode: string; serviceId: string }[],
+): Promise<number> {
+  if (pairs.length === 0) return 0;
+  let added = 0;
+  for (const chunk of chunkArray(pairs, ELIGIBILITY_INSERT_SELECT_CHUNK)) {
+    const tupleIn = sql.join(
+      chunk.map((p) => sql`(${p.nationalityCode}, ${p.serviceId})`),
+      sql`, `,
+    );
+    const r = await tx.execute(sql`
+      WITH ins AS (
+        INSERT INTO visa_service_eligibility (service_id, nationality_code)
+        SELECT DISTINCT c.service_id, c.nationality_code
+        FROM catalog_customer_price AS c
+        WHERE (c.nationality_code, c.service_id) IN (${tupleIn})
+        ON CONFLICT (service_id, nationality_code) DO NOTHING
+        RETURNING 1
+      )
+      SELECT count(*)::int AS added FROM ins
+    `);
+    const rows = neonSqlRows(r);
+    const n = Number(rows[0]?.added ?? 0);
+    if (Number.isFinite(n)) added += n;
+  }
+  return added;
+}
+
+/**
+ * After bulk price writes, sync visa_service_eligibility for all touched nationality×service pairs.
+ * Replaces per-pair count + insert/delete round trips with batched SQL.
+ */
+async function syncEligibilityForTouchedPairs(
+  tx: SchemaDb,
+  touchedKeys: string[],
+): Promise<{ added: number; removed: number }> {
+  if (touchedKeys.length === 0) return { added: 0, removed: 0 };
+
+  let eligibilityAdded = 0;
+  let eligibilityRemoved = 0;
+
+  for (const keyChunk of chunkArray(touchedKeys, ELIGIBILITY_PAIR_CHUNK)) {
+    const pairs = keyChunk.map((key) => {
+      const { natCode, serviceNorm: serviceId } = splitNatServiceNormKey(key);
+      return { nationalityCode: natCode, serviceId };
+    });
+
+    const tupleIn = sql.join(
+      pairs.map((p) => sql`(${p.nationalityCode}, ${p.serviceId})`),
+      sql`, `,
+    );
+
+    const countRows = await tx
+      .select({
+        nationalityCode: schema.catalogCustomerPrice.nationalityCode,
+        serviceId: schema.catalogCustomerPrice.serviceId,
+        c: sql<number>`count(*)::int`,
+      })
+      .from(schema.catalogCustomerPrice)
+      .where(sql`(nationality_code, service_id) IN (${tupleIn})`)
+      .groupBy(schema.catalogCustomerPrice.nationalityCode, schema.catalogCustomerPrice.serviceId);
+
+    const hasPrice = new Set(
+      countRows
+        .filter((r) => (r.c ?? 0) > 0)
+        .map((r) => natSvcIdKey(r.nationalityCode, r.serviceId)),
+    );
+
+    const toEnsure = pairs.filter((p) => hasPrice.has(natSvcIdKey(p.nationalityCode, p.serviceId)));
+    const toRemove = pairs.filter((p) => !hasPrice.has(natSvcIdKey(p.nationalityCode, p.serviceId)));
+
+    if (toEnsure.length > 0) {
+      const ins = await tx
+        .insert(schema.visaServiceEligibility)
+        .values(
+          toEnsure.map((p) => ({
+            serviceId: p.serviceId,
+            nationalityCode: p.nationalityCode,
+          })),
+        )
+        .onConflictDoNothing()
+        .returning({ serviceId: schema.visaServiceEligibility.serviceId });
+      eligibilityAdded += ins.length;
+    }
+
+    if (toRemove.length > 0) {
+      const rmIn = sql.join(
+        toRemove.map((p) => sql`(${p.serviceId}, ${p.nationalityCode})`),
+        sql`, `,
+      );
+      const del = await tx
+        .delete(schema.visaServiceEligibility)
+        .where(sql`(service_id, nationality_code) IN (${rmIn})`)
+        .returning({ serviceId: schema.visaServiceEligibility.serviceId });
+      eligibilityRemoved += del.length;
+    }
+  }
+
+  return { added: eligibilityAdded, removed: eligibilityRemoved };
 }
 
 // ─── Nationality map builder ─────────────────────────────────────────────────
@@ -154,49 +304,6 @@ async function resolveServiceId(
   serviceNameToId.set(norm, newId);
   created.push({ id: newId, name: trimmedName.trim() });
   return newId;
-}
-
-// ─── Eligibility sync ────────────────────────────────────────────────────────
-
-async function syncEligibility(
-  tx: SchemaDb,
-  nationalityCode: string,
-  serviceId: string,
-): Promise<{ added: boolean; removed: boolean }> {
-  // Count published (non-pending) prices for this pair
-  const [row] = await tx
-    .select({ count: sql<number>`count(*)::int` })
-    .from(schema.catalogCustomerPrice)
-    .where(
-      and(
-        eq(schema.catalogCustomerPrice.nationalityCode, nationalityCode),
-        eq(schema.catalogCustomerPrice.serviceId, serviceId),
-      ),
-    );
-
-  const hasPrices = (row?.count ?? 0) > 0;
-
-  if (hasPrices) {
-    // Ensure eligibility exists
-    const inserted = await tx
-      .insert(schema.visaServiceEligibility)
-      .values({ serviceId, nationalityCode })
-      .onConflictDoNothing()
-      .returning({ serviceId: schema.visaServiceEligibility.serviceId });
-    return { added: inserted.length > 0, removed: false };
-  } else {
-    // Remove eligibility
-    const deleted = await tx
-      .delete(schema.visaServiceEligibility)
-      .where(
-        and(
-          eq(schema.visaServiceEligibility.serviceId, serviceId),
-          eq(schema.visaServiceEligibility.nationalityCode, nationalityCode),
-        ),
-      )
-      .returning({ id: schema.visaServiceEligibility.serviceId });
-    return { added: false, removed: deleted.length > 0 };
-  }
 }
 
 // ─── Audit log ───────────────────────────────────────────────────────────────
@@ -254,12 +361,16 @@ export async function previewPriceSheetImport(
       pending: [],
       autoFixPreview: [],
       unknownServices: [],
+      missingNationalities: [],
       stats: { dataRows: 0, pricedCells: 0, ambiguousCells: 0, emptyCells: 0 },
     };
   }
 
   const header = parseHeaderRow(rows[headerRowIdx]);
   const nationalityMap = await buildNationalityMap(tx);
+  const missingNationalities = withSuggestedAlpha2(
+    collectMissingNationalityEntries(rows, headerRowIdx, header.countryColIdx, nationalityMap),
+  );
 
   // Existing services map
   const existingServices = await tx
@@ -309,14 +420,6 @@ export async function previewPriceSheetImport(
 
     stats.dataRows++;
     const natCode = matchNationality(countryRaw, nationalityMap);
-
-    if (!natCode) {
-      errors.push({
-        rowIdx: i + 1,
-        countryRaw: String(countryRaw),
-        message: `Cannot resolve nationality: "${countryRaw}"`,
-      });
-    }
 
     for (const col of header.serviceColumns) {
       const raw = row[col.colIdx];
@@ -384,6 +487,7 @@ export async function previewPriceSheetImport(
     pending,
     autoFixPreview,
     unknownServices,
+    missingNationalities,
     stats,
   };
 }
@@ -427,6 +531,7 @@ export async function applyPriceSheetImport(
       eligibilityRemoved: 0,
       autoFix: [],
       servicesCreated: [],
+      missingNationalities: [],
       errors: [
         {
           rowIdx: 0,
@@ -440,6 +545,31 @@ export async function applyPriceSheetImport(
 
   const header = parseHeaderRow(rows[headerRowIdx]);
   const nationalityMap = await buildNationalityMap(tx);
+  const missingNationalities = withSuggestedAlpha2(
+    collectMissingNationalityEntries(rows, headerRowIdx, header.countryColIdx, nationalityMap),
+  );
+
+  if (missingNationalities.length > 0) {
+    return {
+      batchId,
+      committed: false,
+      headerRowIndex: headerRowIdx,
+      partialApplied: false,
+      rowsProcessed: 0,
+      skippedRows: 0,
+      skippedCells: 0,
+      pricesUpserted: 0,
+      pricesDeleted: 0,
+      pendingCreated: 0,
+      eligibilityAdded: 0,
+      eligibilityRemoved: 0,
+      autoFix: [],
+      servicesCreated: [],
+      missingNationalities,
+      errors: [],
+    };
+  }
+
 
   const existingServices = await tx
     .select({ id: schema.visaService.id, name: schema.visaService.name })
@@ -465,10 +595,6 @@ export async function applyPriceSheetImport(
     string,
     { usdMinor?: bigint; aedMinor?: bigint }
   >();
-
-  function natSvcIdKey(natCode: string, serviceId: string) {
-    return `${natCode}${IMPORT_PAIR_SEP}${serviceId}`;
-  }
 
   type UpsertPlan = {
     nationalityCode: string;
@@ -499,11 +625,6 @@ export async function applyPriceSheetImport(
     rowsProcessed++;
     const natCode = matchNationality(countryRaw, nationalityMap);
     if (!natCode) {
-      errors.push({
-        rowIdx: i + 1,
-        countryRaw: String(countryRaw),
-        message: `Cannot resolve nationality: "${countryRaw}"`,
-      });
       rowHasError.add(i);
       skippedRows++;
       skippedCells += header.serviceColumns.length;
@@ -632,6 +753,7 @@ export async function applyPriceSheetImport(
       eligibilityRemoved: 0,
       autoFix: [],
       servicesCreated: [],
+      missingNationalities: [],
       errors,
     };
   }
@@ -680,6 +802,23 @@ export async function applyPriceSheetImport(
   });
 
   const toUpsertDb = [...toUpsert, ...fxToUpsert].map(resolvePlan);
+  const upsertByTriple = new Map<
+    string,
+    {
+      nationalityCode: string;
+      serviceId: string;
+      serviceName: string;
+      currency: "USD" | "AED";
+      amountMinor: bigint;
+      source: string;
+    }
+  >();
+  for (const u of toUpsertDb) {
+    const tripleKey = `${u.nationalityCode}${IMPORT_PAIR_SEP}${u.serviceId}${IMPORT_PAIR_SEP}${u.currency}`;
+    upsertByTriple.set(tripleKey, u);
+  }
+  const toUpsertUnique = [...upsertByTriple.values()];
+
   const toDeleteDb = toDelete.map((d) => ({
     nationalityCode: d.nationalityCode,
     serviceId: normToId.get(d.serviceNorm)!,
@@ -692,33 +831,41 @@ export async function applyPriceSheetImport(
     rowRef: p.rowRef,
   }));
 
-  const deletedPairs = new Set<string>();
+  const uniqueDeletePairs: { nationalityCode: string; serviceId: string }[] = [];
+  const seenDeletePair = new Set<string>();
   for (const d of toDeleteDb) {
     const k = natSvcIdKey(d.nationalityCode, d.serviceId);
-    if (deletedPairs.has(k)) continue;
-    deletedPairs.add(k);
+    if (seenDeletePair.has(k)) continue;
+    seenDeletePair.add(k);
+    uniqueDeletePairs.push({ nationalityCode: d.nationalityCode, serviceId: d.serviceId });
+  }
+
+  for (const chunk of chunkArray(uniqueDeletePairs, DELETE_PAIR_CHUNK)) {
+    if (chunk.length === 0) continue;
+    const tupleIn = sql.join(
+      chunk.map((c) => sql`(${c.nationalityCode}, ${c.serviceId})`),
+      sql`, `,
+    );
     const del = await tx
       .delete(schema.catalogCustomerPrice)
-      .where(
-        and(
-          eq(schema.catalogCustomerPrice.nationalityCode, d.nationalityCode),
-          eq(schema.catalogCustomerPrice.serviceId, d.serviceId),
-        ),
-      )
+      .where(sql`(nationality_code, service_id) IN (${tupleIn})`)
       .returning({ id: schema.catalogCustomerPrice.id });
     pricesDeleted += del.length;
   }
 
-  for (const u of toUpsertDb) {
+  for (const chunk of chunkArray(toUpsertUnique, UPSERT_CHUNK)) {
+    if (chunk.length === 0) continue;
     await tx
       .insert(schema.catalogCustomerPrice)
-      .values({
-        nationalityCode: u.nationalityCode,
-        serviceId: u.serviceId,
-        currency: u.currency,
-        amountMinor: u.amountMinor,
-        source: u.source,
-      })
+      .values(
+        chunk.map((u) => ({
+          nationalityCode: u.nationalityCode,
+          serviceId: u.serviceId,
+          currency: u.currency,
+          amountMinor: u.amountMinor,
+          source: u.source,
+        })),
+      )
       .onConflictDoUpdate({
         target: [
           schema.catalogCustomerPrice.nationalityCode,
@@ -726,35 +873,35 @@ export async function applyPriceSheetImport(
           schema.catalogCustomerPrice.currency,
         ],
         set: {
-          amountMinor: u.amountMinor,
-          source: u.source,
+          amountMinor: sql`excluded.amount_minor`,
+          source: sql`excluded.source`,
           updatedAt: new Date(),
         },
       });
-    pricesUpserted++;
+    pricesUpserted += chunk.length;
   }
 
-  for (const p of toPendingDb) {
-    await tx.insert(schema.catalogCustomerPricePending).values({
-      nationalityCode: p.nationalityCode,
-      serviceId: p.serviceId,
-      amountMinor: p.amountMinor,
-      batchId,
-      rowRef: p.rowRef,
-    });
-    pendingCreated++;
+  for (const chunk of chunkArray(toPendingDb, PENDING_INSERT_CHUNK)) {
+    if (chunk.length === 0) continue;
+    await tx.insert(schema.catalogCustomerPricePending).values(
+      chunk.map((p) => ({
+        nationalityCode: p.nationalityCode,
+        serviceId: p.serviceId,
+        amountMinor: p.amountMinor,
+        batchId,
+        rowRef: p.rowRef,
+      })),
+    );
+    pendingCreated += chunk.length;
   }
 
   const touchedPairs = new Set<string>();
-  for (const u of toUpsertDb) touchedPairs.add(natSvcIdKey(u.nationalityCode, u.serviceId));
+  for (const u of toUpsertUnique) touchedPairs.add(natSvcIdKey(u.nationalityCode, u.serviceId));
   for (const d of toDeleteDb) touchedPairs.add(natSvcIdKey(d.nationalityCode, d.serviceId));
 
-  for (const key of touchedPairs) {
-    const { natCode, serviceNorm: serviceId } = splitNatServiceNormKey(key);
-    const { added, removed } = await syncEligibility(tx, natCode, serviceId);
-    if (added) eligibilityAdded++;
-    if (removed) eligibilityRemoved++;
-  }
+  const elig = await syncEligibilityForTouchedPairs(tx, [...touchedPairs]);
+  eligibilityAdded = elig.added;
+  eligibilityRemoved = elig.removed;
 
   const result: ApplyImportResult = {
     batchId,
@@ -771,6 +918,7 @@ export async function applyPriceSheetImport(
     eligibilityRemoved,
     autoFix,
     servicesCreated,
+    missingNationalities: [],
     errors,
   };
 
@@ -781,22 +929,112 @@ export async function applyPriceSheetImport(
 
 // ─── Pending currency wizard ─────────────────────────────────────────────────
 
+export type PendingImportListRow = {
+  id: string;
+  nationalityCode: string;
+  serviceId: string;
+  serviceName: string;
+  amountMinor: string;
+  rowRef: string | null;
+  batchId: string;
+};
+
+/** Paginated pending rows for the currency wizard (read-only). */
+export async function listPendingPriceImportPage(
+  tx: SchemaDb,
+  batchId: string,
+  options: { limit: number; offset: number },
+): Promise<{ rows: PendingImportListRow[]; total: number }> {
+  const limit = Math.min(100, Math.max(1, Math.floor(options.limit)));
+  const offset = Math.max(0, Math.floor(options.offset));
+
+  const [countRow] = await tx
+    .select({ c: sql<number>`count(*)::int` })
+    .from(schema.catalogCustomerPricePending)
+    .where(eq(schema.catalogCustomerPricePending.batchId, batchId));
+
+  const total = Number(countRow?.c ?? 0);
+
+  const raw = await tx
+    .select({
+      id: schema.catalogCustomerPricePending.id,
+      nationalityCode: schema.catalogCustomerPricePending.nationalityCode,
+      serviceId: schema.catalogCustomerPricePending.serviceId,
+      amountMinor: schema.catalogCustomerPricePending.amountMinor,
+      rowRef: schema.catalogCustomerPricePending.rowRef,
+      batchId: schema.catalogCustomerPricePending.batchId,
+      serviceName: schema.visaService.name,
+    })
+    .from(schema.catalogCustomerPricePending)
+    .innerJoin(
+      schema.visaService,
+      eq(schema.catalogCustomerPricePending.serviceId, schema.visaService.id),
+    )
+    .where(eq(schema.catalogCustomerPricePending.batchId, batchId))
+    .orderBy(asc(schema.catalogCustomerPricePending.id))
+    .limit(limit)
+    .offset(offset);
+
+  const rows: PendingImportListRow[] = raw.map((r) => ({
+    id: r.id,
+    nationalityCode: r.nationalityCode,
+    serviceId: r.serviceId,
+    serviceName: r.serviceName,
+    amountMinor: r.amountMinor.toString(),
+    rowRef: r.rowRef ?? null,
+    batchId: r.batchId,
+  }));
+
+  return { rows, total };
+}
+
+type CatalogPriceUpsertRow = {
+  nationalityCode: string;
+  serviceId: string;
+  currency: "USD" | "AED";
+  amountMinor: bigint;
+  source: string;
+};
+
+function dedupeCatalogPriceUpserts(rows: CatalogPriceUpsertRow[]): CatalogPriceUpsertRow[] {
+  const m = new Map<string, CatalogPriceUpsertRow>();
+  for (const r of rows) {
+    const k = `${r.nationalityCode}${IMPORT_PAIR_SEP}${r.serviceId}${IMPORT_PAIR_SEP}${r.currency}`;
+    m.set(k, r);
+  }
+  return [...m.values()];
+}
+
 export type AssignPendingCurrencyInput = {
   currency: "USD" | "AED";
   pendingIds?: string[]; // if empty, assigns to all rows of batchId
   batchId?: string;
 };
 
+export type AssignPendingCurrencyResult = {
+  promoted: number;
+  autoFix: AutoFix[];
+  eligibilityAdded: number;
+  /** Total rows promoted (same as promoted); present when promoted &gt; 0. */
+  autoFixTotal: number;
+  /** True when `autoFix` is only a sample of the full set. */
+  autoFixTruncated: boolean;
+};
+
 export async function assignPendingCurrency(
   tx: SchemaDb,
   input: AssignPendingCurrencyInput,
   adminUserId: string,
-): Promise<{
-  promoted: number;
-  autoFix: AutoFix[];
-  eligibilityAdded: number;
-}> {
+): Promise<AssignPendingCurrencyResult> {
   const { currency, pendingIds, batchId } = input;
+
+  const pendingCols = {
+    id: schema.catalogCustomerPricePending.id,
+    nationalityCode: schema.catalogCustomerPricePending.nationalityCode,
+    serviceId: schema.catalogCustomerPricePending.serviceId,
+    amountMinor: schema.catalogCustomerPricePending.amountMinor,
+    batchId: schema.catalogCustomerPricePending.batchId,
+  };
 
   let pendingRows: {
     id: string;
@@ -807,121 +1045,160 @@ export async function assignPendingCurrency(
   }[] = [];
 
   if (pendingIds && pendingIds.length > 0) {
-    // Load specific rows
-    pendingRows = await tx
-      .select()
-      .from(schema.catalogCustomerPricePending)
-      .where(inArray(schema.catalogCustomerPricePending.id, pendingIds));
+    pendingRows = await tx.select(pendingCols).from(schema.catalogCustomerPricePending).where(
+      inArray(schema.catalogCustomerPricePending.id, pendingIds),
+    );
   } else if (batchId) {
     pendingRows = await tx
-      .select()
+      .select(pendingCols)
       .from(schema.catalogCustomerPricePending)
       .where(eq(schema.catalogCustomerPricePending.batchId, batchId));
   }
 
   if (!pendingRows.length) {
-    return { promoted: 0, autoFix: [], eligibilityAdded: 0 };
+    return {
+      promoted: 0,
+      autoFix: [],
+      eligibilityAdded: 0,
+      autoFixTotal: 0,
+      autoFixTruncated: false,
+    };
   }
 
-  const serviceIds = [...new Set(pendingRows.map((p) => p.serviceId))];
+  const promoted = pendingRows.length;
+  const fxRate = readFxRateString();
+
+  const primarySource = "admin_import";
+  const primaryRows: CatalogPriceUpsertRow[] = pendingRows.map((p) => ({
+    nationalityCode: p.nationalityCode,
+    serviceId: p.serviceId,
+    currency,
+    amountMinor: p.amountMinor,
+    source: primarySource,
+  }));
+
+  const siblingCurrency: "USD" | "AED" = currency === "USD" ? "AED" : "USD";
+  const siblingSource =
+    currency === "USD" ? "fx_derived_aed_from_usd" : "fx_derived_usd_from_aed";
+  const siblingRows: CatalogPriceUpsertRow[] = pendingRows.map((p) => {
+    const siblingAmountMinor =
+      currency === "USD"
+        ? fxUsdToAed(p.amountMinor, fxRate)
+        : fxAedToUsd(p.amountMinor, fxRate);
+    return {
+      nationalityCode: p.nationalityCode,
+      serviceId: p.serviceId,
+      currency: siblingCurrency,
+      amountMinor: siblingAmountMinor,
+      source: siblingSource,
+    };
+  });
+
+  const primaryUnique = dedupeCatalogPriceUpserts(primaryRows);
+  const siblingUnique = dedupeCatalogPriceUpserts(siblingRows);
+
+  for (const chunk of chunkArray(primaryUnique, ASSIGN_PRICE_UPSERT_CHUNK)) {
+    if (chunk.length === 0) continue;
+    await tx
+      .insert(schema.catalogCustomerPrice)
+      .values(
+        chunk.map((r) => ({
+          nationalityCode: r.nationalityCode,
+          serviceId: r.serviceId,
+          currency: r.currency,
+          amountMinor: r.amountMinor,
+          source: r.source,
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [
+          schema.catalogCustomerPrice.nationalityCode,
+          schema.catalogCustomerPrice.serviceId,
+          schema.catalogCustomerPrice.currency,
+        ],
+        set: {
+          amountMinor: sql`excluded.amount_minor`,
+          source: sql`excluded.source`,
+          updatedAt: new Date(),
+        },
+      });
+  }
+
+  for (const chunk of chunkArray(siblingUnique, ASSIGN_PRICE_UPSERT_CHUNK)) {
+    if (chunk.length === 0) continue;
+    await tx
+      .insert(schema.catalogCustomerPrice)
+      .values(
+        chunk.map((r) => ({
+          nationalityCode: r.nationalityCode,
+          serviceId: r.serviceId,
+          currency: r.currency,
+          amountMinor: r.amountMinor,
+          source: r.source,
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [
+          schema.catalogCustomerPrice.nationalityCode,
+          schema.catalogCustomerPrice.serviceId,
+          schema.catalogCustomerPrice.currency,
+        ],
+        set: {
+          amountMinor: sql`excluded.amount_minor`,
+          source: sql`excluded.source`,
+          updatedAt: new Date(),
+        },
+      });
+  }
+
+  const distinctPairs: { nationalityCode: string; serviceId: string }[] = [
+    ...new Map(
+      pendingRows.map((p) => [
+        natSvcIdKey(p.nationalityCode, p.serviceId),
+        { nationalityCode: p.nationalityCode, serviceId: p.serviceId },
+      ]),
+    ).values(),
+  ];
+  const eligibilityAdded = await bulkEnsureEligibilityFromCatalogPrices(tx, distinctPairs);
+
+  const fullBatchByBatchId =
+    Boolean(batchId) && (!pendingIds || pendingIds.length === 0);
+  if (fullBatchByBatchId && batchId) {
+    await tx
+      .delete(schema.catalogCustomerPricePending)
+      .where(eq(schema.catalogCustomerPricePending.batchId, batchId));
+  } else {
+    const pendingIdsAll = pendingRows.map((p) => p.id);
+    for (const chunk of chunkArray(pendingIdsAll, PENDING_DELETE_ID_CHUNK)) {
+      if (chunk.length === 0) continue;
+      await tx
+        .delete(schema.catalogCustomerPricePending)
+        .where(inArray(schema.catalogCustomerPricePending.id, chunk));
+    }
+  }
+
+  const samplePending = pendingRows.slice(0, ASSIGN_PENDING_AUTOFIX_RESPONSE_CAP);
+  const sampleServiceIds = [...new Set(samplePending.map((p) => p.serviceId))];
   const svcRows =
-    serviceIds.length > 0
+    sampleServiceIds.length > 0
       ? await tx
           .select({ id: schema.visaService.id, name: schema.visaService.name })
           .from(schema.visaService)
-          .where(inArray(schema.visaService.id, serviceIds))
+          .where(inArray(schema.visaService.id, sampleServiceIds))
       : [];
   const serviceIdToName = new Map(svcRows.map((s) => [s.id, s.name]));
 
-  const fxRate = readFxRateString();
-  const autoFix: AutoFix[] = [];
-  let promoted = 0;
-  let eligibilityAdded = 0;
+  const autoFix: AutoFix[] = samplePending.map((p) => ({
+    nationalityCode: p.nationalityCode,
+    serviceId: p.serviceId,
+    serviceName: serviceIdToName.get(p.serviceId) ?? p.serviceId,
+    fixedCurrency: siblingCurrency,
+    derivedFrom: currency,
+    fxRate,
+  }));
 
-  for (const pending of pendingRows) {
-    const primaryAmountMinor = pending.amountMinor;
-    const primarySource = "admin_import";
+  const autoFixTruncated = promoted > ASSIGN_PENDING_AUTOFIX_RESPONSE_CAP;
 
-    // Upsert primary currency
-    await tx
-      .insert(schema.catalogCustomerPrice)
-      .values({
-        nationalityCode: pending.nationalityCode,
-        serviceId: pending.serviceId,
-        currency,
-        amountMinor: primaryAmountMinor,
-        source: primarySource,
-      })
-      .onConflictDoUpdate({
-        target: [
-          schema.catalogCustomerPrice.nationalityCode,
-          schema.catalogCustomerPrice.serviceId,
-          schema.catalogCustomerPrice.currency,
-        ],
-        set: {
-          amountMinor: primaryAmountMinor,
-          source: primarySource,
-          updatedAt: new Date(),
-        },
-      });
-
-    // Materialise sibling currency
-    const siblingCurrency: "USD" | "AED" = currency === "USD" ? "AED" : "USD";
-    const siblingSource =
-      currency === "USD" ? "fx_derived_aed_from_usd" : "fx_derived_usd_from_aed";
-    const siblingAmountMinor =
-      currency === "USD"
-        ? fxUsdToAed(primaryAmountMinor, fxRate)
-        : fxAedToUsd(primaryAmountMinor, fxRate);
-
-    await tx
-      .insert(schema.catalogCustomerPrice)
-      .values({
-        nationalityCode: pending.nationalityCode,
-        serviceId: pending.serviceId,
-        currency: siblingCurrency,
-        amountMinor: siblingAmountMinor,
-        source: siblingSource,
-      })
-      .onConflictDoUpdate({
-        target: [
-          schema.catalogCustomerPrice.nationalityCode,
-          schema.catalogCustomerPrice.serviceId,
-          schema.catalogCustomerPrice.currency,
-        ],
-        set: {
-          amountMinor: siblingAmountMinor,
-          source: siblingSource,
-          updatedAt: new Date(),
-        },
-      });
-
-    autoFix.push({
-      nationalityCode: pending.nationalityCode,
-      serviceId: pending.serviceId,
-      serviceName: serviceIdToName.get(pending.serviceId) ?? pending.serviceId,
-      fixedCurrency: siblingCurrency,
-      derivedFrom: currency,
-      fxRate,
-    });
-
-    // Sync eligibility
-    const { added } = await syncEligibility(
-      tx,
-      pending.nationalityCode,
-      pending.serviceId,
-    );
-    if (added) eligibilityAdded++;
-
-    // Delete the pending row
-    await tx
-      .delete(schema.catalogCustomerPricePending)
-      .where(eq(schema.catalogCustomerPricePending.id, pending.id));
-
-    promoted++;
-  }
-
-  // Audit
   await tx.insert(schema.auditLog).values({
     actorType: "admin",
     actorId: adminUserId,
@@ -932,9 +1209,18 @@ export async function assignPendingCurrency(
       currency,
       promoted,
       eligibilityAdded,
-      autoFix,
+      autoFixTotal: promoted,
+      autoFixTruncated,
+      autoFixSample: autoFix,
+      fxRate,
     }),
   });
 
-  return { promoted, autoFix, eligibilityAdded };
+  return {
+    promoted,
+    autoFix,
+    eligibilityAdded,
+    autoFixTotal: promoted,
+    autoFixTruncated,
+  };
 }

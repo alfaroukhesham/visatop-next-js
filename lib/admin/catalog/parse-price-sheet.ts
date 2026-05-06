@@ -78,6 +78,55 @@ export function matchNationality(
   return nationalityMap.get(norm) ?? null;
 }
 
+/** Sheet country values that do not match any catalog nationality (deduped by normalized name). */
+export type MissingNationalityEntry = {
+  /** Normalized name key (stable dedupe). */
+  normKey: string;
+  /** Example raw cell from the sheet. */
+  exampleRaw: string;
+  /** 1-based sheet row index (for admin reference). */
+  exampleRowIdx: number;
+  /**
+   * Best-effort ISO 3166-1 alpha-2 (same as IBAN country prefix) from the English dataset + small aliases.
+   * Present on preview/apply API responses; verify before bulk create.
+   */
+  suggestedAlpha2?: string | null;
+};
+
+/**
+ * Collect distinct country cells that cannot be resolved to a nationality code.
+ * Used for preview/apply (bulk create UX) instead of per-row validation errors.
+ */
+export function collectMissingNationalityEntries(
+  rows: RawRow[],
+  headerRowIdx: number,
+  countryColIdx: number,
+  nationalityMap: Map<string, string>,
+): MissingNationalityEntry[] {
+  if (countryColIdx < 0) return [];
+  const byNorm = new Map<string, { exampleRaw: string; exampleRowIdx: number }>();
+  for (let i = headerRowIdx + 1; i < rows.length; i++) {
+    const countryRaw = rows[i]?.[countryColIdx];
+    if (countryRaw == null || String(countryRaw).trim() === "") continue;
+    if (matchNationality(countryRaw, nationalityMap)) continue;
+    const normKey = normalizeCountryName(String(countryRaw));
+    if (!normKey) continue;
+    if (!byNorm.has(normKey)) {
+      byNorm.set(normKey, {
+        exampleRaw: String(countryRaw).trim(),
+        exampleRowIdx: i + 1,
+      });
+    }
+  }
+  return [...byNorm.entries()]
+    .map(([normKey, v]) => ({
+      normKey,
+      exampleRaw: v.exampleRaw,
+      exampleRowIdx: v.exampleRowIdx,
+    }))
+    .sort((a, b) => a.exampleRowIdx - b.exampleRowIdx);
+}
+
 // ─── Currency detection ─────────────────────────────────────────────────────
 
 const USD_SIGNALS = ["usd", "$", "us dollar", "us dollars", "dollar", "dollars"];

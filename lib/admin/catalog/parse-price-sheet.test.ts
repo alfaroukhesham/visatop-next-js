@@ -8,6 +8,7 @@ import {
   parseCurrencySignal,
   extractNumericValue,
   toMinorUnits,
+  collectMissingNationalityEntries,
 } from "./parse-price-sheet";
 
 describe("detectHeaderRowIndex", () => {
@@ -192,6 +193,27 @@ describe("matchNationality", () => {
   it("returns null for empty/null", () => {
     expect(matchNationality(null, map)).toBeNull();
     expect(matchNationality("", map)).toBeNull();
+  });
+});
+
+describe("collectMissingNationalityEntries", () => {
+  it("dedupes missing countries by normalised name and keeps first row", () => {
+    const headerRowIdx = 0;
+    const countryColIdx = 1;
+    const map = new Map<string, string>([["india", "IN"]]);
+    const rows = [
+      ["#", "Country", "Visa"],
+      ["1", "Freedonia", "100"],
+      ["2", "FREEDONIA ", "200"],
+      ["3", "India", "50"],
+    ];
+    const missing = collectMissingNationalityEntries(rows, headerRowIdx, countryColIdx, map);
+    expect(missing).toHaveLength(1);
+    expect(missing[0]).toMatchObject({
+      exampleRaw: "Freedonia",
+      exampleRowIdx: 2,
+    });
+    expect(missing[0].normKey).toBe(normalizeCountryName("Freedonia"));
   });
 });
 
