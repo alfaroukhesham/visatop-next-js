@@ -55,9 +55,12 @@ async function loadStoredPrices(
   const result: { USD?: CustomerCatalogPriceRow; AED?: CustomerCatalogPriceRow } = {};
   for (const r of rows) {
     if (r.currency === "USD" || r.currency === "AED") {
+      if (!Number.isInteger(r.amountMinor)) {
+        throw new Error(`catalog_customer_price.amount_minor must be an integer (got ${r.amountMinor})`);
+      }
       result[r.currency] = {
         currency: r.currency,
-        amountMinor: r.amountMinor,
+        amountMinor: BigInt(r.amountMinor),
         source: r.source,
       };
     }
@@ -189,9 +192,12 @@ export async function batchCustomerPricesForServices(
   for (const r of rows) {
     const existing = map.get(r.serviceId) ?? {};
     if (r.currency === "USD" || r.currency === "AED") {
+      if (!Number.isInteger(r.amountMinor)) {
+        throw new Error(`catalog_customer_price.amount_minor must be an integer (got ${r.amountMinor})`);
+      }
       existing[r.currency] = {
         currency: r.currency,
-        amountMinor: r.amountMinor,
+        amountMinor: BigInt(r.amountMinor),
         source: r.source,
       };
     }

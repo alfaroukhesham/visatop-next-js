@@ -22,6 +22,7 @@ import {
   type MissingNationalityEntry,
 } from "./parse-price-sheet";
 import { fxUsdToAed, fxAedToUsd, readFxRateString } from "@/lib/pricing/fx-usd-aed";
+import { minorUnitsToJsonSafeNumber } from "@/lib/pricing/minor-units-json";
 import { withSuggestedAlpha2 } from "./suggest-country-alpha2";
 
 export type ImportRowError = {
@@ -862,7 +863,7 @@ export async function applyPriceSheetImport(
           nationalityCode: u.nationalityCode,
           serviceId: u.serviceId,
           currency: u.currency,
-          amountMinor: u.amountMinor,
+          amountMinor: minorUnitsToJsonSafeNumber(u.amountMinor),
           source: u.source,
         })),
       )
@@ -1106,7 +1107,7 @@ export async function assignPendingCurrency(
           nationalityCode: r.nationalityCode,
           serviceId: r.serviceId,
           currency: r.currency,
-          amountMinor: r.amountMinor,
+          amountMinor: minorUnitsToJsonSafeNumber(r.amountMinor),
           source: r.source,
         })),
       )
@@ -1133,7 +1134,7 @@ export async function assignPendingCurrency(
           nationalityCode: r.nationalityCode,
           serviceId: r.serviceId,
           currency: r.currency,
-          amountMinor: r.amountMinor,
+          amountMinor: minorUnitsToJsonSafeNumber(r.amountMinor),
           source: r.source,
         })),
       )
