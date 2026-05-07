@@ -42,7 +42,7 @@ export default async function AdminSettingsPage() {
     <AdminShell
       title="Platform settings"
       active="settings"
-      subtitle="Operational keys stored in Postgres with RLS. Draft TTL controls unpaid guest and signed-in draft expiry."
+      subtitle="Manage platform settings."
     >
       <section className="border-border max-w-xl space-y-4 border border-l-4 border-l-primary bg-card p-6">
         <div className="flex items-start gap-3">

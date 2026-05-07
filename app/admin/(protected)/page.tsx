@@ -31,7 +31,7 @@ const links = [
   {
     href: "/admin/settings",
     title: "Platform settings",
-    description: "Draft TTL and other operational keys in Postgres.",
+    description: "Manage platform settings.",
     icon: SlidersHorizontal,
   },
   {

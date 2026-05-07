@@ -105,7 +105,7 @@ export default async function AdminCatalogPage() {
     <AdminShell
       title="Visa catalog"
       active="catalog"
-      subtitle="Nationalities, visa services, and eligibility pairs that power the public apply flow and catalog APIs."
+      subtitle="Manage services and nationalities."
     >
       <AdminCatalogWorkspace
         nationalities={nationalities}
