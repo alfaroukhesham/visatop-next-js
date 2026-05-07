@@ -7,7 +7,7 @@ export type AdminNavKey = "home" | "applications" | "catalog" | "pricing" | "set
 const NAV: { href: string; key: AdminNavKey; label: string }[] = [
   { href: "/admin", key: "home", label: "Overview" },
   { href: "/admin/applications", key: "applications", label: "Applications" },
-  { href: "/admin/catalog", key: "catalog", label: "Catalog" },
+  { href: "/admin/catalog", key: "catalog", label: "Services" },
   { href: "/admin/pricing", key: "pricing", label: "Pricing" },
   { href: "/admin/settings", key: "settings", label: "Settings" },
 ];
@@ -34,13 +34,13 @@ export function AdminShell({ title, subtitle, active, children }: AdminShellProp
             ) : null}
           </div>
           <div className="flex shrink-0 items-center gap-3">
-            <ThemeToggle />
             <Link
-              href="/"
+              href="/admin"
               className="text-muted-foreground hover:text-foreground font-body text-sm font-medium underline-offset-4 hover:underline"
             >
-              Site home
+              Admin home
             </Link>
+            <ThemeToggle />
           </div>
         </div>
         <nav

@@ -24,8 +24,8 @@ const links = [
   },
   {
     href: "/admin/pricing",
-    title: "Margins & reference",
-    description: "Latest margin policies and affiliate reference observations.",
+    title: "Pricing Management",
+    description: "Manage pricing for services and nationalities by uploading Excel files.",
     icon: Banknote,
   },
   {
@@ -54,13 +54,13 @@ export default function AdminHomePage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <ThemeToggle />
             <Link
               href="/"
               className="text-muted-foreground hover:text-foreground text-sm font-medium"
             >
-              Back to home
+              Customer Portal
             </Link>
+            <ThemeToggle />
           </div>
         </div>
       </header>
