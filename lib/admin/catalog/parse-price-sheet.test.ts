@@ -72,39 +72,39 @@ describe("parseMoneyCell", () => {
 
   it("numeric string with USD signal → priced USD", () => {
     const r = parseMoneyCell("USD 150");
-    expect(r).toEqual({ kind: "priced", currency: "USD", amountMinor: 15000n });
+    expect(r).toEqual({ kind: "priced", currency: "USD", amountMinor: BigInt(15000) });
   });
 
   it("$ prefix → priced USD", () => {
     const r = parseMoneyCell("$150.00");
-    expect(r).toEqual({ kind: "priced", currency: "USD", amountMinor: 15000n });
+    expect(r).toEqual({ kind: "priced", currency: "USD", amountMinor: BigInt(15000) });
   });
 
   it("AED signal → priced AED", () => {
     const r = parseMoneyCell("AED 550");
-    expect(r).toEqual({ kind: "priced", currency: "AED", amountMinor: 55000n });
+    expect(r).toEqual({ kind: "priced", currency: "AED", amountMinor: BigInt(55000) });
   });
 
   it("dirham keyword → priced AED", () => {
     const r = parseMoneyCell("550 Dirham");
-    expect(r).toEqual({ kind: "priced", currency: "AED", amountMinor: 55000n });
+    expect(r).toEqual({ kind: "priced", currency: "AED", amountMinor: BigInt(55000) });
   });
 
   it("plain number (ExcelJS numeric) → ambiguous", () => {
     const r = parseMoneyCell(150);
-    expect(r).toEqual({ kind: "ambiguous", amountMinor: 15000n });
+    expect(r).toEqual({ kind: "ambiguous", amountMinor: BigInt(15000) });
   });
 
   it("plain numeric string → ambiguous", () => {
     const r = parseMoneyCell("150");
-    expect(r).toEqual({ kind: "ambiguous", amountMinor: 15000n });
+    expect(r).toEqual({ kind: "ambiguous", amountMinor: BigInt(15000) });
   });
 
   it("fractional amounts rounded correctly", () => {
     // $1.005 should round to 101 cents
     const r = parseMoneyCell("USD 1.005");
     expect(r.kind).toBe("priced");
-    if (r.kind === "priced") expect(r.amountMinor).toBe(101n);
+    if (r.kind === "priced") expect(r.amountMinor).toBe(BigInt(101));
   });
 
   it("non-numeric text → empty", () => {
@@ -148,15 +148,15 @@ describe("extractNumericValue", () => {
 
 describe("toMinorUnits", () => {
   it("converts 1.00 → 100n", () => {
-    expect(toMinorUnits(1.0)).toBe(100n);
+    expect(toMinorUnits(1.0)).toBe(BigInt(100));
   });
 
   it("rounds boundary: 1.005 → 101n", () => {
-    expect(toMinorUnits(1.005)).toBe(101n);
+    expect(toMinorUnits(1.005)).toBe(BigInt(101));
   });
 
   it("converts 150 → 15000n", () => {
-    expect(toMinorUnits(150)).toBe(15000n);
+    expect(toMinorUnits(150)).toBe(BigInt(15000));
   });
 });
 

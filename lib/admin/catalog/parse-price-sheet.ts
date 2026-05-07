@@ -163,11 +163,23 @@ export function extractNumericValue(raw: string): number | null {
   // Strip known currency signal words/symbols
   let cleaned = raw
     .replace(/usd|aed|dh|dhs|د\.إ/gi, "")
-    .replace(/[,$]/g, "")
+    .replace(/[$]/g, "")
     .trim();
 
   // If after stripping we have something like "1 234" (space-separated thousands)
   cleaned = cleaned.replace(/\s+/g, "");
+
+  // Normalise European decimal-comma:
+  // - "550,00" → "550.00"
+  // - "1.234,56" → "1234.56"
+  if (/^\d+,\d{2}$/.test(cleaned)) {
+    cleaned = cleaned.replace(",", ".");
+  } else if (/^\d{1,3}(\.\d{3})*,\d{2}$/.test(cleaned)) {
+    cleaned = cleaned.replace(/\./g, "").replace(",", ".");
+  }
+
+  // Remove thousands separators (US-style): "1,234.56" → "1234.56"
+  cleaned = cleaned.replace(/,/g, "");
 
   const n = parseFloat(cleaned);
   if (!Number.isFinite(n) || n < 0) return null;

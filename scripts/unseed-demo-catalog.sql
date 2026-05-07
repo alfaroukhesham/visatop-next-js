@@ -34,9 +34,10 @@ DELETE FROM "affiliate_site"
 WHERE "id" = 'seed-affiliate-demo-1';
 --> statement-breakpoint
 DELETE FROM "visa_service" v
-WHERE NOT EXISTS (
-  SELECT 1 FROM "application" a WHERE a."service_id" = v."id"
-);
+WHERE v."id" LIKE 'seed-%'
+  AND NOT EXISTS (
+    SELECT 1 FROM "application" a WHERE a."service_id" = v."id"
+  );
 --> statement-breakpoint
 DELETE FROM "nationality" n
 WHERE n."code" IN ('US', 'GB', 'JP', 'DE')

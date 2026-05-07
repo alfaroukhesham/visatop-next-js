@@ -32,13 +32,14 @@ function safeFilename(name: string | null, fallback: string) {
 /** Minor units → display (USD/AED-style 2-decimal currencies). */
 function formatMinorCurrency(minor: number | bigint, currency: string): string {
   const code = /^[A-Z]{3}$/i.test(currency) ? currency.toUpperCase() : "USD";
-  const minorNum = typeof minor === "bigint" ? minor : BigInt(minor);
   try {
+    const raw = typeof minor === "bigint" ? Number(minor) : minor;
     return new Intl.NumberFormat("en-US", { style: "currency", currency: code }).format(
-      Number(minorNum) / 100,
+      raw / 100,
     );
   } catch {
-    return `${(Number(minorNum) / 100).toFixed(2)} ${code}`;
+    const raw = typeof minor === "bigint" ? Number(minor) : minor;
+    return `${(raw / 100).toFixed(2)} ${code}`;
   }
 }
 

@@ -911,6 +911,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
             <Card>
               <CardHeader className="pb-2">
                 <button
+                  type="button"
                   className="flex items-center justify-between w-full text-left"
                   onClick={() => setShowAutoFix((v) => !v)}
                 >

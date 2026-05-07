@@ -5,6 +5,7 @@ import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor, withClientDbActor } from "@/lib/db/actor-context";
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
 import { resolveCheckoutTotal } from "@/lib/pricing/resolve-customer-catalog-price";
+import { FxRateInvalidError, FxRateMissingError } from "@/lib/pricing/fx-usd-aed";
 import { minorUnitsToJsonSafeNumber } from "@/lib/pricing/minor-units-json";
 import { PaddleProviderError, paddleAdapter } from "@/lib/payments/paddle-adapter";
 import {
@@ -85,15 +86,31 @@ export async function POST(req: Request) {
       const catalogCurrency =
         lockedApp.catalogCurrency?.trim().toUpperCase() === "AED" ? "AED" : "USD";
 
-      const price = await resolveCheckoutTotal(tx, {
-        nationalityCode: lockedApp.nationalityCode,
-        serviceId: lockedApp.serviceId,
-        catalogCurrency,
-      });
+      let price;
+      try {
+        price = await resolveCheckoutTotal(tx, {
+          nationalityCode: lockedApp.nationalityCode,
+          serviceId: lockedApp.serviceId,
+          catalogCurrency,
+        });
+      } catch (e) {
+        await tx.update(schema.application).set({ checkoutState: "none" }).where(eq(schema.application.id, applicationId));
+        if (e instanceof FxRateMissingError) {
+          return jsonError("SERVICE_UNAVAILABLE", e.message, { status: 503, requestId });
+        }
+        if (e instanceof FxRateInvalidError) {
+          return jsonError("INTERNAL_ERROR", e.message, { status: 500, requestId });
+        }
+        throw e;
+      }
 
       if (!price) {
         await tx.update(schema.application).set({ checkoutState: "none" }).where(eq(schema.application.id, applicationId));
-        return jsonError("INTERNAL_ERROR", "Pricing unavailable for this nationality/service/currency combination", { status: 400, requestId });
+        return jsonError(
+          "VALIDATION_ERROR",
+          "Pricing unavailable for this nationality/service/currency combination",
+          { status: 400, requestId },
+        );
       }
 
       try {

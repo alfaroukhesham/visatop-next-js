@@ -47,14 +47,13 @@ export function suggestIso3166Alpha2FromCountryLabel(raw: string): string | null
 
   ensureEnLocale();
 
-  const two = trimmed.replace(/\s+/g, "").toUpperCase();
-  if (/^[A-Z]{2}$/.test(two) && countries.isValid(two)) {
-    return two;
+  const compact = trimmed.replace(/\s+/g, "").toUpperCase();
+  if (/^[A-Z]{2}$/.test(compact) && countries.isValid(compact)) {
+    return compact;
   }
 
-  const three = trimmed.replace(/\s+/g, "").toUpperCase();
-  if (/^[A-Z]{3}$/.test(three) && countries.isValid(three)) {
-    const a2 = countries.alpha3ToAlpha2(three);
+  if (/^[A-Z]{3}$/.test(compact) && countries.isValid(compact)) {
+    const a2 = countries.alpha3ToAlpha2(compact);
     return a2 ?? null;
   }
 

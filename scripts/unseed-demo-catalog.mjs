@@ -29,8 +29,8 @@ const sqlPath = join(scriptDir, "unseed-demo-catalog.sql");
 const raw = readFileSync(sqlPath, "utf8");
 const statements = raw
   .split("--> statement-breakpoint")
-  .map((s) => s.trim())
-  .filter((s) => s.length > 0 && !s.startsWith("--"));
+  .map((s) => s.replace(/^(\s*--[^\n]*\n)+/g, "").trim())
+  .filter((s) => s.length > 0);
 
 function connectionSummary(connectionString) {
   try {

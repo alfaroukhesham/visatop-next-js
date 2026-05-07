@@ -26,8 +26,8 @@ export async function GET(req: Request) {
   const offsetRaw = url.searchParams.get("offset");
   const limit = limitRaw != null ? Number(limitRaw) : 25;
   const offset = offsetRaw != null ? Number(offsetRaw) : 0;
-  if (!Number.isFinite(limit) || !Number.isFinite(offset)) {
-    return jsonError("VALIDATION_ERROR", "limit and offset must be finite numbers.", {
+  if (!Number.isFinite(limit) || limit < 1 || limit > 200 || !Number.isFinite(offset) || offset < 0) {
+    return jsonError("VALIDATION_ERROR", "limit must be 1–200 and offset must be ≥ 0.", {
       status: 400,
       requestId,
     });

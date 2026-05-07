@@ -1,5 +1,12 @@
 import { createHash } from "node:crypto";
 
+const MAX_UPLOAD_BYTES = (() => {
+  const raw = process.env.SHEET_UPLOAD_MAX_BYTES;
+  const n = raw ? Number(raw) : NaN;
+  // Default: 10 MiB (XLSX imports should be small; keep memory bounded).
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 10 * 1024 * 1024;
+})();
+
 export type ParsedSheetUpload =
   | {
       ok: true;
@@ -22,8 +29,19 @@ export type ParsedSheetUpload =
 export async function parseSheetUploadRequest(req: Request): Promise<ParsedSheetUpload> {
   const contentType = (req.headers.get("content-type") ?? "").toLowerCase();
 
+  const contentLengthHeader = req.headers.get("content-length");
+  if (contentLengthHeader) {
+    const contentLength = Number(contentLengthHeader);
+    if (Number.isFinite(contentLength) && contentLength > MAX_UPLOAD_BYTES) {
+      return { ok: false, message: "Upload too large." };
+    }
+  }
+
   if (contentType.includes("application/octet-stream")) {
     const buffer = Buffer.from(await req.arrayBuffer());
+    if (buffer.byteLength > MAX_UPLOAD_BYTES) {
+      return { ok: false, message: "Upload too large." };
+    }
     if (!buffer.byteLength) {
       return { ok: false, message: "Empty request body." };
     }
@@ -41,8 +59,14 @@ export async function parseSheetUploadRequest(req: Request): Promise<ParsedSheet
       if (!file || typeof file === "string") {
         return { ok: false, message: "Missing 'file' field in multipart form." };
       }
+      if ((file as File).size > MAX_UPLOAD_BYTES) {
+        return { ok: false, message: "Upload too large." };
+      }
       const arrayBuffer = await (file as File).arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
+      if (buffer.byteLength > MAX_UPLOAD_BYTES) {
+        return { ok: false, message: "Upload too large." };
+      }
       const fileHash = createHash("sha256").update(buffer).digest("hex");
       let mode: "strict" | "partial" | undefined;
       const rawMode = formData.get("mode");

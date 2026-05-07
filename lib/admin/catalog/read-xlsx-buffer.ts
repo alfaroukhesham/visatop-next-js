@@ -39,11 +39,20 @@ export async function readXlsxBuffer(buffer: NodeBuffer): Promise<RawRow[]> {
         const richText = (v as ExcelJS.CellRichTextValue).richText;
         cells.push(richText.map((rt) => rt.text).join(""));
       } else if (typeof v === "object" && "formula" in v) {
-        // Shared formula — use result
-        const fv = (v as ExcelJS.CellFormulaValue).result;
+        // Formula / shared formula — use cached result
+        const fv = (v as ExcelJS.CellFormulaValue | ExcelJS.CellSharedFormulaValue).result;
         if (fv === null || fv === undefined) cells.push(null);
         else if (typeof fv === "number") cells.push(fv);
+        else if (typeof fv === "string") cells.push(fv);
+        else if (fv instanceof Date) cells.push(fv.toISOString());
         else cells.push(String(fv));
+      } else if (typeof v === "object" && "hyperlink" in v) {
+        // Hyperlink cell — use display text (fallback: URL)
+        const hv = v as ExcelJS.CellHyperlinkValue;
+        cells.push(hv.text ?? hv.hyperlink ?? null);
+      } else if (typeof v === "object" && "error" in v) {
+        // Error cell (`#REF`!, `#N/A`, …) — surface as null so downstream validation flags the row
+        cells.push(null);
       } else {
         cells.push(String(v));
       }

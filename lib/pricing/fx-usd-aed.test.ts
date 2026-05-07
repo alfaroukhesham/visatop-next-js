@@ -75,16 +75,16 @@ describe("fxUsdToAed", () => {
 
   it("converts USD minor to AED minor correctly", () => {
     // $100.00 → 10000 cents * 3.6725 = 36725 fils
-    expect(fxUsdToAed(10000n, RATE)).toBe(36725n);
+    expect(fxUsdToAed(BigInt(10000), RATE)).toBe(BigInt(36725));
   });
 
   it("rounds correctly for fractional fils", () => {
     // $1.00 = 100 cents → 100 * 3.6725 = 367.25 → round to 367
-    expect(fxUsdToAed(100n, RATE)).toBe(367n);
+    expect(fxUsdToAed(BigInt(100), RATE)).toBe(BigInt(367));
   });
 
   it("handles zero", () => {
-    expect(fxUsdToAed(0n, RATE)).toBe(0n);
+    expect(fxUsdToAed(BigInt(0), RATE)).toBe(BigInt(0));
   });
 });
 
@@ -93,26 +93,26 @@ describe("fxAedToUsd", () => {
 
   it("converts AED minor to USD minor via inverse", () => {
     // AED 367 fils / 3.6725 ≈ 99.93... → round to 100
-    expect(fxAedToUsd(36725n, RATE)).toBe(10000n);
+    expect(fxAedToUsd(BigInt(36725), RATE)).toBe(BigInt(10000));
   });
 
   it("handles zero", () => {
-    expect(fxAedToUsd(0n, RATE)).toBe(0n);
+    expect(fxAedToUsd(BigInt(0), RATE)).toBe(BigInt(0));
   });
 });
 
 describe("deriveAedFromUsd", () => {
   it("returns aedMinor and correct fxLeg", () => {
-    const result = deriveAedFromUsd(10000n, 3.6725);
+    const result = deriveAedFromUsd(BigInt(10000), 3.6725);
     expect(result.fxLeg).toBe("aed_from_usd");
-    expect(result.aedMinor).toBe(36725n);
+    expect(result.aedMinor).toBe(BigInt(36725));
   });
 });
 
 describe("deriveUsdFromAed", () => {
   it("returns usdMinor and correct fxLeg", () => {
-    const result = deriveUsdFromAed(36725n, 3.6725);
+    const result = deriveUsdFromAed(BigInt(36725), 3.6725);
     expect(result.fxLeg).toBe("usd_from_aed");
-    expect(result.usdMinor).toBe(10000n);
+    expect(result.usdMinor).toBe(BigInt(10000));
   });
 });
