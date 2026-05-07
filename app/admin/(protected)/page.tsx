@@ -18,8 +18,8 @@ import {
 const links = [
   {
     href: "/admin/catalog",
-    title: "Catalog",
-    description: "Nationalities and visa services wired to public catalog APIs.",
+    title: "Services & nationalities",
+    description: "Manage services and nationalities.",
     icon: Globe2,
   },
   {
@@ -39,12 +39,6 @@ const links = [
     title: "Applications",
     description: "Manage and monitor all visa applications, payments, and fulfillment.",
     icon: FileStack,
-  },
-  {
-    href: "/admin/automations",
-    title: "Automations",
-    description: "Rule list and IF / THEN editor.",
-    icon: Sparkles,
   },
 ] as const;
 
