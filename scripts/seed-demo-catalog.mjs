@@ -3,13 +3,16 @@
  * Does not run with `pnpm db:migrate` — invoke explicitly: `pnpm db:seed:demo`.
  */
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { config } from "dotenv";
 import pg from "pg";
 
-config({ path: ".env" });
-config({ path: ".env.local", override: true });
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+const projectRoot = resolve(scriptDir, "..");
+
+config({ path: resolve(projectRoot, ".env") });
+config({ path: resolve(projectRoot, ".env.local"), override: true });
 
 const url = process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL;
 if (!url || typeof url !== "string") {
@@ -19,8 +22,7 @@ if (!url || typeof url !== "string") {
   process.exit(1);
 }
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const sqlPath = join(__dirname, "seed-demo-catalog.sql");
+const sqlPath = join(scriptDir, "seed-demo-catalog.sql");
 const raw = readFileSync(sqlPath, "utf8");
 const statements = raw
   .split("--> statement-breakpoint")

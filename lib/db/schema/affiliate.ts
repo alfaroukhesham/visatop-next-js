@@ -1,8 +1,19 @@
 import { relations, sql } from "drizzle-orm";
-import { pgTable, text, boolean, timestamp, index, bigint } from "drizzle-orm/pg-core";
-import { visaService } from "./visa";
+import { pgTable, text, boolean, timestamp, index } from "drizzle-orm/pg-core";
 import { application } from "./applications";
-import { adminUser } from "./admin-auth";
+
+/**
+ * affiliate_site and affiliate_connector are kept for now (Task 0b).
+ * They support automation_job which references affiliate_connector.
+ * These tables are NOT used for pricing; pricing is handled by catalog_customer_price.
+ *
+ * Follow-up: decouple automation_job from affiliate_connector, then drop affiliate_site/connector.
+ *
+ * Removed in migration 0020:
+ *   - affiliate_reference_price (dropped)
+ *   - margin_policy (moved to applications.ts; also dropped in 0020)
+ *   - priceSyncJob (unused, tombstoned)
+ */
 
 export const affiliateSite = pgTable(
   "affiliate_site",
@@ -43,48 +54,6 @@ export const affiliateConnector = pgTable(
   ],
 );
 
-export const affiliateReferencePrice = pgTable(
-  "affiliate_reference_price",
-  {
-    id: text("id")
-      .primaryKey()
-      .default(sql`gen_random_uuid()`),
-    siteId: text("site_id")
-      .notNull()
-      .references(() => affiliateSite.id, { onDelete: "cascade" }),
-    serviceId: text("service_id")
-      .notNull()
-      .references(() => visaService.id, { onDelete: "cascade" }),
-    amount: bigint("amount", { mode: "number" }).notNull(), // minor units
-    currency: text("currency").default("USD").notNull(),
-    observedAt: timestamp("observed_at").defaultNow().notNull(),
-    sourceUrl: text("source_url"),
-    rawJson: text("raw_json"),
-  },
-  (t) => [
-    index("affiliate_reference_price_siteService_idx").on(t.siteId, t.serviceId),
-    index("affiliate_reference_price_observedAt_idx").on(t.observedAt),
-  ],
-);
-
-export const priceSyncJob = pgTable(
-  "price_sync_job",
-  {
-    id: text("id")
-      .primaryKey()
-      .default(sql`gen_random_uuid()`),
-    status: text("status").notNull(), // queued|running|succeeded|failed
-    requestedByAdminId: text("requested_by_admin_id").references(() => adminUser.id, {
-      onDelete: "set null",
-    }),
-    startedAt: timestamp("started_at"),
-    finishedAt: timestamp("finished_at"),
-    logJson: text("log_json"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-  },
-  (t) => [index("price_sync_job_status_idx").on(t.status)],
-);
-
 export const automationJob = pgTable(
   "automation_job",
   {
@@ -114,7 +83,6 @@ export const automationJob = pgTable(
 
 export const affiliateSiteRelations = relations(affiliateSite, ({ many }) => ({
   connectors: many(affiliateConnector),
-  referencePrices: many(affiliateReferencePrice),
 }));
 
 export const affiliateConnectorRelations = relations(
@@ -127,4 +95,3 @@ export const affiliateConnectorRelations = relations(
     jobs: many(automationJob),
   }),
 );
-

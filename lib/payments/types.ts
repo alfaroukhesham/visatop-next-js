@@ -1,7 +1,7 @@
 export type CreateCheckoutParams = {
   applicationId: string;
   priceQuoteId: string;
-  totalAmount: number; // minor units (adapter converts to string decimal)
+  totalAmount: bigint; // minor units (adapter stringifies for Paddle)
   currency: string;
   serviceLabel: string;
   customerEmail?: string | null;

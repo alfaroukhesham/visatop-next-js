@@ -13,7 +13,7 @@ export class ZiinaProviderError extends Error {
 export type CreateZiinaPaymentIntentParams = {
   baseUrl: string;
   accessToken: string;
-  amountMinor: number;
+  amountMinor: number; // JSON-safe minor units (see minorUnitsToJsonSafeNumber)
   currencyCode: string;
   message: string;
   successUrl: string;

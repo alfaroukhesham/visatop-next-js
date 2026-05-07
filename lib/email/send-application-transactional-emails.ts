@@ -30,12 +30,16 @@ function safeFilename(name: string | null, fallback: string) {
 }
 
 /** Minor units → display (USD/AED-style 2-decimal currencies). */
-function formatMinorCurrency(minor: number, currency: string): string {
+function formatMinorCurrency(minor: number | bigint, currency: string): string {
   const code = /^[A-Z]{3}$/i.test(currency) ? currency.toUpperCase() : "USD";
   try {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: code }).format(minor / 100);
+    const raw = typeof minor === "bigint" ? Number(minor) : minor;
+    return new Intl.NumberFormat("en-US", { style: "currency", currency: code }).format(
+      raw / 100,
+    );
   } catch {
-    return `${(minor / 100).toFixed(2)} ${code}`;
+    const raw = typeof minor === "bigint" ? Number(minor) : minor;
+    return `${(raw / 100).toFixed(2)} ${code}`;
   }
 }
 
@@ -218,7 +222,7 @@ export async function sendPaymentReceivedInProgressEmail(
       .where(and(eq(payment.applicationId, applicationId), eq(payment.status, "paid")))
       .orderBy(desc(payment.updatedAt))
       .limit(1);
-    let amountMinor: number | null = paid?.amount ?? null;
+    let amountMinor: number | bigint | null = paid?.amount ?? null;
     let currency = paid?.currency ?? row.app.catalogCurrency;
     let invoiceDate: Date = paid?.updatedAt ?? new Date();
     if (!paid) {

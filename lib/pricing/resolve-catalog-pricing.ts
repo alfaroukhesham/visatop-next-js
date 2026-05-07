@@ -1,7 +1,22 @@
-import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
-import type { DbTransaction } from "@/lib/db";
-import * as schema from "@/lib/db/schema";
-import { computeDisplayPriceMinor } from "./compute-display-price";
+/**
+ * LEGACY PRICING RESOLVER — DEPRECATED
+ *
+ * This file previously implemented affiliate reference price + margin resolution.
+ * The affiliate_reference_price and margin_policy tables have been dropped in
+ * migration 0020_catalog_customer_price.sql.
+ *
+ * All active pricing now uses:
+ *   - lib/pricing/resolve-customer-catalog-price.ts  (catalog + checkout)
+ *   - lib/pricing/fx-usd-aed.ts                      (FX helpers)
+ *   - lib/catalog/queries.ts                          (public catalog)
+ *
+ * Pure math helpers (pickEffectiveMarginPolicy, pickLatestReferenceRow, etc.)
+ * are retained here only to avoid breaking the existing test file while it is
+ * being migrated. They will be removed in a follow-up cleanup once the test
+ * file is updated.
+ *
+ * @deprecated Do not import new code from this file.
+ */
 
 export type MarginPolicyPickRow = {
   scope: string;
@@ -13,7 +28,7 @@ export type MarginPolicyPickRow = {
   currency: string;
 };
 
-/** Deterministic margin resolution: service `scope=service` beats `global`; tie-break `updatedAt`. */
+/** @deprecated Pure helper retained for existing tests only. */
 export function pickEffectiveMarginPolicy(
   serviceId: string,
   rows: MarginPolicyPickRow[],
@@ -44,6 +59,7 @@ export type ReferencePickRow = {
   observedAt: Date;
 };
 
+/** @deprecated Pure helper retained for existing tests only. */
 export function pickLatestReferenceRow(
   rows: ReferencePickRow[],
 ): ReferencePickRow | null {
@@ -51,6 +67,7 @@ export function pickLatestReferenceRow(
   return rows.reduce((a, b) => (a.observedAt >= b.observedAt ? a : b));
 }
 
+/** @deprecated Pure helper retained for existing tests only. */
 export function pickCanonicalAffiliateSiteId(
   sites: { id: string; enabled: boolean }[],
   envSiteId: string | undefined,
@@ -63,338 +80,13 @@ export function pickCanonicalAffiliateSiteId(
   return first?.id ?? null;
 }
 
-type SchemaDb = DbTransaction;
-
-export async function resolveCanonicalAffiliateSiteId(
-  tx: SchemaDb,
-): Promise<string | null> {
-  const sites = await tx
-    .select({
-      id: schema.affiliateSite.id,
-      enabled: schema.affiliateSite.enabled,
-    })
-    .from(schema.affiliateSite);
-  const env = process.env.PRICING_AFFILIATE_SITE_ID?.trim() || undefined;
-  return pickCanonicalAffiliateSiteId(sites, env);
-}
-
-export async function loadMarginPoliciesForService(
-  tx: SchemaDb,
-  serviceId: string,
-): Promise<MarginPolicyPickRow[]> {
-  const rows = await tx
-    .select({
-      scope: schema.marginPolicy.scope,
-      serviceId: schema.marginPolicy.serviceId,
-      mode: schema.marginPolicy.mode,
-      value: schema.marginPolicy.value,
-      enabled: schema.marginPolicy.enabled,
-      updatedAt: schema.marginPolicy.updatedAt,
-      currency: schema.marginPolicy.currency,
-    })
-    .from(schema.marginPolicy)
-    .where(
-      and(
-        eq(schema.marginPolicy.enabled, true),
-        or(
-          and(
-            eq(schema.marginPolicy.scope, "global"),
-            isNull(schema.marginPolicy.serviceId),
-          ),
-          and(
-            eq(schema.marginPolicy.scope, "service"),
-            eq(schema.marginPolicy.serviceId, serviceId),
-          ),
-        ),
-      ),
-    );
-
-  return rows.map((r) => ({
-    scope: r.scope,
-    serviceId: r.serviceId,
-    mode: r.mode,
-    value: String(r.value),
-    enabled: r.enabled,
-    updatedAt: r.updatedAt,
-    currency: r.currency,
-  }));
-}
-
-/** Latest reference row per service for a site (by `observed_at` desc). */
-export async function batchLatestReferencesForServices(
-  tx: SchemaDb,
-  siteId: string,
-  serviceIds: string[],
-  catalogCurrency: string = "USD",
-): Promise<Map<string, ReferencePickRow>> {
-  const map = new Map<string, ReferencePickRow>();
-  if (!serviceIds.length) return map;
-
-  const rows = await tx
-    .select({
-      serviceId: schema.affiliateReferencePrice.serviceId,
-      amount: schema.affiliateReferencePrice.amount,
-      currency: schema.affiliateReferencePrice.currency,
-      observedAt: schema.affiliateReferencePrice.observedAt,
-    })
-    .from(schema.affiliateReferencePrice)
-    .where(
-      and(
-        eq(schema.affiliateReferencePrice.siteId, siteId),
-        inArray(schema.affiliateReferencePrice.serviceId, serviceIds),
-        eq(schema.affiliateReferencePrice.currency, catalogCurrency),
-      ),
-    )
-    .orderBy(desc(schema.affiliateReferencePrice.observedAt));
-
-  for (const r of rows) {
-    if (map.has(r.serviceId)) continue;
-    map.set(r.serviceId, {
-      amountMinor: BigInt(r.amount),
-      currency: r.currency,
-      observedAt: r.observedAt,
-    });
-  }
-  return map;
-}
-
-export async function batchMarginPoliciesForServices(
-  tx: SchemaDb,
-  serviceIds: string[],
-): Promise<MarginPolicyPickRow[]> {
-  if (!serviceIds.length) return [];
-
-  const rows = await tx
-    .select({
-      scope: schema.marginPolicy.scope,
-      serviceId: schema.marginPolicy.serviceId,
-      mode: schema.marginPolicy.mode,
-      value: schema.marginPolicy.value,
-      enabled: schema.marginPolicy.enabled,
-      updatedAt: schema.marginPolicy.updatedAt,
-      currency: schema.marginPolicy.currency,
-    })
-    .from(schema.marginPolicy)
-    .where(
-      and(
-        eq(schema.marginPolicy.enabled, true),
-        or(
-          and(
-            eq(schema.marginPolicy.scope, "global"),
-            isNull(schema.marginPolicy.serviceId),
-          ),
-          and(
-            eq(schema.marginPolicy.scope, "service"),
-            inArray(schema.marginPolicy.serviceId, serviceIds),
-          ),
-        ),
-      ),
-    );
-
-  return rows.map((r) => ({
-    scope: r.scope,
-    serviceId: r.serviceId,
-    mode: r.mode,
-    value: String(r.value),
-    enabled: r.enabled,
-    updatedAt: r.updatedAt,
-    currency: r.currency,
-  }));
-}
-
-export type AddonLineRow = {
-  serviceId: string;
-  amount: bigint;
-  currency: string;
-};
-
-export async function batchAddonLinesForServices(
-  tx: SchemaDb,
-  serviceIds: string[],
-): Promise<AddonLineRow[]> {
-  if (!serviceIds.length) return [];
-
-  const rows = await tx
-    .select({
-      serviceId: schema.visaServiceAddon.serviceId,
-      amount: schema.addon.amount,
-      currency: schema.addon.currency,
-    })
-    .from(schema.visaServiceAddon)
-    .innerJoin(schema.addon, eq(schema.visaServiceAddon.addonId, schema.addon.id))
-    .where(
-      and(
-        inArray(schema.visaServiceAddon.serviceId, serviceIds),
-        eq(schema.addon.enabled, true),
-      ),
-    );
-
-  return rows.map((r) => ({
-    serviceId: r.serviceId,
-    amount: r.amount,
-    currency: r.currency,
-  }));
-}
-
-export async function loadReferenceRowsForServiceSite(
-  tx: SchemaDb,
-  serviceId: string,
-  siteId: string,
-  catalogCurrency: string = "USD",
-): Promise<ReferencePickRow[]> {
-  const rows = await tx
-    .select({
-      amount: schema.affiliateReferencePrice.amount,
-      currency: schema.affiliateReferencePrice.currency,
-      observedAt: schema.affiliateReferencePrice.observedAt,
-    })
-    .from(schema.affiliateReferencePrice)
-    .where(
-      and(
-        eq(schema.affiliateReferencePrice.serviceId, serviceId),
-        eq(schema.affiliateReferencePrice.siteId, siteId),
-        eq(schema.affiliateReferencePrice.currency, catalogCurrency),
-      ),
-    )
-    .orderBy(desc(schema.affiliateReferencePrice.observedAt));
-
-  return rows.map((r) => ({
-    amountMinor: BigInt(r.amount),
-    currency: r.currency,
-    observedAt: r.observedAt,
-  }));
-}
-
-/** Addon line amounts (minor) for a service matching reference currency. */
-export async function loadAddonMinorTotalsForService(
-  tx: SchemaDb,
-  serviceId: string,
-  referenceCurrency: string,
-): Promise<bigint[]> {
-  const rows = await tx
-    .select({
-      amount: schema.addon.amount,
-    })
-    .from(schema.visaServiceAddon)
-    .innerJoin(schema.addon, eq(schema.visaServiceAddon.addonId, schema.addon.id))
-    .where(
-      and(
-        eq(schema.visaServiceAddon.serviceId, serviceId),
-        eq(schema.addon.enabled, true),
-        eq(schema.addon.currency, referenceCurrency),
-      ),
-    );
-
-  return rows.map((r) => r.amount);
-}
-
-export type ClientDisplayPrice = {
-  displayMinor: bigint;
-  currency: string;
-};
-
-export type ResolveClientDisplayPriceOptions = {
-  /** When set, skips querying `affiliate_site` (caller resolved canonical site once). */
-  canonicalSiteId?: string | null;
-  /** Reference + margin currency (default USD). */
-  catalogCurrency?: string;
-};
-
-/**
- * Computes client-visible total for a service (no cost/margin breakdown).
- * Returns null when no reference price, no margin, margin/addon currency mismatches reference, or invalid margin mode.
- */
-export async function resolveClientDisplayPrice(
-  tx: SchemaDb,
-  serviceId: string,
-  options?: ResolveClientDisplayPriceOptions,
-): Promise<ClientDisplayPrice | null> {
-  let siteId: string | null;
-  if (options && "canonicalSiteId" in options) {
-    siteId = options.canonicalSiteId ?? null;
-  } else {
-    siteId = await resolveCanonicalAffiliateSiteId(tx);
-  }
-  if (!siteId) return null;
-
-  const catalogCurrency = options?.catalogCurrency?.trim().toUpperCase() || "USD";
-  const refRows = await loadReferenceRowsForServiceSite(tx, serviceId, siteId, catalogCurrency);
-  const latest = pickLatestReferenceRow(refRows);
-  if (!latest) return null;
-
-  const marginRows = await loadMarginPoliciesForService(tx, serviceId);
-  const margin = pickEffectiveMarginPolicy(serviceId, marginRows, catalogCurrency);
-  if (!margin || (margin.mode !== "percent" && margin.mode !== "fixed")) {
-    return null;
-  }
-  if (margin.currency !== latest.currency) {
-    return null;
-  }
-
-  const addonMinorUnits = await loadAddonMinorTotalsForService(
-    tx,
-    serviceId,
-    latest.currency,
-  );
-  const { totalMinor } = computeDisplayPriceMinor({
-    referenceMinor: latest.amountMinor,
-    marginMode: margin.mode,
-    marginValue: margin.value,
-    addonMinorUnits,
-    discountMinor: BigInt(0),
-  });
-
-  return { displayMinor: totalMinor, currency: latest.currency };
-}
-
-export type AdminPricingBreakdown = ClientDisplayPrice & {
-  referenceMinor: bigint;
-  marginMode: string;
-  marginValue: string;
-  addonsMinor: bigint;
-};
-
-export async function resolveAdminPricingBreakdown(
-  tx: SchemaDb,
-  serviceId: string,
-  options?: ResolveClientDisplayPriceOptions,
-): Promise<AdminPricingBreakdown | null> {
-  let siteId: string | null;
-  if (options && "canonicalSiteId" in options) {
-    siteId = options.canonicalSiteId ?? null;
-  } else {
-    siteId = await resolveCanonicalAffiliateSiteId(tx);
-  }
-  if (!siteId) return null;
-  const catalogCurrency = options?.catalogCurrency?.trim().toUpperCase() || "USD";
-  const refRows = await loadReferenceRowsForServiceSite(tx, serviceId, siteId, catalogCurrency);
-  const latest = pickLatestReferenceRow(refRows);
-  if (!latest) return null;
-  const marginRows = await loadMarginPoliciesForService(tx, serviceId);
-  const margin = pickEffectiveMarginPolicy(serviceId, marginRows, catalogCurrency);
-  if (!margin || (margin.mode !== "percent" && margin.mode !== "fixed"))
-    return null;
-  if (margin.currency !== latest.currency) {
-    return null;
-  }
-  const addonMinorUnits = await loadAddonMinorTotalsForService(
-    tx,
-    serviceId,
-    latest.currency,
-  );
-  const computed = computeDisplayPriceMinor({
-    referenceMinor: latest.amountMinor,
-    marginMode: margin.mode,
-    marginValue: margin.value,
-    addonMinorUnits,
-    discountMinor: BigInt(0),
-  });
-  return {
-    displayMinor: computed.totalMinor,
-    currency: latest.currency,
-    referenceMinor: latest.amountMinor,
-    marginMode: margin.mode,
-    marginValue: margin.value,
-    addonsMinor: computed.addonsMinor,
-  };
-}
+// DB-touching functions removed — tables dropped in migration 0020.
+// resolveCanonicalAffiliateSiteId → removed (affiliateSite table kept but not used for pricing)
+// loadMarginPoliciesForService     → removed (margin_policy table dropped)
+// batchLatestReferencesForServices → removed (affiliate_reference_price table dropped)
+// batchMarginPoliciesForServices   → removed (margin_policy table dropped)
+// batchAddonLinesForServices       → removed (addons not used in new pricing path)
+// loadReferenceRowsForServiceSite  → removed (affiliate_reference_price table dropped)
+// loadAddonMinorTotalsForService   → removed (not used in new pricing path)
+// resolveClientDisplayPrice        → removed (replaced by resolveCheckoutTotal)
+// resolveAdminPricingBreakdown     → removed (replaced by resolveCheckoutTotal)

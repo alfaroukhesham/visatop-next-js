@@ -51,8 +51,9 @@ function toPaddleProviderError(e: unknown): PaddleProviderError | null {
 }
 
 /** `unit_price.amount` must be in the smallest currency unit (e.g. USD cents), integer string — not major units. */
-function amountMinorToPaddleAmountString(minorUnits: number): string {
-  return String(Math.max(0, Math.round(minorUnits)));
+function amountMinorToPaddleAmountString(minorUnits: bigint): string {
+  if (minorUnits < BigInt(0)) return "0";
+  return minorUnits.toString();
 }
 
 function toPaddleCurrencyCode(raw: string): CurrencyCode {

@@ -4,7 +4,9 @@ import { appHref } from "@/lib/app-href";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor, withClientDbActor } from "@/lib/db/actor-context";
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
-import { resolveAdminPricingBreakdown } from "@/lib/pricing/resolve-catalog-pricing";
+import { resolveCheckoutTotal } from "@/lib/pricing/resolve-customer-catalog-price";
+import { FxRateInvalidError, FxRateMissingError } from "@/lib/pricing/fx-usd-aed";
+import { minorUnitsToJsonSafeNumber } from "@/lib/pricing/minor-units-json";
 import { PaddleProviderError, paddleAdapter } from "@/lib/payments/paddle-adapter";
 import {
   assertPaymentsAllowedForOrigin,
@@ -83,25 +85,58 @@ export async function POST(req: Request) {
 
       const catalogCurrency =
         lockedApp.catalogCurrency?.trim().toUpperCase() === "AED" ? "AED" : "USD";
-      const price = await resolveAdminPricingBreakdown(tx, lockedApp.serviceId, {
-        catalogCurrency,
-      });
+
+      let price;
+      try {
+        price = await resolveCheckoutTotal(tx, {
+          nationalityCode: lockedApp.nationalityCode,
+          serviceId: lockedApp.serviceId,
+          catalogCurrency,
+        });
+      } catch (e) {
+        await tx.update(schema.application).set({ checkoutState: "none" }).where(eq(schema.application.id, applicationId));
+        if (e instanceof FxRateMissingError) {
+          return jsonError("SERVICE_UNAVAILABLE", e.message, { status: 503, requestId });
+        }
+        if (e instanceof FxRateInvalidError) {
+          return jsonError("INTERNAL_ERROR", e.message, { status: 500, requestId });
+        }
+        throw e;
+      }
+
       if (!price) {
         await tx.update(schema.application).set({ checkoutState: "none" }).where(eq(schema.application.id, applicationId));
-        return jsonError("INTERNAL_ERROR", "Pricing unavailable", { status: 400, requestId });
+        return jsonError(
+          "VALIDATION_ERROR",
+          "Pricing unavailable for this nationality/service/currency combination",
+          { status: 400, requestId },
+        );
+      }
+
+      try {
+        minorUnitsToJsonSafeNumber(price.displayMinor);
+      } catch (e) {
+        await tx.update(schema.application).set({ checkoutState: "none" }).where(eq(schema.application.id, applicationId));
+        return jsonError(
+          "VALIDATION_ERROR",
+          e instanceof Error ? e.message : "Checkout amount is out of supported range.",
+          { status: 400, requestId },
+        );
       }
 
       const quoteId = createId();
       await tx.insert(schema.priceQuote).values({
         id: quoteId,
         applicationId,
-        totalAmount: Number(price.displayMinor),
+        totalAmount: price.displayMinor,
         currency: price.currency,
         breakdownJson: JSON.stringify({
-          referenceMinor: price.referenceMinor.toString(),
-          marginMode: price.marginMode,
-          marginValue: price.marginValue,
-          addonsMinor: price.addonsMinor.toString(),
+          kind: "customer_catalog",
+          amountMinor: price.displayMinor.toString(),
+          currency: price.currency,
+          fxRate: price.fxRateUsed ?? undefined,
+          fxLeg: price.fxLeg ?? undefined,
+          source: price.source,
         }),
         lockedAt: new Date(),
       });
@@ -111,7 +146,7 @@ export async function POST(req: Request) {
         id: paymentId,
         applicationId,
         provider,
-        amount: Number(price.displayMinor),
+        amount: price.displayMinor,
         currency: price.currency,
         status: "checkout_created",
       });
@@ -126,7 +161,7 @@ export async function POST(req: Request) {
         const result = await paddleAdapter.createCheckout({
           applicationId,
           priceQuoteId: quoteId,
-          totalAmount: Number(price.displayMinor),
+          totalAmount: price.displayMinor,
           currency: price.currency,
           serviceLabel: `Visa Service for ${lockedApp.nationalityCode}`,
           customerEmail: lockedApp.guestEmail,
@@ -173,7 +208,7 @@ export async function POST(req: Request) {
         const ziina = await createZiinaPaymentIntent({
           baseUrl: ziinaCfg.apiBaseUrl,
           accessToken: ziinaCfg.accessToken,
-          amountMinor: Number(price.displayMinor),
+          amountMinor: minorUnitsToJsonSafeNumber(price.displayMinor),
           currencyCode: price.currency,
           message: `Visa service — ${lockedApp.nationalityCode}`,
           successUrl,
@@ -181,7 +216,6 @@ export async function POST(req: Request) {
           failureUrl,
           test: ziinaCfg.testMode,
           operationId,
-          // Important: this runs inside the DB tx; keep strictly below DB statement timeout.
           timeoutMs: 8000,
         });
 

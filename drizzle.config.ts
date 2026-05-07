@@ -1,9 +1,13 @@
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
-// Load `.env` first, then let `.env.local` override (matches common Next.js expectations).
-config({ path: ".env" });
-config({ path: ".env.local", override: true });
+const projectRoot = dirname(fileURLToPath(import.meta.url));
+
+// Load from project root (not process.cwd()) so migrate matches scripts + Neon CLI.
+config({ path: resolve(projectRoot, ".env") });
+config({ path: resolve(projectRoot, ".env.local"), override: true });
 
 const url = process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL;
 if (!url) {
