@@ -35,7 +35,7 @@ export const catalogCustomerPrice = pgTable(
     /** ISO 4217: 'USD' | 'AED' */
     currency: text("currency").notNull(),
     /** Final customer total in minor units (cents / fils). */
-    amountMinor: bigint("amount_minor", { mode: "bigint" }).notNull(),
+    amountMinor: bigint("amount_minor", { mode: "number" }).notNull(),
     /**
      * Audit trail: how this row was created.
      * 'admin_import' | 'admin_ui' | 'fx_derived_aed_from_usd' | 'fx_derived_usd_from_aed'
