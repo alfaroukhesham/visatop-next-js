@@ -41,7 +41,7 @@ export default async function AdminPricingPage() {
     <AdminShell
       title="Catalog Customer Prices"
       active="pricing"
-      subtitle="Import nationality × service prices from XLSX. One price per currency; missing currency auto-filled via FX rate. Requires catalog.write and audit.write."
+      subtitle="Import nationality × service prices from Excel files. One price per currency; missing currency auto-filled via FX rate."
     >
       <CustomerPriceImport canWrite={view.canWrite} />
     </AdminShell>
