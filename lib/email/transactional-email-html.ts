@@ -1,4 +1,5 @@
 import { appHref } from "@/lib/app-href";
+import { SUPPORT_PHONE_DISPLAY, SUPPORT_WHATSAPP_URL } from "@/lib/support-contact";
 import { getTransactionalEmailFooter } from "./transactional-footer";
 
 export function escapeHtml(s: string): string {
@@ -8,11 +9,6 @@ export function escapeHtml(s: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
-
-/** UAE support line; digits only for wa.me. */
-export const SUPPORT_PHONE_E164_DIGITS = "971503156105";
-export const SUPPORT_PHONE_DISPLAY = "+971 50 3156 105";
-export const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_PHONE_E164_DIGITS}`;
 
 export function supportContactPlainText(): string {
   return `If you require any assistance, please contact us by replying to this email, or WhatsApp / call us at ${SUPPORT_PHONE_DISPLAY} (WhatsApp: ${SUPPORT_WHATSAPP_URL}).`;

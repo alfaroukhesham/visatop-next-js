@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SUPPORT_WHATSAPP_URL } from "@/lib/support-contact";
 
 /**
  * Shared client footer — subtle, does not compete with primary flows.
@@ -19,7 +20,7 @@ export function ClientShellFooter() {
           <Link href="/" className="text-link font-medium transition-colors duration-200 hover:underline">
             Apply
           </Link>
-          <Link href="/help" className="text-link font-medium transition-colors duration-200 hover:underline">
+          <Link href={SUPPORT_WHATSAPP_URL} className="text-link font-medium transition-colors duration-200 hover:underline">
             Help
           </Link>
         </nav>

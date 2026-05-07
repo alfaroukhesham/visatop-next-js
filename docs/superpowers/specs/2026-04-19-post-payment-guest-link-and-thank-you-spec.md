@@ -237,7 +237,7 @@ Same as v2 **except** `after_json` uses **non-PII flags only**, e.g. **`{ userId
 |-------|-----------------|
 | T+0–60s | Poll every **2s** |
 | T+60–180s | Poll every **5s** |
-| T+>180s | **Stop** polling; show **terminal panel**: title “We’re still confirming your payment”, body with reference line, **button** “Refresh status” (manual `router.refresh()` or refetch), link “Contact support” with `mailto:` or `/help` **including reference in subject suggestion only** |
+| T+>180s | **Stop** polling; show **terminal panel**: title “We’re still confirming your payment”, body with reference line, **button** “Refresh status” (manual `router.refresh()` or refetch), link “Contact support” → WhatsApp (`https://wa.me/971503156105`) **including reference in subject suggestion only** |
 
 Server remains authoritative; user may leave and return; webhook eventually sets `paid`. **Guest returning** to **`/submitted`** on a **device without** `vt_resume` still gets **404** per **§9.E** — same expectation as “refresh broke my thank-you” support cases.
 

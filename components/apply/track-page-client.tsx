@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { ApplicationTrackLookupForm } from "@/components/apply/application-track-lookup-form";
+import { SUPPORT_WHATSAPP_URL } from "@/lib/support-contact";
 import { SignedInTrackList } from "@/components/portal/signed-in-track-list";
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 
@@ -49,7 +50,7 @@ export function TrackPageClient() {
         <span className="mx-2 text-border" aria-hidden>
           ·
         </span>
-        <Link href="https://wa.me/971503156105" className="text-link font-medium hover:underline">
+        <Link href={SUPPORT_WHATSAPP_URL} className="text-link font-medium hover:underline">
           Contact support
         </Link>
       </p>

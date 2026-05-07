@@ -8,9 +8,10 @@ import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { GUEST_LINK_EVENTS, trackGuestLinkEvent } from "@/lib/analytics/guest-link-events";
 import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
 import { buildPostLinkLocation } from "@/lib/applications/post-link-redirect";
-import { apiHref } from "@/lib/app-href";
+import { apiHref, appHref } from "@/lib/app-href";
 import type { PublicApplication } from "@/lib/applications/public-application";
 import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
+import { SUPPORT_WHATSAPP_URL } from "@/lib/support-contact";
 
 type Props = {
   applicationId: string;
@@ -146,10 +147,9 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
       setLinkActionError(prep.message);
       return;
     }
-    const cb = encodeURIComponent(safeCallbackUrl(linkAfterPath));
-    window.location.assign(
-      target === "sign-up" ? `/sign-up?callbackUrl=${cb}` : `/sign-in?callbackUrl=${cb}`,
-    );
+    const cb = encodeURIComponent(safeCallbackUrl(appHref(linkAfterPath)));
+    const authPath = target === "sign-up" ? "/sign-up" : "/sign-in";
+    window.location.assign(`${appHref(authPath)}?callbackUrl=${cb}`);
   }
 
   async function attachWhileSignedIn() {
@@ -280,7 +280,7 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
           >
             Refresh status
           </ClientButton>
-          <Link href="/help" className="text-link text-sm font-medium">
+          <Link href={SUPPORT_WHATSAPP_URL} className="text-link text-sm font-medium">
             Contact support
           </Link>
         </div>
@@ -310,7 +310,7 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
         <span aria-hidden className="text-border">
           ·
         </span>
-        <Link href="/help" className="text-link font-medium transition-colors hover:underline">
+        <Link href={SUPPORT_WHATSAPP_URL} className="text-link font-medium transition-colors hover:underline">
           Help
         </Link>
       </footer>
