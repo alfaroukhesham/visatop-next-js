@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
+import { appHref } from "@/lib/app-href";
 import { authClient } from "@/lib/auth-client";
 import { ClientAppHeader } from "@/components/client/client-app-header";
 import {
@@ -37,7 +38,7 @@ export function SignInForm({ facebookEnabled }: { facebookEnabled: boolean }) {
     const next = safeCallbackUrl(searchParams.get("callbackUrl"));
     const { error: socialError } = await authClient.signIn.social({
       provider,
-      callbackURL: next,
+      callbackURL: appHref(next),
     });
     setPending(false);
     if (socialError) {
