@@ -34,7 +34,11 @@ export function SignInForm({ facebookEnabled }: { facebookEnabled: boolean }) {
   async function signInWith(provider: SocialProvider) {
     setError(null);
     setPending(true);
-    const { error: socialError } = await authClient.signIn.social({ provider });
+    const next = safeCallbackUrl(searchParams.get("callbackUrl"));
+    const { error: socialError } = await authClient.signIn.social({
+      provider,
+      callbackURL: next,
+    });
     setPending(false);
     if (socialError) {
       setError(socialError.message ?? "Could not sign in");
