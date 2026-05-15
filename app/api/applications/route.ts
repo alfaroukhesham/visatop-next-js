@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { auth } from "@/lib/auth";
 import { createDraftBodySchema } from "@/lib/applications/create-draft-body";
 import { computeDraftExpiresAt, getDraftTtlHoursFromTx } from "@/lib/applications/draft-ttl";
@@ -9,7 +10,20 @@ import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { isForeignKeyViolation } from "@/lib/db/pg-errors";
 import { withClientDbActor, withSystemDbActor } from "@/lib/db/actor-context";
+import { sendAdminStep2ServiceSelectedEmail } from "@/lib/email/send-admin-notification-emails";
 import { application } from "@/lib/db/schema";
+
+function queueAdminStep2Email(applicationId: string, requestId: string | null) {
+  after(() => {
+    void sendAdminStep2ServiceSelectedEmail(applicationId, requestId).catch((err) => {
+      console.error("[api/applications] admin_step2_service_selected email failed", {
+        applicationId,
+        requestId,
+        err: err instanceof Error ? err.message : err,
+      });
+    });
+  });
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -55,6 +69,7 @@ export async function POST(req: Request) {
           requestId,
         });
       }
+      queueAdminStep2Email(row.id, requestId);
       return jsonOk({ application: toPublicApplication(row) }, { status: 201, requestId });
     } catch (e) {
       if (isForeignKeyViolation(e)) {
@@ -101,6 +116,7 @@ export async function POST(req: Request) {
     const setCookie = buildResumeSetCookieValue(plainToken, maxAge, {
       secure: process.env.NODE_ENV === "production",
     });
+    queueAdminStep2Email(row.id, requestId);
     return jsonOk(
       { application: toPublicApplication(row) },
       {

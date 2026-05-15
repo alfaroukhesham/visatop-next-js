@@ -7,8 +7,8 @@ export const createDraftBodySchema = z.object({
     .regex(/^[A-Za-z]{2}$/, "Nationality code must be two letters")
     .transform((s) => s.toUpperCase()),
   serviceId: z.string().min(1),
-  /** Set in applicant details (step 3) for guests; optional at draft creation. */
-  guestEmail: z.string().email().max(320).optional().nullable(),
+  /** Contact email — required at step 2 on the client; optional for signed-in API creates (account email used). */
+  guestEmail: z.string().email().max(320).optional(),
   /** Price book for checkout (must match seeded reference + margin currency). */
   catalogCurrency: z.enum(["USD", "AED"]).default("USD"),
 });

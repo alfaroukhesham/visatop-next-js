@@ -17,6 +17,7 @@ import {
 } from "@/lib/payments/resolve-payment-provider";
 import { createZiinaPaymentIntent, ZiinaProviderError } from "@/lib/payments/ziina-client";
 import type { CheckoutSessionData } from "@/lib/payments/checkout-types";
+import { diagnoseCheckoutBlock } from "@/lib/payments/diagnose-checkout-block";
 import * as schema from "@/lib/db/schema";
 import { eq, and, or, isNull } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
@@ -43,7 +44,11 @@ export async function POST(req: Request) {
     }
     const gate = assertPaymentsAllowedForOrigin(origin);
     if (!gate.ok) {
-      return jsonError("PAYMENT_PROVIDER_ERROR", gate.message, { status: 400, requestId });
+      return jsonError("PAYMENT_PROVIDER_ERROR", gate.message, {
+        status: 400,
+        requestId,
+        details: { reason: "payments_origin_blocked" },
+      });
     }
 
     const accessRes = await resolveApplicationAccess(req, hdrs, applicationId);
@@ -68,9 +73,11 @@ export async function POST(req: Request) {
         .returning();
 
       if (!lockedApp) {
-        return jsonError("CONFLICT", "Application locked, not ready, or checkout already in progress", {
+        const block = await diagnoseCheckoutBlock(tx, applicationId);
+        return jsonError("CONFLICT", "Checkout cannot be started for this application", {
           status: 409,
           requestId,
+          details: block,
         });
       }
 
@@ -79,7 +86,7 @@ export async function POST(req: Request) {
         return jsonError(
           "VALIDATION_ERROR",
           "Guest email is required on the application before checkout.",
-          { status: 400, requestId },
+          { status: 400, requestId, details: { reason: "missing_guest_email" } },
         );
       }
 
@@ -109,7 +116,7 @@ export async function POST(req: Request) {
         return jsonError(
           "VALIDATION_ERROR",
           "Pricing unavailable for this nationality/service/currency combination",
-          { status: 400, requestId },
+          { status: 400, requestId, details: { reason: "pricing_unavailable" } },
         );
       }
 
@@ -237,6 +244,7 @@ export async function POST(req: Request) {
           return jsonError("ZIINA_UNAVAILABLE", e.message, {
             status: e.httpStatus >= 500 ? 502 : e.httpStatus,
             requestId,
+            details: { reason: "provider_unavailable" },
           });
         }
         throw e;

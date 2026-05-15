@@ -1,4 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@/lib/apply/apply-flow-config", () => ({
+  APPLY_STEP3_VALIDATION_DISABLED: false,
+}));
+
 import { computeValidation } from "@/lib/documents/validation-readiness";
 import { readinessPromotionAction } from "./evaluate-readiness";
 

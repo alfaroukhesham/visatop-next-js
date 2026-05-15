@@ -19,6 +19,7 @@ import { eq } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { markWebhookReceivedNow, PLATFORM_KEY_LAST_WEBHOOK_PADDLE } from "@/lib/payments/webhook-health";
 import { sendPaymentReceivedInProgressEmail } from "@/lib/email/send-application-transactional-emails";
+import { sendAdminPaymentCompletedEmail } from "@/lib/email/send-admin-notification-emails";
 
 export const runtime = "nodejs";
 
@@ -134,10 +135,18 @@ export async function POST(req: Request) {
   }
 
   if (firstPaidApplicationId) {
+    const paidAppId = firstPaidApplicationId;
     after(() => {
-      void sendPaymentReceivedInProgressEmail(firstPaidApplicationId!, requestId).catch((err) => {
+      void sendPaymentReceivedInProgressEmail(paidAppId, requestId).catch((err) => {
         console.error("[webhooks/paddle] payment_received_in_progress email failed", {
-          applicationId: firstPaidApplicationId,
+          applicationId: paidAppId,
+          requestId,
+          err: err instanceof Error ? err.message : err,
+        });
+      });
+      void sendAdminPaymentCompletedEmail(paidAppId, requestId).catch((err) => {
+        console.error("[webhooks/paddle] admin_payment_completed email failed", {
+          applicationId: paidAppId,
           requestId,
           err: err instanceof Error ? err.message : err,
         });

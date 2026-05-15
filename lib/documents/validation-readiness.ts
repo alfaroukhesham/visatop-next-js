@@ -1,3 +1,5 @@
+import { APPLY_STEP3_VALIDATION_DISABLED } from "@/lib/apply/apply-flow-config";
+
 /**
  * Pure validation + readiness calculator (spec §6.5, §7.x).
  *
@@ -38,7 +40,6 @@ export type Readiness =
 
 export type ValidationFailure = {
   code:
-    | "passport_expired_or_insufficient_validity"
     | "passport_expiry_date_invalid"
     | "dob_invalid";
   message: string;
@@ -145,10 +146,6 @@ function isPresent(v: unknown): boolean {
   return true;
 }
 
-function addDaysUtc(d: Date, days: number): Date {
-  return new Date(d.getTime() + days * 24 * 60 * 60 * 1000);
-}
-
 export type ComputeValidationInput = {
   profile: ApplicantProfile;
   uploads: UploadPresence;
@@ -158,6 +155,18 @@ export type ComputeValidationInput = {
 export function computeValidation(input: ComputeValidationInput): ValidationResult {
   const now = input.now;
   const nowUtcDate = toUtcDateString(now);
+
+  if (APPLY_STEP3_VALIDATION_DISABLED) {
+    const hasEmail = isPresent(input.profile.email);
+    return {
+      schemaVersion: VALIDATION_SCHEMA_VERSION,
+      nowUtcDate,
+      readiness: hasEmail ? "ready" : "blocked_missing_required_fields",
+      paymentReadiness: hasEmail ? "ready" : "blocked_missing_required_fields",
+      requiredFieldsMissing: hasEmail ? [] : (["email"] as SubmissionRequiredField[]),
+      validationFailures: [],
+    };
+  }
 
   const requiredFieldsMissing: SubmissionRequiredField[] = SUBMISSION_REQUIRED_FIELDS.filter(
     (key) => !isPresent(input.profile[key as keyof ApplicantProfile]),
@@ -172,17 +181,6 @@ export function computeValidation(input: ComputeValidationInput): ValidationResu
       code: "passport_expiry_date_invalid",
       message: "Passport expiry date looks invalid. Please check and correct it.",
     });
-  } else if (expiry) {
-    const minValid = addDaysUtc(
-      new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())),
-      PASSPORT_MIN_VALIDITY_DAYS,
-    );
-    if (expiry.getTime() < minValid.getTime()) {
-      validationFailures.push({
-        code: "passport_expired_or_insufficient_validity",
-        message: "Passport must be valid for at least 6 months.",
-      });
-    }
   }
 
   const dob = parseIsoDateUtc(input.profile.dateOfBirth ?? null);

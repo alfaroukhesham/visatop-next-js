@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
+import { ClientField } from "@/components/client/client-field";
+import { ClientInput } from "@/components/client/client-input";
 import { convertMinorBetweenUsdAed, parsePublicDisplayFxAedPerUsd } from "@/lib/catalog/display-price";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
@@ -77,6 +79,7 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
   const [nationality, setNationality] = useState("");
   const [services, setServices] = useState<Service[]>([]);
   const [serviceId, setServiceId] = useState("");
+  const [email, setEmail] = useState("");
   const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>("USD");
   const [loadingList, setLoadingList] = useState(true);
   const [loadingServices, setLoadingServices] = useState(false);
@@ -166,8 +169,17 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const trimmedEmail = email.trim();
     if (!nationality || !serviceId) {
       setError("Choose a service.");
+      return;
+    }
+    if (!trimmedEmail) {
+      setError("Enter your email address.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setError("Enter a valid email address.");
       return;
     }
     setSubmitting(true);
@@ -175,6 +187,7 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
       nationalityCode: nationality,
       serviceId,
       catalogCurrency: displayCurrency,
+      guestEmail: trimmedEmail.toLowerCase(),
     };
     const res = await fetchApiEnvelope<{ application: { id: string; isGuest: boolean } }>(
       apiHref("/applications"),
@@ -319,6 +332,22 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
               })}
             </div>
           )}
+
+          <ClientField id="apply-email" label="Email *">
+            <ClientInput
+              id="apply-email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="rounded-[5px]"
+            />
+            <p className="text-muted-foreground mt-1.5 text-xs leading-relaxed">
+              We’ll send application updates and your receipt to this address.
+            </p>
+          </ClientField>
         </section>
       ) : null}
 

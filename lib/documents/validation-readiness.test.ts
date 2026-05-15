@@ -1,10 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("@/lib/apply/apply-flow-config", () => ({
+  APPLY_STEP3_VALIDATION_DISABLED: false,
+}));
+
 import {
   computeValidation,
   formatIsoDateAsDdMmYyyy,
   parseDobInputToIsoUtc,
   parseIsoDateUtc,
-  PASSPORT_MIN_VALIDITY_DAYS,
   SUBMISSION_REQUIRED_FIELDS,
   toUtcDateString,
 } from "./validation-readiness";
@@ -96,25 +100,8 @@ describe("computeValidation", () => {
     expect(v.validationFailures.map((f) => f.code)).toContain("passport_expiry_date_invalid");
   });
 
-  it("flags passport expiry exactly 179 days in the future as failure", () => {
-    const expiry = new Date(NOW.getTime() + 179 * 24 * 3600 * 1000);
-    const v = computeValidation({
-      profile: {
-        ...COMPLETE_PROFILE,
-        passportExpiryDate: toUtcDateString(expiry),
-      },
-      uploads: UPLOADS_OK,
-      now: NOW,
-    });
-    expect(v.readiness).toBe("blocked_validation");
-    expect(v.paymentReadiness).toBe("blocked_validation");
-    expect(v.validationFailures.map((f) => f.code)).toContain(
-      "passport_expired_or_insufficient_validity",
-    );
-  });
-
-  it("treats passport expiry exactly 180 days out as valid", () => {
-    const expiry = new Date(NOW.getTime() + PASSPORT_MIN_VALIDITY_DAYS * 24 * 3600 * 1000);
+  it("accepts any future passport expiry without a minimum-validity check", () => {
+    const expiry = new Date(NOW.getTime() + 10 * 24 * 3600 * 1000);
     const v = computeValidation({
       profile: {
         ...COMPLETE_PROFILE,
@@ -162,11 +149,10 @@ describe("computeValidation", () => {
   });
 
   it("prefers blocked_validation over blocked_missing_required_fields (spec §6.5 precedence)", () => {
-    const expiry = new Date(NOW.getTime() + 10 * 24 * 3600 * 1000);
     const v = computeValidation({
       profile: {
         ...COMPLETE_PROFILE,
-        passportExpiryDate: toUtcDateString(expiry),
+        passportExpiryDate: "not-a-date",
         profession: null,
       },
       uploads: UPLOADS_OK,
@@ -176,7 +162,7 @@ describe("computeValidation", () => {
     expect(v.paymentReadiness).toBe("blocked_validation");
     expect(v.requiredFieldsMissing).toContain("profession");
     expect(v.validationFailures.map((f) => f.code)).toContain(
-      "passport_expired_or_insufficient_validity",
+      "passport_expiry_date_invalid",
     );
   });
 
@@ -215,5 +201,40 @@ describe("computeValidation", () => {
         "address",
       ].sort(),
     );
+  });
+});
+
+describe("computeValidation when APPLY_STEP3_VALIDATION_DISABLED", () => {
+  const NOW = new Date(Date.UTC(2026, 3, 16));
+
+  it("returns payment ready when only email is present", async () => {
+    vi.resetModules();
+    vi.doMock("@/lib/apply/apply-flow-config", () => ({
+      APPLY_STEP3_VALIDATION_DISABLED: true,
+    }));
+    const { computeValidation: computeWithFlag } = await import("./validation-readiness");
+    const v = computeWithFlag({
+      profile: { email: "guest@example.com" },
+      uploads: { passportCopyPresent: false, personalPhotoPresent: false },
+      now: NOW,
+    });
+    expect(v.paymentReadiness).toBe("ready");
+    expect(v.requiredFieldsMissing).toEqual([]);
+    expect(v.validationFailures).toEqual([]);
+  });
+
+  it("blocks payment when email is missing", async () => {
+    vi.resetModules();
+    vi.doMock("@/lib/apply/apply-flow-config", () => ({
+      APPLY_STEP3_VALIDATION_DISABLED: true,
+    }));
+    const { computeValidation: computeWithFlag } = await import("./validation-readiness");
+    const v = computeWithFlag({
+      profile: {},
+      uploads: { passportCopyPresent: false, personalPhotoPresent: false },
+      now: NOW,
+    });
+    expect(v.paymentReadiness).toBe("blocked_missing_required_fields");
+    expect(v.requiredFieldsMissing).toEqual(["email"]);
   });
 });

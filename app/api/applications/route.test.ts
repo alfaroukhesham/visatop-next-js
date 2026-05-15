@@ -4,6 +4,20 @@ vi.mock("next/headers", () => ({
   headers: async () => new Headers({ "x-request-id": "app-create-test" }),
 }));
 
+vi.mock("next/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/server")>();
+  return {
+    ...actual,
+    after: (fn: () => void) => {
+      fn();
+    },
+  };
+});
+
+vi.mock("@/lib/email/send-admin-notification-emails", () => ({
+  sendAdminStep2ServiceSelectedEmail: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@/lib/auth", () => ({
   auth: {
     api: {

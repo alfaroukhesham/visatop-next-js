@@ -12,7 +12,7 @@ const STEPS = [
     step: 2,
     kicker: "Step 2",
     title: "Currency & visa type",
-    body: "Choose how prices are shown, pick your visa, and we open your file.",
+    body: "Choose how prices are shown, pick your visa, and enter your email so we can open your file.",
   },
   {
     step: 3,

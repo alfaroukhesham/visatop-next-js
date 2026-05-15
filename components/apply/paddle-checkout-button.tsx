@@ -10,6 +10,7 @@ import {
 import { ClientButton } from "@/components/client/client-button";
 import { Loader2 } from "lucide-react";
 import { apiHref } from "@/lib/app-href";
+import { checkoutErrorToUserMessage } from "@/lib/payments/checkout-client-messages";
 
 interface PaddleCheckoutButtonProps {
   applicationId: string;
@@ -67,7 +68,7 @@ export function PaddleCheckoutButton({
           | { provider: "paddle"; transactionId: string; clientToken: string }
           | { provider: "ziina"; redirectUrl: string }
           | { transactionId?: string; clientToken?: string };
-        error?: { message?: string };
+        error?: { code?: string; message?: string; details?: { reason?: string } };
       };
       try {
         envelope = raw ? (JSON.parse(raw) as typeof envelope) : {};
@@ -80,11 +81,11 @@ export function PaddleCheckoutButton({
       }
 
       if (!res.ok) {
-        throw new Error(envelope.error?.message || `Failed to initiate checkout (HTTP ${res.status})`);
+        throw new Error(checkoutErrorToUserMessage(envelope.error));
       }
 
       if (!envelope.ok || !envelope.data) {
-        throw new Error(envelope.error?.message || "Invalid checkout response from server");
+        throw new Error(checkoutErrorToUserMessage(envelope.error));
       }
 
       const data = envelope.data;
@@ -95,7 +96,7 @@ export function PaddleCheckoutButton({
       }
 
       if (!("transactionId" in data) || !data.transactionId) {
-        throw new Error(envelope.error?.message || "Invalid checkout response from server");
+        throw new Error(checkoutErrorToUserMessage(envelope.error));
       }
 
       const { transactionId, clientToken } = data;
