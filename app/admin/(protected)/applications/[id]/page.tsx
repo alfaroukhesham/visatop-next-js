@@ -8,6 +8,7 @@ import { ApplicationActions } from "@/components/admin/application-actions";
 import { ApplicationRefundForm } from "@/components/admin/application-refund-form";
 import * as schema from "@/lib/db/schema";
 import Link from "next/link";
+import { formatMinorUnitsAmount } from "@/lib/pricing/format-minor-units";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { ArrowLeft, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
@@ -363,7 +364,6 @@ export default async function AdminApplicationDetailPage({
             applicationId={app.id}
             paymentStatus={app.paymentStatus}
             applicationStatus={app.applicationStatus}
-            adminOpsStep={app.adminOpsStep}
             documents={adminDocuments.map((d) => ({
               id: d.id,
               documentType: d.documentType,
@@ -417,8 +417,8 @@ export default async function AdminApplicationDetailPage({
                       <td className="px-4 py-2">
                         <span className="font-mono text-xs bg-muted px-1.5 py-0.5">{p.status}</span>
                       </td>
-                      <td className="px-4 py-2 font-mono">
-                        {p.amount ?? "—"} {p.currency ?? ""}
+                      <td className="px-4 py-2 font-mono tabular-nums">
+                        {formatMinorUnitsAmount(p.amount, p.currency)}
                       </td>
                       <td className="px-4 py-2 font-mono text-xs text-muted-foreground truncate max-w-[200px]">
                         {p.providerTransactionId ?? "—"}

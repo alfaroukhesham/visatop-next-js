@@ -5,6 +5,8 @@ import * as schema from "@/lib/db/schema";
 export type AdminListParams = {
   attention?: boolean;
   status?: string;
+  paymentStatus?: string;
+  fulfillmentStatus?: string;
   search?: string;
   limit?: number;
   offset?: number;
@@ -24,13 +26,22 @@ export async function listAdminApplications(
     conditions.push(eq(schema.application.applicationStatus, params.status));
   }
 
+  if (params.paymentStatus) {
+    conditions.push(eq(schema.application.paymentStatus, params.paymentStatus));
+  }
+
+  if (params.fulfillmentStatus) {
+    conditions.push(eq(schema.application.fulfillmentStatus, params.fulfillmentStatus));
+  }
+
   if (params.search) {
     conditions.push(
       or(
         ilike(schema.application.id, `%${params.search}%`),
         ilike(schema.application.referenceNumber, `%${params.search}%`),
-        ilike(schema.application.guestEmail, `%${params.search}%`)
-      )
+        ilike(schema.application.guestEmail, `%${params.search}%`),
+        ilike(schema.application.fullName, `%${params.search}%`),
+      ),
     );
   }
 

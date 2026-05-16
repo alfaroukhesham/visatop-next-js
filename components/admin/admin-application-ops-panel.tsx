@@ -20,27 +20,24 @@ export function AdminApplicationOpsPanel({
   applicationId,
   paymentStatus,
   applicationStatus,
-  adminOpsStep,
   documents,
 }: {
   applicationId: string;
   paymentStatus: string;
   applicationStatus: string;
-  adminOpsStep: string | null;
   documents: AdminDocRow[];
 }) {
   const router = useRouter();
-  const [step, setStep] = useState(adminOpsStep ?? "");
   const [nextStatus, setNextStatus] = useState<string>("");
   const [outcomeDocId, setOutcomeDocId] = useState("");
-  const [uploadType, setUploadType] = useState("admin_step_attachment");
+  const [uploadType, setUploadType] = useState("outcome_approval");
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   if (paymentStatus !== "paid") {
     return (
       <p className="text-muted-foreground text-sm">
-        Admin workflow uploads and status controls unlock after payment is received.
+        Outcome uploads and status controls unlock after payment is received.
       </p>
     );
   }
@@ -48,29 +45,9 @@ export function AdminApplicationOpsPanel({
   if (TERMINAL.has(applicationStatus)) {
     return (
       <p className="text-muted-foreground text-sm">
-        This application is in a terminal status. Ops controls are not available.
+        This application is in a terminal status. Outcome controls are not available.
       </p>
     );
-  }
-
-  async function saveStep() {
-    setLoading(true);
-    setMsg(null);
-    try {
-      const res = await fetch(apiHref(`/admin/applications/${applicationId}/ops`), {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adminOpsStep: step }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setMsg(data?.error?.message ?? "Update failed.");
-        return;
-      }
-      router.refresh();
-    } finally {
-      setLoading(false);
-    }
   }
 
   async function uploadFile(ev: React.FormEvent) {
@@ -98,10 +75,8 @@ export function AdminApplicationOpsPanel({
       }
       const id = data?.data?.document?.id as string | undefined;
       if (id) {
-        if (uploadType === "outcome_approval" || uploadType === "outcome_authority_rejection") {
-          setOutcomeDocId(id);
-        }
-        setMsg(`Uploaded. Document id: ${id}`);
+        setOutcomeDocId(id);
+        setMsg(`Outcome document uploaded. Id: ${id}`);
       }
       input.value = "";
       router.refresh();
@@ -159,51 +134,35 @@ export function AdminApplicationOpsPanel({
   return (
     <div className="space-y-6 border-t border-border pt-4">
       {msg ? <p className="text-sm text-muted-foreground">{msg}</p> : null}
-
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold">Ops step label</h3>
-        <p className="text-muted-foreground text-xs">
-          Optional internal label for where the case sits (e.g. submitted to authority). Cannot be combined with a
-          terminal status change in the same request.
-        </p>
-        <div className="flex flex-wrap items-end gap-2">
-          <Input
-            value={step}
-            onChange={(e) => setStep(e.target.value)}
-            placeholder="e.g. awaiting_embassy"
-            className="max-w-md rounded-none font-mono text-sm"
-          />
-          <Button type="button" size="sm" className="rounded-none" disabled={loading} onClick={() => void saveStep()}>
-            {loading ? <Loader2 className="size-4 animate-spin" /> : "Save step"}
-          </Button>
-        </div>
-      </div>
-
+      {/* Here i want to add a new feature where we can export the application data to a CSV/Excel file and also download attachmnets */}
       <form className="space-y-2" onSubmit={(e) => void uploadFile(e)}>
-        <h3 className="text-sm font-semibold">Upload document</h3>
+        <h3 className="text-sm font-semibold">Upload outcome document</h3>
         <p className="text-muted-foreground text-xs">
-          Step attachments are optional. Outcome uploads are required before setting approval or UAE authority rejection.
-          Max 8 MB; JPEG, PNG, or PDF.
+          Upload the approval pack or UAE authority rejection proof before marking the application completed or
+          rejected. Max 8 MB; JPEG, PNG, or PDF.
         </p>
         <div className="flex flex-wrap items-end gap-2">
           <select
             value={uploadType}
             onChange={(e) => setUploadType(e.target.value)}
             className="border-border bg-background h-9 rounded-none border px-2 text-sm"
+            aria-label="Outcome document type"
           >
-            <option value="admin_step_attachment">Step attachment (optional)</option>
-            <option value="outcome_approval">Outcome — approval / visa pack</option>
-            <option value="outcome_authority_rejection">Outcome — UAE authority rejection proof</option>
+            <option value="outcome_approval">Approval / visa pack</option>
+            <option value="outcome_authority_rejection">UAE authority rejection proof</option>
           </select>
           <input name="file" type="file" accept="image/jpeg,image/png,application/pdf" className="max-w-xs text-sm" />
           <Button type="submit" size="sm" variant="secondary" className="rounded-none" disabled={loading}>
-            Upload
+            {loading ? <Loader2 className="size-4 animate-spin" /> : "Upload"}
           </Button>
         </div>
       </form>
 
       <div className="space-y-2">
         <h3 className="text-sm font-semibold">Set application status</h3>
+        <p className="text-muted-foreground text-xs">
+          Completed and UAE rejection require an outcome document uploaded above.
+        </p>
         <div className="flex flex-wrap items-end gap-2">
           <select
             value={nextStatus}
@@ -213,11 +172,11 @@ export function AdminApplicationOpsPanel({
             <option value="">Choose…</option>
             <option value="awaiting_authority">awaiting_authority</option>
             <option value="in_progress">in_progress</option>
-            <option value="completed">completed (requires outcome approval doc)</option>
+            <option value="completed">completed (requires approval pack)</option>
             <option value="rejection_by_uae_authorities">
-              rejection_by_uae_authorities (requires rejection proof doc)
+              rejection_by_uae_authorities (requires rejection proof)
             </option>
-            <option value="cancelled">cancelled (no attachment)</option>
+            <option value="cancelled">cancelled (no document)</option>
           </select>
           <Input
             value={outcomeDocId}
@@ -226,16 +185,16 @@ export function AdminApplicationOpsPanel({
             className="max-w-md rounded-none font-mono text-xs"
           />
           <Button type="button" size="sm" className="rounded-none" disabled={loading} onClick={() => void applyStatus()}>
-            Apply status
+            {loading ? <Loader2 className="size-4 animate-spin" /> : "Apply status"}
           </Button>
         </div>
       </div>
 
       <div>
-        <h3 className="text-sm font-semibold">Recent documents</h3>
+        <h3 className="text-sm font-semibold">Outcome documents</h3>
         <ul className="mt-2 max-h-40 overflow-y-auto font-mono text-xs">
           {documents.length === 0 ? (
-            <li className="text-muted-foreground">No documents yet.</li>
+            <li className="text-muted-foreground">No outcome documents yet.</li>
           ) : (
             documents.map((d) => (
               <li key={d.id} className="border-border border-b py-1">
