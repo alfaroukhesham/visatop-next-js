@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ClientHeaderAuthSkeleton } from "@/components/client/client-loading";
 import { ClientButtonLink } from "@/components/client/client-button";
 import { ClientNavLink } from "@/components/client/client-nav-link";
 import { authClient } from "@/lib/auth-client";
@@ -100,10 +101,7 @@ export function ClientAppHeader({ className }: Props) {
 
         <div className="flex max-w-full shrink-0 flex-wrap items-center justify-end justify-self-end gap-x-2 gap-y-1 max-sm:justify-self-center">
           {!mounted || storePending ? (
-            <div className="flex items-center gap-2" aria-label="Loading account actions">
-              <div className="h-9 w-[92px] animate-pulse rounded-md bg-white/10" aria-hidden />
-              <div className="h-9 w-[120px] animate-pulse rounded-md bg-white/10" aria-hidden />
-            </div>
+            <ClientHeaderAuthSkeleton />
           ) : storeSession ? (
             <>
               <span

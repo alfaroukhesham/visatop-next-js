@@ -2,6 +2,10 @@
 
 import { signOutAction } from "@/app/actions/auth";
 import { ClientButton, ClientButtonLink } from "@/components/client/client-button";
+import {
+  ClientAccountCardSkeleton,
+  ClientButtonRowSkeleton,
+} from "@/components/client/client-loading";
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 
 /** “Track application” for guests only; hidden while session is resolving and when signed in. */
@@ -28,12 +32,7 @@ export function HomeHeroAuthActions() {
   const pending = useClientAuthStore((s) => s.isPending);
 
   if (pending) {
-    return (
-      <>
-        <div className="h-10 min-w-[148px] animate-pulse rounded-md bg-muted/80" aria-hidden />
-        <div className="h-10 min-w-[148px] animate-pulse rounded-md bg-muted/80" aria-hidden />
-      </>
-    );
+    return <ClientButtonRowSkeleton />;
   }
 
   if (!session?.user) return null;
@@ -62,7 +61,7 @@ export function HomeAccountCardBody() {
   const pending = useClientAuthStore((s) => s.isPending);
 
   if (pending) {
-    return <div className="h-14 w-full animate-pulse rounded-md bg-muted/70" aria-hidden />;
+    return <ClientAccountCardSkeleton />;
   }
 
   if (session?.user) {

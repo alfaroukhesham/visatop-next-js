@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { ClientCenteredStatus } from "@/components/client/client-loading";
+import { AlertCircle } from "lucide-react";
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import {
   GUEST_LINK_EVENTS,
@@ -96,12 +97,10 @@ export default function LinkAfterSignupPage() {
 
   if (isPending) {
     return (
-      <div className="flex min-h-[min(60vh,520px)] flex-col items-center justify-center px-6 py-16">
-        <Loader2 className="text-secondary mb-4 size-10 animate-spin" aria-hidden />
-        <p className="text-muted-foreground text-sm font-medium" role="status">
-          Checking your session…
-        </p>
-      </div>
+      <ClientCenteredStatus
+        label="Checking your session…"
+        className="min-h-[min(60vh,520px)]"
+      />
     );
   }
 
@@ -134,11 +133,9 @@ export default function LinkAfterSignupPage() {
   }
 
   return (
-    <div className="flex min-h-[min(50vh,420px)] flex-col items-center justify-center px-6 py-16">
-      <Loader2 className="text-secondary mb-4 size-10 animate-spin" aria-hidden />
-      <p className="text-muted-foreground text-sm font-medium" role="status" aria-live="polite">
-        Linking your application…
-      </p>
-    </div>
+    <ClientCenteredStatus
+      label="Linking your application…"
+      className="min-h-[min(50vh,420px)]"
+    />
   );
 }

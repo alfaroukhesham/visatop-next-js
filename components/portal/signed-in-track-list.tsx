@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { ClientInlineLoading, ClientTrackListSkeleton } from "@/components/client/client-loading";
 
 import { ClientButton, ClientButtonLink } from "@/components/client/client-button";
 import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
@@ -85,7 +85,9 @@ export function SignedInTrackList() {
         </p>
       ) : null}
 
-      {items.length === 0 && !loading ? (
+      {loading && items.length === 0 ? (
+        <ClientTrackListSkeleton count={2} />
+      ) : items.length === 0 ? (
         <div className="text-muted-foreground rounded-[12px] border border-border bg-card p-6 text-center text-sm leading-relaxed shadow-sm">
           <p>No applications found for this account yet.</p>
           <p className="mt-3">
@@ -144,11 +146,8 @@ export function SignedInTrackList() {
         </ul>
       )}
 
-      {loading ? (
-        <p className="text-muted-foreground flex items-center justify-center gap-2 text-sm">
-          <Loader2 className="size-4 animate-spin" aria-hidden />
-          Loading…
-        </p>
+      {loading && items.length > 0 ? (
+        <ClientInlineLoading label="Loading more applications…" />
       ) : null}
 
       {nextCursor && !loading ? (

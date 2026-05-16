@@ -8,6 +8,7 @@ import { ClientInput } from "@/components/client/client-input";
 import { apiHref } from "@/lib/app-href";
 import type { ClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
 import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
+import { ClientInlineLoading, ClientTrackListSkeleton } from "@/components/client/client-loading";
 
 type TrackApplicationRow = {
   applicationId: string;
@@ -113,7 +114,9 @@ export function ApplicationTrackLookupForm() {
         </ClientButton>
       </form>
 
-      {results !== null ? (
+      {loading && results === null ? (
+        <ClientTrackListSkeleton count={2} />
+      ) : results !== null ? (
         <section className="space-y-8" aria-live="polite">
           {results.length === 0 ? (
             <p className="text-muted-foreground rounded-[12px] border border-border bg-card p-6 text-center text-sm leading-relaxed shadow-sm">
@@ -139,23 +142,18 @@ export function ApplicationTrackLookupForm() {
               ))}
             </ul>
           )}
-          {nextCursor ? (
+          {loading && results.length > 0 ? (
+            <ClientInlineLoading label="Loading more applications…" />
+          ) : null}
+          {nextCursor && !loading ? (
             <div className="flex justify-center">
               <ClientButton
                 type="button"
                 variant="secondary"
-                disabled={loading}
                 onClick={() => void runLookup({ reset: false, cursor: nextCursor })}
                 className="font-semibold"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
-                    Loading…
-                  </>
-                ) : (
-                  "Load more"
-                )}
+                Load more
               </ClientButton>
             </div>
           ) : null}

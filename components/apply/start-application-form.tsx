@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  ClientServiceCardsSkeleton,
+  ClientStartStepSkeleton,
+} from "@/components/client/client-loading";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
 import { ClientField } from "@/components/client/client-field";
@@ -205,6 +209,14 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
     router.push(`/apply/applications/${res.data.application.id}`);
   }
 
+  if (loadingList) {
+    return (
+      <div className="pb-24" aria-busy="true">
+        <ClientStartStepSkeleton />
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={onSubmit} className="space-y-10 pb-24">
       {error ? (
@@ -254,10 +266,7 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
           </div>
 
           {!nationality ? null : loadingServices ? (
-            <p className="text-muted-foreground flex items-center gap-2 text-sm">
-              <Loader2 className="size-4 animate-spin" aria-hidden />
-              Loading services…
-            </p>
+            <ClientServiceCardsSkeleton />
           ) : services.length === 0 ? (
             <p className="text-muted-foreground text-sm">No services for this nationality.</p>
           ) : (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { ClientOrderRecapSkeleton } from "@/components/client/client-loading";
 import { convertMinorBetweenUsdAed, parsePublicDisplayFxAedPerUsd } from "@/lib/catalog/display-price";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
@@ -126,16 +126,7 @@ export function CheckoutOrderRecap({ application }: { application: PublicApplica
   const subtotalText = price?.text ?? null;
 
   if (services === null) {
-    return (
-      <div
-        className="flex items-center gap-2 rounded-[12px] border border-border bg-card px-4 py-6 text-sm text-muted-foreground shadow-sm"
-        role="status"
-        aria-live="polite"
-      >
-        <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
-        Loading order summary…
-      </div>
-    );
+    return <ClientOrderRecapSkeleton />;
   }
 
   return (

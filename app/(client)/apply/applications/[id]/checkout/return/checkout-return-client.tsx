@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { ClientCenteredStatus } from "@/components/client/client-loading";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 
@@ -70,15 +70,16 @@ export function CheckoutReturnClient({ applicationId }: { applicationId: string 
   }, [applicationId, router]);
 
   return (
-    <div className="mx-auto flex max-w-lg flex-col gap-6 px-4 py-16">
-      <Loader2 className="text-primary size-10 animate-spin self-center" aria-hidden />
-      <p className="text-center text-sm leading-relaxed text-muted-foreground">{message}</p>
-      <Link
-        href={`/apply/applications/${encodeURIComponent(applicationId)}`}
-        className="text-link text-center text-sm font-medium"
-      >
-        Back to application
-      </Link>
+    <div className="mx-auto max-w-lg px-4">
+      <ClientCenteredStatus label={message} />
+      <p className="text-center">
+        <Link
+          href={`/apply/applications/${encodeURIComponent(applicationId)}`}
+          className="text-link text-sm font-medium"
+        >
+          Back to application
+        </Link>
+      </p>
     </div>
   );
 }

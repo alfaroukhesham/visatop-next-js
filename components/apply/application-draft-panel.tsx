@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { ClientDraftPanelSkeleton } from "@/components/client/client-loading";
 import { ApplyJourneyStepBar } from "@/components/apply/apply-journey-step-bar";
 import { APPLY_STEP3_VALIDATION_DISABLED } from "@/lib/apply/apply-flow-config";
 import { computeValidation } from "@/lib/documents/validation-readiness";
@@ -20,12 +20,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
   const draft = useApplicationDraft(applicationId);
 
   if (draft.loading) {
-    return (
-      <p className="text-muted-foreground flex items-center gap-2 text-sm">
-        <Loader2 className="size-4 animate-spin" aria-hidden />
-        Loading application…
-      </p>
-    );
+    return <ClientDraftPanelSkeleton />;
   }
 
   if (draft.error || !draft.app) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { ClientComboboxSkeleton } from "@/components/client/client-loading";
 import { ClientButton } from "@/components/client/client-button";
 import { NationalityCombobox } from "@/components/client/nationality-combobox";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
@@ -57,10 +57,7 @@ export function HomeNationalityStart() {
             Nationality
           </label>
           {loading ? (
-            <p className="text-muted-foreground flex min-h-[3.5rem] items-center justify-center gap-2 text-sm">
-              <Loader2 className="size-5 animate-spin" aria-hidden />
-              Loading countries…
-            </p>
+            <ClientComboboxSkeleton />
           ) : error ? (
             <p className="text-error min-h-[3.5rem] px-2 text-sm leading-relaxed" role="alert">
               {error}

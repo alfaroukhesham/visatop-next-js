@@ -3,6 +3,8 @@
 import Link from "next/link";
 
 import { ApplicationTrackLookupForm } from "@/components/apply/application-track-lookup-form";
+import { AppShimmer } from "@/components/ui/app-loading";
+import { ClientTrackListSkeleton } from "@/components/client/client-loading";
 import { SUPPORT_WHATSAPP_URL } from "@/lib/support-contact";
 import { SignedInTrackList } from "@/components/portal/signed-in-track-list";
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
@@ -25,9 +27,7 @@ export function TrackPageClient() {
         </h1>
 
         {pending ? (
-          <p className="text-muted-foreground max-w-prose text-base leading-relaxed">
-            Loading…
-          </p>
+          <AppShimmer className="h-4 w-full max-w-prose" aria-hidden />
         ) : authed ? (
           <p className="text-muted-foreground max-w-prose text-base leading-relaxed">
             Every application on this account appears here—drafts waiting for payment, files in progress, and
@@ -41,7 +41,13 @@ export function TrackPageClient() {
         )}
       </header>
 
-      {pending ? null : authed ? <SignedInTrackList /> : <ApplicationTrackLookupForm />}
+      {pending ? (
+        <ClientTrackListSkeleton count={1} />
+      ) : authed ? (
+        <SignedInTrackList />
+      ) : (
+        <ApplicationTrackLookupForm />
+      )}
 
       <p className="text-muted-foreground mt-10 text-center text-sm">
         <Link href="/" className="text-link font-medium hover:underline">
