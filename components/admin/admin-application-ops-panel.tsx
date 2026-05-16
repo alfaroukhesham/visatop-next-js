@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiHref } from "@/lib/app-href";
+import { AdminApplicationCustomerExport } from "@/components/admin/admin-application-customer-export";
 
 export type AdminDocRow = {
   id: string;
@@ -34,21 +35,12 @@ export function AdminApplicationOpsPanel({
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  if (paymentStatus !== "paid") {
-    return (
-      <p className="text-muted-foreground text-sm">
-        Outcome uploads and status controls unlock after payment is received.
-      </p>
-    );
-  }
-
-  if (TERMINAL.has(applicationStatus)) {
-    return (
-      <p className="text-muted-foreground text-sm">
-        This application is in a terminal status. Outcome controls are not available.
-      </p>
-    );
-  }
+  const opsLocked =
+    paymentStatus !== "paid" || TERMINAL.has(applicationStatus);
+  const opsLockedMessage =
+    paymentStatus !== "paid"
+      ? "Outcome uploads and status controls unlock after payment is received."
+      : "This application is in a terminal status. Outcome controls are not available.";
 
   async function uploadFile(ev: React.FormEvent) {
     ev.preventDefault();
@@ -133,8 +125,12 @@ export function AdminApplicationOpsPanel({
 
   return (
     <div className="space-y-6 border-t border-border pt-4">
+      <AdminApplicationCustomerExport applicationId={applicationId} />
+      {opsLocked ? (
+        <p className="text-muted-foreground text-sm">{opsLockedMessage}</p>
+      ) : (
+        <>
       {msg ? <p className="text-sm text-muted-foreground">{msg}</p> : null}
-      {/* Here i want to add a new feature where we can export the application data to a CSV/Excel file and also download attachmnets */}
       <form className="space-y-2" onSubmit={(e) => void uploadFile(e)}>
         <h3 className="text-sm font-semibold">Upload outcome document</h3>
         <p className="text-muted-foreground text-xs">
@@ -205,6 +201,8 @@ export function AdminApplicationOpsPanel({
           )}
         </ul>
       </div>
+        </>
+      )}
     </div>
   );
 }
