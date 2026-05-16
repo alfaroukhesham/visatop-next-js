@@ -12,7 +12,22 @@ type EligibilityPageResponse = {
   pageSize: number;
 };
 
-export function useCatalogEligibilityPage(initialPageSize = 10) {
+export type CatalogEligibilityFilters = {
+  q: string;
+  serviceId: string;
+  nationalityCode: string;
+};
+
+export const EMPTY_CATALOG_ELIGIBILITY_FILTERS: CatalogEligibilityFilters = {
+  q: "",
+  serviceId: "",
+  nationalityCode: "",
+};
+
+export function useCatalogEligibilityPage(
+  initialPageSize = 10,
+  filters: CatalogEligibilityFilters = EMPTY_CATALOG_ELIGIBILITY_FILTERS,
+) {
   const [page, setPageState] = useState(0);
   const [pageSize, setPageSizeState] = useState(initialPageSize);
   const [refreshToken, setRefreshToken] = useState(0);
@@ -45,6 +60,10 @@ export function useCatalogEligibilityPage(initialPageSize = 10) {
         page: String(page),
         pageSize: String(pageSize),
       });
+      const q = filters.q.trim();
+      if (q) qs.set("q", q);
+      if (filters.serviceId) qs.set("serviceId", filters.serviceId);
+      if (filters.nationalityCode) qs.set("nationalityCode", filters.nationalityCode);
       const res = await fetchApiEnvelope<EligibilityPageResponse>(
         apiHref(`/admin/catalog/eligibility?${qs}`),
       );
@@ -73,7 +92,7 @@ export function useCatalogEligibilityPage(initialPageSize = 10) {
     return () => {
       active = false;
     };
-  }, [page, pageSize, refreshToken]);
+  }, [page, pageSize, refreshToken, filters.q, filters.serviceId, filters.nationalityCode]);
 
   return {
     page,

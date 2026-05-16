@@ -33,6 +33,7 @@ export async function GET(req: Request) {
     nationalityRaw && /^[A-Za-z]{2}$/.test(nationalityRaw)
       ? nationalityRaw.toUpperCase()
       : undefined;
+  const q = url.searchParams.get("q")?.trim() || undefined;
 
   return runAdminDbJson(requestId, ["catalog.read"], async ({ tx }) => {
     const { items, total } = await listCatalogEligibility(tx, {
@@ -40,6 +41,7 @@ export async function GET(req: Request) {
       offset: page * pageSize,
       serviceId,
       nationalityCode,
+      q,
     });
     return jsonOk({ items, total, page, pageSize }, { requestId });
   });

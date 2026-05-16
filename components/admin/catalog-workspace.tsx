@@ -1,14 +1,19 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, Loader2, Plus, Search, Trash2 } from "lucide-react";
+import { AdminListFilters } from "@/components/admin/admin-list-filters";
 import {
   AdminTableLoadingFrame,
   AdminTableLoadingSkeleton,
 } from "@/components/admin/admin-loading";
 import { ListPaginatorBar } from "@/components/admin/list-paginator-bar";
-import { useCatalogEligibilityPage } from "@/components/admin/use-catalog-eligibility-page";
+import {
+  EMPTY_CATALOG_ELIGIBILITY_FILTERS,
+  useCatalogEligibilityPage,
+  type CatalogEligibilityFilters,
+} from "@/components/admin/use-catalog-eligibility-page";
 import { usePaginatedList } from "@/components/admin/use-paginated-list";
 import type {
   CatalogEligibility,
@@ -39,6 +44,44 @@ import { apiHref } from "@/lib/app-href";
 import { cn } from "@/lib/utils";
 
 export type { CatalogEligibility, CatalogNationality, CatalogService };
+
+function filterByQuery<T>(items: T[], query: string, parts: (item: T) => string[]): T[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return items;
+  return items.filter((item) =>
+    parts(item).some((part) => part.toLowerCase().includes(q)),
+  );
+}
+
+function CatalogSectionSearch({
+  id,
+  value,
+  onChange,
+  placeholder,
+  disabled,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="relative max-w-md">
+      <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="pl-9"
+        autoComplete="off"
+        disabled={disabled}
+        aria-label={placeholder}
+      />
+    </div>
+  );
+}
 
 type Props = {
   nationalities: CatalogNationality[];
@@ -119,15 +162,34 @@ function NationalitiesSection({
 }) {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
-  const natPage = usePaginatedList(rows);
+  const [search, setSearch] = useState("");
+  const filteredRows = useMemo(
+    () => filterByQuery(rows, search, (n) => [n.code, n.name]),
+    [rows, search],
+  );
+  const { setPage: setNatPage, ...natPageRest } = usePaginatedList(filteredRows);
+  const natPage = { ...natPageRest, setPage: setNatPage };
+
+  useEffect(() => {
+    setNatPage(0);
+  }, [search, setNatPage]);
 
   return (
     <Card className="border-border overflow-hidden border">
-      <CardHeader className="border-border bg-muted/20 border-b">
-        <CardTitle className="font-heading text-lg">Nationalities</CardTitle>
-        <CardDescription>
-          ISO alpha-2 codes. Public catalog only lists enabled rows with at least one eligible service.
-        </CardDescription>
+      <CardHeader className="border-border bg-muted/20 space-y-4 border-b">
+        <div>
+          <CardTitle className="font-heading text-lg">Nationalities</CardTitle>
+          <CardDescription>
+            ISO alpha-2 codes. Public catalog only lists enabled rows with at least one eligible service.
+          </CardDescription>
+        </div>
+        <CatalogSectionSearch
+          id="catalog-nationalities-search"
+          value={search}
+          onChange={setSearch}
+          placeholder="Search by code or name…"
+          disabled={busy !== null}
+        />
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
@@ -141,6 +203,16 @@ function NationalitiesSection({
               </tr>
             </thead>
             <tbody className="divide-border divide-y">
+              {natPage.pageItems.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={canWrite ? 4 : 3}
+                    className="text-muted-foreground px-4 py-6 text-center text-sm"
+                  >
+                    {search.trim() ? "No nationalities match your search." : "No nationalities yet."}
+                  </td>
+                </tr>
+              ) : null}
               {natPage.pageItems.map((n) => (
                 <NationalityRow
                   key={`${n.code}:${n.name}:${n.enabled ? 1 : 0}`}
@@ -313,17 +385,34 @@ function ServicesSection({
   const [name, setName] = useState("");
   const [durationDays, setDurationDays] = useState("");
   const [entries, setEntries] = useState("");
-  const svcPage = usePaginatedList(rows);
+  const [search, setSearch] = useState("");
+  const filteredRows = useMemo(
+    () =>
+      filterByQuery(rows, search, (s) => [
+        s.name,
+        s.id,
+        s.entries ?? "",
+        s.durationDays === null || s.durationDays === undefined ? "" : String(s.durationDays),
+      ]),
+    [rows, search],
+  );
+  const { setPage: setSvcPage, ...svcPageRest } = usePaginatedList(filteredRows);
+  const svcPage = { ...svcPageRest, setPage: setSvcPage };
+
+  useEffect(() => {
+    setSvcPage(0);
+  }, [search, setSvcPage]);
 
   return (
     <Card className="border-border overflow-hidden border">
-      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 border-b border-border bg-muted/20">
-        <div>
-          <CardTitle className="font-heading text-lg">Visa services</CardTitle>
-          <CardDescription>Variants shown in the apply flow and public pricing resolution.</CardDescription>
-        </div>
-        {canWrite ? (
-          <Dialog open={open} onOpenChange={setOpen}>
+      <CardHeader className="border-border bg-muted/20 space-y-4 border-b">
+        <div className="flex flex-row flex-wrap items-start justify-between gap-4">
+          <div>
+            <CardTitle className="font-heading text-lg">Visa services</CardTitle>
+            <CardDescription>Variants shown in the apply flow and public pricing resolution.</CardDescription>
+          </div>
+          {canWrite ? (
+            <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger render={<Button type="button">New service</Button>} />
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
@@ -392,7 +481,15 @@ function ServicesSection({
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        ) : null}
+          ) : null}
+        </div>
+        <CatalogSectionSearch
+          id="catalog-services-search"
+          value={search}
+          onChange={setSearch}
+          placeholder="Search by name, id, duration, or entries…"
+          disabled={busy !== null}
+        />
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
@@ -407,6 +504,16 @@ function ServicesSection({
               </tr>
             </thead>
             <tbody className="divide-border divide-y">
+              {svcPage.pageItems.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={canWrite ? 5 : 4}
+                    className="text-muted-foreground px-4 py-6 text-center text-sm"
+                  >
+                    {search.trim() ? "No services match your search." : "No visa services yet."}
+                  </td>
+                </tr>
+              ) : null}
               {svcPage.pageItems.map((s) => (
                 <ServiceRow
                   key={`${s.id}:${s.name}:${s.durationDays ?? ""}:${s.entries ?? ""}:${s.enabled ? 1 : 0}`}
@@ -554,8 +661,35 @@ function EligibilitySection({
   const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
   const [nationalityCode, setNationalityCode] = useState(nationalities[0]?.code ?? "");
   const [eligBusy, setEligBusy] = useState<string | null>(null);
-  const eligPage = useCatalogEligibilityPage();
+  const [draftFilters, setDraftFilters] = useState<CatalogEligibilityFilters>(
+    EMPTY_CATALOG_ELIGIBILITY_FILTERS,
+  );
+  const [appliedFilters, setAppliedFilters] = useState<CatalogEligibilityFilters>(
+    EMPTY_CATALOG_ELIGIBILITY_FILTERS,
+  );
+  const eligPage = useCatalogEligibilityPage(10, appliedFilters);
   const sectionBusy = busy !== null || eligBusy !== null;
+
+  const serviceFilterOptions = useMemo(
+    () => services.map((s) => ({ value: s.id, label: s.name })),
+    [services],
+  );
+  const nationalityFilterOptions = useMemo(
+    () => nationalities.map((n) => ({ value: n.code, label: `${n.code} — ${n.name}` })),
+    [nationalities],
+  );
+  const filterValues = useMemo(
+    () => ({
+      q: draftFilters.q,
+      serviceId: draftFilters.serviceId,
+      nationalityCode: draftFilters.nationalityCode,
+    }),
+    [draftFilters],
+  );
+  const hasActiveFilters =
+    Boolean(appliedFilters.q.trim()) ||
+    Boolean(appliedFilters.serviceId) ||
+    Boolean(appliedFilters.nationalityCode);
 
   async function runElig(key: string, fn: () => Promise<void>) {
     setEligBusy(key);
@@ -582,58 +716,112 @@ function EligibilitySection({
             {eligPage.error}
           </p>
         ) : null}
+        <AdminListFilters
+          fields={[
+            {
+              kind: "search",
+              key: "q",
+              label: "Search",
+              placeholder: "Service name, id, or nationality code…",
+            },
+            {
+              kind: "select",
+              key: "serviceId",
+              label: "Service",
+              options: serviceFilterOptions,
+              allLabel: "All services",
+            },
+            {
+              kind: "select",
+              key: "nationalityCode",
+              label: "Nationality",
+              options: nationalityFilterOptions,
+              allLabel: "All nationalities",
+            },
+          ]}
+          values={filterValues}
+          onChange={(key, value) => setDraftFilters((prev) => ({ ...prev, [key]: value }))}
+          onApply={() => {
+            setAppliedFilters({ ...draftFilters });
+            eligPage.setPage(0);
+          }}
+          onClear={() => {
+            setDraftFilters(EMPTY_CATALOG_ELIGIBILITY_FILTERS);
+            setAppliedFilters(EMPTY_CATALOG_ELIGIBILITY_FILTERS);
+            eligPage.setPage(0);
+          }}
+          canClear={hasActiveFilters}
+          applying={eligPage.loading}
+          applyLabel="Apply filters"
+          className="rounded-md"
+        />
         {canWrite ? (
-          <form
-            className="flex flex-wrap items-end gap-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void runElig("elig-add", async () => {
-                const res = await fetchApiEnvelope<{ eligibility: unknown }>(apiHref("/admin/catalog/eligibility"), {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ serviceId, nationalityCode }),
+          <details className="group border-border rounded-md border">
+            <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
+              <ChevronDown className="text-muted-foreground size-4 shrink-0 transition-transform group-open:rotate-180" />
+              Link a new service to an existing nationality
+            </summary>
+            <form
+              className="border-border flex flex-wrap items-end gap-3 border-t px-4 py-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void runElig("elig-add", async () => {
+                  const res = await fetchApiEnvelope<{ eligibility: unknown }>(
+                    apiHref("/admin/catalog/eligibility"),
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ serviceId, nationalityCode }),
+                    },
+                  );
+                  if (!res.ok) {
+                    flash(res.error.message, true);
+                    throw new Error("fail");
+                  }
+                  flash("Eligibility saved (or already existed).");
                 });
-                if (!res.ok) {
-                  flash(res.error.message, true);
-                  throw new Error("fail");
-                }
-                flash("Eligibility saved (or already existed).");
-              });
-            }}
-          >
-            <div className="space-y-1">
-              <Label>Service</Label>
-              <select
-                className="border-input bg-background h-9 w-56 rounded-md border px-2 text-sm"
-                value={serviceId}
-                onChange={(e) => setServiceId(e.target.value)}
-              >
-                {services.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <Label>Nationality</Label>
-              <select
-                className="border-input bg-background h-9 w-40 rounded-md border px-2 font-mono text-sm"
-                value={nationalityCode}
-                onChange={(e) => setNationalityCode(e.target.value)}
-              >
-                {nationalities.map((n) => (
-                  <option key={n.code} value={n.code}>
-                    {n.code} — {n.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <Button type="submit" disabled={sectionBusy || !serviceId || !nationalityCode}>
-              {eligBusy === "elig-add" ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-              Link
-            </Button>
-          </form>
+              }}
+            >
+              <div className="space-y-1">
+                <Label htmlFor="elig-link-service">Service</Label>
+                <select
+                  id="elig-link-service"
+                  className="border-input bg-background h-9 w-56 rounded-md border px-2 text-sm"
+                  value={serviceId}
+                  onChange={(e) => setServiceId(e.target.value)}
+                >
+                  {services.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="elig-link-nationality">Nationality</Label>
+                <select
+                  id="elig-link-nationality"
+                  className="border-input bg-background h-9 w-40 rounded-md border px-2 font-mono text-sm"
+                  value={nationalityCode}
+                  onChange={(e) => setNationalityCode(e.target.value)}
+                >
+                  {nationalities.map((n) => (
+                    <option key={n.code} value={n.code}>
+                      {n.code} — {n.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button type="submit" disabled={sectionBusy || !serviceId || !nationalityCode}>
+                {eligBusy === "elig-add" ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Plus className="size-4" />
+                )}
+                Link
+              </Button>
+            </form>
+          </details>
         ) : null}
         <AdminTableLoadingFrame
           loading={eligPage.loading}
@@ -662,7 +850,9 @@ function EligibilitySection({
                     colSpan={canWrite ? 3 : 2}
                     className="text-muted-foreground px-4 py-6 text-center text-sm"
                   >
-                    No eligibility links yet.
+                    {hasActiveFilters
+                      ? "No eligibility links match your filters."
+                      : "No eligibility links yet."}
                   </td>
                 </tr>
               ) : null}
