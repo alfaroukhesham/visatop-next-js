@@ -2,19 +2,31 @@ import { getAdminUserId } from "@/lib/admin/get-admin-session";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { withAdminDbActor } from "@/lib/db/actor-context";
 import { CustomerPriceImport } from "@/components/admin/customer-price-import";
+import { NationalityPriceEditor } from "@/components/admin/nationality-price-editor";
+import * as schema from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPricingPage() {
   const adminUserId = await getAdminUserId();
 
-  const view = await withAdminDbActor(adminUserId, async ({ permissions }) => {
+  const view = await withAdminDbActor(adminUserId, async ({ tx, permissions }) => {
     if (!permissions.includes("catalog.read")) {
       return { kind: "forbidden" as const };
     }
     const canWrite =
       permissions.includes("catalog.write") && permissions.includes("audit.write");
-    return { kind: "ok" as const, canWrite };
+
+    const nationalities = await tx
+      .select({
+        code: schema.nationality.code,
+        name: schema.nationality.name,
+        enabled: schema.nationality.enabled,
+      })
+      .from(schema.nationality)
+      .orderBy(schema.nationality.name);
+
+    return { kind: "ok" as const, canWrite, nationalities };
   });
 
   if (view.kind === "forbidden") {
@@ -35,9 +47,12 @@ export default async function AdminPricingPage() {
     <AdminShell
       title="Catalog Customer Prices"
       active="pricing"
-      subtitle="Import nationality × service prices from Excel files. One price per currency; missing currency auto-filled via FX rate."
+      subtitle="Bulk import from Excel or update prices per nationality in the catalog."
     >
-      <CustomerPriceImport canWrite={view.canWrite} />
+      <div className="space-y-10">
+        <CustomerPriceImport canWrite={view.canWrite} />
+        <NationalityPriceEditor nationalities={view.nationalities} canWrite={view.canWrite} />
+      </div>
     </AdminShell>
   );
 }

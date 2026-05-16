@@ -600,9 +600,9 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
             Upload Price Sheet (XLSX)
           </CardTitle>
           <CardDescription>
-            Upload the standard <code>Price_template_v01.xlsx</code> format.
+            Upload the standard <code>Price Excel</code> format.
             Columns: <code>#</code>, <code>Country</code>, then one column per
-            visa service. Header row is auto-detected (scans first 25 rows).
+            visa service. Contact info@visatop.com for any questions.
           </CardDescription>
         </CardHeader>
         <CardContent>

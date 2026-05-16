@@ -1,9 +1,11 @@
+const MINOR_PER_MAJOR = BigInt(100);
+
 /** Convert stored minor units (cents/fils) to a major-unit number for display. */
 export function minorUnitsToMajor(minor: bigint): number {
-  const whole = minor / 100n;
-  const frac = minor % 100n;
-  const sign = minor < 0n ? -1 : 1;
-  const absWhole = whole < 0n ? -whole : whole;
+  const whole = minor / MINOR_PER_MAJOR;
+  const frac = minor % MINOR_PER_MAJOR;
+  const sign = minor < BigInt(0) ? -1 : 1;
+  const absWhole = whole < BigInt(0) ? -whole : whole;
   return sign * (Number(absWhole) + Number(frac) / 100);
 }
 

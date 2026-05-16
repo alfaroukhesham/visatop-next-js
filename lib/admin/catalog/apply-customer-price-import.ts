@@ -24,6 +24,7 @@ import {
 import { fxUsdToAed, fxAedToUsd, readFxRateString } from "@/lib/pricing/fx-usd-aed";
 import { minorUnitsToJsonSafeNumber } from "@/lib/pricing/minor-units-json";
 import { withSuggestedAlpha2 } from "./suggest-country-alpha2";
+import { buildServiceNameToIdMap } from "./build-service-name-to-id-map";
 
 export type ImportRowError = {
   rowIdx: number; // 1-based display row
@@ -201,7 +202,7 @@ async function bulkEnsureEligibilityFromCatalogPrices(
  * After bulk price writes, sync visa_service_eligibility for all touched nationality×service pairs.
  * Replaces per-pair count + insert/delete round trips with batched SQL.
  */
-async function syncEligibilityForTouchedPairs(
+export async function syncEligibilityForTouchedPairs(
   tx: SchemaDb,
   touchedKeys: string[],
 ): Promise<{ added: number; removed: number }> {
@@ -373,14 +374,7 @@ export async function previewPriceSheetImport(
     collectMissingNationalityEntries(rows, headerRowIdx, header.countryColIdx, nationalityMap),
   );
 
-  // Existing services map
-  const existingServices = await tx
-    .select({ id: schema.visaService.id, name: schema.visaService.name })
-    .from(schema.visaService);
-  const serviceNameToId = new Map<string, string>();
-  for (const s of existingServices) {
-    serviceNameToId.set(s.name.trim().toLowerCase(), s.id);
-  }
+  const serviceNameToId = await buildServiceNameToIdMap(tx);
 
   const errors: PreviewImportResult["errors"] = [];
   const pending: PreviewImportResult["pending"] = [];
@@ -572,13 +566,7 @@ export async function applyPriceSheetImport(
   }
 
 
-  const existingServices = await tx
-    .select({ id: schema.visaService.id, name: schema.visaService.name })
-    .from(schema.visaService);
-  const serviceNameToId = new Map<string, string>();
-  for (const s of existingServices) {
-    serviceNameToId.set(s.name.trim().toLowerCase(), s.id);
-  }
+  const serviceNameToId = await buildServiceNameToIdMap(tx);
 
   const serviceColByIdx = new Map<
     number,
