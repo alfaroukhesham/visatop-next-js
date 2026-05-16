@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { adminAuth } from "@/lib/admin-auth";
+import { getAdminSession } from "@/lib/admin/get-admin-session";
 import { withAdminDbActor } from "@/lib/db/actor-context";
 import { jsonError, jsonOk } from "@/lib/api/response";
 
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const hdrs = await headers();
-  const session = await adminAuth.api.getSession({ headers: hdrs });
+  const session = await getAdminSession();
   const requestId = hdrs.get("x-request-id");
 
   if (!session) {

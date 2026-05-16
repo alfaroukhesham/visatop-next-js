@@ -1,6 +1,4 @@
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
-import { adminAuth } from "@/lib/admin-auth";
+import { getAdminUserId } from "@/lib/admin/get-admin-session";
 import { withAdminDbActor } from "@/lib/db/actor-context";
 import { listAdminApplications, getAttentionRequiredCount } from "@/lib/applications/admin-queries";
 import { AdminShell } from "@/components/admin/admin-shell";
@@ -19,16 +17,13 @@ export default async function AdminApplicationsPage(props: {
   searchParams: Promise<{ attention?: string; page?: string }>;
 }) {
   const searchParams = await props.searchParams;
-  const hdrs = await headers();
-  const session = await adminAuth.api.getSession({ headers: hdrs });
-
-  if (!session) redirect("/admin/sign-in?callbackUrl=%2Fadmin%2Fapplications");
+  const adminUserId = await getAdminUserId();
 
   const isAttentionView = searchParams.attention === "true";
   const page = Math.max(1, Number(searchParams.page || "1"));
 
   const { items, total, attentionCount } = await withAdminDbActor(
-    session.user.id,
+    adminUserId,
     async ({ tx }) => {
       const [{ items, total }, attentionCount] = await Promise.all([
         listAdminApplications(tx, {

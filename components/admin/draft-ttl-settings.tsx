@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AdminFormLoadingSkeleton } from "@/components/admin/admin-loading";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,12 +58,7 @@ export function DraftTtlSettings() {
   }
 
   if (loading) {
-    return (
-      <p className="text-muted-foreground flex items-center gap-2 text-sm">
-        <Loader2 className="size-4 animate-spin" aria-hidden />
-        Loading…
-      </p>
-    );
+    return <AdminFormLoadingSkeleton fields={1} />;
   }
 
   return (

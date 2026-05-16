@@ -3,6 +3,18 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  AdminTableLoadingFrame,
+  AdminTableLoadingSkeleton,
+} from "@/components/admin/admin-loading";
+import { ListPaginatorBar } from "@/components/admin/list-paginator-bar";
+import { useCatalogEligibilityPage } from "@/components/admin/use-catalog-eligibility-page";
+import { usePaginatedList } from "@/components/admin/use-paginated-list";
+import type {
+  CatalogEligibility,
+  CatalogNationality,
+  CatalogService,
+} from "@/lib/admin/catalog/catalog-types";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,38 +36,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
+import { cn } from "@/lib/utils";
 
-export type CatalogNationality = {
-  code: string;
-  name: string;
-  enabled: boolean;
-};
-
-export type CatalogService = {
-  id: string;
-  name: string;
-  enabled: boolean;
-  durationDays: number | null;
-  entries: string | null;
-};
-
-export type CatalogEligibility = {
-  serviceId: string;
-  nationalityCode: string;
-  serviceName: string;
-};
+export type { CatalogEligibility, CatalogNationality, CatalogService };
 
 type Props = {
   nationalities: CatalogNationality[];
   services: CatalogService[];
-  eligibility: CatalogEligibility[];
   canWrite: boolean;
 };
 
 export function AdminCatalogWorkspace({
   nationalities,
   services,
-  eligibility,
   canWrite,
 }: Props) {
   const router = useRouter();
@@ -101,12 +94,10 @@ export function AdminCatalogWorkspace({
       />
       <ServicesSection rows={services} canWrite={canWrite} busy={busy} run={run} flash={flash} />
       <EligibilitySection
-        eligibility={eligibility}
         services={services}
         nationalities={nationalities}
         canWrite={canWrite}
         busy={busy}
-        run={run}
         flash={flash}
       />
     </div>
@@ -128,6 +119,7 @@ function NationalitiesSection({
 }) {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
+  const natPage = usePaginatedList(rows);
 
   return (
     <Card className="border-border overflow-hidden border">
@@ -149,7 +141,7 @@ function NationalitiesSection({
               </tr>
             </thead>
             <tbody className="divide-border divide-y">
-              {rows.map((n) => (
+              {natPage.pageItems.map((n) => (
                 <NationalityRow
                   key={`${n.code}:${n.name}:${n.enabled ? 1 : 0}`}
                   n={n}
@@ -162,6 +154,15 @@ function NationalitiesSection({
             </tbody>
           </table>
         </div>
+        <ListPaginatorBar
+          selectId="catalog-nationalities-page-size"
+          page={natPage.page}
+          setPage={natPage.setPage}
+          pageSize={natPage.pageSize}
+          onPageSizeChange={natPage.onPageSizeChange}
+          total={natPage.total}
+          disabled={busy !== null}
+        />
         {canWrite ? (
           <form
             className="border-border flex flex-wrap items-end gap-3 border-t bg-muted/10 p-4"
@@ -312,6 +313,7 @@ function ServicesSection({
   const [name, setName] = useState("");
   const [durationDays, setDurationDays] = useState("");
   const [entries, setEntries] = useState("");
+  const svcPage = usePaginatedList(rows);
 
   return (
     <Card className="border-border overflow-hidden border">
@@ -405,7 +407,7 @@ function ServicesSection({
               </tr>
             </thead>
             <tbody className="divide-border divide-y">
-              {rows.map((s) => (
+              {svcPage.pageItems.map((s) => (
                 <ServiceRow
                   key={`${s.id}:${s.name}:${s.durationDays ?? ""}:${s.entries ?? ""}:${s.enabled ? 1 : 0}`}
                   s={s}
@@ -418,6 +420,15 @@ function ServicesSection({
             </tbody>
           </table>
         </div>
+        <ListPaginatorBar
+          selectId="catalog-services-page-size"
+          page={svcPage.page}
+          setPage={svcPage.setPage}
+          pageSize={svcPage.pageSize}
+          onPageSizeChange={svcPage.onPageSizeChange}
+          total={svcPage.total}
+          disabled={busy !== null}
+        />
       </CardContent>
     </Card>
   );
@@ -528,38 +539,55 @@ function ServiceRow({
 }
 
 function EligibilitySection({
-  eligibility,
   services,
   nationalities,
   canWrite,
   busy,
-  run,
   flash,
 }: {
-  eligibility: CatalogEligibility[];
   services: CatalogService[];
   nationalities: CatalogNationality[];
   canWrite: boolean;
   busy: string | null;
-  run: (k: string, fn: () => Promise<void>) => Promise<void>;
   flash: (t: string, err?: boolean) => void;
 }) {
   const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
   const [nationalityCode, setNationalityCode] = useState(nationalities[0]?.code ?? "");
+  const [eligBusy, setEligBusy] = useState<string | null>(null);
+  const eligPage = useCatalogEligibilityPage();
+  const sectionBusy = busy !== null || eligBusy !== null;
+
+  async function runElig(key: string, fn: () => Promise<void>) {
+    setEligBusy(key);
+    try {
+      await fn();
+      eligPage.reload();
+    } finally {
+      setEligBusy(null);
+    }
+  }
 
   return (
     <Card className="border-border overflow-hidden border">
       <CardHeader className="border-border bg-muted/20 border-b">
         <CardTitle className="font-heading text-lg">Service ↔ nationality eligibility</CardTitle>
-        <CardDescription>Controls which combinations appear in the public services list.</CardDescription>
+        <CardDescription>
+          Loaded in pages from the server ({eligPage.total.toLocaleString()} links). Controls which
+          combinations appear in the public services list.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 p-4">
+        {eligPage.error ? (
+          <p className="text-destructive text-sm" role="alert">
+            {eligPage.error}
+          </p>
+        ) : null}
         {canWrite ? (
           <form
             className="flex flex-wrap items-end gap-3"
             onSubmit={(e) => {
               e.preventDefault();
-              void run("elig-add", async () => {
+              void runElig("elig-add", async () => {
                 const res = await fetchApiEnvelope<{ eligibility: unknown }>(apiHref("/admin/catalog/eligibility"), {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -601,13 +629,17 @@ function EligibilitySection({
                 ))}
               </select>
             </div>
-            <Button type="submit" disabled={busy !== null || !serviceId || !nationalityCode}>
-              {busy === "elig-add" ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+            <Button type="submit" disabled={sectionBusy || !serviceId || !nationalityCode}>
+              {eligBusy === "elig-add" ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
               Link
             </Button>
           </form>
         ) : null}
-        <div className="overflow-x-auto rounded-md border border-border">
+        <AdminTableLoadingFrame
+          loading={eligPage.loading}
+          hasRows={eligPage.items.length > 0}
+          className="overflow-x-auto rounded-md border border-border"
+        >
           <table className="w-full text-left text-sm">
             <thead className="bg-muted/60 text-muted-foreground text-xs uppercase tracking-wide">
               <tr>
@@ -616,8 +648,25 @@ function EligibilitySection({
                 {canWrite ? <th className="px-4 py-2 font-medium">Remove</th> : null}
               </tr>
             </thead>
-            <tbody className="divide-border divide-y">
-              {eligibility.map((e) => (
+            <tbody className={cn("divide-border divide-y", eligPage.loading && eligPage.items.length === 0 && "admin-stagger")}>
+              {eligPage.loading && eligPage.items.length === 0 ? (
+                <AdminTableLoadingSkeleton
+                  rows={Math.min(eligPage.pageSize, 8)}
+                  columns={canWrite ? 3 : 2}
+                  columnWidths={canWrite ? ["w-2/5", "w-20", "w-10"] : ["w-2/5", "w-20"]}
+                />
+              ) : null}
+              {!eligPage.loading && eligPage.items.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={canWrite ? 3 : 2}
+                    className="text-muted-foreground px-4 py-6 text-center text-sm"
+                  >
+                    No eligibility links yet.
+                  </td>
+                </tr>
+              ) : null}
+              {eligPage.items.map((e) => (
                 <tr key={`${e.serviceId}-${e.nationalityCode}`} className="hover:bg-muted/30">
                   <td className="px-4 py-2">
                     <span className="font-medium">{e.serviceName}</span>
@@ -631,10 +680,10 @@ function EligibilitySection({
                         size="icon-sm"
                         variant="ghost"
                         className="text-destructive hover:text-destructive"
-                        disabled={busy !== null}
+                        disabled={sectionBusy}
                         aria-label="Remove eligibility"
                         onClick={() =>
-                          void run(`elig-del-${e.serviceId}-${e.nationalityCode}`, async () => {
+                          void runElig(`elig-del-${e.serviceId}-${e.nationalityCode}`, async () => {
                             const res = await fetchApiEnvelope<{ deleted: unknown }>(
                               apiHref("/admin/catalog/eligibility"),
                               {
@@ -654,7 +703,7 @@ function EligibilitySection({
                           })
                         }
                       >
-                        {busy === `elig-del-${e.serviceId}-${e.nationalityCode}` ? (
+                        {eligBusy === `elig-del-${e.serviceId}-${e.nationalityCode}` ? (
                           <Loader2 className="size-4 animate-spin" />
                         ) : (
                           <Trash2 className="size-4" />
@@ -666,7 +715,17 @@ function EligibilitySection({
               ))}
             </tbody>
           </table>
-        </div>
+        </AdminTableLoadingFrame>
+        <ListPaginatorBar
+          selectId="catalog-eligibility-page-size"
+          page={eligPage.page}
+          setPage={eligPage.setPage}
+          pageSize={eligPage.pageSize}
+          onPageSizeChange={eligPage.onPageSizeChange}
+          total={eligPage.total}
+          disabled={sectionBusy || eligPage.loading}
+          loading={eligPage.loading}
+        />
       </CardContent>
     </Card>
   );

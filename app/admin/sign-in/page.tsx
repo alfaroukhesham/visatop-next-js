@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { adminAuthClient } from "@/lib/admin-auth-client";
+import { appHref } from "@/lib/app-href";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -26,7 +27,6 @@ function safeCallbackUrl(raw: string | null): string {
 }
 
 export default function AdminSignInPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -55,8 +55,7 @@ export default function AdminSignInPage() {
       return;
     }
     const next = safeCallbackUrl(searchParams.get("callbackUrl"));
-    router.refresh();
-    router.push(next);
+    window.location.assign(appHref(next));
   }
 
   return (

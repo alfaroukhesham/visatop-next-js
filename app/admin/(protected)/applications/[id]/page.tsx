@@ -1,7 +1,6 @@
-import { headers } from "next/headers";
-import { redirect, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { eq, desc } from "drizzle-orm";
-import { adminAuth } from "@/lib/admin-auth";
+import { getAdminUserId } from "@/lib/admin/get-admin-session";
 import { withAdminDbActor } from "@/lib/db/actor-context";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { AdminApplicationOpsPanel } from "@/components/admin/admin-application-ops-panel";
@@ -211,15 +210,10 @@ export default async function AdminApplicationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id: applicationId } = await params;
-  const hdrs = await headers();
-  const session = await adminAuth.api.getSession({ headers: hdrs });
-
-  if (!session) {
-    redirect(`/admin/sign-in?callbackUrl=/admin/applications/${applicationId}`);
-  }
+  const adminUserId = await getAdminUserId();
 
   const { app, payments, auditLogs, adminDocuments } = await withAdminDbActor(
-    session.user.id,
+    adminUserId,
     async ({ tx }) => {
       const rows = await tx
         .select()

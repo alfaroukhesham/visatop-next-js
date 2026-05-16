@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { adminAuth } from "@/lib/admin-auth";
+import { getAdminSession } from "@/lib/admin/get-admin-session";
 import { adminSignOutAction } from "@/app/actions/admin-auth";
 import { Button } from "@/components/ui/button";
 
@@ -19,9 +19,7 @@ export default async function AdminProtectedLayout({
   children: React.ReactNode;
 }) {
   const hdrs = await headers();
-  const session = await adminAuth.api.getSession({
-    headers: hdrs,
-  });
+  const session = await getAdminSession();
 
   if (!session) {
     const path = hdrs.get("x-pathname") ?? "/admin";

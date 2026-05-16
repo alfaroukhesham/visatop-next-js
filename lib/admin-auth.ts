@@ -1,7 +1,6 @@
-import { dash } from "@better-auth/infra";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { nextCookies } from "better-auth/next-js";
+import { betterAuthServerPlugins } from "@/lib/better-auth/server-plugins";
 import { apiHref, appHref } from "@/lib/app-href";
 import { db } from "@/lib/db";
 import * as adminSchema from "@/lib/db/schema/admin-auth";
@@ -103,6 +102,6 @@ export const adminAuth = betterAuth({
           ? false
           : process.env.NODE_ENV === "production",
   },
-  plugins: [nextCookies(), dash()],
+  plugins: betterAuthServerPlugins(),
 });
 

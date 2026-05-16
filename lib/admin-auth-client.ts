@@ -1,5 +1,5 @@
-import { dashClient } from "@better-auth/infra/client";
 import { createAuthClient } from "better-auth/react";
+import { betterAuthClientPlugins } from "@/lib/better-auth/client-plugins";
 import { getAppOrigin } from "@/lib/app-url";
 
 function resolveAdminClientBaseURL(): string {
@@ -12,6 +12,6 @@ function resolveAdminClientBaseURL(): string {
 
 export const adminAuthClient = createAuthClient({
   baseURL: resolveAdminClientBaseURL(),
-  plugins: [dashClient()],
+  plugins: betterAuthClientPlugins(),
 });
 

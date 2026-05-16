@@ -1,7 +1,5 @@
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { SlidersHorizontal } from "lucide-react";
-import { adminAuth } from "@/lib/admin-auth";
+import { getAdminUserId } from "@/lib/admin/get-admin-session";
 import { DraftTtlSettings } from "@/components/admin/draft-ttl-settings";
 import { PaymentsSettings } from "@/components/admin/payments-settings";
 import { AdminShell } from "@/components/admin/admin-shell";
@@ -10,13 +8,9 @@ import { withAdminDbActor } from "@/lib/db/actor-context";
 export const dynamic = "force-dynamic";
 
 export default async function AdminSettingsPage() {
-  const hdrs = await headers();
-  const session = await adminAuth.api.getSession({ headers: hdrs });
-  if (!session) {
-    redirect("/admin/sign-in?callbackUrl=%2Fadmin%2Fsettings");
-  }
+  const adminUserId = await getAdminUserId();
 
-  const gate = await withAdminDbActor(session.user.id, async ({ permissions }) => {
+  const gate = await withAdminDbActor(adminUserId, async ({ permissions }) => {
     if (!permissions.includes("settings.read")) {
       return "forbidden" as const;
     }

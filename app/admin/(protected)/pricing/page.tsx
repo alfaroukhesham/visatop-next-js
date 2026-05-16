@@ -1,6 +1,4 @@
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
-import { adminAuth } from "@/lib/admin-auth";
+import { getAdminUserId } from "@/lib/admin/get-admin-session";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { withAdminDbActor } from "@/lib/db/actor-context";
 import { CustomerPriceImport } from "@/components/admin/customer-price-import";
@@ -8,13 +6,9 @@ import { CustomerPriceImport } from "@/components/admin/customer-price-import";
 export const dynamic = "force-dynamic";
 
 export default async function AdminPricingPage() {
-  const hdrs = await headers();
-  const session = await adminAuth.api.getSession({ headers: hdrs });
-  if (!session) {
-    redirect("/admin/sign-in?callbackUrl=%2Fadmin%2Fpricing");
-  }
+  const adminUserId = await getAdminUserId();
 
-  const view = await withAdminDbActor(session.user.id, async ({ permissions }) => {
+  const view = await withAdminDbActor(adminUserId, async ({ permissions }) => {
     if (!permissions.includes("catalog.read")) {
       return { kind: "forbidden" as const };
     }

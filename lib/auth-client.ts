@@ -1,5 +1,5 @@
-import { dashClient } from "@better-auth/infra/client";
 import { createAuthClient } from "better-auth/react";
+import { betterAuthClientPlugins } from "@/lib/better-auth/client-plugins";
 import { getAppOrigin } from "@/lib/app-url";
 
 /**
@@ -19,5 +19,5 @@ function resolveClientBaseURL(): string {
 
 export const authClient = createAuthClient({
   baseURL: resolveClientBaseURL(),
-  plugins: [dashClient()],
+  plugins: betterAuthClientPlugins(),
 });

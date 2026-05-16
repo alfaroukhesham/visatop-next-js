@@ -31,6 +31,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  AdminTableLoadingFrame,
+  AdminTableLoadingSkeleton,
+} from "@/components/admin/admin-loading";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AlertCircle,
@@ -670,8 +674,8 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
       )}
 
       {phase === "applying" && (
-        <Alert>
-          <Loader2 className="h-4 w-4 animate-spin" />
+        <Alert className="admin-rise">
+          <Loader2 className="admin-loading-spin h-4 w-4" aria-hidden />
           <AlertTitle>Applying import…</AlertTitle>
           <AlertDescription className="text-sm">
             Large sheets can take a minute or more. This request runs entirely on the server; do not close the tab.
@@ -1047,7 +1051,11 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                   </div>
                 </div>
 
-                <div className="rounded-md border overflow-x-auto">
+                <AdminTableLoadingFrame
+                  loading={pendingListLoading}
+                  hasRows={pendingListRows.length > 0}
+                  className="rounded-md border overflow-x-auto"
+                >
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -1059,12 +1067,11 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                     </TableHeader>
                     <TableBody>
                       {pendingListLoading && pendingListRows.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-muted-foreground py-8 text-center text-sm">
-                            <Loader2 className="inline h-4 w-4 animate-spin mr-2 align-text-bottom" />
-                            Loading pending rows…
-                          </TableCell>
-                        </TableRow>
+                        <AdminTableLoadingSkeleton
+                          rows={Math.min(pendingPageSize, 8)}
+                          columns={4}
+                          columnWidths={["w-16", "w-2/5", "w-20", "w-24"]}
+                        />
                       ) : pendingListRows.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={4} className="text-muted-foreground py-6 text-center text-sm">
@@ -1083,10 +1090,13 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                       )}
                     </TableBody>
                   </Table>
-                </div>
+                </AdminTableLoadingFrame>
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-muted-foreground">
-                  <span className="tabular-nums">
+                  <span className="tabular-nums inline-flex items-center gap-2">
+                    {pendingListLoading ? (
+                      <Loader2 className="admin-loading-spin size-3.5 shrink-0" aria-hidden />
+                    ) : null}
                     Showing{" "}
                     {pendingListTotal === 0
                       ? 0

@@ -1,14 +1,49 @@
 import { headers } from "next/headers";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
+import { listCatalogEligibility } from "@/lib/admin/catalog/list-catalog-eligibility";
 import { runAdminDbJson } from "@/lib/admin-api/require-admin-db";
 import { writeAdminAudit } from "@/lib/admin-api/write-admin-audit";
+import { parseLimit } from "@/lib/api/cursor";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import * as schema from "@/lib/db/schema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+function parsePage(raw: string | null): number {
+  const n = raw ? Number(raw) : 0;
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.floor(n);
+}
+
+export async function GET(req: Request) {
+  const hdrs = await headers();
+  const requestId = hdrs.get("x-request-id");
+  const url = new URL(req.url);
+  const page = parsePage(url.searchParams.get("page"));
+  const pageSize = parseLimit(url.searchParams.get("pageSize"), {
+    defaultLimit: 10,
+    max: 100,
+  });
+  const serviceId = url.searchParams.get("serviceId")?.trim() || undefined;
+  const nationalityRaw = url.searchParams.get("nationalityCode")?.trim();
+  const nationalityCode =
+    nationalityRaw && /^[A-Za-z]{2}$/.test(nationalityRaw)
+      ? nationalityRaw.toUpperCase()
+      : undefined;
+
+  return runAdminDbJson(requestId, ["catalog.read"], async ({ tx }) => {
+    const { items, total } = await listCatalogEligibility(tx, {
+      limit: pageSize,
+      offset: page * pageSize,
+      serviceId,
+      nationalityCode,
+    });
+    return jsonOk({ items, total, page, pageSize }, { requestId });
+  });
+}
 
 const bodySchema = z.object({
   serviceId: z.string().min(1),

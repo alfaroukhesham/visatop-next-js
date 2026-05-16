@@ -1,6 +1,5 @@
-import { headers } from "next/headers";
 import type { DbTransaction } from "@/lib/db";
-import { adminAuth } from "@/lib/admin-auth";
+import { getAdminSession } from "@/lib/admin/get-admin-session";
 import { jsonError } from "@/lib/api/response";
 import { isForeignKeyViolation } from "@/lib/db/pg-errors";
 import { withAdminDbActor } from "@/lib/db/actor-context";
@@ -16,8 +15,7 @@ export async function runAdminDbJson(
   requiredPermissions: string[],
   fn: (ctx: { tx: AdminDbTx; adminUserId: string }) => Promise<Response>,
 ): Promise<Response> {
-  const hdrs = await headers();
-  const session = await adminAuth.api.getSession({ headers: hdrs });
+  const session = await getAdminSession();
   if (!session) {
     return jsonError("UNAUTHORIZED", "Unauthorized", {
       status: 401,

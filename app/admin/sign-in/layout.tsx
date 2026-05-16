@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AdminSignInSkeleton } from "@/components/auth/admin-sign-in-skeleton";
 import { auth } from "@/lib/auth";
-import { adminAuth } from "@/lib/admin-auth";
+import { getAdminSession } from "@/lib/admin/get-admin-session";
 
 export const metadata: Metadata = {
   title: "Admin sign in",
@@ -20,7 +20,7 @@ export default async function AdminSignInLayout({
   const hdrs = await headers();
   const [clientSession, adminSession] = await Promise.all([
     auth.api.getSession({ headers: hdrs }),
-    adminAuth.api.getSession({ headers: hdrs }),
+    getAdminSession(),
   ]);
 
   if (clientSession) redirect("/portal/track");
