@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { eq, desc } from "drizzle-orm";
+import { formatServiceTypeForExport } from "@/lib/applications/customer-export";
 import { getAdminUserId } from "@/lib/admin/get-admin-session";
 import { withAdminDbActor } from "@/lib/db/actor-context";
 import { AdminShell } from "@/components/admin/admin-shell";
@@ -192,13 +193,21 @@ function StatusBadge({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ProfileRow({ label, value }: { label: string; value: string | null | undefined }) {
+function ProfileRow({
+  label,
+  value,
+  mono = true,
+}: {
+  label: string;
+  value: string | null | undefined;
+  mono?: boolean;
+}) {
   return (
     <div>
       <dt className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </dt>
-      <dd className="mt-0.5 font-mono text-sm text-foreground">
+      <dd className={cn("mt-0.5 text-sm text-foreground", mono && "font-mono")}>
         {value ?? <span className="text-muted-foreground/50 italic">—</span>}
       </dd>
     </div>
@@ -213,17 +222,33 @@ export default async function AdminApplicationDetailPage({
   const { id: applicationId } = await params;
   const adminUserId = await getAdminUserId();
 
-  const { app, payments, auditLogs, adminDocuments } = await withAdminDbActor(
+  const { app, serviceLabel, payments, auditLogs, adminDocuments } = await withAdminDbActor(
     adminUserId,
     async ({ tx }) => {
-      const rows = await tx
-        .select()
+      const [joined] = await tx
+        .select({
+          app: schema.application,
+          serviceName: schema.visaService.name,
+          serviceDurationDays: schema.visaService.durationDays,
+          serviceEntries: schema.visaService.entries,
+        })
         .from(schema.application)
+        .leftJoin(schema.visaService, eq(schema.application.serviceId, schema.visaService.id))
         .where(eq(schema.application.id, applicationId))
         .limit(1);
 
-      const app = rows[0];
-      if (!app) return { app: null, payments: [], auditLogs: [], adminDocuments: [] };
+      const app = joined?.app;
+      if (!app) {
+        return { app: null, serviceLabel: null, payments: [], auditLogs: [], adminDocuments: [] };
+      }
+
+      const serviceLabel = joined.serviceName
+        ? formatServiceTypeForExport({
+            name: joined.serviceName,
+            durationDays: joined.serviceDurationDays,
+            entries: joined.serviceEntries,
+          })
+        : null;
 
       const payments = await tx
         .select()
@@ -252,7 +277,7 @@ export default async function AdminApplicationDetailPage({
         .orderBy(desc(schema.applicationDocument.createdAt))
         .limit(40);
 
-      return { app, payments, auditLogs, adminDocuments };
+      return { app, serviceLabel, payments, auditLogs, adminDocuments };
     }
   );
 
@@ -348,7 +373,7 @@ export default async function AdminApplicationDetailPage({
           </div>
           <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 border-t border-border pt-4">
             <ProfileRow label="Nationality" value={app.nationalityCode} />
-            <ProfileRow label="Service ID" value={app.serviceId} />
+            <ProfileRow label="Service" value={serviceLabel ?? "Unknown service"} mono={false} />
             <ProfileRow label="Reference No." value={app.referenceNumber} />
             <ProfileRow label="Guest" value={app.isGuest ? "Yes" : "No"} />
             <ProfileRow label="Guest Email" value={app.guestEmail} />
