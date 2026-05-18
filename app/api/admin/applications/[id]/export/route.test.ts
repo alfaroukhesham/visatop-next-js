@@ -73,7 +73,10 @@ describe("GET /api/admin/applications/[id]/export", () => {
     vi.mocked(loadCustomerExportPayload).mockResolvedValue({
       applicationId: "app-1",
       referenceNumber: "REF-9",
-      profileRows: [{ label: "Full name", value: "Jane" }],
+      profileRows: [
+        { label: "Service type", value: "Tourist visa" },
+        { label: "Full name", value: "Jane" },
+      ],
       documents: [],
     });
     vi.mocked(buildCustomerExportZip).mockResolvedValue(Buffer.from("PK\x03\x04"));
@@ -93,9 +96,46 @@ describe("GET /api/admin/applications/[id]/export", () => {
       params: Promise.resolve({ id: "app-1" }),
     });
     expect(res.status).toBe(200);
+    expect(loadCustomerExportPayload).toHaveBeenCalledWith(expect.anything(), "app-1", {
+      includePrice: false,
+    });
     expect(res.headers.get("Content-Type")).toBe("application/zip");
     expect(res.headers.get("Content-Disposition")).toContain("REF-9-customer-export.zip");
     const body = await res.arrayBuffer();
     expect(body.byteLength).toBeGreaterThan(0);
+  });
+
+  it("passes includePrice when query param is set", async () => {
+    setupAdmin(["applications.read", "audit.write"]);
+    vi.mocked(loadCustomerExportPayload).mockResolvedValue({
+      applicationId: "app-1",
+      referenceNumber: "REF-9",
+      profileRows: [
+        { label: "Service type", value: "Tourist visa" },
+        { label: "Price paid", value: "$419.00" },
+      ],
+      documents: [],
+    });
+    vi.mocked(buildCustomerExportZip).mockResolvedValue(Buffer.from("PK\x03\x04"));
+    const tx = {
+      insert: () => ({
+        values: vi.fn().mockResolvedValue(undefined),
+      }),
+    };
+    vi.mocked(actorContext.withAdminDbActor).mockImplementation(async (_id, fn) =>
+      fn({
+        tx: tx as never,
+        permissions: ["applications.read", "audit.write"],
+      }),
+    );
+
+    const res = await GET(
+      new Request("http://localhost/api/admin/applications/app-1/export?includePrice=1"),
+      { params: Promise.resolve({ id: "app-1" }) },
+    );
+    expect(res.status).toBe(200);
+    expect(loadCustomerExportPayload).toHaveBeenCalledWith(expect.anything(), "app-1", {
+      includePrice: true,
+    });
   });
 });

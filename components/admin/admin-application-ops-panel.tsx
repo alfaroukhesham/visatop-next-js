@@ -1,12 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { apiHref } from "@/lib/app-href";
+import { UPLOAD_MAX_BYTES } from "@/lib/applications/document-upload";
 import { AdminApplicationCustomerExport } from "@/components/admin/admin-application-customer-export";
+import { cn } from "@/lib/utils";
 
 export type AdminDocRow = {
   id: string;
@@ -32,8 +34,21 @@ export function AdminApplicationOpsPanel({
   const [nextStatus, setNextStatus] = useState<string>("");
   const [outcomeDocId, setOutcomeDocId] = useState("");
   const [uploadType, setUploadType] = useState("outcome_approval");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!selectedFile) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(selectedFile);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [selectedFile]);
 
   const opsLocked =
     paymentStatus !== "paid" || TERMINAL.has(applicationStatus);
@@ -42,11 +57,31 @@ export function AdminApplicationOpsPanel({
       ? "Outcome uploads and status controls unlock after payment is received."
       : "This application is in a terminal status. Outcome controls are not available.";
 
-  async function uploadFile(ev: React.FormEvent) {
-    ev.preventDefault();
-    const input = (ev.target as HTMLFormElement).elements.namedItem("file") as HTMLInputElement;
-    const f = input?.files?.[0];
-    if (!f) {
+  function clearSelectedFile() {
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function pickAnotherFile() {
+    clearSelectedFile();
+    fileInputRef.current?.click();
+  }
+
+  function handleFileChosen(ev: React.ChangeEvent<HTMLInputElement>) {
+    const f = ev.target.files?.[0] ?? null;
+    ev.target.value = "";
+    if (!f) return;
+    if (f.size > UPLOAD_MAX_BYTES) {
+      setMsg("File exceeds 8 MB limit.");
+      clearSelectedFile();
+      return;
+    }
+    setMsg(null);
+    setSelectedFile(f);
+  }
+
+  async function uploadSelectedFile() {
+    if (!selectedFile) {
       setMsg("Choose a file to upload.");
       return;
     }
@@ -55,7 +90,7 @@ export function AdminApplicationOpsPanel({
     try {
       const fd = new FormData();
       fd.set("documentType", uploadType);
-      fd.set("file", f);
+      fd.set("file", selectedFile);
       const res = await fetch(apiHref(`/admin/applications/${applicationId}/documents/upload`), {
         method: "POST",
         body: fd,
@@ -70,7 +105,7 @@ export function AdminApplicationOpsPanel({
         setOutcomeDocId(id);
         setMsg(`Outcome document uploaded. Id: ${id}`);
       }
-      input.value = "";
+      clearSelectedFile();
       router.refresh();
     } finally {
       setLoading(false);
@@ -131,28 +166,60 @@ export function AdminApplicationOpsPanel({
       ) : (
         <>
       {msg ? <p className="text-sm text-muted-foreground">{msg}</p> : null}
-      <form className="space-y-2" onSubmit={(e) => void uploadFile(e)}>
+      <div className="space-y-3">
         <h3 className="text-sm font-semibold">Upload outcome document</h3>
         <p className="text-muted-foreground text-xs">
           Upload the approval pack or UAE authority rejection proof before marking the application completed or
           rejected. Max 8 MB; JPEG, PNG, or PDF.
         </p>
-        <div className="flex flex-wrap items-end gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
           <select
             value={uploadType}
             onChange={(e) => setUploadType(e.target.value)}
-            className="border-border bg-background h-9 rounded-none border px-2 text-sm"
+            className="border-border bg-background h-9 w-full shrink-0 rounded-none border px-2 text-sm sm:w-auto"
             aria-label="Outcome document type"
           >
             <option value="outcome_approval">Approval / visa pack</option>
             <option value="outcome_authority_rejection">UAE authority rejection proof</option>
           </select>
-          <input name="file" type="file" accept="image/jpeg,image/png,application/pdf" className="max-w-xs text-sm" />
-          <Button type="submit" size="sm" variant="secondary" className="rounded-none" disabled={loading}>
-            {loading ? <Loader2 className="size-4 animate-spin" /> : "Upload"}
-          </Button>
+
+          <div className="min-w-0 flex-1 space-y-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,application/pdf"
+              onChange={handleFileChosen}
+              className="sr-only"
+              tabIndex={-1}
+              aria-hidden
+            />
+
+            {!selectedFile ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-9 rounded-none"
+                disabled={loading}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Choose file
+              </Button>
+            ) : (
+              <OutcomeFilePreview
+                file={selectedFile}
+                previewUrl={previewUrl}
+                loading={loading}
+                onChangeFile={pickAnotherFile}
+                onPreview={() => {
+                  if (previewUrl) window.open(previewUrl, "_blank", "noopener,noreferrer");
+                }}
+                onUpload={() => void uploadSelectedFile()}
+              />
+            )}
+          </div>
         </div>
-      </form>
+      </div>
 
       <div className="space-y-2">
         <h3 className="text-sm font-semibold">Set application status</h3>
@@ -203,6 +270,84 @@ export function AdminApplicationOpsPanel({
       </div>
         </>
       )}
+    </div>
+  );
+}
+
+function OutcomeFilePreview({
+  file,
+  previewUrl,
+  loading,
+  onChangeFile,
+  onPreview,
+  onUpload,
+}: {
+  file: File;
+  previewUrl: string | null;
+  loading: boolean;
+  onChangeFile: () => void;
+  onPreview: () => void;
+  onUpload: () => void;
+}) {
+  const isImage = file.type.startsWith("image/");
+  const sizeKb = (file.size / 1024).toFixed(1);
+
+  return (
+    <div className="border-border bg-muted/20 max-w-md space-y-3 border p-3">
+      <div className="flex gap-3">
+        {isImage && previewUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- blob preview of admin-selected file
+          <img
+            src={previewUrl}
+            alt=""
+            className="border-border size-14 shrink-0 border object-cover"
+          />
+        ) : (
+          <div
+            className="border-border bg-muted text-muted-foreground flex size-14 shrink-0 items-center justify-center border"
+            aria-hidden
+          >
+            <FileText className="size-6" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1 pt-0.5">
+          <p className="truncate text-sm font-medium">{file.name}</p>
+          <p className="text-muted-foreground text-xs">
+            {sizeKb} KB · {isImage ? "Image" : "PDF"}
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="rounded-none"
+          disabled={!previewUrl}
+          onClick={onPreview}
+        >
+          Preview
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="rounded-none"
+          disabled={loading}
+          onClick={onChangeFile}
+        >
+          Change file
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          className={cn("rounded-none", loading && "pointer-events-none")}
+          disabled={loading}
+          onClick={onUpload}
+        >
+          {loading ? <Loader2 className="size-4 animate-spin" /> : "Upload"}
+        </Button>
+      </div>
     </div>
   );
 }

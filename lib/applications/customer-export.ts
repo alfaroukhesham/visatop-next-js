@@ -1,5 +1,5 @@
 import JSZip from "jszip";
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
 import {
   application,
@@ -7,10 +7,14 @@ import {
   applicationDocumentBlob,
   DOCUMENT_STATUS,
   DOCUMENT_TYPE,
+  payment,
+  priceQuote,
+  visaService,
   type DocumentType,
 } from "@/lib/db/schema";
 import { formatIsoDateAsDdMmYyyy } from "@/lib/documents/validation-readiness";
 import { asciiFilename } from "@/lib/applications/document-fetch";
+import { formatMinorUnitsAmount } from "@/lib/pricing/format-minor-units";
 
 /** Document types the customer may upload on the apply flow (step 3). */
 export const CUSTOMER_UPLOAD_DOCUMENT_TYPES = [
@@ -45,6 +49,35 @@ export type CustomerExportPayload = {
   profileRows: CustomerExportProfileRow[];
   documents: CustomerExportDocument[];
 };
+
+export type LoadCustomerExportOptions = {
+  /** When true, adds a formatted price-paid row from payment or locked quote. */
+  includePrice?: boolean;
+};
+
+export function formatServiceTypeForExport(service: {
+  name: string;
+  durationDays: number | null;
+  entries: string | null;
+}): string {
+  const name = service.name.trim();
+  const extras: string[] = [];
+  if (service.durationDays != null) extras.push(`${service.durationDays} days`);
+  if (service.entries?.trim()) extras.push(service.entries.trim());
+  if (extras.length === 0) return name;
+  return `${name} (${extras.join(", ")})`;
+}
+
+export function buildCustomerExportApplicationRows(input: {
+  serviceType: string;
+  pricePaid?: string | null;
+}): CustomerExportProfileRow[] {
+  const rows: CustomerExportProfileRow[] = [{ label: "Service type", value: input.serviceType }];
+  if (input.pricePaid !== undefined) {
+    rows.push({ label: "Price paid", value: input.pricePaid ?? "—" });
+  }
+  return rows;
+}
 
 export const CUSTOMER_EXPORT_PROFILE_FIELDS: Array<{
   label: string;
@@ -148,17 +181,60 @@ function selectCustomerExportDocuments(rows: DocumentRowFromDb[]): CustomerExpor
   );
 }
 
+export async function resolveCustomerExportPricePaid(
+  tx: DbTransaction,
+  applicationId: string,
+): Promise<string> {
+  const [paid] = await tx
+    .select({
+      amount: payment.amount,
+      currency: payment.currency,
+    })
+    .from(payment)
+    .where(and(eq(payment.applicationId, applicationId), eq(payment.status, "paid")))
+    .orderBy(desc(payment.updatedAt))
+    .limit(1);
+
+  if (paid) {
+    return formatMinorUnitsAmount(paid.amount, paid.currency);
+  }
+
+  const [quote] = await tx
+    .select({
+      totalAmount: priceQuote.totalAmount,
+      currency: priceQuote.currency,
+    })
+    .from(priceQuote)
+    .where(eq(priceQuote.applicationId, applicationId))
+    .orderBy(desc(priceQuote.lockedAt))
+    .limit(1);
+
+  if (quote) {
+    return formatMinorUnitsAmount(quote.totalAmount, quote.currency);
+  }
+
+  return "Not paid";
+}
+
 export async function loadCustomerExportPayload(
   tx: DbTransaction,
   applicationId: string,
+  options?: LoadCustomerExportOptions,
 ): Promise<CustomerExportPayload | null> {
   const appRows = await tx
-    .select()
+    .select({
+      app: application,
+      serviceName: visaService.name,
+      serviceDurationDays: visaService.durationDays,
+      serviceEntries: visaService.entries,
+    })
     .from(application)
+    .innerJoin(visaService, eq(application.serviceId, visaService.id))
     .where(eq(application.id, applicationId))
     .limit(1);
-  const app = appRows[0];
-  if (!app) return null;
+  const row = appRows[0];
+  if (!row) return null;
+  const app = row.app;
 
   const docRows = await tx
     .select({
@@ -181,10 +257,28 @@ export async function loadCustomerExportPayload(
       ),
     );
 
-  const profileRows: CustomerExportProfileRow[] = CUSTOMER_EXPORT_PROFILE_FIELDS.map(({ label, pick }) => ({
-    label,
-    value: pick(app),
-  }));
+  const serviceType = formatServiceTypeForExport({
+    name: row.serviceName,
+    durationDays: row.serviceDurationDays,
+    entries: row.serviceEntries,
+  });
+
+  const applicationRows = buildCustomerExportApplicationRows({
+    serviceType,
+    ...(options?.includePrice
+      ? {
+          pricePaid: await resolveCustomerExportPricePaid(tx, applicationId),
+        }
+      : {}),
+  });
+
+  const profileRows: CustomerExportProfileRow[] = [
+    ...applicationRows,
+    ...CUSTOMER_EXPORT_PROFILE_FIELDS.map(({ label, pick }) => ({
+      label,
+      value: pick(app),
+    })),
+  ];
 
   for (const doc of selectCustomerExportDocuments(docRows)) {
     profileRows.push({

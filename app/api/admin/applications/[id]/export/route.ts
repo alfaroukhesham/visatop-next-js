@@ -16,19 +16,26 @@ import { jsonError } from "@/lib/api/response";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function parseIncludePriceParam(value: string | null): boolean {
+  if (!value) return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "yes";
+}
+
 export async function GET(
-  _req: Request,
+  req: Request,
   ctx: { params: Promise<{ id: string }> },
 ) {
   const hdrs = await headers();
   const requestId = hdrs.get("x-request-id");
   const { id: applicationId } = await ctx.params;
+  const includePrice = parseIncludePriceParam(new URL(req.url).searchParams.get("includePrice"));
 
   return runAdminDbJson(
     requestId,
     ["applications.read", "audit.write"],
     async ({ tx, adminUserId }) => {
-      const payload = await loadCustomerExportPayload(tx, applicationId);
+      const payload = await loadCustomerExportPayload(tx, applicationId, { includePrice });
       if (!payload) {
         return jsonError("NOT_FOUND", "Application not found", {
           status: 404,
@@ -47,6 +54,7 @@ export async function GET(
         afterJson: JSON.stringify({
           documentCount: payload.documents.length,
           profileFieldCount: payload.profileRows.length,
+          includePrice,
         }),
       });
 
