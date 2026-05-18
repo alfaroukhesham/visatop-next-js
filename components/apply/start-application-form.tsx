@@ -95,7 +95,9 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
   useEffect(() => {
     const fromSession = sessionEmail?.trim();
     if (!fromSession) return;
-    setEmail((current) => (current.trim() ? current : fromSession));
+    queueMicrotask(() => {
+      setEmail((current) => (current.trim() ? current : fromSession));
+    });
   }, [sessionEmail]);
 
   useEffect(() => {
