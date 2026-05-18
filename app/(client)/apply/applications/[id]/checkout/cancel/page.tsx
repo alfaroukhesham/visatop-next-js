@@ -10,8 +10,11 @@ export default async function CheckoutCancelPage({ params }: { params: Promise<{
         No charge was completed. You can return to your application to review details or try again when you are
         ready.
       </p>
-      <Link href={`/apply/applications/${enc}`} className="text-link text-center text-sm font-medium">
-        Back to application
+      <Link
+        href={`/apply/applications/${enc}/payment`}
+        className="text-link text-center text-sm font-medium"
+      >
+        Back to payment
       </Link>
     </div>
   );

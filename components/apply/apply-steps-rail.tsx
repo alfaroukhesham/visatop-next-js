@@ -18,13 +18,13 @@ const STEPS = [
     step: 3,
     kicker: "Step 3",
     title: "Documents",
-    body: "Upload what we ask for in one place—clear checklists, fewer mistakes.",
+    body: "Upload what we ask for and confirm your passport details.",
   },
   {
     step: 4,
     kicker: "Step 4",
-    title: "Review & pay",
-    body: "Check your details, pay securely, then submit when you are ready.",
+    title: "Secure payment",
+    body: "Review your order and pay securely to begin processing.",
   },
   {
     step: 5,
@@ -44,7 +44,8 @@ function hrefForStep(step: number, applicationId?: string): string | null {
   if (step === 1) return "/";
   if (step === 2) return "/";
   if (!applicationId) return null;
-  if (step === 3 || step === 4) return `/apply/applications/${encodeURIComponent(applicationId)}`;
+  if (step === 3) return `/apply/applications/${encodeURIComponent(applicationId)}`;
+  if (step === 4) return `/apply/applications/${encodeURIComponent(applicationId)}/payment`;
   if (step === 5) return `/apply/applications/${encodeURIComponent(applicationId)}/submitted`;
   return null;
 }

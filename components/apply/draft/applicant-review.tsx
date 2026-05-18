@@ -86,6 +86,13 @@ export function ApplicantReview({
 
   const dirty = APPLICANT_ROWS.some((r) => (values[r.apiKey] ?? "") !== (initial[r.apiKey] ?? ""));
 
+  const paymentPath = `/apply/applications/${encodeURIComponent(applicationId)}/payment`;
+  const canContinueToPayment = !locked && paymentReadiness === "ready";
+
+  function goToPayment() {
+    router.push(paymentPath);
+  }
+
   async function handleSave() {
     setSaving(true);
     setSaveMsg(null);
@@ -146,6 +153,9 @@ export function ApplicantReview({
     }
     setSaveMsg("Changes saved.");
     onSaved();
+    if (canContinueToPayment) {
+      goToPayment();
+    }
   }
 
   const readinessLabel = buildReadinessLabel(readiness, paymentReadiness);
@@ -247,10 +257,10 @@ export function ApplicantReview({
             <ClientButton
               type="button"
               brand="cta"
-              disabled={APPLY_STEP3_VALIDATION_DISABLED ? saving : !dirty || saving}
+              disabled={saving || (!dirty && !canContinueToPayment)}
               onClick={() => {
-                if (APPLY_STEP3_VALIDATION_DISABLED && !dirty) {
-                  document.getElementById("draft-payment-section")?.scrollIntoView({ behavior: "smooth" });
+                if (!dirty && canContinueToPayment) {
+                  goToPayment();
                   return;
                 }
                 void handleSave();
@@ -258,11 +268,7 @@ export function ApplicantReview({
               className="rounded-none"
             >
               {saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-              {saving
-                ? "Saving…"
-                : APPLY_STEP3_VALIDATION_DISABLED && !dirty
-                  ? "Continue to payment"
-                  : "Next"}
+              {saving ? "Saving…" : !dirty && canContinueToPayment ? "Continue to payment" : "Next"}
             </ClientButton>
             {saveMsg ? <p className="text-success text-xs">{saveMsg}</p> : null}
             {saveError ? <p className="text-error text-xs">{saveError}</p> : null}

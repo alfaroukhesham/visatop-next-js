@@ -39,7 +39,7 @@ export function DraftPaymentSection({
     <section id="draft-payment-section" className="space-y-4">
       {paymentReadiness === "ready" && app.paymentStatus === "unpaid" && (
         <div className="space-y-4 rounded-[12px] border-2 border-primary bg-primary/5 p-5 shadow-[0_8px_32px_rgba(1,32,49,0.08)] sm:p-6">
-          <h2 className="font-heading text-lg font-bold">Secure payment</h2>
+          <h2 className="font-heading text-lg font-bold">Initiate payment</h2>
           <p className="text-sm text-muted-foreground">
             Your application is complete and ready for submission. Please pay the service fee to begin processing.
           </p>

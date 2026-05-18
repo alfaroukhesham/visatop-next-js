@@ -74,10 +74,10 @@ export function CheckoutReturnClient({ applicationId }: { applicationId: string 
       <ClientCenteredStatus label={message} />
       <p className="text-center">
         <Link
-          href={`/apply/applications/${encodeURIComponent(applicationId)}`}
+          href={`/apply/applications/${encodeURIComponent(applicationId)}/payment`}
           className="text-link text-sm font-medium"
         >
-          Back to application
+          Back to payment
         </Link>
       </p>
     </div>

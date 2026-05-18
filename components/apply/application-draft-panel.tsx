@@ -2,22 +2,26 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect } from "react";
 import { ClientDraftPanelSkeleton } from "@/components/client/client-loading";
 import { ApplyJourneyStepBar } from "@/components/apply/apply-journey-step-bar";
-import { APPLY_STEP3_VALIDATION_DISABLED } from "@/lib/apply/apply-flow-config";
 import { computeValidation } from "@/lib/documents/validation-readiness";
 import { ApplicantReview } from "./draft/applicant-review";
 import { DraftDocumentsSection } from "./draft/draft-documents-section";
 import { DraftPanelError } from "./draft/draft-panel-error";
-import { DraftPaymentSection } from "./draft/draft-payment-section";
 import { applicantFormResetKey } from "./draft/utils";
 import { useApplicationDraft } from "./draft/use-application-draft";
 
 export function ApplicationDraftPanel({ applicationId }: { applicationId: string }) {
   const router = useRouter();
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const draft = useApplicationDraft(applicationId);
+  const paymentPath = `/apply/applications/${encodeURIComponent(applicationId)}/payment`;
+
+  useEffect(() => {
+    if (draft.app?.paymentStatus === "checkout_created") {
+      router.replace(paymentPath);
+    }
+  }, [draft.app?.paymentStatus, paymentPath, router]);
 
   if (draft.loading) {
     return <ClientDraftPanelSkeleton />;
@@ -39,30 +43,6 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
     },
     now: new Date(),
   });
-
-  const journeyStep =
-    app.paymentStatus === "checkout_created" || app.paymentStatus === "paid"
-      ? (4 as const)
-      : paymentReadiness === "ready"
-        ? (4 as const)
-        : (3 as const);
-
-  const submittedPath = `/apply/applications/${encodeURIComponent(applicationId)}/submitted`;
-
-  const checkoutHandlers = {
-    onExternalRedirect: () =>
-      draft.setActionMsg("Redirecting to our payment partner to complete checkout securely…"),
-    onOverlayClosed: () => void draft.load({ silent: true }),
-    onSuccess: () => {
-      draft.setCountdown(null);
-      draft.setActionMsg("Payment submitted. Confirming with our systems…");
-      router.push(submittedPath);
-    },
-    onError: (msg: string) => {
-      setCheckoutError(msg);
-      document.getElementById("draft-payment-section")?.scrollIntoView({ behavior: "smooth" });
-    },
-  };
 
   return (
     <div className="space-y-8">
@@ -98,25 +78,6 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
         onSaved={() => void draft.load({ silent: true })}
       />
 
-      <DraftPaymentSection
-        applicationId={applicationId}
-        app={app}
-        paymentReadiness={paymentReadiness}
-        countdown={draft.countdown}
-        checkoutError={checkoutError}
-        onDismissCheckoutError={() => setCheckoutError(null)}
-        onCancelCheckout={() => {
-          setCheckoutError(null);
-          void draft.cancelCheckout();
-        }}
-        checkout={{
-          ...checkoutHandlers,
-          onStartCheckoutTimer: () => {
-            if (draft.countdown === null) draft.setCountdown(600);
-          },
-        }}
-      />
-
       <p className="text-muted-foreground text-center text-xs">
         <Link href="/" className="text-link hover:underline">
           Start another draft
@@ -128,16 +89,10 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
       </p>
 
       <ApplyJourneyStepBar
-        step={journeyStep}
+        step={3}
         totalSteps={5}
-        title={journeyStep === 4 ? "Review & pay" : "Upload documents"}
-        subtitle={
-          journeyStep === 4
-            ? APPLY_STEP3_VALIDATION_DISABLED
-              ? "Pay securely now — you can add documents and details anytime before submission."
-              : "Confirm your details, then pay securely to submit."
-            : "Upload what we ask for, then confirm your passport details."
-        }
+        title="Upload documents"
+        subtitle="Upload what we ask for, then confirm your passport details."
       />
     </div>
   );
