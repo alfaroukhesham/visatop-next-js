@@ -244,6 +244,8 @@ export default async function AdminApplicationDetailPage({
           documentType: schema.applicationDocument.documentType,
           status: schema.applicationDocument.status,
           createdAt: schema.applicationDocument.createdAt,
+          originalFilename: schema.applicationDocument.originalFilename,
+          byteLength: schema.applicationDocument.byteLength,
         })
         .from(schema.applicationDocument)
         .where(eq(schema.applicationDocument.applicationId, applicationId))
@@ -369,6 +371,8 @@ export default async function AdminApplicationDetailPage({
               documentType: d.documentType,
               status: d.status,
               createdAt: d.createdAt.toISOString(),
+              originalFilename: d.originalFilename,
+              byteLength: d.byteLength,
             }))}
           />
         </div>

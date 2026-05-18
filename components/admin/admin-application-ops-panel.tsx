@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { apiHref } from "@/lib/app-href";
 import { UPLOAD_MAX_BYTES } from "@/lib/applications/document-upload";
 import { AdminApplicationCustomerExport } from "@/components/admin/admin-application-customer-export";
@@ -15,9 +14,41 @@ export type AdminDocRow = {
   documentType: string | null;
   status: string | null;
   createdAt: string;
+  originalFilename: string | null;
+  byteLength: number | null;
 };
 
 const TERMINAL = new Set(["completed", "rejection_by_uae_authorities", "cancelled"]);
+const RETAINED = "retained";
+
+function requiredOutcomeDocType(status: string): "outcome_approval" | "outcome_authority_rejection" | null {
+  if (status === "completed") return "outcome_approval";
+  if (status === "rejection_by_uae_authorities") return "outcome_authority_rejection";
+  return null;
+}
+
+function retainedOutcomeDocs(documents: AdminDocRow[], docType: string) {
+  return documents.filter((d) => d.documentType === docType && d.status === RETAINED);
+}
+
+function formatOutcomeDocType(docType: string | null) {
+  switch (docType) {
+    case "outcome_approval":
+      return "Approval / visa pack";
+    case "outcome_authority_rejection":
+      return "UAE authority rejection proof";
+    default:
+      return docType ?? "Unknown";
+  }
+}
+
+function formatBytes(n: number | null) {
+  if (n == null || n <= 0) return null;
+  if (n < 1024) return `${n} B`;
+  const kb = n / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  return `${(kb / 1024).toFixed(1)} MB`;
+}
 
 export function AdminApplicationOpsPanel({
   applicationId,
@@ -32,23 +63,23 @@ export function AdminApplicationOpsPanel({
 }) {
   const router = useRouter();
   const [nextStatus, setNextStatus] = useState<string>("");
-  const [outcomeDocId, setOutcomeDocId] = useState("");
+  const [selectedOutcomeDocId, setSelectedOutcomeDocId] = useState("");
   const [uploadType, setUploadType] = useState("outcome_approval");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showNewUpload, setShowNewUpload] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (!selectedFile) {
-      setPreviewUrl(null);
-      return;
-    }
-    const url = URL.createObjectURL(selectedFile);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [selectedFile]);
+  const requiredDocType = requiredOutcomeDocType(nextStatus);
+  const matchingOutcomeDocs = requiredDocType ? retainedOutcomeDocs(documents, requiredDocType) : [];
+  const selectedOutcomeDoc =
+    matchingOutcomeDocs.find((d) => d.id === selectedOutcomeDocId) ?? null;
+  const statusNeedsOutcome = requiredDocType !== null;
+  const canApplyStatus = !statusNeedsOutcome || selectedOutcomeDocId.length > 0;
+  const showUploadPanel =
+    statusNeedsOutcome && (matchingOutcomeDocs.length === 0 || showNewUpload);
 
   const opsLocked =
     paymentStatus !== "paid" || TERMINAL.has(applicationStatus);
@@ -80,6 +111,33 @@ export function AdminApplicationOpsPanel({
     setSelectedFile(f);
   }
 
+  useEffect(() => {
+    if (!selectedFile) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(selectedFile);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [selectedFile]);
+
+  useEffect(() => {
+    if (!requiredDocType) {
+      setSelectedOutcomeDocId("");
+      setShowNewUpload(false);
+      clearSelectedFile();
+      return;
+    }
+    setUploadType(requiredDocType);
+    setShowNewUpload(false);
+    clearSelectedFile();
+    const matching = retainedOutcomeDocs(documents, requiredDocType);
+    setSelectedOutcomeDocId((prev) => {
+      if (prev && matching.some((d) => d.id === prev)) return prev;
+      return matching[0]?.id ?? "";
+    });
+  }, [requiredDocType, documents]);
+
   async function uploadSelectedFile() {
     if (!selectedFile) {
       setMsg("Choose a file to upload.");
@@ -102,8 +160,9 @@ export function AdminApplicationOpsPanel({
       }
       const id = data?.data?.document?.id as string | undefined;
       if (id) {
-        setOutcomeDocId(id);
-        setMsg(`Outcome document uploaded. Id: ${id}`);
+        setSelectedOutcomeDocId(id);
+        setShowNewUpload(false);
+        setMsg("Document uploaded. You can now apply the status.");
       }
       clearSelectedFile();
       router.refresh();
@@ -117,17 +176,15 @@ export function AdminApplicationOpsPanel({
       setMsg("Choose a target status.");
       return;
     }
-    const needsOutcome =
-      nextStatus === "completed" || nextStatus === "rejection_by_uae_authorities";
-    if (needsOutcome && !outcomeDocId.trim()) {
-      setMsg("Upload the outcome document first, or paste the document id from the list below.");
+    if (statusNeedsOutcome && !selectedOutcomeDocId) {
+      setMsg("Upload the required outcome document before applying this status.");
       return;
     }
     setLoading(true);
     setMsg(null);
     try {
       const body: Record<string, unknown> = { applicationStatus: nextStatus };
-      if (needsOutcome) body.outcomeDocumentId = outcomeDocId.trim();
+      if (statusNeedsOutcome) body.outcomeDocumentId = selectedOutcomeDocId;
       const res = await fetch(apiHref(`/admin/applications/${applicationId}/ops`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -151,7 +208,8 @@ export function AdminApplicationOpsPanel({
         setMsg(null);
       }
       setNextStatus("");
-      setOutcomeDocId("");
+      setSelectedOutcomeDocId("");
+      setShowNewUpload(false);
       router.refresh();
     } finally {
       setLoading(false);
@@ -165,111 +223,189 @@ export function AdminApplicationOpsPanel({
         <p className="text-muted-foreground text-sm">{opsLockedMessage}</p>
       ) : (
         <>
-      {msg ? <p className="text-sm text-muted-foreground">{msg}</p> : null}
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold">Upload outcome document</h3>
-        <p className="text-muted-foreground text-xs">
-          Upload the approval pack or UAE authority rejection proof before marking the application completed or
-          rejected. Max 8 MB; JPEG, PNG, or PDF.
-        </p>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-          <select
-            value={uploadType}
-            onChange={(e) => setUploadType(e.target.value)}
-            className="border-border bg-background h-9 w-full shrink-0 rounded-none border px-2 text-sm sm:w-auto"
-            aria-label="Outcome document type"
-          >
-            <option value="outcome_approval">Approval / visa pack</option>
-            <option value="outcome_authority_rejection">UAE authority rejection proof</option>
-          </select>
+          {msg ? <p className="text-sm text-muted-foreground">{msg}</p> : null}
 
-          <div className="min-w-0 flex-1 space-y-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,application/pdf"
-              onChange={handleFileChosen}
-              className="sr-only"
-              tabIndex={-1}
-              aria-hidden
-            />
-
-            {!selectedFile ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-9 rounded-none"
-                disabled={loading}
-                onClick={() => fileInputRef.current?.click()}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">1. Choose status</h3>
+              <select
+                value={nextStatus}
+                onChange={(e) => setNextStatus(e.target.value)}
+                className="border-border bg-background h-9 w-full max-w-md rounded-none border px-2 text-sm"
+                aria-label="Target application status"
               >
-                Choose file
-              </Button>
-            ) : (
-              <OutcomeFilePreview
-                file={selectedFile}
-                previewUrl={previewUrl}
-                loading={loading}
-                onChangeFile={pickAnotherFile}
-                onPreview={() => {
-                  if (previewUrl) window.open(previewUrl, "_blank", "noopener,noreferrer");
-                }}
-                onUpload={() => void uploadSelectedFile()}
-              />
-            )}
+                <option value="">Choose status…</option>
+                <option value="awaiting_authority">Awaiting authority</option>
+                <option value="in_progress">In progress</option>
+                <option value="completed">Completed (approval pack)</option>
+                <option value="rejection_by_uae_authorities">Rejected by UAE authorities</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+
+            {nextStatus ? (
+              <>
+                {statusNeedsOutcome ? (
+                  <div className="space-y-4 border border-border bg-muted/10 p-4">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-semibold">2. Outcome document</h3>
+                      <p className="text-muted-foreground text-xs">
+                        Required:{" "}
+                        <span className="font-medium">{formatOutcomeDocType(requiredDocType)}</span>. Max 8
+                        MB; JPEG, PNG, or PDF.
+                      </p>
+                    </div>
+
+                    {matchingOutcomeDocs.length > 0 && !showNewUpload ? (
+                      <div className="space-y-3">
+                        {matchingOutcomeDocs.length > 1 ? (
+                          <fieldset className="space-y-2">
+                            <legend className="text-muted-foreground text-xs font-medium">
+                              Choose an existing upload
+                            </legend>
+                            <ul className="space-y-1">
+                              {matchingOutcomeDocs.map((d) => (
+                                <li key={d.id}>
+                                  <label className="border-border hover:bg-muted/30 flex cursor-pointer items-start gap-2 border p-2 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                                    <input
+                                      type="radio"
+                                      name="outcome-doc"
+                                      className="mt-1"
+                                      checked={selectedOutcomeDocId === d.id}
+                                      onChange={() => setSelectedOutcomeDocId(d.id)}
+                                    />
+                                    <OutcomeDocSummary doc={d} compact />
+                                  </label>
+                                </li>
+                              ))}
+                            </ul>
+                          </fieldset>
+                        ) : selectedOutcomeDoc ? (
+                          <OutcomeDocSummary doc={selectedOutcomeDoc} />
+                        ) : null}
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="rounded-none"
+                          onClick={() => {
+                            setShowNewUpload(true);
+                            clearSelectedFile();
+                          }}
+                        >
+                          Upload a different document
+                        </Button>
+                      </div>
+                    ) : null}
+
+                    {showUploadPanel ? (
+                      <div className="space-y-2">
+                        {matchingOutcomeDocs.length > 0 ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-auto rounded-none px-0 text-xs"
+                            onClick={() => {
+                              setShowNewUpload(false);
+                              clearSelectedFile();
+                            }}
+                          >
+                            Use an existing upload instead
+                          </Button>
+                        ) : null}
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,application/pdf"
+                          onChange={handleFileChosen}
+                          className="sr-only"
+                          tabIndex={-1}
+                          aria-hidden
+                        />
+                        {!selectedFile ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="rounded-none"
+                            disabled={loading}
+                            onClick={() => fileInputRef.current?.click()}
+                          >
+                            Choose file
+                          </Button>
+                        ) : (
+                          <OutcomeFilePreview
+                            file={selectedFile}
+                            previewUrl={previewUrl}
+                            loading={loading}
+                            onChangeFile={pickAnotherFile}
+                            onPreview={() => {
+                              if (previewUrl) window.open(previewUrl, "_blank", "noopener,noreferrer");
+                            }}
+                            onUpload={() => void uploadSelectedFile()}
+                          />
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-xs">
+                    No outcome document is required for this status.
+                  </p>
+                )}
+
+                <div className="space-y-2 border-t border-border pt-4">
+                  <h3 className="text-sm font-semibold">
+                    {statusNeedsOutcome ? "3. Apply status" : "2. Apply status"}
+                  </h3>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="rounded-none"
+                    disabled={loading || !canApplyStatus}
+                    onClick={() => void applyStatus()}
+                  >
+                    {loading ? <Loader2 className="size-4 animate-spin" /> : "Apply status"}
+                  </Button>
+                  {statusNeedsOutcome && !canApplyStatus ? (
+                    <p className="text-sm text-amber-800 dark:text-amber-200">
+                      Upload the required document before applying this status.
+                    </p>
+                  ) : null}
+                </div>
+              </>
+            ) : null}
           </div>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold">Set application status</h3>
-        <p className="text-muted-foreground text-xs">
-          Completed and UAE rejection require an outcome document uploaded above.
-        </p>
-        <div className="flex flex-wrap items-end gap-2">
-          <select
-            value={nextStatus}
-            onChange={(e) => setNextStatus(e.target.value)}
-            className="border-border bg-background h-9 rounded-none border px-2 text-sm"
-          >
-            <option value="">Choose…</option>
-            <option value="awaiting_authority">awaiting_authority</option>
-            <option value="in_progress">in_progress</option>
-            <option value="completed">completed (requires approval pack)</option>
-            <option value="rejection_by_uae_authorities">
-              rejection_by_uae_authorities (requires rejection proof)
-            </option>
-            <option value="cancelled">cancelled (no document)</option>
-          </select>
-          <Input
-            value={outcomeDocId}
-            onChange={(e) => setOutcomeDocId(e.target.value)}
-            placeholder="outcome document id"
-            className="max-w-md rounded-none font-mono text-xs"
-          />
-          <Button type="button" size="sm" className="rounded-none" disabled={loading} onClick={() => void applyStatus()}>
-            {loading ? <Loader2 className="size-4 animate-spin" /> : "Apply status"}
-          </Button>
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-sm font-semibold">Outcome documents</h3>
-        <ul className="mt-2 max-h-40 overflow-y-auto font-mono text-xs">
-          {documents.length === 0 ? (
-            <li className="text-muted-foreground">No outcome documents yet.</li>
-          ) : (
-            documents.map((d) => (
-              <li key={d.id} className="border-border border-b py-1">
-                <span className="text-muted-foreground">{d.documentType ?? "?"}</span> · {d.status ?? "?"} ·{" "}
-                {d.id.slice(0, 8)}…
-              </li>
-            ))
-          )}
-        </ul>
-      </div>
         </>
       )}
+    </div>
+  );
+}
+
+function OutcomeDocSummary({ doc, compact }: { doc: AdminDocRow; compact?: boolean }) {
+  const size = formatBytes(doc.byteLength);
+  const uploadedAt = new Date(doc.createdAt).toLocaleString();
+  const filename = doc.originalFilename?.trim() || "Uploaded document";
+
+  return (
+    <div className={cn("min-w-0", compact ? "flex-1" : "border-border bg-background border p-3")}>
+      <div className="flex gap-3">
+        <div
+          className="border-border bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center border"
+          aria-hidden
+        >
+          <FileText className="size-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{filename}</p>
+          <p className="text-muted-foreground text-xs">
+            {formatOutcomeDocType(doc.documentType)}
+            {size ? ` · ${size}` : ""}
+            {!compact ? ` · Uploaded ${uploadedAt}` : ` · ${uploadedAt}`}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
