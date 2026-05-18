@@ -13,6 +13,7 @@ import { ClientInput } from "@/components/client/client-input";
 import { convertMinorBetweenUsdAed, parsePublicDisplayFxAedPerUsd } from "@/lib/catalog/display-price";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
+import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { cn } from "@/lib/utils";
 
 type Nationality = { code: string; name: string };
@@ -79,6 +80,7 @@ type StartApplicationFormProps = {
 
 export function StartApplicationForm({ initialNationalityCode }: StartApplicationFormProps) {
   const router = useRouter();
+  const sessionEmail = useClientAuthStore((s) => s.session?.user?.email);
   const [nationalities, setNationalities] = useState<Nationality[]>([]);
   const [nationality, setNationality] = useState("");
   const [services, setServices] = useState<Service[]>([]);
@@ -89,6 +91,12 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
   const [loadingServices, setLoadingServices] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fromSession = sessionEmail?.trim();
+    if (!fromSession) return;
+    setEmail((current) => (current.trim() ? current : fromSession));
+  }, [sessionEmail]);
 
   useEffect(() => {
     let cancelled = false;
