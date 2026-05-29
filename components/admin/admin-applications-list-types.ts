@@ -1,6 +1,7 @@
 export type AdminApplicationListItem = {
   id: string;
   serviceId: string;
+  serviceName: string | null;
   applicationStatus: string;
   paymentStatus: string;
   fulfillmentStatus: string;

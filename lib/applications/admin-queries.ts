@@ -46,8 +46,15 @@ export async function listAdminApplications(
   }
 
   const query = tx
-    .select()
+    .select({
+      application: schema.application,
+      serviceName: schema.visaService.name,
+    })
     .from(schema.application)
+    .leftJoin(
+      schema.visaService,
+      eq(schema.application.serviceId, schema.visaService.id),
+    )
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(schema.application.createdAt))
     .limit(params.limit ?? 50)
@@ -61,7 +68,10 @@ export async function listAdminApplications(
   const [rows, [totalResult]] = await Promise.all([query, totalQuery]);
 
   return {
-    items: rows,
+    items: rows.map((row) => ({
+      ...row.application,
+      serviceName: row.serviceName,
+    })),
     total: totalResult.value,
   };
 }

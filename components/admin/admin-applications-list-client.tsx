@@ -25,11 +25,10 @@ import { useAdminApplicationsList } from "@/components/admin/use-admin-applicati
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button-variants";
 
-const TABLE_COLUMNS = 8;
+const TABLE_COLUMNS = 7;
 const SKELETON_COLUMN_WIDTHS = [
-  "w-24",
   "w-32",
-  "w-20",
+  "w-40",
   "w-24",
   "w-20",
   "w-28",
@@ -230,7 +229,6 @@ export function AdminApplicationsListClient({ initialAttentionCount }: Props) {
           <table className="w-full text-left border-collapse text-sm">
           <thead>
             <tr className="bg-muted border-b border-border">
-              <th className="px-4 py-3 text-xs font-bold uppercase text-muted-foreground">ID</th>
               <th className="px-4 py-3 text-xs font-bold uppercase text-muted-foreground">
                 Applicant
               </th>
@@ -283,15 +281,16 @@ export function AdminApplicationsListClient({ initialAttentionCount }: Props) {
                 )}
                 aria-label={`Open application ${app.referenceNumber ?? app.id.slice(0, 8)}`}
               >
-                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                  {app.referenceNumber ?? `${app.id.slice(0, 8)}…`}
-                </td>
                 <td className="px-4 py-3 text-xs">
                   {app.fullName ?? app.guestEmail ?? (
                     <span className="text-muted-foreground italic">Unnamed draft</span>
                   )}
                 </td>
-                <td className="px-4 py-3 font-mono text-xs">{app.serviceId}</td>
+                <td className="px-4 py-3 text-xs">
+                  {app.serviceName ?? (
+                    <span className="text-muted-foreground italic">Unknown service</span>
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary border border-primary/20 font-mono">
                     {app.applicationStatus}
