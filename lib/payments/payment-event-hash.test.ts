@@ -1,18 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { computePaymentEventPayloadHash } from "./payment-event-hash";
+import {
+  computeZiinaReconcilePayloadHash,
+  computeZiinaReconcileProbePayloadHash,
+} from "./payment-event-hash";
 
-describe("computePaymentEventPayloadHash", () => {
-  it("is stable for the same provider + body", () => {
-    const body = '{"event":"x"}';
-    expect(computePaymentEventPayloadHash("paddle", body)).toBe(
-      computePaymentEventPayloadHash("paddle", body),
-    );
+describe("ziina reconcile hashes", () => {
+  it("probe hashes are stable per payment and slot", () => {
+    const a = computeZiinaReconcileProbePayloadHash("pay_1", "5m");
+    const b = computeZiinaReconcileProbePayloadHash("pay_1", "5m");
+    const c = computeZiinaReconcileProbePayloadHash("pay_1", "10m");
+    expect(a).toBe(b);
+    expect(a).not.toBe(c);
   });
 
-  it("differs when provider changes for the same body", () => {
-    const body = '{"event":"x"}';
-    const paddle = computePaymentEventPayloadHash("paddle", body);
-    const ziina = computePaymentEventPayloadHash("ziina", body);
-    expect(paddle).not.toBe(ziina);
+  it("apply hashes differ by slot and status", () => {
+    const a = computeZiinaReconcilePayloadHash("pay_1", "5m", "completed");
+    const b = computeZiinaReconcilePayloadHash("pay_1", "10m", "completed");
+    expect(a).not.toBe(b);
   });
 });

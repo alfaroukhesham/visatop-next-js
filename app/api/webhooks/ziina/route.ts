@@ -1,29 +1,20 @@
 import { headers } from "next/headers";
-import { after } from "next/server";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor } from "@/lib/db/actor-context";
-import {
-  applyPaymentWebhookEvent,
-  resolvePaymentRowForWebhook,
-} from "@/lib/payments/apply-payment-webhook-event";
 import { computePaymentEventPayloadHash } from "@/lib/payments/payment-event-hash";
 import {
   isPostgresOnConflictMissingConstraintError,
   PaymentWebhookSchemaDeploymentError,
-  requirePaymentEventPayloadHashDedupeIndex,
 } from "@/lib/payments/payment-webhook-db-guard";
+import { processZiinaPaymentInTransaction } from "@/lib/payments/process-ziina-payment";
+import { scheduleZiinaPaidSideEffects } from "@/lib/payments/ziina-payment-side-effects";
 import {
   assertZiinaWebhookSourceIpAllowed,
   parseZiinaWebhookToNormalized,
   verifyZiinaWebhookSignature,
 } from "@/lib/payments/ziina-webhook";
 import { ZIINA_WEBHOOK_SOURCE_IPS } from "@/lib/payments/resolve-payment-provider";
-import { application, auditLog, paymentEvent } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { createId } from "@paralleldrive/cuid2";
 import { markWebhookReceivedNow, PLATFORM_KEY_LAST_WEBHOOK_ZIINA } from "@/lib/payments/webhook-health";
-import { sendPaymentReceivedInProgressEmail } from "@/lib/email/send-application-transactional-emails";
-import { sendAdminPaymentCompletedEmail } from "@/lib/email/send-admin-notification-emails";
 
 export const runtime = "nodejs";
 
@@ -38,8 +29,10 @@ export async function POST(req: Request) {
   const allowUnsigned = process.env.ZIINA_WEBHOOK_ALLOW_UNSIGNED === "true";
 
   if (!secret) {
-    // Never allow unsigned webhooks in production.
     if (isProd) {
+      console.error("[webhooks/ziina] WEBHOOK_SECRET_NOT_CONFIGURED — rejecting in production", {
+        requestId,
+      });
       return jsonError("WEBHOOK_SECRET_NOT_CONFIGURED", "Ziina webhook secret is not configured", {
         status: 503,
         requestId,
@@ -47,6 +40,7 @@ export async function POST(req: Request) {
       });
     }
     if (!allowUnsigned) {
+      console.warn("[webhooks/ziina] Missing webhook secret and unsigned not allowed", { requestId });
       return jsonError("WEBHOOK_SIGNATURE_INVALID", "Invalid or missing Ziina webhook signature", {
         status: 401,
         requestId,
@@ -54,89 +48,73 @@ export async function POST(req: Request) {
     }
     console.error("[webhooks/ziina] CRITICAL: ZIINA_WEBHOOK_ALLOW_UNSIGNED=true — webhooks are not authenticated");
   } else if (!verifyZiinaWebhookSignature(bodyText, sig, secret)) {
+    console.warn("[webhooks/ziina] Invalid webhook signature", {
+      requestId,
+      hasSignatureHeader: Boolean(sig),
+    });
     return jsonError("WEBHOOK_SIGNATURE_INVALID", "Invalid Ziina webhook signature", { status: 401, requestId });
   }
 
   const enforceIp = process.env.ZIINA_ENFORCE_WEBHOOK_IP_ALLOWLIST === "true";
   if (enforceIp) {
-    // Netlify sets `x-nf-client-connection-ip`; fall back to checking *any* IP in x-forwarded-for.
     const xff = req.headers.get("x-forwarded-for");
     const netlifyClientIp = req.headers.get("x-nf-client-connection-ip");
     const ok = assertZiinaWebhookSourceIpAllowed(xff, netlifyClientIp, ZIINA_WEBHOOK_SOURCE_IPS);
     if (!ok) {
+      console.warn("[webhooks/ziina] Webhook source IP not allowlisted", {
+        requestId,
+        xForwardedFor: xff,
+        clientIp: netlifyClientIp,
+      });
       return jsonError("UNAUTHORIZED", "Webhook source IP not allowlisted", { status: 401, requestId });
     }
   }
 
   const parsed = parseZiinaWebhookToNormalized(bodyText);
   if (parsed.kind === "ignored") {
+    let intentId: string | undefined;
+    try {
+      const body = JSON.parse(bodyText) as { data?: { id?: string; status?: string } };
+      intentId = body.data?.id;
+      console.info("[webhooks/ziina] Webhook ignored (no state change)", {
+        requestId,
+        reason: parsed.reason,
+        intentId,
+        ziinaStatus: body.data?.status,
+      });
+    } catch {
+      console.info("[webhooks/ziina] Webhook ignored (no state change)", {
+        requestId,
+        reason: parsed.reason,
+      });
+    }
     return jsonOk({ received: true, ignored: parsed.reason }, { requestId });
   }
 
   const normalized = parsed.event;
   const payloadHash = computePaymentEventPayloadHash("ziina", bodyText);
-  const providerEventId =
-    typeof normalized.providerEventId === "string" && normalized.providerEventId ?
-      normalized.providerEventId
-    : normalized.providerPaymentId;
+  const eventType = normalized.rawEventType;
 
   let firstPaidApplicationId: string | null = null;
   try {
     const handleResult = await withSystemDbActor(async (tx) => {
       await markWebhookReceivedNow(tx, PLATFORM_KEY_LAST_WEBHOOK_ZIINA);
 
-      const payRow = await resolvePaymentRowForWebhook(tx, normalized);
-      if (!payRow) {
-        // Expected for admin smoke-test intents (not linked to an application payment row).
-        console.info("[webhooks/ziina] Webhook received but no matching payment row", {
-          intentId: normalized.providerPaymentId,
-        });
-        return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
-      }
+      const processResult = await processZiinaPaymentInTransaction(tx, {
+        normalized,
+        payloadHash,
+        eventType,
+        requestId,
+        logLabel: "webhooks/ziina",
+      });
 
-      if (payRow.provider !== "ziina") {
-        console.warn("[webhooks/ziina] payment row provider mismatch", {
-          paymentId: payRow.id,
-          rowProvider: payRow.provider,
-        });
-        await tx.insert(auditLog).values({
-          actorType: "system",
-          actorId: null,
-          action: "webhook_provider_mismatch",
-          entityType: "payment",
-          entityId: payRow.id,
-          beforeJson: JSON.stringify({ paymentProvider: payRow.provider }),
-          afterJson: JSON.stringify({
-            route: "ziina",
-            providerEventId,
-            rawEventType: normalized.rawEventType,
-          }),
-        });
+      if (processResult.outcome === "rejected_provider_mismatch") {
         return { kind: "reject" as const, firstPaidApplicationId: null as string | null };
       }
 
-      const [appRow] = await tx.select().from(application).where(eq(application.id, payRow.applicationId)).limit(1);
-      if (!appRow) return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
-
-      await requirePaymentEventPayloadHashDedupeIndex(tx);
-
-      const [insertedEvent] = await tx
-        .insert(paymentEvent)
-        .values({
-          id: createId(),
-          paymentId: payRow.id,
-          providerEventId,
-          type: normalized.rawEventType,
-          payloadHash,
-        })
-        .onConflictDoNothing({ target: paymentEvent.payloadHash })
-        .returning();
-      if (!insertedEvent) return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
-
-      const payApply = await applyPaymentWebhookEvent(tx, normalized, payRow, appRow, providerEventId, { requestId });
       return {
         kind: "noop" as const,
-        firstPaidApplicationId: payApply.didFirstPaidTransition ? payRow.applicationId : null,
+        firstPaidApplicationId: processResult.firstPaidApplicationId,
       };
     });
 
@@ -164,27 +142,16 @@ export async function POST(req: Request) {
         },
       );
     }
+    console.error("[webhooks/ziina] Unhandled webhook processing error", {
+      requestId,
+      intentId: normalized.providerPaymentId,
+      err: e instanceof Error ? e.message : e,
+    });
     throw e;
   }
 
   if (firstPaidApplicationId) {
-    const paidAppId = firstPaidApplicationId;
-    after(() => {
-      void sendPaymentReceivedInProgressEmail(paidAppId, requestId).catch((err) => {
-        console.error("[webhooks/ziina] payment_received_in_progress email failed", {
-          applicationId: paidAppId,
-          requestId,
-          err: err instanceof Error ? err.message : err,
-        });
-      });
-      void sendAdminPaymentCompletedEmail(paidAppId, requestId).catch((err) => {
-        console.error("[webhooks/ziina] admin_payment_completed email failed", {
-          applicationId: paidAppId,
-          requestId,
-          err: err instanceof Error ? err.message : err,
-        });
-      });
-    });
+    scheduleZiinaPaidSideEffects(firstPaidApplicationId, requestId);
   }
 
   return jsonOk({ received: true }, { requestId });

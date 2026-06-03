@@ -1,9 +1,7 @@
 import crypto from "node:crypto";
-import type { NormalizedPaymentWebhookEvent } from "./normalized-webhook";
+import { mapZiinaIntentSnapshotToNormalized, type ZiinaIntentMapResult } from "./ziina-intent-status";
 
-export type ZiinaWebhookParseResult =
-  | { kind: "event"; event: NormalizedPaymentWebhookEvent }
-  | { kind: "ignored"; reason: string };
+export type ZiinaWebhookParseResult = ZiinaIntentMapResult;
 
 function timingSafeEqualHex(a: string, b: string): boolean {
   try {
@@ -77,49 +75,14 @@ export function parseZiinaWebhookToNormalized(rawBody: string): ZiinaWebhookPars
     typeof d.currency_code === "string" ? d.currency_code.trim().toUpperCase() : "USD";
   const operationId = typeof d.operation_id === "string" ? d.operation_id : null;
 
-  if (!id) {
-    return { kind: "ignored", reason: "missing_intent_id" };
-  }
-
-  if (
-    status === "requires_payment_instrument" ||
-    status === "pending" ||
-    status === "requires_user_action"
-  ) {
-    return { kind: "ignored", reason: `non_terminal_status:${status}` };
-  }
-
-  if (status === "completed") {
-    return {
-      kind: "event",
-      event: {
-        provider: "ziina",
-        kind: "payment_completed",
-        providerPaymentId: id,
-        amountMinor: Number.isFinite(amount) ? amount : 0,
-        currency: currency.length === 3 ? currency : "USD",
-        metadata: operationId ? { operationId } : {},
-        rawEventType: eventName,
-        providerEventId: id,
-      },
-    };
-  }
-
-  if (status === "failed" || status === "canceled") {
-    return {
-      kind: "event",
-      event: {
-        provider: "ziina",
-        kind: "payment_failed",
-        providerPaymentId: id,
-        amountMinor: Number.isFinite(amount) ? amount : 0,
-        currency: currency.length === 3 ? currency : "USD",
-        metadata: operationId ? { operationId } : {},
-        rawEventType: eventName,
-        providerEventId: id,
-      },
-    };
-  }
-
-  return { kind: "ignored", reason: `unknown_status:${status}` };
+  return mapZiinaIntentSnapshotToNormalized(
+    {
+      id,
+      status,
+      amountMinor: Number.isFinite(amount) ? amount : 0,
+      currencyCode: currency,
+      operationId,
+    },
+    eventName,
+  );
 }

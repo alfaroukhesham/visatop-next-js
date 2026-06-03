@@ -38,6 +38,11 @@ export function CheckoutReturnClient({ applicationId }: { applicationId: string 
         return;
       }
 
+      await fetchApiEnvelope<{ reconciled?: boolean }>(
+        apiHref(`/applications/${encodeURIComponent(applicationId)}/checkout/reconcile`),
+        { method: "POST" },
+      );
+
       const res = await fetchApiEnvelope<{ application: AppPoll }>(
         apiHref(`/applications/${encodeURIComponent(applicationId)}`),
       );

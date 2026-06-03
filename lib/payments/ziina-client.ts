@@ -30,6 +30,15 @@ export type ZiinaPaymentIntentCreated = {
   operationId: string;
 };
 
+export type ZiinaPaymentIntentRecord = {
+  id: string;
+  status: string;
+  amountMinor: number;
+  currencyCode: string;
+  operationId: string | null;
+  raw: Record<string, unknown>;
+};
+
 export async function createZiinaPaymentIntent(
   params: CreateZiinaPaymentIntentParams,
 ): Promise<ZiinaPaymentIntentCreated> {
@@ -96,6 +105,50 @@ export async function createZiinaPaymentIntent(
     throw new ZiinaProviderError("Ziina payment_intent response missing id or redirect_url", 502, text.slice(0, 300));
   }
   return { id, redirectUrl, operationId };
+}
+
+export async function getZiinaPaymentIntent(params: {
+  baseUrl: string;
+  accessToken: string;
+  paymentIntentId: string;
+  timeoutMs?: number;
+}): Promise<ZiinaPaymentIntentRecord> {
+  const endpoint = `${params.baseUrl.replace(/\/$/, "")}/payment_intent/${encodeURIComponent(params.paymentIntentId)}`;
+  const res = await ziinaFetchJson(endpoint, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${params.accessToken}`,
+      Accept: "application/json",
+    },
+    timeoutMs: params.timeoutMs,
+  });
+  if (!res.ok) {
+    throw new ZiinaProviderError(
+      `Ziina get payment_intent failed (HTTP ${res.status})`,
+      res.status >= 500 ? 502 : res.status >= 400 ? 400 : 502,
+      res.text.slice(0, 500),
+    );
+  }
+  const rec = res.json;
+  const id = typeof rec.id === "string" ? rec.id : "";
+  const status = typeof rec.status === "string" ? rec.status : "";
+  const amountRaw = rec.amount;
+  const amount =
+    typeof amountRaw === "number" ? amountRaw : typeof amountRaw === "string" ? Number(amountRaw) : NaN;
+  const currencyCode =
+    typeof rec.currency_code === "string" ? rec.currency_code.trim().toUpperCase() : "USD";
+  const operationId = typeof rec.operation_id === "string" ? rec.operation_id : null;
+  if (!id || !status) {
+    throw new ZiinaProviderError("Ziina payment_intent response missing id or status", 502);
+  }
+  return {
+    id,
+    status,
+    amountMinor: Number.isFinite(amount) ? amount : 0,
+    currencyCode,
+    operationId,
+    raw: rec,
+  };
 }
 
 export type InitiateZiinaRefundParams = {
