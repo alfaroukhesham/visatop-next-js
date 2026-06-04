@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 import type { PublicApplication } from "@/lib/applications/public-application";
@@ -26,11 +27,16 @@ export function useApplicationDraft(applicationId: string) {
       const silent = opts?.silent === true;
       if (!silent) setLoading(true);
       if (!silent) setError(null);
-      const [appRes, docsRes] = await Promise.all([
-        fetchApiEnvelope<{ application: PublicApplication }>(apiHref(`/applications/${applicationId}`)),
-        fetchApiEnvelope<{ documents: PublicDocument[] }>(apiHref(`/applications/${applicationId}/documents`)),
-      ]);
-      if (!silent) setLoading(false);
+      let appRes: Awaited<ReturnType<typeof fetchApiEnvelope<{ application: PublicApplication }>>>;
+      let docsRes: Awaited<ReturnType<typeof fetchApiEnvelope<{ documents: PublicDocument[] }>>>;
+      try {
+        [appRes, docsRes] = await Promise.all([
+          fetchApiEnvelope<{ application: PublicApplication }>(apiHref(`/applications/${applicationId}`)),
+          fetchApiEnvelope<{ documents: PublicDocument[] }>(apiHref(`/applications/${applicationId}/documents`)),
+        ]);
+      } finally {
+        if (!silent) setLoading(false);
+      }
       if (!appRes.ok) {
         setApp(null);
         setError(appRes.error.message);
@@ -125,6 +131,10 @@ export function useApplicationDraft(applicationId: string) {
       void load();
     });
   }, [load]);
+
+  useOnBfcacheRestore(() => {
+    void load();
+  });
 
   useEffect(() => {
     if (app?.paymentStatus === "checkout_created") {

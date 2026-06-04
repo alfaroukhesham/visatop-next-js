@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ClientServiceCardsSkeleton,
@@ -13,6 +13,7 @@ import { ClientInput } from "@/components/client/client-input";
 import { convertMinorBetweenUsdAed, parsePublicDisplayFxAedPerUsd } from "@/lib/catalog/display-price";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
+import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { cn } from "@/lib/utils";
 
@@ -91,6 +92,13 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
   const [loadingServices, setLoadingServices] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [catalogReloadEpoch, setCatalogReloadEpoch] = useState(0);
+
+  const reloadCatalog = useCallback(() => {
+    setCatalogReloadEpoch((n) => n + 1);
+  }, [nationality]);
+
+  useOnBfcacheRestore(reloadCatalog);
 
   useEffect(() => {
     const fromSession = sessionEmail?.trim();
@@ -105,32 +113,36 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
     queueMicrotask(() => {
       void (async () => {
         setLoadingList(true);
-        const res = await fetchApiEnvelope<{ nationalities: Nationality[] }>(
-          apiHref("/catalog/nationalities"),
-        );
-        if (cancelled) return;
-        if (!res.ok) {
-          setError(res.error.message);
-          setNationalities([]);
-        } else {
-          const list = res.data.nationalities;
-          setNationalities(list);
-          setError(null);
-          const upper =
-            initialNationalityCode && initialNationalityCode.length === 2
-              ? initialNationalityCode.toUpperCase()
-              : null;
-          if (upper && list.some((n) => n.code === upper)) {
-            setNationality(upper);
+        try {
+          const res = await fetchApiEnvelope<{ nationalities: Nationality[] }>(
+            apiHref("/catalog/nationalities"),
+          );
+          if (cancelled) return;
+          if (!res.ok) {
+            setError(res.error.message);
+            setNationalities([]);
+          } else {
+            const list = res.data.nationalities;
+            setNationalities(list);
+            setError(null);
+            const upper =
+              initialNationalityCode && initialNationalityCode.length === 2
+                ? initialNationalityCode.toUpperCase()
+                : null;
+            if (upper && list.some((n) => n.code === upper)) {
+              setNationality(upper);
+            }
           }
+        } finally {
+          if (!cancelled) setLoadingList(false);
         }
-        setLoadingList(false);
       })();
     });
     return () => {
       cancelled = true;
+      setLoadingList(false);
     };
-  }, [initialNationalityCode]);
+  }, [initialNationalityCode, catalogReloadEpoch]);
 
   useEffect(() => {
     if (loadingList) return;
@@ -158,27 +170,31 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
       }
       void (async () => {
         setLoadingServices(true);
-        const res = await fetchApiEnvelope<{ services: Service[] }>(
-          apiHref(
-            `/catalog/services?nationality=${encodeURIComponent(nationality)}&currency=${encodeURIComponent(displayCurrency)}`,
-          ),
-        );
-        if (cancelled) return;
-        if (!res.ok) {
-          setError(res.error.message);
-          setServices([]);
-        } else {
-          setServices(res.data.services);
-          setServiceId("");
-          setError(null);
+        try {
+          const res = await fetchApiEnvelope<{ services: Service[] }>(
+            apiHref(
+              `/catalog/services?nationality=${encodeURIComponent(nationality)}&currency=${encodeURIComponent(displayCurrency)}`,
+            ),
+          );
+          if (cancelled) return;
+          if (!res.ok) {
+            setError(res.error.message);
+            setServices([]);
+          } else {
+            setServices(res.data.services);
+            setServiceId("");
+            setError(null);
+          }
+        } finally {
+          if (!cancelled) setLoadingServices(false);
         }
-        setLoadingServices(false);
       })();
     });
     return () => {
       cancelled = true;
+      setLoadingServices(false);
     };
-  }, [nationality, displayCurrency]);
+  }, [nationality, displayCurrency, catalogReloadEpoch]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();

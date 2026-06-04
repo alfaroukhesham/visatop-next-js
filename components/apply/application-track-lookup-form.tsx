@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
 import { ClientField } from "@/components/client/client-field";
@@ -9,6 +9,7 @@ import { apiHref } from "@/lib/app-href";
 import type { ClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
 import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
 import { ClientInlineLoading, ClientTrackListSkeleton } from "@/components/client/client-loading";
+import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 
 type TrackApplicationRow = {
   applicationId: string;
@@ -34,6 +35,7 @@ export function ApplicationTrackLookupForm() {
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<TrackApplicationRow[] | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const hadResultsRef = useRef(false);
 
   async function runLookup(opts: { reset: boolean; cursor: string | null }) {
     setError(null);
@@ -61,6 +63,7 @@ export function ApplicationTrackLookupForm() {
       setResults((prev) =>
         opts.reset ? json.data.applications : [...(prev ?? []), ...json.data.applications],
       );
+      hadResultsRef.current = true;
     } catch {
       setError("Network error. Check your connection and try again.");
     } finally {
@@ -74,6 +77,11 @@ export function ApplicationTrackLookupForm() {
     setNextCursor(null);
     await runLookup({ reset: true, cursor: null });
   }
+
+  useOnBfcacheRestore(() => {
+    if (!hadResultsRef.current || !contact.trim()) return;
+    void runLookup({ reset: true, cursor: null });
+  });
 
   return (
     <div className="space-y-10">

@@ -12,6 +12,7 @@ import { apiHref, appHref } from "@/lib/app-href";
 import type { PublicApplication } from "@/lib/applications/public-application";
 import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
 import { SUPPORT_WHATSAPP_URL } from "@/lib/support-contact";
+import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 
 type Props = {
   applicationId: string;
@@ -55,6 +56,10 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
       setApp(json.data.application);
     }
   }, [applicationId]);
+
+  useOnBfcacheRestore(() => {
+    void load();
+  });
 
   useEffect(() => {
     if (app.paymentStatus !== "checkout_created") return;

@@ -8,6 +8,7 @@ import { ClientButton, ClientButtonLink } from "@/components/client/client-butto
 import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
 import type { ClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
 import { apiHref } from "@/lib/app-href";
+import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 
 type Row = {
   applicationId: string;
@@ -76,6 +77,10 @@ export function SignedInTrackList() {
   useEffect(() => {
     void load(null);
   }, []);
+
+  useOnBfcacheRestore(() => {
+    void load(null);
+  });
 
   return (
     <section className="space-y-8" aria-live="polite">

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Red_Hat_Display, Red_Hat_Mono, Red_Hat_Text } from "next/font/google";
 import { ThemeClassSync } from "@/components/theme-class-sync";
+import { BFCACHE_BOOTSTRAP_SCRIPT } from "@/lib/client/bfcache-bootstrap-script";
 import { getAppOrigin } from "@/lib/app-url";
 import "./globals.css";
 
@@ -54,6 +56,11 @@ export default function RootLayout({
       className={`${bodySans.variable} ${headingSans.variable} ${mono.variable} h-full antialiased`}
     >
       <body className="relative flex min-h-full flex-col">
+        <Script
+          id="visatop-bfcache-bootstrap"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: BFCACHE_BOOTSTRAP_SCRIPT }}
+        />
         <ThemeClassSync />
         {children}
       </body>

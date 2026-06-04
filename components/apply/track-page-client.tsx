@@ -26,7 +26,7 @@ export function TrackPageClient() {
           Track your application
         </h1>
 
-        {pending ? (
+        {pending && authed ? (
           <AppShimmer className="h-4 w-full max-w-prose" aria-hidden />
         ) : authed ? (
           <p className="text-muted-foreground max-w-prose text-base leading-relaxed">
@@ -41,10 +41,12 @@ export function TrackPageClient() {
         )}
       </header>
 
-      {pending ? (
-        <ClientTrackListSkeleton count={1} />
-      ) : authed ? (
-        <SignedInTrackList />
+      {authed ? (
+        pending ? (
+          <ClientTrackListSkeleton count={1} />
+        ) : (
+          <SignedInTrackList />
+        )
       ) : (
         <ApplicationTrackLookupForm />
       )}
@@ -63,4 +65,3 @@ export function TrackPageClient() {
     </div>
   );
 }
-

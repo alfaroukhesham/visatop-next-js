@@ -1,14 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ClientComboboxSkeleton } from "@/components/client/client-loading";
 import { ClientButton } from "@/components/client/client-button";
 import { NationalityCombobox } from "@/components/client/nationality-combobox";
+import {
+  clearLeftPageMarker,
+  reloadHomeCatalogIfReturning,
+  setHomeCatalogReload,
+} from "@/lib/client/home-catalog-reload-bridge";
+import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 
 type Nationality = { code: string; name: string };
+
+declare global {
+  interface Window {
+    __visatopReloadHomeCatalog?: () => void;
+  }
+}
 
 /**
  * Home hero: searchable nationality → `/apply/start` with nationality query set.
@@ -19,30 +31,59 @@ export function HomeNationalityStart() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
+  const [catalogReloadEpoch, setCatalogReloadEpoch] = useState(0);
+  const nationalitiesRef = useRef(nationalities);
+  const loadingRef = useRef(loading);
+
+  nationalitiesRef.current = nationalities;
+  loadingRef.current = loading;
+
+  const loadNationalities = useCallback(async () => {
+    clearLeftPageMarker();
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchApiEnvelope<{ nationalities: Nationality[] }>(
+        apiHref("/catalog/nationalities"),
+      );
+      if (!res.ok) {
+        setError(res.error.message);
+        setNationalities([]);
+        return;
+      }
+      setNationalities(res.data.nationalities);
+    } finally {
+      setLoading(false);
+    }
+  }, [catalogReloadEpoch]);
+
+  const reloadNationalities = useCallback(() => {
+    const hasCatalog = nationalitiesRef.current.length > 0 && !loadingRef.current;
+    const domReady =
+      typeof document !== "undefined" &&
+      Boolean(document.querySelector("#home-nationality-input"));
+    if (hasCatalog && domReady) {
+      clearLeftPageMarker();
+      return;
+    }
+    setCatalogReloadEpoch((n) => n + 1);
+  }, []);
+
+  useOnBfcacheRestore(reloadNationalities);
+
+  useLayoutEffect(() => {
+    window.__visatopReloadHomeCatalog = reloadNationalities;
+    setHomeCatalogReload(reloadNationalities);
+    reloadHomeCatalogIfReturning();
+    return () => {
+      delete window.__visatopReloadHomeCatalog;
+      setHomeCatalogReload(null);
+    };
+  }, [reloadNationalities]);
 
   useEffect(() => {
-    let cancelled = false;
-    queueMicrotask(() => {
-      void (async () => {
-        setLoading(true);
-        const res = await fetchApiEnvelope<{ nationalities: Nationality[] }>(
-          apiHref("/catalog/nationalities"),
-        );
-        if (cancelled) return;
-        if (!res.ok) {
-          setError(res.error.message);
-          setNationalities([]);
-        } else {
-          setNationalities(res.data.nationalities);
-          setError(null);
-        }
-        setLoading(false);
-      })();
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    void loadNationalities();
+  }, [loadNationalities]);
 
   function onContinue() {
     if (!selectedCode || selectedCode.length !== 2) return;
