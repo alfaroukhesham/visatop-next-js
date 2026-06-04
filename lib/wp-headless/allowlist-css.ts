@@ -19,8 +19,11 @@ export function allowlistWpCssUrls(
     if (!t) continue;
     try {
       const u = new URL(t);
+      const hostname = u.hostname.toLowerCase();
+      if (!allowed.has(hostname)) continue;
+      // WP behind TLS nginx often emits http:// asset URLs when X-Forwarded-Proto is missing.
+      if (u.protocol === "http:") u.protocol = "https:";
       if (u.protocol !== "https:") continue;
-      if (!allowed.has(u.hostname.toLowerCase())) continue;
       deduped.add(u.toString());
     } catch {
       // skip invalid

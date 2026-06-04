@@ -7,7 +7,7 @@ describe("allowlistWpCssUrls", () => {
       [
         "https://wp.visatop.com/wp-content/themes/site.css",
         "https://wp.visatop.com/wp-content/themes/site.css",
-        "http://wp.visatop.com/insecure.css",
+        "http://evil.example.com/insecure.css",
         "https://evil.example.com/x.css",
         "not-a-url",
       ],
@@ -15,6 +15,20 @@ describe("allowlistWpCssUrls", () => {
     );
 
     expect(out).toEqual(["https://wp.visatop.com/wp-content/themes/site.css"]);
+  });
+
+  it("upgrades http to https for allowlisted hosts (WP behind TLS proxy)", () => {
+    const out = allowlistWpCssUrls(
+      [
+        "http://visatop.com/wp-content/themes/topvisa-v3/assets/scss/styles.css",
+        "http://visatop.com/wp-content/themes/topvisa-v3/assets/scss/styles.css",
+      ],
+      { allowedHosts: ["visatop.com"] }
+    );
+
+    expect(out).toEqual([
+      "https://visatop.com/wp-content/themes/topvisa-v3/assets/scss/styles.css",
+    ]);
   });
 
   it("accepts multiple allowed hosts", () => {
