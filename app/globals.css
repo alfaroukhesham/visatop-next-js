@@ -2,6 +2,11 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Explicit scan paths (Tailwind v4 auto-detect can miss files in some CI/deploy layouts). */
+@source "../app/**/*.{ts,tsx}";
+@source "../components/**/*.{ts,tsx}";
+@source "../lib/**/*.{ts,tsx}";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -213,19 +218,24 @@
 /* Layered ink / gold / blue atmosphere — client routes only (use on pages under .theme-client) */
 .theme-client-page-canvas {
   background-color: var(--muted);
-  background-image:
-    radial-gradient(ellipse 95% 60% at 10% -18%, color-mix(in srgb, var(--primary) 24%, transparent), transparent 52%),
-    linear-gradient(
-      108deg,
-      color-mix(in srgb, var(--foreground) 6%, transparent) 0%,
-      transparent 40%,
-      color-mix(in srgb, var(--secondary) 12%, transparent) 100%
-    ),
-    repeating-linear-gradient(
-      -14deg,
-      transparent 0 80px,
-      color-mix(in srgb, var(--foreground) 2.5%, transparent) 80px 81px
-    );
+}
+
+@supports (background: color-mix(in srgb, white, transparent)) {
+  .theme-client-page-canvas {
+    background-image:
+      radial-gradient(ellipse 95% 60% at 10% -18%, color-mix(in srgb, var(--primary) 24%, transparent), transparent 52%),
+      linear-gradient(
+        108deg,
+        color-mix(in srgb, var(--foreground) 6%, transparent) 0%,
+        transparent 40%,
+        color-mix(in srgb, var(--secondary) 12%, transparent) 100%
+      ),
+      repeating-linear-gradient(
+        -14deg,
+        transparent 0 80px,
+        color-mix(in srgb, var(--foreground) 2.5%, transparent) 80px 81px
+      );
+  }
 }
 
 @keyframes theme-client-rise {

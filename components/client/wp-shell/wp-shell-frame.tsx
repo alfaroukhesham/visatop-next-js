@@ -100,9 +100,13 @@ function buildSrcDoc(input: {
         input.hideLangSwitcher
           ? `
       /* DISABLE_WP_LANG_SWITCHER: hide Polylang / theme language UI in the embedded shell */
-      header#header nav.menu ul li.lang-switcher-item,
-      header#header nav.menu li:has(a[href="#pll_switcher"]) {
+      header#header nav.menu ul li.lang-switcher-item {
         display: none !important;
+      }
+      @supports selector(header#header nav.menu li:has(a[href="#pll_switcher"])) {
+        header#header nav.menu li:has(a[href="#pll_switcher"]) {
+          display: none !important;
+        }
       }
       footer#footer .footer-lang-dropdown {
         display: none !important;
@@ -122,10 +126,11 @@ function buildSrcDoc(input: {
           position: fixed;
           top: 0;
           right: -280px;
-          left: unset;
+          left: auto;
           width: 280px;
           height: 100vh;
           height: 100dvh;
+          max-height: -webkit-fill-available;
           background: #012031;
           padding: 80px 35px 40px;
           align-items: flex-start;
@@ -136,8 +141,18 @@ function buildSrcDoc(input: {
         header#header nav.menu ul {
           flex-direction: column;
           align-items: flex-start;
-          gap: 25px;
           width: 100%;
+        }
+        header#header nav.menu ul > li + li {
+          margin-top: 25px;
+        }
+        @supports (gap: 1px) {
+          header#header nav.menu ul {
+            gap: 25px;
+          }
+          header#header nav.menu ul > li + li {
+            margin-top: 0;
+          }
         }
         header#header nav.menu ul li {
           width: 100%;

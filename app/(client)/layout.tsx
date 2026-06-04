@@ -38,7 +38,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
   return (
     <div
       data-ui="client"
-      className={`theme-client theme-client-page-canvas ${inter.variable} ${notoSerif.variable} flex min-h-dvh flex-col text-[18px] leading-[1.6] antialiased`}
+      className={`theme-client theme-client-page-canvas ${inter.variable} ${notoSerif.variable} flex min-h-screen min-h-dvh flex-col text-[18px] leading-[1.6] antialiased`}
     >
       {model?.headerHtml ? (
         <WpShellFrame
