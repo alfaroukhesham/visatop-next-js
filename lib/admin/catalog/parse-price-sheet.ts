@@ -9,7 +9,7 @@
  */
 
 /** Maximum number of rows scanned looking for the header row. */
-export const HEADER_SCAN_LIMIT = 25;
+const HEADER_SCAN_LIMIT = 25;
 
 /** Minimum extra columns (beyond # and Country) required to consider a row the header. */
 const MIN_SERVICE_COLS = 1;

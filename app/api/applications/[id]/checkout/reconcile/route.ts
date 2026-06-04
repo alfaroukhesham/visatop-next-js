@@ -4,18 +4,47 @@ import { jsonError, jsonOk } from "@/lib/api/response";
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
 import { toPublicApplication } from "@/lib/applications/public-application";
 import { withSystemDbActor } from "@/lib/db/actor-context";
-import { application, payment } from "@/lib/db/schema";
+import { application as applicationTable, payment } from "@/lib/db/schema";
 import { getActivePaymentProvider } from "@/lib/payments/resolve-payment-provider";
 import { reconcileZiinaPaymentFromReturn } from "@/lib/payments/reconcile-ziina-payments";
 import { scheduleZiinaPaidSideEffects } from "@/lib/payments/ziina-payment-side-effects";
+import type { DbTransaction } from "@/lib/db";
+
+async function loadApplicationRowAfterZiinaAttempt(
+  tx: DbTransaction,
+  applicationId: string,
+  attempt: Awaited<ReturnType<typeof reconcileZiinaPaymentFromReturn>>,
+) {
+  void attempt;
+  return tx
+    .select()
+    .from(applicationTable)
+    .where(eq(applicationTable.id, applicationId))
+    .limit(1);
+}
+
+async function reconcileReturnAndLoadApplication(
+  tx: DbTransaction,
+  payRow: typeof payment.$inferSelect,
+  appRow: typeof applicationTable.$inferSelect,
+  applicationId: string,
+  requestId: string | null,
+) {
+  const attempt = await reconcileZiinaPaymentFromReturn(tx, payRow, requestId);
+  const [updatedApp] = await loadApplicationRowAfterZiinaAttempt(tx, applicationId, attempt);
+  return {
+    attempt,
+    application: updatedApp ?? appRow,
+    firstPaidApplicationId: attempt.process?.firstPaidApplicationId ?? null,
+  };
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const hdrs = await headers();
+  const [hdrs, { id: applicationId }] = await Promise.all([headers(), ctx.params]);
   const requestId = hdrs.get("x-request-id");
-  const { id: applicationId } = await ctx.params;
 
   if (getActivePaymentProvider() !== "ziina") {
     return jsonOk({ reconciled: false, reason: "not_ziina_provider" }, { requestId });
@@ -30,8 +59,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const result = await withSystemDbActor(async (tx) => {
     const [appRow] = await tx
       .select()
-      .from(application)
-      .where(eq(application.id, applicationId))
+      .from(applicationTable)
+      .where(eq(applicationTable.id, applicationId))
       .limit(1);
     if (!appRow) return { kind: "not_found" as const };
 
@@ -57,19 +86,19 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       return { kind: "no_checkout" as const, application: appRow };
     }
 
-    const attempt = await reconcileZiinaPaymentFromReturn(tx, payRow, requestId);
-
-    const [updatedApp] = await tx
-      .select()
-      .from(application)
-      .where(eq(application.id, applicationId))
-      .limit(1);
+    const { attempt, application: applicationRow, firstPaidApplicationId } = await reconcileReturnAndLoadApplication(
+      tx,
+      payRow,
+      appRow,
+      applicationId,
+      requestId,
+    );
 
     return {
       kind: "done" as const,
-      application: updatedApp ?? appRow,
+      application: applicationRow,
       attempt,
-      firstPaidApplicationId: attempt.process?.firstPaidApplicationId ?? null,
+      firstPaidApplicationId,
     };
   });
 

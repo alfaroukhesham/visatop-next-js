@@ -183,7 +183,7 @@ function ListPaginatorBar({
           disabled={disabled || page <= 0}
           onClick={() => setPage((p) => Math.max(0, p - 1))}
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="size-4" />
           Previous
         </Button>
         <Button
@@ -194,7 +194,7 @@ function ListPaginatorBar({
           onClick={() => setPage((p) => p + 1)}
         >
           Next
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="size-4" />
         </Button>
       </div>
     </div>
@@ -596,7 +596,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
+            <Upload className="size-5" />
             Upload Price Sheet (XLSX)
           </CardTitle>
           <CardDescription>
@@ -627,7 +627,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
             </div>
             {!canWrite && (
               <Alert>
-                <Info className="h-4 w-4" />
+                <Info className="size-4" />
                 <AlertTitle>Read-only</AlertTitle>
                 <AlertDescription>
                   You need <code>catalog.write</code> and <code>audit.write</code> permissions to apply changes.
@@ -643,7 +643,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
             disabled={!file || phase === "previewing" || phase === "applying"}
             variant="outline"
           >
-            {phase === "previewing" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {phase === "previewing" && <Loader2 className="mr-2 size-4 animate-spin" />}
             Preview
           </Button>
           {preview && !hasBlockingErrors && (
@@ -652,7 +652,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
               onClick={handleApply}
               disabled={!canApply || phase === "applying" || phase === "applied"}
             >
-              {phase === "applying" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {phase === "applying" && <Loader2 className="mr-2 size-4 animate-spin" />}
               Apply Import {applyMode === "partial" ? "(Partial)" : "(Strict)"}
             </Button>
           )}
@@ -667,7 +667,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
       {/* Error banner */}
       {error && (
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
+          <AlertCircle className="size-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -675,7 +675,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
 
       {phase === "applying" && (
         <Alert className="admin-rise">
-          <Loader2 className="admin-loading-spin h-4 w-4" aria-hidden />
+          <Loader2 className="admin-loading-spin size-4" aria-hidden />
           <AlertTitle>Applying import…</AlertTitle>
           <AlertDescription className="text-sm">
             Large sheets can take a minute or more. This request runs entirely on the server; do not close the tab.
@@ -708,7 +708,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
 
           {/* Header row info */}
           <Alert>
-            <Info className="h-4 w-4" />
+            <Info className="size-4" />
             <AlertTitle>Header detected</AlertTitle>
             <AlertDescription>
               {preview.headerRowIndex === -1
@@ -720,7 +720,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
           {/* Unknown services */}
           {preview.unknownServices.length > 0 && (
             <Alert>
-              <Wand2 className="h-4 w-4" />
+              <Wand2 className="size-4" />
               <AlertTitle>New services will be created</AlertTitle>
               <AlertDescription>
                 <ul className="mt-1 list-disc list-inside text-sm">
@@ -736,7 +736,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
             <Card className="border-amber-500/50">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <Info className="h-4 w-4 text-amber-600" />
+                  <Info className="size-4 text-amber-600" />
                   {missingNationalities.length} sheet{" "}
                   {missingNationalities.length === 1 ? "country" : "countries"} not in the nationality catalog
                 </CardTitle>
@@ -766,7 +766,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                               {m.suggestedAlpha2}
                             </Badge>
                           ) : (
-                            <span className="text-muted-foreground text-xs">—</span>
+                            <span className="text-muted-foreground text-xs">, </span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -794,7 +794,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
             <Card className="border-destructive">
               <CardHeader className="pb-2">
                 <CardTitle className="text-destructive text-sm flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
+                  <AlertCircle className="size-4" />
                   {preview.errors.length} validation error(s)
                 </CardTitle>
                 <CardDescription className="text-xs mt-1">
@@ -844,7 +844,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                     {previewSlices.errors.map((e) => (
                       <TableRow key={`${e.rowIdx}-${e.countryRaw}-${e.message.slice(0, 24)}`}>
                         <TableCell>{e.rowIdx}</TableCell>
-                        <TableCell>{e.countryRaw || "—"}</TableCell>
+                        <TableCell>{e.countryRaw || ", "}</TableCell>
                         <TableCell className="text-destructive text-sm">{e.message}</TableCell>
                       </TableRow>
                     ))}
@@ -868,8 +868,8 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
             <Card className="border-amber-500/50">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <Info className="h-4 w-4 text-amber-500" />
-                  {preview.pending.length} amount(s) without currency — will go to pending wizard after apply
+                  <Info className="size-4 text-amber-500" />
+                  {preview.pending.length} amount(s) without currency ,  will go to pending wizard after apply
                 </CardTitle>
                 <CardDescription className="text-xs">
                   These cells had a numeric amount but no currency signal (USD, AED, $, etc.).
@@ -920,10 +920,10 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                   onClick={() => setShowAutoFix((v) => !v)}
                 >
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <Wand2 className="h-4 w-4 text-blue-500" />
+                    <Wand2 className="size-4 text-blue-500" />
                     {preview.autoFixPreview.length} FX auto-fill(s) will be applied
                   </CardTitle>
-                  {showAutoFix ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  {showAutoFix ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
                 </button>
                 <CardDescription className="text-xs mt-1">
                   When only one currency is in the sheet, the system fills the other via{" "}
@@ -945,7 +945,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                     <TableBody>
                       {previewSlices.autoFix.map((f, i) => (
                         <TableRow key={`${f.nationalityCode ?? ""}-${f.serviceName}-${previewAutoFixPage * previewListPageSize + i}`}>
-                          <TableCell>{f.nationalityCode ?? "—"}</TableCell>
+                          <TableCell>{f.nationalityCode ?? ", "}</TableCell>
                           <TableCell>{f.serviceName}</TableCell>
                           <TableCell>
                             <Badge variant="outline">{f.existingCurrency}</Badge>
@@ -981,7 +981,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
         <div className="space-y-4">
           {phase === "assigning" && (
             <Alert>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
               <AlertTitle>Assigning currency…</AlertTitle>
               <AlertDescription className="text-sm">
                 Updating live prices for every pending row in this batch. This can take a moment on large imports.
@@ -997,8 +997,8 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
             <Card className="border-amber-500/50">
               <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <Wand2 className="h-4 w-4 text-amber-500" />
-                  Currency wizard — {applyResult.pendingCreated} pending row
+                  <Wand2 className="size-4 text-amber-500" />
+                  Currency wizard ,  {applyResult.pendingCreated} pending row
                   {applyResult.pendingCreated === 1 ? "" : "s"}
                 </CardTitle>
                 <CardDescription className="text-xs">
@@ -1084,7 +1084,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                             <TableCell className="font-mono text-xs">{r.nationalityCode}</TableCell>
                             <TableCell className="text-sm">{r.serviceName}</TableCell>
                             <TableCell className="text-right tabular-nums text-sm">{r.amountMinor}</TableCell>
-                            <TableCell className="text-muted-foreground text-xs">{r.rowRef ?? "—"}</TableCell>
+                            <TableCell className="text-muted-foreground text-xs">{r.rowRef ?? ", "}</TableCell>
                           </TableRow>
                         ))
                       )}
@@ -1114,7 +1114,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                       }
                       onClick={() => setPendingPage((p) => Math.max(0, p - 1))}
                     >
-                      <ChevronLeft className="h-4 w-4" />
+                      <ChevronLeft className="size-4" />
                       Previous
                     </Button>
                     <Button
@@ -1129,7 +1129,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                       onClick={() => setPendingPage((p) => p + 1)}
                     >
                       Next
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronRight className="size-4" />
                     </Button>
                   </div>
                 </div>
@@ -1140,7 +1140,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                   onClick={handleAssignPendingCurrency}
                   disabled={phase === "assigning" || !canWrite || applyResult.pendingCreated <= 0}
                 >
-                  {phase === "assigning" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {phase === "assigning" && <Loader2 className="mr-2 size-4 animate-spin" />}
                   Assign {pendingCurrency} to all {applyResult.pendingCreated} pending row
                   {applyResult.pendingCreated === 1 ? "" : "s"}
                 </Button>
@@ -1156,11 +1156,11 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
             }
           >
             <CheckCircle2
-              className={`h-4 w-4 ${applyResult.pendingCreated > 0 ? "text-muted-foreground" : "text-green-500"}`}
+              className={`size-4 ${applyResult.pendingCreated > 0 ? "text-muted-foreground" : "text-green-500"}`}
             />
             <AlertTitle>
               {applyResult.pendingCreated > 0
-                ? "Import applied — finish the currency step above"
+                ? "Import applied ,  finish the currency step above"
                 : "Import applied successfully"}
             </AlertTitle>
             <AlertDescription
@@ -1203,12 +1203,12 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <Wand2 className="h-4 w-4 text-blue-500" />
+                  <Wand2 className="size-4 text-blue-500" />
                   {applyResult.autoFix.length} FX-derived row(s) materialised
                 </CardTitle>
                 <CardDescription className="text-xs">
                   These rows were automatically created from the other currency using the configured FX rate.
-                  Data integrity is your responsibility — verify these are correct.
+                  Data integrity is your responsibility ,  verify these are correct.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1241,7 +1241,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
           {/* Services created */}
           {applyResult.servicesCreated.length > 0 && (
             <Alert>
-              <Info className="h-4 w-4" />
+              <Info className="size-4" />
               <AlertTitle>New services created</AlertTitle>
               <AlertDescription>
                 <ul className="mt-1 list-disc list-inside text-sm">
@@ -1256,7 +1256,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
           {/* Apply errors */}
           {applyResult.errors.length > 0 && (
             <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
+              <AlertCircle className="size-4" />
               <AlertTitle>{applyResult.errors.length} row(s) skipped due to errors</AlertTitle>
               <AlertDescription>
                 <ul className="mt-1 list-disc list-inside text-sm">
@@ -1279,7 +1279,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
               <DialogTitle>Bulk create nationalities</DialogTitle>
               <DialogDescription>
                 ISO 3166-1 alpha-2 codes are prefilled from the official English country list (same codes as IBAN
-                country prefix) plus a few common abbreviations. Display names start as the sheet cell — adjust if you
+                country prefix) plus a few common abbreviations. Display names start as the sheet cell ,  adjust if you
                 want the catalog spelling. Codes and normalised names must be unique; the server rejects names that
                 already map to a different code.
               </DialogDescription>
@@ -1288,7 +1288,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
           <div className="min-h-0 flex-1 overflow-y-auto border-y px-4 py-3">
             {bulkLocalError && (
               <Alert variant="destructive" className="mb-3">
-                <AlertCircle className="h-4 w-4" />
+                <AlertCircle className="size-4" />
                 <AlertTitle>Cannot submit</AlertTitle>
                 <AlertDescription>{bulkLocalError}</AlertDescription>
               </Alert>
@@ -1299,7 +1299,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                 if (prefilled === 0) return null;
                 return (
                   <p className="text-xs text-muted-foreground">
-                    {prefilled} of {natDrafts.length} ISO code{prefilled === 1 ? "" : "s"} prefilled — review especially
+                    {prefilled} of {natDrafts.length} ISO code{prefilled === 1 ? "" : "s"} prefilled ,  review especially
                     where the sheet label is informal or ambiguous.
                   </p>
                 );
@@ -1348,7 +1348,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                         {row.code.trim().toUpperCase() !== row.suggestedAlpha2 ? " (you changed it)" : ""}
                       </p>
                     ) : (
-                      <p className="text-xs text-muted-foreground">No automatic match — enter the ISO code manually.</p>
+                      <p className="text-xs text-muted-foreground">No automatic match ,  enter the ISO code manually.</p>
                     )}
                   </div>
                 </div>
@@ -1360,7 +1360,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
               Cancel
             </Button>
             <Button type="button" onClick={handleBulkCreateNationalities} disabled={bulkSaving || !canWrite}>
-              {bulkSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {bulkSaving && <Loader2 className="mr-2 size-4 animate-spin" />}
               Create {natDrafts.length} nationalit{natDrafts.length === 1 ? "y" : "ies"}
             </Button>
           </DialogFooter>

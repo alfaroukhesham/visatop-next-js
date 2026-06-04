@@ -182,7 +182,7 @@ export function ApplicantReview({
       </div>
 
       {!APPLY_STEP3_VALIDATION_DISABLED && missing.length > 0 && (
-        <div className="border-error bg-error/5 border-l-4 px-3 py-2 text-sm">
+        <div className="border-error bg-error/5 border-b-2 px-3 py-2 text-sm">
           <p className="text-error font-semibold">Required fields missing:</p>
           <p className="mt-1 text-xs text-error/90">{missing.join(", ")}</p>
         </div>

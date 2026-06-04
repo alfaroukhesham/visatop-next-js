@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { and, eq, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
 import { jsonError, jsonOk } from "@/lib/api/response";
+import type { DbTransaction } from "@/lib/db";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import {
   application,
@@ -11,6 +12,46 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+async function cleanupExpiredTempDocumentBlobs(
+  tx: DbTransaction,
+  afterDraftDeletes: { id: string }[],
+): Promise<string[]> {
+  void afterDraftDeletes;
+  const orphanRows = await tx
+    .select({
+      documentId: applicationDocumentBlob.documentId,
+      applicationId: applicationDocument.applicationId,
+    })
+    .from(applicationDocumentBlob)
+    .innerJoin(
+      applicationDocument,
+      eq(applicationDocument.id, applicationDocumentBlob.documentId),
+    )
+    .innerJoin(application, eq(application.id, applicationDocument.applicationId))
+    .where(
+      and(
+        isNull(applicationDocumentBlob.retainedAt),
+        isNotNull(applicationDocumentBlob.tempExpiresAt),
+        lt(applicationDocumentBlob.tempExpiresAt, sql`now()`),
+        eq(application.paymentStatus, "unpaid"),
+        eq(applicationDocument.status, DOCUMENT_STATUS.UPLOADED_TEMP),
+      ),
+    );
+
+  const orphanIds = orphanRows.map((r) => r.documentId);
+  if (orphanIds.length > 0) {
+    await tx
+      .delete(applicationDocumentBlob)
+      .where(inArray(applicationDocumentBlob.documentId, orphanIds));
+    await tx
+      .update(applicationDocument)
+      .set({ status: DOCUMENT_STATUS.DELETED })
+      .where(inArray(applicationDocument.id, orphanIds));
+  }
+
+  return orphanIds;
+}
 
 export async function POST(request: Request) {
   const hdrs = await headers();
@@ -45,46 +86,11 @@ export async function POST(request: Request) {
       )
       .returning({ id: application.id });
 
-    // 2) Safety net for orphaned TEMP blobs (spec §11.1) — covers partial
-    //    failures where the application row still exists but the blob's
-    //    `tempExpiresAt` has lapsed and payment never landed. We delete the
-    //    blob row (bytes) and mark the document `deleted`; metadata is
-    //    retained so the UI can render a "file removed" placeholder.
-    const orphanRows = await tx
-      .select({
-        documentId: applicationDocumentBlob.documentId,
-        applicationId: applicationDocument.applicationId,
-      })
-      .from(applicationDocumentBlob)
-      .innerJoin(
-        applicationDocument,
-        eq(applicationDocument.id, applicationDocumentBlob.documentId),
-      )
-      .innerJoin(application, eq(application.id, applicationDocument.applicationId))
-      .where(
-        and(
-          isNull(applicationDocumentBlob.retainedAt),
-          isNotNull(applicationDocumentBlob.tempExpiresAt),
-          lt(applicationDocumentBlob.tempExpiresAt, sql`now()`),
-          eq(application.paymentStatus, "unpaid"),
-          eq(applicationDocument.status, DOCUMENT_STATUS.UPLOADED_TEMP),
-        ),
-      );
-
-    const orphanIds = orphanRows.map((r) => r.documentId);
-    if (orphanIds.length > 0) {
-      await tx
-        .delete(applicationDocumentBlob)
-        .where(inArray(applicationDocumentBlob.documentId, orphanIds));
-      await tx
-        .update(applicationDocument)
-        .set({ status: DOCUMENT_STATUS.DELETED })
-        .where(inArray(applicationDocument.id, orphanIds));
-    }
+    const deletedBlobDocumentIds = await cleanupExpiredTempDocumentBlobs(tx, deletedApplications);
 
     return {
       deletedApplicationIds: deletedApplications.map((r) => r.id),
-      deletedBlobDocumentIds: orphanIds,
+      deletedBlobDocumentIds,
     };
   });
 

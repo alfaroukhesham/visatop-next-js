@@ -16,8 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function SubmittedApplicationPage({ params }: Props) {
-  const { id } = await params;
-  const hdrs = await headers();
+  const [{ id }, hdrs] = await Promise.all([params, headers()]);
   const row = await loadApplicationRowForRequest(id, hdrs.get("cookie"));
   if (!row) {
     notFound();

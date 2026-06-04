@@ -31,9 +31,10 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const hdrs = await headers();
   const requestId = hdrs.get("x-request-id");
-  const session = await auth.api.getSession({ headers: hdrs });
-
-  const parsed = await parseJsonBody(req, createDraftBodySchema, requestId);
+  const [session, parsed] = await Promise.all([
+    auth.api.getSession({ headers: hdrs }),
+    parseJsonBody(req, createDraftBodySchema, requestId),
+  ]);
   if (!parsed.ok) return parsed.response;
 
   const body = parsed.data;

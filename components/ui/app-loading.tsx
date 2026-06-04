@@ -151,11 +151,11 @@ export function AdminAuthLoadingSkeleton() {
 
         <aside className="lg:justify-self-end w-full app-rise">
           <div className="bg-card border-border w-full max-w-md overflow-hidden rounded-lg border">
-            <div className="border-b border-border px-6 py-6 space-y-2">
+            <div className="border-b border-border p-6 space-y-2">
               <AppShimmer className="h-6 w-24" />
               <AppShimmer className="h-4 w-full max-w-xs" />
             </div>
-            <div className="app-stagger space-y-4 px-6 py-6">
+            <div className="app-stagger space-y-4 p-6">
               <AppShimmer className="h-10 w-full" />
               <AppShimmer className="h-10 w-full" />
               <div className="flex gap-2 pt-2">

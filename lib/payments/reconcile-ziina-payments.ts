@@ -18,7 +18,7 @@ import {
   requirePaymentEventPayloadHashDedupeIndex,
 } from "@/lib/payments/payment-webhook-db-guard";
 
-export const ZIINA_RECONCILE_SLOTS = [
+const ZIINA_RECONCILE_SLOTS = [
   { slot: "5m", delayMs: 5 * 60 * 1000 },
   { slot: "10m", delayMs: 10 * 60 * 1000 },
   { slot: "15m", delayMs: 15 * 60 * 1000 },

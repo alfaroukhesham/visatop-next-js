@@ -14,11 +14,9 @@ import { application } from "@/lib/db/schema";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const patchBody = z
-  .object({
-    guestEmail: z.email().max(320),
-  })
-  .strict();
+const patchBody = z.strictObject({
+  guestEmail: z.email().max(320),
+});
 
 async function loadApplicationForGuest(
   applicationId: string,
@@ -30,8 +28,10 @@ async function loadApplicationForGuest(
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const hdrs = await headers();
   const requestId = hdrs.get("x-request-id");
-  const { id } = await ctx.params;
-  const session = await auth.api.getSession({ headers: hdrs });
+  const [{ id }, session] = await Promise.all([
+    ctx.params,
+    auth.api.getSession({ headers: hdrs }),
+  ]);
 
   if (session) {
     const row = await loadApplicationRowForRequest(id, req.headers.get("cookie"));
@@ -58,9 +58,10 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const hdrs = await headers();
   const requestId = hdrs.get("x-request-id");
-  const { id } = await ctx.params;
-
-  const parsed = await parseJsonBody(req, patchBody, requestId);
+  const [{ id }, parsed] = await Promise.all([
+    ctx.params,
+    parseJsonBody(req, patchBody, requestId),
+  ]);
   if (!parsed.ok) return parsed.response;
 
   const session = await auth.api.getSession({ headers: hdrs });

@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
-export const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
 
 let cached: GoogleGenAI | null = null;
 
@@ -23,11 +23,6 @@ export function getGeminiClient(): GoogleGenAI {
   if (!apiKey) throw new GeminiNotConfiguredError();
   cached = new GoogleGenAI({ apiKey });
   return cached;
-}
-
-/** Testing helper. */
-export function __resetGeminiClientForTests() {
-  cached = null;
 }
 
 export function resolveGeminiModelId(): string {

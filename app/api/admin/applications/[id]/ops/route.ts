@@ -64,9 +64,10 @@ const patchBodySchema = z
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const hdrs = await headers();
   const requestId = hdrs.get("x-request-id");
-  const { id: applicationId } = await ctx.params;
-
-  const parsed = await parseJsonBody(req, patchBodySchema, requestId);
+  const [{ id: applicationId }, parsed] = await Promise.all([
+    ctx.params,
+    parseJsonBody(req, patchBodySchema, requestId),
+  ]);
   if (!parsed.ok) return parsed.response;
 
   const body = parsed.data;

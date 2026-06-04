@@ -167,7 +167,7 @@ export function AdminApplicationsListClient({ initialAttentionCount }: Props) {
                 intervention
               </p>
               <p className="text-sm text-destructive/80">
-                Flagged by webhook handler — payment confirmed but requires human review.
+                Flagged by webhook handler ,  payment confirmed but requires human review.
               </p>
             </div>
           </div>
@@ -220,7 +220,7 @@ export function AdminApplicationsListClient({ initialAttentionCount }: Props) {
           </>
         )}
         {list.error ? (
-          <span className="text-destructive ml-2">— {list.error}</span>
+          <span className="text-destructive ml-2">,  {list.error}</span>
         ) : null}
       </p>
 
@@ -317,7 +317,7 @@ export function AdminApplicationsListClient({ initialAttentionCount }: Props) {
                   {app.adminAttentionRequired ? (
                     <span className="text-destructive text-xs font-bold">⚠️ FLAG</span>
                   ) : (
-                    <span className="text-muted-foreground/30 text-xs">—</span>
+                    <span className="text-muted-foreground/30 text-xs">, </span>
                   )}
                 </td>
                 <td className="px-4 py-3 text-xs text-muted-foreground">

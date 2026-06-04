@@ -1,18 +1,13 @@
 import { eq } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import type { DbTransaction } from "@/lib/db";
-import { withSystemDbActor } from "@/lib/db/actor-context";
 import { application, auditLog, paymentEvent } from "@/lib/db/schema";
 import {
   applyPaymentWebhookEvent,
   resolvePaymentRowForWebhook,
 } from "@/lib/payments/apply-payment-webhook-event";
 import type { NormalizedPaymentWebhookEvent } from "@/lib/payments/normalized-webhook";
-import {
-  isPostgresOnConflictMissingConstraintError,
-  PaymentWebhookSchemaDeploymentError,
-  requirePaymentEventPayloadHashDedupeIndex,
-} from "@/lib/payments/payment-webhook-db-guard";
+import { requirePaymentEventPayloadHashDedupeIndex } from "@/lib/payments/payment-webhook-db-guard";
 
 export type ProcessZiinaPaymentOutcome =
   | "applied"
@@ -177,24 +172,4 @@ export async function processZiinaPaymentInTransaction(
     paymentId: payRow.id,
     intentId,
   };
-}
-
-export async function processZiinaPaymentNotification(params: {
-  normalized: NormalizedPaymentWebhookEvent;
-  payloadHash: string;
-  eventType: string;
-  requestId?: string | null;
-  logLabel: string;
-}): Promise<ProcessZiinaPaymentResult> {
-  try {
-    return await withSystemDbActor((tx) => processZiinaPaymentInTransaction(tx, params));
-  } catch (e) {
-    if (e instanceof PaymentWebhookSchemaDeploymentError || isPostgresOnConflictMissingConstraintError(e)) {
-      console.error(`[${params.logLabel}] payment_event idempotency index missing`, {
-        requestId: params.requestId,
-        err: e instanceof Error ? e.message : e,
-      });
-    }
-    throw e;
-  }
 }

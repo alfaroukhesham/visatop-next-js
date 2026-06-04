@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { ClientDraftPanelSkeleton } from "@/components/client/client-loading";
 import { ApplyJourneyStepBar } from "@/components/apply/apply-journey-step-bar";
 import { computeValidation } from "@/lib/documents/validation-readiness";
@@ -13,15 +11,7 @@ import { applicantFormResetKey } from "./draft/utils";
 import { useApplicationDraft } from "./draft/use-application-draft";
 
 export function ApplicationDraftPanel({ applicationId }: { applicationId: string }) {
-  const router = useRouter();
   const draft = useApplicationDraft(applicationId);
-  const paymentPath = `/apply/applications/${encodeURIComponent(applicationId)}/payment`;
-
-  useEffect(() => {
-    if (draft.app?.paymentStatus === "checkout_created") {
-      router.replace(paymentPath);
-    }
-  }, [draft.app?.paymentStatus, paymentPath, router]);
 
   if (draft.loading) {
     return <ClientDraftPanelSkeleton />;
@@ -47,7 +37,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
   return (
     <div className="space-y-8">
       {draft.actionMsg ? (
-        <p className="text-accent-foreground border-accent/30 bg-accent/15 text-sm border-l-4 border-l-accent px-3 py-2">
+        <p className="text-accent-foreground border-accent/30 bg-accent/15 text-sm border-b-2 border-l-accent px-3 py-2">
           {draft.actionMsg}
         </p>
       ) : null}

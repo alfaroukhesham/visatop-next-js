@@ -16,8 +16,7 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id: applicationId } = await params;
-  const hdrs = await headers();
+  const [{ id: applicationId }, hdrs] = await Promise.all([params, headers()]);
   const requestId = hdrs.get("x-request-id");
 
   return runAdminDbJson(

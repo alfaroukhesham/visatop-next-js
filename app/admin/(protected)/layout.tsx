@@ -18,8 +18,7 @@ export default async function AdminProtectedLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const hdrs = await headers();
-  const session = await getAdminSession();
+  const [hdrs, session] = await Promise.all([headers(), getAdminSession()]);
 
   if (!session) {
     const path = hdrs.get("x-pathname") ?? "/admin";

@@ -98,7 +98,7 @@ export function SignInForm({ facebookEnabled }: { facebookEnabled: boolean }) {
             or Continue your application
             </h2>
             <p className="text-muted-foreground mt-5 max-w-[48ch] text-lg leading-relaxed">
-              Documents, payments, and status — structured so you always know what happens next.
+              Documents, payments, and status ,  structured so you always know what happens next.
             </p>
             {/* <div className="border-secondary/15 bg-secondary/5 mt-8 rounded-[5px] border p-4">
               <p className="text-secondary text-[10px] font-bold uppercase tracking-widest">Tip</p>

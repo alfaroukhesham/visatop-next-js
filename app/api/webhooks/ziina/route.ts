@@ -19,8 +19,7 @@ import { markWebhookReceivedNow, PLATFORM_KEY_LAST_WEBHOOK_ZIINA } from "@/lib/p
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  const bodyText = await req.text();
-  const hdrs = await headers();
+  const [bodyText, hdrs] = await Promise.all([req.text(), headers()]);
   const requestId = hdrs.get("x-request-id");
   const sig = req.headers.get("x-hmac-signature") ?? hdrs.get("x-hmac-signature");
 

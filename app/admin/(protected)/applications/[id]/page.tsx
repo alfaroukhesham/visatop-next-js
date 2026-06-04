@@ -208,7 +208,7 @@ function ProfileRow({
         {label}
       </dt>
       <dd className={cn("mt-0.5 text-sm text-foreground", mono && "font-mono")}>
-        {value ?? <span className="text-muted-foreground/50 italic">—</span>}
+        {value ?? <span className="text-muted-foreground/50 italic">, </span>}
       </dd>
     </div>
   );
@@ -219,8 +219,7 @@ export default async function AdminApplicationDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id: applicationId } = await params;
-  const adminUserId = await getAdminUserId();
+  const [{ id: applicationId }, adminUserId] = await Promise.all([params, getAdminUserId()]);
 
   const { app, serviceLabel, payments, auditLogs, adminDocuments } = await withAdminDbActor(
     adminUserId,
@@ -250,32 +249,32 @@ export default async function AdminApplicationDetailPage({
           })
         : null;
 
-      const payments = await tx
-        .select()
-        .from(schema.payment)
-        .where(eq(schema.payment.applicationId, applicationId))
-        .orderBy(desc(schema.payment.createdAt));
-
-      const auditLogs = await tx
-        .select()
-        .from(schema.auditLog)
-        .where(eq(schema.auditLog.entityId, applicationId))
-        .orderBy(desc(schema.auditLog.createdAt))
-        .limit(30);
-
-      const adminDocuments = await tx
-        .select({
-          id: schema.applicationDocument.id,
-          documentType: schema.applicationDocument.documentType,
-          status: schema.applicationDocument.status,
-          createdAt: schema.applicationDocument.createdAt,
-          originalFilename: schema.applicationDocument.originalFilename,
-          byteLength: schema.applicationDocument.byteLength,
-        })
-        .from(schema.applicationDocument)
-        .where(eq(schema.applicationDocument.applicationId, applicationId))
-        .orderBy(desc(schema.applicationDocument.createdAt))
-        .limit(40);
+      const [payments, auditLogs, adminDocuments] = await Promise.all([
+        tx
+          .select()
+          .from(schema.payment)
+          .where(eq(schema.payment.applicationId, applicationId))
+          .orderBy(desc(schema.payment.createdAt)),
+        tx
+          .select()
+          .from(schema.auditLog)
+          .where(eq(schema.auditLog.entityId, applicationId))
+          .orderBy(desc(schema.auditLog.createdAt))
+          .limit(30),
+        tx
+          .select({
+            id: schema.applicationDocument.id,
+            documentType: schema.applicationDocument.documentType,
+            status: schema.applicationDocument.status,
+            createdAt: schema.applicationDocument.createdAt,
+            originalFilename: schema.applicationDocument.originalFilename,
+            byteLength: schema.applicationDocument.byteLength,
+          })
+          .from(schema.applicationDocument)
+          .where(eq(schema.applicationDocument.applicationId, applicationId))
+          .orderBy(desc(schema.applicationDocument.createdAt))
+          .limit(40),
+      ]);
 
       return { app, serviceLabel, payments, auditLogs, adminDocuments };
     }
@@ -344,7 +343,7 @@ export default async function AdminApplicationDetailPage({
             <div>
               <p className="font-bold text-destructive">Manual Intervention Required</p>
               <p className="text-sm text-destructive/80">
-                This application was flagged by the system — check the audit log for details.
+                This application was flagged by the system ,  check the audit log for details.
               </p>
             </div>
             <div className="ml-auto">
@@ -384,7 +383,7 @@ export default async function AdminApplicationDetailPage({
 
         {/* Admin ops + uploads */}
         <div className="border border-border bg-card p-5 space-y-4">
-          <h2 className="font-heading text-base font-semibold tracking-tight border-l-4 border-primary pl-3">
+          <h2 className="font-heading text-base font-semibold tracking-tight border-b-2 border-primary pb-0.5">
             Fulfillment & outcomes
           </h2>
           <AdminApplicationOpsPanel
@@ -404,7 +403,7 @@ export default async function AdminApplicationDetailPage({
 
         {/* Applicant Profile */}
         <div className="border border-border bg-card p-5 space-y-4">
-          <h2 className="font-heading text-base font-semibold tracking-tight border-l-4 border-primary pl-3">
+          <h2 className="font-heading text-base font-semibold tracking-tight border-b-2 border-primary pb-0.5">
             Applicant Profile
           </h2>
           <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
@@ -422,7 +421,7 @@ export default async function AdminApplicationDetailPage({
 
         {/* Payments Section */}
         <div className="border border-border bg-card p-5 space-y-4">
-          <h2 className="font-heading text-base font-semibold tracking-tight border-l-4 border-primary pl-3">
+          <h2 className="font-heading text-base font-semibold tracking-tight border-b-2 border-primary pb-0.5">
             Payments
           </h2>
           {payments.length === 0 ? (
@@ -450,7 +449,7 @@ export default async function AdminApplicationDetailPage({
                         {formatMinorUnitsAmount(p.amount, p.currency)}
                       </td>
                       <td className="px-4 py-2 font-mono text-xs text-muted-foreground truncate max-w-[200px]">
-                        {p.providerTransactionId ?? "—"}
+                        {p.providerTransactionId ?? ", "}
                       </td>
                       <td className="px-4 py-2 text-xs text-muted-foreground">
                         {p.createdAt.toLocaleString()}
@@ -471,7 +470,7 @@ export default async function AdminApplicationDetailPage({
 
         {/* Audit Log */}
         <div className="border border-border bg-card p-5 space-y-4">
-          <h2 className="font-heading text-base font-semibold tracking-tight border-l-4 border-primary pl-3">
+          <h2 className="font-heading text-base font-semibold tracking-tight border-b-2 border-primary pb-0.5">
             Audit Log
           </h2>
           {shownAuditLogs.length === 0 ? (
@@ -514,7 +513,7 @@ export default async function AdminApplicationDetailPage({
                         </div>
                       </td>
                       <td className="px-4 py-2 text-xs text-muted-foreground">
-                        {log.actorId?.slice(0, 8) ?? "—"}
+                        {log.actorId?.slice(0, 8) ?? ", "}
                       </td>
                       <td className="px-4 py-2 text-xs">{log.actorType}</td>
                       <td className="px-4 py-2 text-xs text-muted-foreground">

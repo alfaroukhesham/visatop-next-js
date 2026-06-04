@@ -215,13 +215,15 @@ export async function sendPaymentReceivedInProgressEmail(
       .where(eq(application.id, applicationId))
       .limit(1);
     if (!row) return null;
-    const to = await resolveApplicantEmailTx(tx, row.app);
-    const [paid] = await tx
-      .select()
-      .from(payment)
-      .where(and(eq(payment.applicationId, applicationId), eq(payment.status, "paid")))
-      .orderBy(desc(payment.updatedAt))
-      .limit(1);
+    const [to, [paid]] = await Promise.all([
+      resolveApplicantEmailTx(tx, row.app),
+      tx
+        .select()
+        .from(payment)
+        .where(and(eq(payment.applicationId, applicationId), eq(payment.status, "paid")))
+        .orderBy(desc(payment.updatedAt))
+        .limit(1),
+    ]);
     let amountMinor: number | bigint | null = paid?.amount ?? null;
     let currency = paid?.currency ?? row.app.catalogCurrency;
     let invoiceDate: Date = paid?.updatedAt ?? new Date();
@@ -292,27 +294,29 @@ export async function sendOutcomeApprovedEmail(
   const payload = await withSystemDbActor(async (tx) => {
     const [app] = await tx.select().from(application).where(eq(application.id, applicationId)).limit(1);
     if (!app) return null;
-    const to = await resolveApplicantEmailTx(tx, app);
-    const [doc] = await tx
-      .select({
-        id: applicationDocument.id,
-        documentType: applicationDocument.documentType,
-        status: applicationDocument.status,
-        contentType: applicationDocument.contentType,
-        originalFilename: applicationDocument.originalFilename,
-        bytes: applicationDocumentBlob.bytes,
-      })
-      .from(applicationDocument)
-      .innerJoin(applicationDocumentBlob, eq(applicationDocumentBlob.documentId, applicationDocument.id))
-      .where(
-        and(
-          eq(applicationDocument.id, outcomeDocumentId),
-          eq(applicationDocument.applicationId, applicationId),
-          eq(applicationDocument.documentType, DOCUMENT_TYPE.OUTCOME_APPROVAL),
-          eq(applicationDocument.status, DOCUMENT_STATUS.RETAINED),
-        ),
-      )
-      .limit(1);
+    const [to, [doc]] = await Promise.all([
+      resolveApplicantEmailTx(tx, app),
+      tx
+        .select({
+          id: applicationDocument.id,
+          documentType: applicationDocument.documentType,
+          status: applicationDocument.status,
+          contentType: applicationDocument.contentType,
+          originalFilename: applicationDocument.originalFilename,
+          bytes: applicationDocumentBlob.bytes,
+        })
+        .from(applicationDocument)
+        .innerJoin(applicationDocumentBlob, eq(applicationDocumentBlob.documentId, applicationDocument.id))
+        .where(
+          and(
+            eq(applicationDocument.id, outcomeDocumentId),
+            eq(applicationDocument.applicationId, applicationId),
+            eq(applicationDocument.documentType, DOCUMENT_TYPE.OUTCOME_APPROVAL),
+            eq(applicationDocument.status, DOCUMENT_STATUS.RETAINED),
+          ),
+        )
+        .limit(1),
+    ]);
     if (!doc?.bytes) return null;
     return { app, to, doc };
   });
@@ -373,27 +377,29 @@ export async function sendOutcomeUaeAuthorityRejectionEmail(
   const payload = await withSystemDbActor(async (tx) => {
     const [app] = await tx.select().from(application).where(eq(application.id, applicationId)).limit(1);
     if (!app) return null;
-    const to = await resolveApplicantEmailTx(tx, app);
-    const [doc] = await tx
-      .select({
-        id: applicationDocument.id,
-        documentType: applicationDocument.documentType,
-        status: applicationDocument.status,
-        contentType: applicationDocument.contentType,
-        originalFilename: applicationDocument.originalFilename,
-        bytes: applicationDocumentBlob.bytes,
-      })
-      .from(applicationDocument)
-      .innerJoin(applicationDocumentBlob, eq(applicationDocumentBlob.documentId, applicationDocument.id))
-      .where(
-        and(
-          eq(applicationDocument.id, outcomeDocumentId),
-          eq(applicationDocument.applicationId, applicationId),
-          eq(applicationDocument.documentType, DOCUMENT_TYPE.OUTCOME_AUTHORITY_REJECTION),
-          eq(applicationDocument.status, DOCUMENT_STATUS.RETAINED),
-        ),
-      )
-      .limit(1);
+    const [to, [doc]] = await Promise.all([
+      resolveApplicantEmailTx(tx, app),
+      tx
+        .select({
+          id: applicationDocument.id,
+          documentType: applicationDocument.documentType,
+          status: applicationDocument.status,
+          contentType: applicationDocument.contentType,
+          originalFilename: applicationDocument.originalFilename,
+          bytes: applicationDocumentBlob.bytes,
+        })
+        .from(applicationDocument)
+        .innerJoin(applicationDocumentBlob, eq(applicationDocumentBlob.documentId, applicationDocument.id))
+        .where(
+          and(
+            eq(applicationDocument.id, outcomeDocumentId),
+            eq(applicationDocument.applicationId, applicationId),
+            eq(applicationDocument.documentType, DOCUMENT_TYPE.OUTCOME_AUTHORITY_REJECTION),
+            eq(applicationDocument.status, DOCUMENT_STATUS.RETAINED),
+          ),
+        )
+        .limit(1),
+    ]);
     if (!doc?.bytes) return null;
     return { app, to, doc };
   });

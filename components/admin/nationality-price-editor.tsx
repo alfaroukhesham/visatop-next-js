@@ -97,11 +97,7 @@ export function NationalityPriceEditor({
   }, []);
 
   useEffect(() => {
-    if (!nationalityCode) {
-      setRows([]);
-      setDrafts({});
-      return;
-    }
+    if (!nationalityCode) return;
     void loadRows(nationalityCode);
   }, [nationalityCode, loadRows]);
 

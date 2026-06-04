@@ -50,7 +50,7 @@ export default function AdminHomePage() {
           <div>
             <h1 className="text-xl font-bold tracking-tight">Admin</h1>
             <p className="text-muted-foreground text-sm">
-              Signed-in area — pick a screen to open.
+              Signed-in area ,  pick a screen to open.
             </p>
           </div>
           <div className="flex items-center gap-3">

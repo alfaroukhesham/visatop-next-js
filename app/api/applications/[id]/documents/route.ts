@@ -79,9 +79,10 @@ export async function POST(
 ) {
   const hdrs = await headers();
   const requestId = hdrs.get("x-request-id");
-  const { id: applicationId } = await ctx.params;
-
-  const parsed = await parseJsonBody(req, docBody, requestId);
+  const [{ id: applicationId }, parsed] = await Promise.all([
+    ctx.params,
+    parseJsonBody(req, docBody, requestId),
+  ]);
   if (!parsed.ok) return parsed.response;
 
   const session = await auth.api.getSession({ headers: hdrs });

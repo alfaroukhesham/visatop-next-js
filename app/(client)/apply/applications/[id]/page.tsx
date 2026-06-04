@@ -12,14 +12,16 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ApplyApplicationPage({ params }: Props) {
-  const { id } = await params;
-  const hdrs = await headers();
+  const [{ id }, hdrs] = await Promise.all([params, headers()]);
   const row = await loadApplicationRowForRequest(id, hdrs.get("cookie"));
   if (!row) {
     notFound();
   }
   if (row.paymentStatus === "paid") {
     redirect(`/apply/applications/${encodeURIComponent(id)}/submitted`);
+  }
+  if (row.paymentStatus === "checkout_created") {
+    redirect(`/apply/applications/${encodeURIComponent(id)}/payment`);
   }
   return (
     <div className="max-w-6xl">

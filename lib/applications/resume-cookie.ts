@@ -38,9 +38,3 @@ export function readResumeTokenFromRequestCookies(
   return null;
 }
 
-export function buildResumeClearCookieValue(opts?: { secure?: boolean }): string {
-  const secure = opts?.secure ?? process.env.NODE_ENV === "production";
-  const parts = [`${RESUME_COOKIE_NAME}=`, "Max-Age=0", "Path=/", "HttpOnly", "SameSite=Lax"];
-  if (secure) parts.push("Secure");
-  return parts.join("; ");
-}

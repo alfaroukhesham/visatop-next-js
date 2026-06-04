@@ -41,24 +41,24 @@ export async function listNationalityPricingRows(
   const serviceIds = pricedServiceIds.map((r) => r.serviceId);
   if (!serviceIds.length) return [];
 
-  const services = await tx
-    .select({
-      id: schema.visaService.id,
-      name: schema.visaService.name,
-      enabled: schema.visaService.enabled,
-      durationDays: schema.visaService.durationDays,
-      entries: schema.visaService.entries,
-    })
-    .from(schema.visaService)
-    .where(inArray(schema.visaService.id, serviceIds))
-    .orderBy(asc(schema.visaService.name));
-
-  const priceMap = await batchCustomerPricesForServices(tx, nationalityCode, serviceIds);
-
-  const eligibilityRows = await tx
-    .select({ serviceId: schema.visaServiceEligibility.serviceId })
-    .from(schema.visaServiceEligibility)
-    .where(eq(schema.visaServiceEligibility.nationalityCode, nationalityCode));
+  const [services, priceMap, eligibilityRows] = await Promise.all([
+    tx
+      .select({
+        id: schema.visaService.id,
+        name: schema.visaService.name,
+        enabled: schema.visaService.enabled,
+        durationDays: schema.visaService.durationDays,
+        entries: schema.visaService.entries,
+      })
+      .from(schema.visaService)
+      .where(inArray(schema.visaService.id, serviceIds))
+      .orderBy(asc(schema.visaService.name)),
+    batchCustomerPricesForServices(tx, nationalityCode, serviceIds),
+    tx
+      .select({ serviceId: schema.visaServiceEligibility.serviceId })
+      .from(schema.visaServiceEligibility)
+      .where(eq(schema.visaServiceEligibility.nationalityCode, nationalityCode)),
+  ]);
   const eligibleIds = new Set(eligibilityRows.map((r) => r.serviceId));
 
   let fxRate: string | null = null;

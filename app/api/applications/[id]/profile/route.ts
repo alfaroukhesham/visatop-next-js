@@ -13,35 +13,32 @@ import type { DbTransaction } from "@/lib/db";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const profilePatchBody = z
-  .object({
-    fullName: z.string().max(200).optional(),
-    dateOfBirth: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD")
-      .or(z.literal(""))
-      .optional(),
-    placeOfBirth: z.string().max(500).optional(),
-    applicantNationality: z.string().max(200).optional(),
-    passportNumber: z.string().max(200).optional(),
-    passportExpiryDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD")
-      .or(z.literal(""))
-      .optional(),
-    profession: z.string().max(500).optional(),
-    address: z.string().max(500).optional(),
-    phone: z.string().max(50).optional(),
-    guestEmail: z.string().email().max(320).optional(),
-  })
-  .strict();
+const profilePatchBody = z.strictObject({
+  fullName: z.string().max(200).optional(),
+  dateOfBirth: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD")
+    .or(z.literal(""))
+    .optional(),
+  placeOfBirth: z.string().max(500).optional(),
+  applicantNationality: z.string().max(200).optional(),
+  passportNumber: z.string().max(200).optional(),
+  passportExpiryDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD")
+    .or(z.literal(""))
+    .optional(),
+  profession: z.string().max(500).optional(),
+  address: z.string().max(500).optional(),
+  phone: z.string().max(50).optional(),
+  guestEmail: z.email().max(320).optional(),
+});
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id: applicationId } = await params;
-  const hdrs = await headers();
+  const [{ id: applicationId }, hdrs] = await Promise.all([params, headers()]);
   const requestId = hdrs.get("x-request-id");
 
   const parsed = await parseJsonBody(req, profilePatchBody, requestId);

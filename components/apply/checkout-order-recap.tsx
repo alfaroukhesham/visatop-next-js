@@ -19,16 +19,27 @@ type CatalogService = {
 
 type DisplayCurrency = "USD" | "AED";
 
+const displayCurrencyFormatters = new Map<string, Intl.NumberFormat>();
+
+function displayCurrencyFormatter(currency: string): Intl.NumberFormat {
+  let fmt = displayCurrencyFormatters.get(currency);
+  if (!fmt) {
+    fmt = new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+    });
+    displayCurrencyFormatters.set(currency, fmt);
+  }
+  return fmt;
+}
+
 function formatDisplayMinor(minor: string | null, currency: string | null): string | null {
   if (minor === null || currency === null) return null;
   const n = Number(minor);
   if (!Number.isFinite(n)) return null;
   try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 2,
-    }).format(n / 100);
+    return displayCurrencyFormatter(currency).format(n / 100);
   } catch {
     return `${(n / 100).toFixed(2)} ${currency}`;
   }
@@ -77,7 +88,7 @@ function contactEmailLine(app: PublicApplication): string {
   const em = app.guestEmail?.trim();
   if (em) return em;
   if (!app.isGuest) return "Your sign-in email (for updates)";
-  return "—";
+  return ", ";
 }
 
 export function CheckoutOrderRecap({ application }: { application: PublicApplication }) {
@@ -119,9 +130,9 @@ export function CheckoutOrderRecap({ application }: { application: PublicApplica
 
   const price = useMemo(() => (service ? formatPriceForDisplay(service, currency) : null), [service, currency]);
 
-  const fullName = application.applicant.fullName?.trim() || "—";
-  const passportNo = application.applicant.passportNumber?.trim() || "—";
-  const dob = formatIsoDateAsDdMmYyyy(application.applicant.dateOfBirth ?? null) || "—";
+  const fullName = application.applicant.fullName?.trim() || ", ";
+  const passportNo = application.applicant.passportNumber?.trim() || ", ";
+  const dob = formatIsoDateAsDdMmYyyy(application.applicant.dateOfBirth ?? null) || ", ";
 
   const subtotalText = price?.text ?? null;
 
@@ -186,14 +197,14 @@ export function CheckoutOrderRecap({ application }: { application: PublicApplica
             </div>
             {price?.isEstimate ? (
               <p className="text-muted-foreground mt-2 text-[10px] font-medium uppercase tracking-wide">
-                Estimated — exact total confirmed when you pay
+                Estimated ,  exact total confirmed when you pay
               </p>
             ) : null}
           </>
         ) : (
           <p className="text-muted-foreground text-sm">
             Visa service{" "}
-            <span className="font-mono text-xs break-all">{application.serviceId}</span> — catalog details unavailable.
+            <span className="font-mono text-xs break-all">{application.serviceId}</span> ,  catalog details unavailable.
           </p>
         )}
       </div>

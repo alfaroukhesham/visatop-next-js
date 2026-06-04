@@ -30,8 +30,8 @@ export function TrackPageClient() {
           <AppShimmer className="h-4 w-full max-w-prose" aria-hidden />
         ) : authed ? (
           <p className="text-muted-foreground max-w-prose text-base leading-relaxed">
-            Every application on this account appears here—drafts waiting for payment, files in progress, and
-            completed cases—except drafts that have already expired.
+            Every application on this account appears here, drafts waiting for payment, files in progress, and
+            completed cases, except drafts that have already expired.
           </p>
         ) : (
           <p className="text-muted-foreground max-w-prose text-base leading-relaxed">

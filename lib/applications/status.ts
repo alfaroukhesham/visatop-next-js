@@ -36,5 +36,4 @@ export const FULFILLMENT_STATUSES = [
 ] as const;
 export type FulfillmentStatus = typeof FULFILLMENT_STATUSES[number];
 
-export const CHECKOUT_STATES = ["none", "pending"] as const;
-export type CheckoutState = typeof CHECKOUT_STATES[number];
+export type CheckoutState = "none" | "pending";

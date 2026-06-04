@@ -1,5 +1,36 @@
 const MINOR_PER_MAJOR = BigInt(100);
 
+const currencyFormatters = new Map<string, Intl.NumberFormat>();
+const plainFormatters = new Map<string, Intl.NumberFormat>();
+
+function currencyFormatter(locale: string, currencyCode: string): Intl.NumberFormat {
+  const key = `${locale}\0${currencyCode}`;
+  let fmt = currencyFormatters.get(key);
+  if (!fmt) {
+    fmt = new Intl.NumberFormat(locale, {
+      style: "currency",
+      currency: currencyCode,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    currencyFormatters.set(key, fmt);
+  }
+  return fmt;
+}
+
+function plainFormatter(locale: string): Intl.NumberFormat {
+  let fmt = plainFormatters.get(locale);
+  if (!fmt) {
+    fmt = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      useGrouping: true,
+    });
+    plainFormatters.set(locale, fmt);
+  }
+  return fmt;
+}
+
 /** Convert stored minor units (cents/fils) to a major-unit number for display. */
 export function minorUnitsToMajor(minor: bigint): number {
   const whole = minor / MINOR_PER_MAJOR;
@@ -48,22 +79,13 @@ export function formatMinorUnitsAmount(
 
   if (currencyCode && /^[A-Z]{3}$/.test(currencyCode)) {
     try {
-      return new Intl.NumberFormat(locale, {
-        style: "currency",
-        currency: currencyCode,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(major);
+      return currencyFormatter(locale, currencyCode).format(major);
     } catch {
       /* fall through to plain number + code */
     }
   }
 
-  const formatted = new Intl.NumberFormat(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-    useGrouping: true,
-  }).format(major);
+  const formatted = plainFormatter(locale).format(major);
 
   return currencyCode ? `${formatted} ${currencyCode}` : formatted;
 }

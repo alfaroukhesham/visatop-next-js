@@ -58,7 +58,7 @@ export function isHttpsOrigin(origin: string): boolean {
   return origin.trim().toLowerCase().startsWith("https://");
 }
 
-export function shouldAllowInsecureLocalhostPayments(): boolean {
+function shouldAllowInsecureLocalhostPayments(): boolean {
   const raw = process.env.PAYMENTS_ALLOW_INSECURE_LOCALHOST?.trim().toLowerCase();
   return raw === "true" || raw === "1";
 }

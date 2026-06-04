@@ -24,7 +24,7 @@ export function AdminShell({ title, subtitle, active, children }: AdminShellProp
     <div className="bg-background text-foreground min-h-screen">
       <header className="border-border bg-card sticky top-0 z-40 border-b">
         <div className="mx-auto flex max-w-6xl flex-wrap items-end justify-between gap-4 px-6 py-5">
-          <div className="min-w-0 space-y-1 border-l-4 border-primary pl-4">
+          <div className="min-w-0 space-y-1 border-b-2 border-primary pl-4">
             <p className="text-muted-foreground font-body text-xs font-medium tracking-widest uppercase">
               Console
             </p>

@@ -91,7 +91,7 @@ export function ApplicationPaymentPanel({ applicationId }: { applicationId: stri
   return (
     <div className="space-y-8">
       {draft.actionMsg ? (
-        <p className="text-accent-foreground border-accent/30 bg-accent/15 text-sm border-l-4 border-l-accent px-3 py-2">
+        <p className="text-accent-foreground border-accent/30 bg-accent/15 text-sm border-b-2 border-l-accent px-3 py-2">
           {draft.actionMsg}
         </p>
       ) : null}

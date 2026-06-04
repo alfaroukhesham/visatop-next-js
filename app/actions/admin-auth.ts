@@ -5,7 +5,11 @@ import { redirect } from "next/navigation";
 import { adminAuth } from "@/lib/admin-auth";
 
 export async function adminSignOutAction() {
-  await adminAuth.api.signOut({ headers: await headers() });
+  const hdrs = await headers();
+  const session = await adminAuth.api.getSession({ headers: hdrs });
+  if (session) {
+    await adminAuth.api.signOut({ headers: hdrs });
+  }
   redirect("/admin/sign-in");
 }
 

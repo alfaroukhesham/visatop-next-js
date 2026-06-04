@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Payment cancelled",
+  description: "Your payment was not completed. Return to your application to try again when ready.",
+  robots: { index: false, follow: false },
+};
 
 export default async function CheckoutCancelPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

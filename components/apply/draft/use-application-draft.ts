@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 import type { PublicApplication } from "@/lib/applications/public-application";
@@ -9,7 +8,6 @@ import { UPLOAD_MAX_BYTES, type DocType, type ExtractResponse, type PublicDocume
 import { latestByType } from "./utils";
 
 export function useApplicationDraft(applicationId: string) {
-  const router = useRouter();
   const [app, setApp] = useState<PublicApplication | null>(null);
   const [docs, setDocs] = useState<PublicDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,11 +132,6 @@ export function useApplicationDraft(applicationId: string) {
       return () => clearInterval(interval);
     }
   }, [app?.paymentStatus, load]);
-
-  useEffect(() => {
-    if (app?.paymentStatus !== "paid") return;
-    router.replace(`/apply/applications/${encodeURIComponent(applicationId)}/submitted`);
-  }, [app?.paymentStatus, applicationId, router]);
 
   useEffect(() => {
     if (countdown !== null && countdown > 0) {

@@ -7,8 +7,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const hdrs = await headers();
-  const session = await getAdminSession();
+  const [hdrs, session] = await Promise.all([headers(), getAdminSession()]);
   const requestId = hdrs.get("x-request-id");
 
   if (!session) {

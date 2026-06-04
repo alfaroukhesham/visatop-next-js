@@ -1,0 +1,6 @@
+packages:
+  - "."
+
+# Supply-chain hardening (react-doctor/require-pnpm-hardening)
+minimumReleaseAge: 10080
+trustPolicy: no-downgrade

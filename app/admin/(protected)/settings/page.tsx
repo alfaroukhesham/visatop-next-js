@@ -38,7 +38,7 @@ export default async function AdminSettingsPage() {
       active="settings"
       subtitle="Manage platform settings."
     >
-      <section className="border-border max-w-xl space-y-4 border border-l-4 border-l-primary bg-card p-6">
+      <section className="border-border max-w-xl space-y-4 border border-b-2 border-b-primary bg-card p-6">
         <div className="flex items-start gap-3">
           <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center border border-primary/20">
             <SlidersHorizontal className="size-5" aria-hidden />
@@ -55,7 +55,7 @@ export default async function AdminSettingsPage() {
         <DraftTtlSettings />
       </section>
 
-      <section className="border-border mt-8 max-w-3xl space-y-4 border border-l-4 border-l-primary bg-card p-6">
+      <section className="border-border mt-8 max-w-3xl space-y-4 border border-b-2 border-b-primary bg-card p-6">
         <div className="space-y-1">
           <h2 className="font-heading text-base font-semibold tracking-tight">Payments</h2>
           <p className="text-muted-foreground text-sm leading-relaxed">

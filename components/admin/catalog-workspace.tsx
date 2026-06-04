@@ -119,8 +119,8 @@ export function AdminCatalogWorkspace({
         <p
           className={
             banner.type === "err"
-              ? "border-destructive/40 bg-destructive/10 text-destructive border-l-4 px-4 py-3 text-sm"
-              : "border-success/40 bg-success/10 text-success border-l-4 px-4 py-3 text-sm"
+              ? "border-destructive/40 bg-destructive/10 text-destructive border-b-2 px-4 py-3 text-sm"
+              : "border-success/40 bg-success/10 text-success border-b-2 px-4 py-3 text-sm"
           }
           role="status"
         >
@@ -580,14 +580,14 @@ function ServiceRow({
             onChange={(e) => setDurationDays(e.target.value)}
           />
         ) : (
-          <span className="font-mono text-xs">{s.durationDays ?? "—"}</span>
+          <span className="font-mono text-xs">{s.durationDays ?? ", "}</span>
         )}
       </td>
       <td className="px-4 py-3">
         {canWrite ? (
           <Input className="h-8 w-28 font-mono text-xs" value={entries} onChange={(e) => setEntries(e.target.value)} />
         ) : (
-          <span className="font-mono text-xs">{s.entries ?? "—"}</span>
+          <span className="font-mono text-xs">{s.entries ?? ", "}</span>
         )}
       </td>
       <td className="px-4 py-3">
@@ -675,7 +675,7 @@ function EligibilitySection({
     [services],
   );
   const nationalityFilterOptions = useMemo(
-    () => nationalities.map((n) => ({ value: n.code, label: `${n.code} — ${n.name}` })),
+    () => nationalities.map((n) => ({ value: n.code, label: `${n.code} ,  ${n.name}` })),
     [nationalities],
   );
   const filterValues = useMemo(
@@ -762,7 +762,7 @@ function EligibilitySection({
               Link a new service to an existing nationality
             </summary>
             <form
-              className="border-border flex flex-wrap items-end gap-3 border-t px-4 py-4"
+              className="border-border flex flex-wrap items-end gap-3 border-t p-4"
               onSubmit={(e) => {
                 e.preventDefault();
                 void runElig("elig-add", async () => {
@@ -807,7 +807,7 @@ function EligibilitySection({
                 >
                   {nationalities.map((n) => (
                     <option key={n.code} value={n.code}>
-                      {n.code} — {n.name}
+                      {n.code} ,  {n.name}
                     </option>
                   ))}
                 </select>

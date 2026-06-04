@@ -115,7 +115,7 @@ export function ClientDraftPanelSkeleton() {
 }
 
 /** Portal / track application card. */
-export function ClientTrackCardSkeleton() {
+function ClientTrackCardSkeleton() {
   return (
     <li className="space-y-6 rounded-[12px] border border-border border-l-[3px] border-l-primary bg-card p-6 shadow-[0_4px_24px_rgba(0,0,0,0.07)] sm:p-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

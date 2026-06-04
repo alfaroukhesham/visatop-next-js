@@ -90,7 +90,7 @@ export function SignUpForm({ facebookEnabled }: { facebookEnabled: boolean }) {
               Your portal for every document and update.
             </h1>
             <p className="text-muted-foreground mt-5 max-w-[48ch] text-lg leading-relaxed">
-              One secure place to upload files, review extracted fields, pay, and track status — built for
+              One secure place to upload files, review extracted fields, pay, and track status ,  built for
               clarity under pressure.
             </p>
             <div className="mt-8 grid gap-3 sm:grid-cols-2">

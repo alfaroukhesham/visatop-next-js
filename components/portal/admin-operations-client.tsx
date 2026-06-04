@@ -138,7 +138,7 @@ export function AdminOperationsClient() {
             </div>
             <div className="w-full md:w-auto md:min-w-[320px]">
               <label className="flex h-10 w-full flex-col">
-                <div className="border-border focus-within:border-foreground flex h-full w-full flex-1 items-stretch border bg-card shadow-sm transition-colors">
+                <div className="border-border focus-within:border-foreground flex size-full flex-1 items-stretch border bg-card shadow-sm transition-colors">
                   <div className="text-muted-foreground flex items-center justify-center pl-3">
                     <Search className="size-5" />
                   </div>
@@ -231,7 +231,7 @@ export function AdminOperationsClient() {
                       </td>
                       <td className="px-4">
                         <div
-                          className={`border-border bg-muted text-foreground inline-flex items-center rounded-none border px-2 py-0.5 text-xs font-medium border-l-4 ${badgeClass(row.status)}`}
+                          className={`border-border bg-muted text-foreground inline-flex items-center rounded-none border px-2 py-0.5 text-xs font-medium border-b-2 ${badgeClass(row.status)}`}
                         >
                           {row.statusLabel}
                         </div>
@@ -289,7 +289,7 @@ export function AdminOperationsClient() {
                   <>
                     <div className="border-border bg-card p-4">
                       <div className="mb-4 flex items-center gap-4">
-                        <div className="border-border relative h-12 w-12 overflow-hidden rounded-full border bg-muted">
+                        <div className="border-border relative size-12 overflow-hidden rounded-full border bg-muted">
                           <Image
                             src="https://lh3.googleusercontent.com/aida-public/AB6AXuBWGc04oG0NB-VSL-RfHuSDKfhd6WBpNRkpkuOtwsGO0udGhWF9AFoYNwvZJRvCPJz9VWEa7iibYQ_ag2uSANZeeWQoXzWuYIG_DtSeZOVHc4m9Zvis0GAA503LO2bNxY-zqb2EzBLR8nutvamdV6V-9fCmuk9ITGnoxiRLg2sCfw7PLmmU4s_OJEQJAfbzgbHPlnZzVaFRhok6xrzDHhUTw-wmAmE86EUz3Bk3jaNgWHW6ErryC1UkZ-kUfmm5l87qsC7uIvF2YaM"
                             alt=""

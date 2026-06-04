@@ -70,22 +70,3 @@ export function mapZiinaIntentSnapshotToNormalized(
 
   return { kind: "ignored", reason: `unknown_status:${status}` };
 }
-
-export function ziinaIntentFromApiRecord(rec: Record<string, unknown>): ZiinaIntentSnapshot | null {
-  const id = typeof rec.id === "string" ? rec.id : "";
-  const status = typeof rec.status === "string" ? rec.status : "";
-  const amountRaw = rec.amount;
-  const amount =
-    typeof amountRaw === "number" ? amountRaw : typeof amountRaw === "string" ? Number(amountRaw) : NaN;
-  const currencyCode =
-    typeof rec.currency_code === "string" ? rec.currency_code : "USD";
-  const operationId = typeof rec.operation_id === "string" ? rec.operation_id : null;
-  if (!id || !status) return null;
-  return {
-    id,
-    status,
-    amountMinor: Number.isFinite(amount) ? amount : 0,
-    currencyCode,
-    operationId,
-  };
-}

@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -34,5 +33,4 @@ export {
   CardTitle,
   CardDescription,
   CardContent,
-  CardAction,
 };

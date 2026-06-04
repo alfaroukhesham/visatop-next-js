@@ -17,7 +17,7 @@ import { readResumeTokenFromRequestCookies } from "@/lib/applications/resume-coo
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const bodySchema = z.object({ applicationId: z.string().uuid() }).strict();
+const bodySchema = z.strictObject({ applicationId: z.uuid() });
 
 export async function POST(req: Request) {
   const hdrs = await headers();

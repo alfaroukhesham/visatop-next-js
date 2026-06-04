@@ -230,7 +230,7 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
   return (
     <form onSubmit={onSubmit} className="space-y-10 pb-24">
       {error ? (
-        <p className="text-error border-error/30 bg-error/5 text-sm leading-relaxed border-l-4 pl-3">
+        <p className="text-error border-error/30 bg-error/5 text-sm leading-relaxed border-b-2 pl-3">
           {error}
         </p>
       ) : null}
@@ -272,7 +272,7 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
 
           <div>
             <h2 className="font-heading text-foreground text-lg font-semibold tracking-tight">Visa type</h2>
-            <p className="text-muted-foreground mt-1 text-sm">Choose duration and entry — tap a card to select.</p>
+            <p className="text-muted-foreground mt-1 text-sm">Choose duration and entry ,  tap a card to select.</p>
           </div>
 
           {!nationality ? null : loadingServices ? (

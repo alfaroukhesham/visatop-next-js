@@ -4,8 +4,8 @@ import {
   PAYMENT_STATUSES,
 } from "@/lib/applications/status";
 
-export const ADMIN_APPLICATIONS_DEFAULT_PAGE_SIZE = 20;
-export const ADMIN_APPLICATIONS_PAGE_SIZES = [10, 20, 50, 100] as const;
+const ADMIN_APPLICATIONS_DEFAULT_PAGE_SIZE = 20;
+const ADMIN_APPLICATIONS_PAGE_SIZES = [10, 20, 50, 100] as const;
 
 export type AdminApplicationsListSearchParams = {
   attention?: string;
@@ -63,7 +63,7 @@ export function parseAdminApplicationsListParams(
   };
 }
 
-export function buildAdminApplicationsListQuery(
+function buildAdminApplicationsListQuery(
   params: AdminApplicationsListSearchParams,
   overrides: Partial<AdminApplicationsListSearchParams> = {},
 ): string {

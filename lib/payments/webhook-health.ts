@@ -24,16 +24,18 @@ export async function getWebhookHealthFromTx(tx: DbTransaction): Promise<{
   lastZiina: string | null;
   lastPaddle: string | null;
 }> {
-  const ziinaRows = await tx
-    .select({ value: platformSetting.value })
-    .from(platformSetting)
-    .where(eq(platformSetting.key, PLATFORM_KEY_LAST_WEBHOOK_ZIINA))
-    .limit(1);
-  const paddleRows = await tx
-    .select({ value: platformSetting.value })
-    .from(platformSetting)
-    .where(eq(platformSetting.key, PLATFORM_KEY_LAST_WEBHOOK_PADDLE))
-    .limit(1);
+  const [ziinaRows, paddleRows] = await Promise.all([
+    tx
+      .select({ value: platformSetting.value })
+      .from(platformSetting)
+      .where(eq(platformSetting.key, PLATFORM_KEY_LAST_WEBHOOK_ZIINA))
+      .limit(1),
+    tx
+      .select({ value: platformSetting.value })
+      .from(platformSetting)
+      .where(eq(platformSetting.key, PLATFORM_KEY_LAST_WEBHOOK_PADDLE))
+      .limit(1),
+  ]);
 
   return {
     lastZiina: ziinaRows[0]?.value ? ziinaRows[0].value : null,

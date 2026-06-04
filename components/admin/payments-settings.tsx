@@ -99,7 +99,7 @@ export function PaymentsSettings() {
   if (error || !state) {
     return (
       <div className="space-y-3">
-        <p className="text-destructive text-sm border-l-4 border-destructive/40 pl-3">
+        <p className="text-destructive text-sm border-b-2 border-destructive/40 pl-3">
           {error ?? "Failed to load payments settings."}
         </p>
         <Button type="button" variant="outline" size="sm" className="rounded-none" onClick={() => void load()}>
@@ -115,7 +115,7 @@ export function PaymentsSettings() {
   return (
     <div className="space-y-4">
       {missingAny ? (
-        <div className="border-destructive/40 bg-destructive/5 text-destructive border-l-4 px-3 py-2 text-sm">
+        <div className="border-destructive/40 bg-destructive/5 text-destructive border-b-2 px-3 py-2 text-sm">
           Missing env vars:{" "}
           <span className="font-mono text-xs">
             {[...state.ziina.missing, ...state.paddle.missing].join(", ") || "—"}
@@ -124,10 +124,10 @@ export function PaymentsSettings() {
       ) : null}
 
       {error ? (
-        <p className="text-destructive text-sm border-l-4 border-destructive/40 pl-3">{error}</p>
+        <p className="text-destructive text-sm border-b-2 border-destructive/40 pl-3">{error}</p>
       ) : null}
       {message ? (
-        <p className="text-success text-sm border-l-4 border-success/40 bg-success/10 pl-3 py-1">{message}</p>
+        <p className="text-success text-sm border-b-2 border-success/40 bg-success/10 pl-3 py-1">{message}</p>
       ) : null}
 
       <div className="grid gap-3 md:grid-cols-2">
@@ -147,7 +147,7 @@ export function PaymentsSettings() {
         </div>
       </div>
 
-      <div className="border-border space-y-3 border border-l-4 border-l-primary bg-card p-5">
+      <div className="border-border space-y-3 border border-b-2 border-b-primary bg-card p-5">
         <div className="flex items-start gap-3">
           <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center border border-primary/20">
             <Webhook className="size-5" aria-hidden />

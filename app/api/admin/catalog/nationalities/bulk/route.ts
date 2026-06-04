@@ -83,26 +83,30 @@ export async function POST(req: Request) {
         }
       }
 
-      const upserted: (typeof schema.nationality.$inferSelect)[] = [];
-      for (const it of items) {
-        const inserted = await tx
-          .insert(schema.nationality)
-          .values({
-            code: it.code,
-            name: it.name,
-            enabled: true,
-          })
-          .onConflictDoUpdate({
-            target: schema.nationality.code,
-            set: { name: it.name, enabled: true },
-          })
-          .returning();
-        const row = inserted[0];
-        if (!row) {
-          return jsonError("INTERNAL_ERROR", "Upsert failed", { status: 500, requestId });
-        }
-        upserted.push(row);
-        normToExistingCode.set(normalizeCountryName(it.name), it.code);
+      const upserted = await Promise.all(
+        items.map(async (it) => {
+          const inserted = await tx
+            .insert(schema.nationality)
+            .values({
+              code: it.code,
+              name: it.name,
+              enabled: true,
+            })
+            .onConflictDoUpdate({
+              target: schema.nationality.code,
+              set: { name: it.name, enabled: true },
+            })
+            .returning();
+          const row = inserted[0];
+          if (!row) {
+            throw new Error("Upsert failed");
+          }
+          normToExistingCode.set(normalizeCountryName(it.name), it.code);
+          return row;
+        }),
+      ).catch(() => null);
+      if (!upserted) {
+        return jsonError("INTERNAL_ERROR", "Upsert failed", { status: 500, requestId });
       }
 
       await writeAdminAudit(tx, {

@@ -64,7 +64,7 @@ export function AdminApplicationOpsPanel({
   const router = useRouter();
   const [nextStatus, setNextStatus] = useState<string>("");
   const [selectedOutcomeDocId, setSelectedOutcomeDocId] = useState("");
-  const [uploadType, setUploadType] = useState("outcome_approval");
+  const uploadType = "outcome_approval";
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -74,10 +74,19 @@ export function AdminApplicationOpsPanel({
 
   const requiredDocType = requiredOutcomeDocType(nextStatus);
   const matchingOutcomeDocs = requiredDocType ? retainedOutcomeDocs(documents, requiredDocType) : [];
+  const resolvedOutcomeDocId =
+    !requiredDocType
+      ? ""
+      : selectedOutcomeDocId && matchingOutcomeDocs.some((d) => d.id === selectedOutcomeDocId)
+        ? selectedOutcomeDocId
+        : (matchingOutcomeDocs[0]?.id ?? "");
+
+  const effectiveUploadType = requiredDocType ?? uploadType;
+
   const selectedOutcomeDoc =
-    matchingOutcomeDocs.find((d) => d.id === selectedOutcomeDocId) ?? null;
+    matchingOutcomeDocs.find((d) => d.id === resolvedOutcomeDocId) ?? null;
   const statusNeedsOutcome = requiredDocType !== null;
-  const canApplyStatus = !statusNeedsOutcome || selectedOutcomeDocId.length > 0;
+  const canApplyStatus = !statusNeedsOutcome || resolvedOutcomeDocId.length > 0;
   const showUploadPanel =
     statusNeedsOutcome && (matchingOutcomeDocs.length === 0 || showNewUpload);
 
@@ -121,23 +130,6 @@ export function AdminApplicationOpsPanel({
     return () => URL.revokeObjectURL(url);
   }, [selectedFile]);
 
-  useEffect(() => {
-    if (!requiredDocType) {
-      setSelectedOutcomeDocId("");
-      setShowNewUpload(false);
-      clearSelectedFile();
-      return;
-    }
-    setUploadType(requiredDocType);
-    setShowNewUpload(false);
-    clearSelectedFile();
-    const matching = retainedOutcomeDocs(documents, requiredDocType);
-    setSelectedOutcomeDocId((prev) => {
-      if (prev && matching.some((d) => d.id === prev)) return prev;
-      return matching[0]?.id ?? "";
-    });
-  }, [requiredDocType, documents]);
-
   async function uploadSelectedFile() {
     if (!selectedFile) {
       setMsg("Choose a file to upload.");
@@ -147,7 +139,7 @@ export function AdminApplicationOpsPanel({
     setMsg(null);
     try {
       const fd = new FormData();
-      fd.set("documentType", uploadType);
+      fd.set("documentType", effectiveUploadType);
       fd.set("file", selectedFile);
       const res = await fetch(apiHref(`/admin/applications/${applicationId}/documents/upload`), {
         method: "POST",
@@ -176,7 +168,7 @@ export function AdminApplicationOpsPanel({
       setMsg("Choose a target status.");
       return;
     }
-    if (statusNeedsOutcome && !selectedOutcomeDocId) {
+    if (statusNeedsOutcome && !resolvedOutcomeDocId) {
       setMsg("Upload the required outcome document before applying this status.");
       return;
     }
@@ -184,7 +176,7 @@ export function AdminApplicationOpsPanel({
     setMsg(null);
     try {
       const body: Record<string, unknown> = { applicationStatus: nextStatus };
-      if (statusNeedsOutcome) body.outcomeDocumentId = selectedOutcomeDocId;
+      if (statusNeedsOutcome) body.outcomeDocumentId = resolvedOutcomeDocId;
       const res = await fetch(apiHref(`/admin/applications/${applicationId}/ops`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -246,7 +238,10 @@ export function AdminApplicationOpsPanel({
             {nextStatus ? (
               <>
                 {statusNeedsOutcome ? (
-                  <div className="space-y-4 border border-border bg-muted/10 p-4">
+                  <div
+                    key={requiredDocType ?? "none"}
+                    className="space-y-4 border border-border bg-muted/10 p-4"
+                  >
                     <div className="space-y-1">
                       <h3 className="text-sm font-semibold">2. Outcome document</h3>
                       <p className="text-muted-foreground text-xs">
@@ -271,7 +266,7 @@ export function AdminApplicationOpsPanel({
                                       type="radio"
                                       name="outcome-doc"
                                       className="mt-1"
-                                      checked={selectedOutcomeDocId === d.id}
+                                      checked={resolvedOutcomeDocId === d.id}
                                       onChange={() => setSelectedOutcomeDocId(d.id)}
                                     />
                                     <OutcomeDocSummary doc={d} compact />

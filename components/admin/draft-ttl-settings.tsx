@@ -62,12 +62,12 @@ export function DraftTtlSettings() {
   }
 
   return (
-    <form onSubmit={onSave} className="border-border max-w-md space-y-4 border border-l-4 border-l-primary bg-card p-5">
+    <form onSubmit={onSave} className="border-border max-w-md space-y-4 border border-b-2 border-b-primary bg-card p-5">
       {error ? (
-        <p className="text-destructive text-sm leading-relaxed border-l-4 border-destructive/40 pl-3">{error}</p>
+        <p className="text-destructive text-sm leading-relaxed border-b-2 border-destructive/40 pl-3">{error}</p>
       ) : null}
       {message ? (
-        <p className="text-success text-sm border-l-4 border-success/40 bg-success/10 pl-3 py-1">{message}</p>
+        <p className="text-success text-sm border-b-2 border-success/40 bg-success/10 pl-3 py-1">{message}</p>
       ) : null}
       <div className="space-y-2">
         <Label htmlFor="ttl">Draft TTL (hours)</Label>

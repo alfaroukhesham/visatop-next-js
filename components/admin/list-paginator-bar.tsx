@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
-export const ADMIN_LIST_PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+const ADMIN_LIST_PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 
 export type ListPaginatorBarProps = {
   selectId: string;
@@ -62,7 +62,7 @@ export function ListPaginatorBar({
           disabled={disabled || page <= 0}
           onClick={() => setPage((p) => Math.max(0, p - 1))}
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="size-4" />
           Previous
         </Button>
         <Button
@@ -73,7 +73,7 @@ export function ListPaginatorBar({
           onClick={() => setPage((p) => p + 1)}
         >
           Next
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="size-4" />
         </Button>
       </div>
     </div>

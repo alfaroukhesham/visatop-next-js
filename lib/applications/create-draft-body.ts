@@ -8,7 +8,7 @@ export const createDraftBodySchema = z.object({
     .transform((s) => s.toUpperCase()),
   serviceId: z.string().min(1),
   /** Contact email — required at step 2 on the client; optional for signed-in API creates (account email used). */
-  guestEmail: z.string().email().max(320).optional(),
+  guestEmail: z.email().max(320).optional(),
   /** Price book for checkout (must match seeded reference + margin currency). */
   catalogCurrency: z.enum(["USD", "AED"]).default("USD"),
 });
