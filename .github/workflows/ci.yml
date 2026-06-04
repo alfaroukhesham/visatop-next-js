@@ -20,5 +20,6 @@ jobs:
           cache: "pnpm"
       - run: pnpm install
       - run: pnpm run lint
+      - run: pnpm run react-doctor:ci
       - run: pnpm run test:ci
       - run: pnpm run build

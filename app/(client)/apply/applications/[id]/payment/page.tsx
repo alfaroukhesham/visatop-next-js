@@ -4,6 +4,10 @@ import { notFound, redirect } from "next/navigation";
 import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
 import { ApplicationPaymentPanel } from "@/components/apply/application-payment-panel";
 import { loadApplicationRowForRequest } from "@/lib/applications/load-application-row-for-request";
+import { loadPaymentUploadFlags } from "@/lib/applications/load-payment-upload-flags";
+import { paymentPanelMayShow } from "@/lib/applications/payment-panel-may-show";
+import { toPublicApplication } from "@/lib/applications/public-application";
+import { withSystemDbActor } from "@/lib/db/actor-context";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -20,6 +24,13 @@ export default async function ApplyApplicationPaymentPage({ params }: Props) {
   if (row.paymentStatus === "paid") {
     redirect(`/apply/applications/${encodeURIComponent(id)}/submitted`);
   }
+
+  const uploads = await withSystemDbActor((tx) => loadPaymentUploadFlags(tx, id));
+  const publicApp = toPublicApplication(row);
+  if (!paymentPanelMayShow(publicApp, uploads)) {
+    redirect(`/apply/applications/${encodeURIComponent(id)}`);
+  }
+
   return (
     <div className="max-w-6xl">
       <ApplyTwoColumn

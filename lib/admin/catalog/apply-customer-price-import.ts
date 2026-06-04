@@ -9,6 +9,7 @@
 
 import { eq, sql, inArray, asc } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
+import { applyChunksInParallel } from "@/lib/async/apply-chunks-in-parallel";
 import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import {
@@ -208,65 +209,72 @@ export async function syncEligibilityForTouchedPairs(
 ): Promise<{ added: number; removed: number }> {
   if (touchedKeys.length === 0) return { added: 0, removed: 0 };
 
-  let eligibilityAdded = 0;
-  let eligibilityRemoved = 0;
+  const chunkResults = await Promise.all(
+    chunkArray(touchedKeys, ELIGIBILITY_PAIR_CHUNK).map(async (keyChunk) => {
+      const pairs = keyChunk.map((key) => {
+        const { natCode, serviceNorm: serviceId } = splitNatServiceNormKey(key);
+        return { nationalityCode: natCode, serviceId };
+      });
 
-  for (const keyChunk of chunkArray(touchedKeys, ELIGIBILITY_PAIR_CHUNK)) {
-    const pairs = keyChunk.map((key) => {
-      const { natCode, serviceNorm: serviceId } = splitNatServiceNormKey(key);
-      return { nationalityCode: natCode, serviceId };
-    });
-
-    const tupleIn = sql.join(
-      pairs.map((p) => sql`(${p.nationalityCode}, ${p.serviceId})`),
-      sql`, `,
-    );
-
-    const countRows = await tx
-      .select({
-        nationalityCode: schema.catalogCustomerPrice.nationalityCode,
-        serviceId: schema.catalogCustomerPrice.serviceId,
-        c: sql<number>`count(*)::int`,
-      })
-      .from(schema.catalogCustomerPrice)
-      .where(sql`(nationality_code, service_id) IN (${tupleIn})`)
-      .groupBy(schema.catalogCustomerPrice.nationalityCode, schema.catalogCustomerPrice.serviceId);
-
-    const hasPrice = new Set(
-      countRows
-        .filter((r) => (r.c ?? 0) > 0)
-        .map((r) => natSvcIdKey(r.nationalityCode, r.serviceId)),
-    );
-
-    const toEnsure = pairs.filter((p) => hasPrice.has(natSvcIdKey(p.nationalityCode, p.serviceId)));
-    const toRemove = pairs.filter((p) => !hasPrice.has(natSvcIdKey(p.nationalityCode, p.serviceId)));
-
-    if (toEnsure.length > 0) {
-      const ins = await tx
-        .insert(schema.visaServiceEligibility)
-        .values(
-          toEnsure.map((p) => ({
-            serviceId: p.serviceId,
-            nationalityCode: p.nationalityCode,
-          })),
-        )
-        .onConflictDoNothing()
-        .returning({ serviceId: schema.visaServiceEligibility.serviceId });
-      eligibilityAdded += ins.length;
-    }
-
-    if (toRemove.length > 0) {
-      const rmIn = sql.join(
-        toRemove.map((p) => sql`(${p.serviceId}, ${p.nationalityCode})`),
+      const tupleIn = sql.join(
+        pairs.map((p) => sql`(${p.nationalityCode}, ${p.serviceId})`),
         sql`, `,
       );
-      const del = await tx
-        .delete(schema.visaServiceEligibility)
-        .where(sql`(service_id, nationality_code) IN (${rmIn})`)
-        .returning({ serviceId: schema.visaServiceEligibility.serviceId });
-      eligibilityRemoved += del.length;
-    }
-  }
+
+      const countRows = await tx
+        .select({
+          nationalityCode: schema.catalogCustomerPrice.nationalityCode,
+          serviceId: schema.catalogCustomerPrice.serviceId,
+          c: sql<number>`count(*)::int`,
+        })
+        .from(schema.catalogCustomerPrice)
+        .where(sql`(nationality_code, service_id) IN (${tupleIn})`)
+        .groupBy(schema.catalogCustomerPrice.nationalityCode, schema.catalogCustomerPrice.serviceId);
+
+      const hasPrice = new Set(
+        countRows
+          .filter((r) => (r.c ?? 0) > 0)
+          .map((r) => natSvcIdKey(r.nationalityCode, r.serviceId)),
+      );
+
+      const toEnsure = pairs.filter((p) => hasPrice.has(natSvcIdKey(p.nationalityCode, p.serviceId)));
+      const toRemove = pairs.filter((p) => !hasPrice.has(natSvcIdKey(p.nationalityCode, p.serviceId)));
+
+      let added = 0;
+      let removed = 0;
+
+      if (toEnsure.length > 0) {
+        const ins = await tx
+          .insert(schema.visaServiceEligibility)
+          .values(
+            toEnsure.map((p) => ({
+              serviceId: p.serviceId,
+              nationalityCode: p.nationalityCode,
+            })),
+          )
+          .onConflictDoNothing()
+          .returning({ serviceId: schema.visaServiceEligibility.serviceId });
+        added = ins.length;
+      }
+
+      if (toRemove.length > 0) {
+        const rmIn = sql.join(
+          toRemove.map((p) => sql`(${p.serviceId}, ${p.nationalityCode})`),
+          sql`, `,
+        );
+        const del = await tx
+          .delete(schema.visaServiceEligibility)
+          .where(sql`(service_id, nationality_code) IN (${rmIn})`)
+          .returning({ serviceId: schema.visaServiceEligibility.serviceId });
+        removed = del.length;
+      }
+
+      return { added, removed };
+    }),
+  );
+
+  const eligibilityAdded = chunkResults.reduce((sum, r) => sum + r.added, 0);
+  const eligibilityRemoved = chunkResults.reduce((sum, r) => sum + r.removed, 0);
 
   return { added: eligibilityAdded, removed: eligibilityRemoved };
 }
@@ -751,7 +759,10 @@ export async function applyPriceSheetImport(
   const uniqueNorms = [
     ...new Set(header.serviceColumns.map((c) => c.trimmedName.trim().toLowerCase())),
   ];
-  for (const norm of uniqueNorms) {
+  let normIdx = 0;
+  while (normIdx < uniqueNorms.length) {
+    const norm = uniqueNorms[normIdx]!;
+    normIdx += 1;
     const displayName = normToDisplayName.get(norm) ?? norm;
     const id = await resolveServiceId(tx, displayName, serviceNameToId, servicesCreated);
     normToId.set(norm, id);
@@ -829,8 +840,7 @@ export async function applyPriceSheetImport(
     uniqueDeletePairs.push({ nationalityCode: d.nationalityCode, serviceId: d.serviceId });
   }
 
-  for (const chunk of chunkArray(uniqueDeletePairs, DELETE_PAIR_CHUNK)) {
-    if (chunk.length === 0) continue;
+  await applyChunksInParallel(uniqueDeletePairs, DELETE_PAIR_CHUNK, async (chunk) => {
     const tupleIn = sql.join(
       chunk.map((c) => sql`(${c.nationalityCode}, ${c.serviceId})`),
       sql`, `,
@@ -840,10 +850,9 @@ export async function applyPriceSheetImport(
       .where(sql`(nationality_code, service_id) IN (${tupleIn})`)
       .returning({ id: schema.catalogCustomerPrice.id });
     pricesDeleted += del.length;
-  }
+  });
 
-  for (const chunk of chunkArray(toUpsertUnique, UPSERT_CHUNK)) {
-    if (chunk.length === 0) continue;
+  await applyChunksInParallel(toUpsertUnique, UPSERT_CHUNK, async (chunk) => {
     await tx
       .insert(schema.catalogCustomerPrice)
       .values(
@@ -868,10 +877,9 @@ export async function applyPriceSheetImport(
         },
       });
     pricesUpserted += chunk.length;
-  }
+  });
 
-  for (const chunk of chunkArray(toPendingDb, PENDING_INSERT_CHUNK)) {
-    if (chunk.length === 0) continue;
+  await applyChunksInParallel(toPendingDb, PENDING_INSERT_CHUNK, async (chunk) => {
     await tx.insert(schema.catalogCustomerPricePending).values(
       chunk.map((p) => ({
         nationalityCode: p.nationalityCode,
@@ -882,7 +890,7 @@ export async function applyPriceSheetImport(
       })),
     );
     pendingCreated += chunk.length;
-  }
+  });
 
   const touchedPairs = new Set<string>();
   for (const u of toUpsertUnique) touchedPairs.add(natSvcIdKey(u.nationalityCode, u.serviceId));
@@ -1086,8 +1094,7 @@ export async function assignPendingCurrency(
   const primaryUnique = dedupeCatalogPriceUpserts(primaryRows);
   const siblingUnique = dedupeCatalogPriceUpserts(siblingRows);
 
-  for (const chunk of chunkArray(primaryUnique, ASSIGN_PRICE_UPSERT_CHUNK)) {
-    if (chunk.length === 0) continue;
+  await applyChunksInParallel(primaryUnique, ASSIGN_PRICE_UPSERT_CHUNK, async (chunk) => {
     await tx
       .insert(schema.catalogCustomerPrice)
       .values(
@@ -1111,10 +1118,9 @@ export async function assignPendingCurrency(
           updatedAt: new Date(),
         },
       });
-  }
+  });
 
-  for (const chunk of chunkArray(siblingUnique, ASSIGN_PRICE_UPSERT_CHUNK)) {
-    if (chunk.length === 0) continue;
+  await applyChunksInParallel(siblingUnique, ASSIGN_PRICE_UPSERT_CHUNK, async (chunk) => {
     await tx
       .insert(schema.catalogCustomerPrice)
       .values(
@@ -1138,7 +1144,7 @@ export async function assignPendingCurrency(
           updatedAt: new Date(),
         },
       });
-  }
+  });
 
   const distinctPairs: { nationalityCode: string; serviceId: string }[] = [
     ...new Map(
@@ -1158,12 +1164,11 @@ export async function assignPendingCurrency(
       .where(eq(schema.catalogCustomerPricePending.batchId, batchId));
   } else {
     const pendingIdsAll = pendingRows.map((p) => p.id);
-    for (const chunk of chunkArray(pendingIdsAll, PENDING_DELETE_ID_CHUNK)) {
-      if (chunk.length === 0) continue;
+    await applyChunksInParallel(pendingIdsAll, PENDING_DELETE_ID_CHUNK, async (chunk) => {
       await tx
         .delete(schema.catalogCustomerPricePending)
         .where(inArray(schema.catalogCustomerPricePending.id, chunk));
-    }
+    });
   }
 
   const samplePending = pendingRows.slice(0, ASSIGN_PENDING_AUTOFIX_RESPONSE_CAP);

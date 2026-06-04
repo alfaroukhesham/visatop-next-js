@@ -1,7 +1,8 @@
 "use client";
 
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { AuthFlowSkeleton } from "@/components/auth/auth-flow-skeleton";
 import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
 import { appHref } from "@/lib/app-href";
 import { authClient } from "@/lib/auth-client";
@@ -25,6 +26,14 @@ import { ClientHeroPanel } from "@/components/client/client-surface";
 type SocialProvider = "google" | "facebook";
 
 export function SignUpForm({ facebookEnabled }: { facebookEnabled: boolean }) {
+  return (
+    <Suspense fallback={<AuthFlowSkeleton />}>
+      <SignUpFormContent facebookEnabled={facebookEnabled} />
+    </Suspense>
+  );
+}
+
+function SignUpFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [name, setName] = useState("");

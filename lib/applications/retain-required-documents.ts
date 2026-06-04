@@ -81,22 +81,29 @@ export async function retainRequiredDocuments(
   const retainedDocumentIds: string[] = [];
   const missingBytes: DocumentType[] = [];
 
-  for (const type of REQUIRED_RETENTION_TYPES) {
-    const latest = await findLatestTempDocumentId(tx, applicationId, type);
-    if (!latest) continue;
-    if (!latest.hasBytes) {
-      missingBytes.push(type);
-      continue;
+  const retentionResults = await Promise.all(
+    REQUIRED_RETENTION_TYPES.map(async (type) => {
+      const latest = await findLatestTempDocumentId(tx, applicationId, type);
+      if (!latest) return { type, kind: "absent" as const };
+      if (!latest.hasBytes) return { type, kind: "missing_bytes" as const };
+      await tx
+        .update(applicationDocument)
+        .set({ status: DOCUMENT_STATUS.RETAINED })
+        .where(eq(applicationDocument.id, latest.id));
+      await tx
+        .update(applicationDocumentBlob)
+        .set({ retainedAt: now, tempExpiresAt: null })
+        .where(eq(applicationDocumentBlob.documentId, latest.id));
+      return { type, kind: "retained" as const, documentId: latest.id };
+    }),
+  );
+
+  for (const result of retentionResults) {
+    if (result.kind === "missing_bytes") {
+      missingBytes.push(result.type);
+    } else if (result.kind === "retained") {
+      retainedDocumentIds.push(result.documentId);
     }
-    await tx
-      .update(applicationDocument)
-      .set({ status: DOCUMENT_STATUS.RETAINED })
-      .where(eq(applicationDocument.id, latest.id));
-    await tx
-      .update(applicationDocumentBlob)
-      .set({ retainedAt: now, tempExpiresAt: null })
-      .where(eq(applicationDocumentBlob.documentId, latest.id));
-    retainedDocumentIds.push(latest.id);
   }
 
   if (missingBytes.length > 0) {

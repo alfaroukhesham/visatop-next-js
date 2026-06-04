@@ -20,6 +20,7 @@
     "start": "next start",
     "lint": "eslint",
     "react-doctor": "react-doctor . --verbose --diff",
+    "react-doctor:ci": "react-doctor . --verbose --diff --fail-on error --annotations",
     "test": "vitest",
     "test:ci": "vitest run",
     "test:e2e": "playwright test",

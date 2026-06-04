@@ -144,21 +144,12 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
     };
   }, [initialNationalityCode, catalogReloadEpoch]);
 
-  useEffect(() => {
-    if (loadingList) return;
-    const raw = initialNationalityCode.trim().toUpperCase();
-    if (raw.length !== 2) {
-      router.replace("/");
-      return;
-    }
-    if (nationalities.length === 0) {
-      router.replace("/");
-      return;
-    }
-    if (!nationalities.some((n) => n.code === raw)) {
-      router.replace("/");
-    }
-  }, [initialNationalityCode, loadingList, nationalities, router]);
+  const nationalityCode = initialNationalityCode.trim().toUpperCase();
+  const nationalityUnavailable =
+    !loadingList &&
+    (nationalityCode.length !== 2 ||
+      nationalities.length === 0 ||
+      !nationalities.some((n) => n.code === nationalityCode));
 
   useEffect(() => {
     let cancelled = false;
@@ -239,6 +230,21 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
     return (
       <div className="pb-24" aria-busy="true">
         <ClientStartStepSkeleton />
+      </div>
+    );
+  }
+
+  if (nationalityUnavailable) {
+    return (
+      <div className="space-y-4 pb-24">
+        <p className="text-muted-foreground text-sm leading-relaxed" role="alert">
+          We could not load visa options for nationality{" "}
+          <span className="text-foreground font-semibold">{nationalityCode || "—"}</span>. Return to the
+          home page and choose your nationality again.
+        </p>
+        <ClientButton type="button" brand="cta" onClick={() => router.push("/")}>
+          Back to home
+        </ClientButton>
       </div>
     );
   }

@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { redirectToSubmittedApplication } from "./actions";
 import { ClientCenteredStatus } from "@/components/client/client-loading";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
@@ -10,7 +11,6 @@ import { apiHref } from "@/lib/app-href";
 type AppPoll = { paymentStatus: string };
 
 export function CheckoutReturnClient({ applicationId }: { applicationId: string }) {
-  const router = useRouter();
   const [message, setMessage] = useState("Confirming payment with our servers…");
   const startedAt = useRef(0);
   const nextDelayMs = useRef(1000);
@@ -29,6 +29,7 @@ export function CheckoutReturnClient({ applicationId }: { applicationId: string 
     };
 
     async function pollOnce() {
+      try {
       if (cancelled) return;
       const elapsed = Date.now() - startedAt.current;
       if (elapsed > 120_000) {
@@ -54,7 +55,7 @@ export function CheckoutReturnClient({ applicationId }: { applicationId: string 
 
       const ps = res.data.application.paymentStatus;
       if (ps === "paid") {
-        router.replace(`/apply/applications/${encodeURIComponent(applicationId)}/submitted`);
+        await redirectToSubmittedApplication(applicationId);
         return;
       }
       if (ps !== "checkout_created") {
@@ -65,6 +66,10 @@ export function CheckoutReturnClient({ applicationId }: { applicationId: string 
       }
 
       if (!cancelled) schedule(pollOnce);
+      } catch (err) {
+        if (isRedirectError(err)) throw err;
+        setMessage("Something went wrong while confirming payment. Please refresh or contact support.");
+      }
     }
 
     void pollOnce();
@@ -72,7 +77,7 @@ export function CheckoutReturnClient({ applicationId }: { applicationId: string 
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [applicationId, router]);
+  }, [applicationId]);
 
   return (
     <div className="mx-auto max-w-lg px-4">

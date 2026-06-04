@@ -1,20 +1,18 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { isRedirectError } from "next/dist/client/components/redirect-error";
+import { linkAfterSignupAndRedirect } from "./actions";
 import { ClientCenteredStatus } from "@/components/client/client-loading";
 import { AlertCircle } from "lucide-react";
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import {
   GUEST_LINK_EVENTS,
-  mapLinkFailureDetailsCodeToReason,
   trackGuestLinkEvent,
 } from "@/lib/analytics/guest-link-events";
-import { buildPostLinkLocation } from "@/lib/applications/post-link-redirect";
 import { ClientSurface } from "@/components/client/client-surface";
 
 export function LinkAfterSignupClient() {
-  const router = useRouter();
   const userId = useClientAuthStore((s) => s.session?.user?.id);
   const isPending = useClientAuthStore((s) => s.isPending);
   const [message, setMessage] = useState<string | null>(null);
@@ -42,8 +40,6 @@ export function LinkAfterSignupClient() {
       applicationId = null;
     }
 
-    const origin = window.location.origin;
-
     void (async () => {
       if (!applicationId) {
         setMessage(
@@ -52,48 +48,30 @@ export function LinkAfterSignupClient() {
         return;
       }
 
-      const res = await fetch(`${origin}/api/applications/link-after-auth`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Origin: origin,
-        },
-      });
-      const json = (await res.json()) as {
-        ok?: boolean;
-        data?: { linked?: boolean; alreadyLinked?: boolean };
-        error?: { details?: { code?: string } };
-      };
-
-      if (json.ok && json.data?.linked) {
-        trackGuestLinkEvent(GUEST_LINK_EVENTS.linkAfterAuthSuccess, { applicationId });
-        router.replace(buildPostLinkLocation(applicationId));
-        return;
+      try {
+        const outcome = await linkAfterSignupAndRedirect(applicationId);
+        if (outcome?.kind === "failed") {
+          trackGuestLinkEvent(GUEST_LINK_EVENTS.linkAfterAuthFail, {
+            applicationId,
+            reason: outcome.reason,
+          });
+          setMessage(
+            "We could not attach this application to your account from this browser. Try again from the submitted page, or contact support with your reference number.",
+          );
+        }
+      } catch (err) {
+        if (isRedirectError(err)) {
+          trackGuestLinkEvent(GUEST_LINK_EVENTS.linkAfterAuthSuccess, { applicationId });
+          throw err;
+        }
+        trackGuestLinkEvent(GUEST_LINK_EVENTS.linkAfterAuthFail, {
+          applicationId: applicationId ?? "",
+          reason: "unknown",
+        });
+        setMessage("Something went wrong. Please try again.");
       }
-      if (json.ok && json.data?.alreadyLinked) {
-        trackGuestLinkEvent(GUEST_LINK_EVENTS.linkAfterAuthSuccess, { applicationId, alreadyLinked: true });
-        router.replace(buildPostLinkLocation(applicationId));
-        return;
-      }
-
-      const code =
-        json.error && typeof json.error.details === "object" && json.error.details
-          ? (json.error.details as { code?: string }).code
-          : undefined;
-      const reason = mapLinkFailureDetailsCodeToReason(code);
-      trackGuestLinkEvent(GUEST_LINK_EVENTS.linkAfterAuthFail, { applicationId, reason });
-      setMessage(
-        "We could not attach this application to your account from this browser. Try again from the submitted page, or contact support with your reference number.",
-      );
-    })().catch(() => {
-      trackGuestLinkEvent(GUEST_LINK_EVENTS.linkAfterAuthFail, {
-        applicationId: applicationId ?? "",
-        reason: "unknown",
-      });
-      setMessage("Something went wrong. Please try again.");
-    });
-  }, [isPending, router, userId]);
+    })();
+  }, [isPending, userId]);
 
   if (isPending) {
     return (

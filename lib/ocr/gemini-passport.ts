@@ -157,6 +157,134 @@ const defaultCallModel: CallModelFn = async ({
   return { text, usage: res.usageMetadata };
 };
 
+type PassportAttemptRun = {
+  outcome: OcrAttemptOutcome;
+  success?: ExtractPassportResult;
+};
+
+async function runPassportOcrAttempt(
+  attempt: 1 | 2,
+  input: ExtractPassportInput,
+  ctx: {
+    deadline: number;
+    call: CallModelFn;
+    modelId: string;
+    promptVersion: number;
+  },
+): Promise<PassportAttemptRun> {
+  const remaining = ctx.deadline - Date.now();
+  if (remaining <= 500) {
+    return {
+      outcome: {
+        attempt,
+        status: "failed",
+        result: null,
+        rawText: null,
+        errorCode: "OCR_TIMEOUT_BUDGET",
+        errorMessage: "Overall OCR budget exhausted.",
+        missingFields: [...listMissingOcrFields(null)],
+        latencyMs: 0,
+        usage: null,
+      },
+    };
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), Math.max(500, remaining));
+  const startedAt = Date.now();
+  let rawText = "";
+  let usage: unknown = null;
+  try {
+    const out = await ctx.call({
+      modelId: ctx.modelId,
+      prompt: PASSPORT_PROMPT,
+      imageBytes: input.imageBytes,
+      contentType: input.contentType,
+      signal: controller.signal,
+    });
+    rawText = out.text ?? "";
+    usage = out.usage ?? null;
+  } catch (err) {
+    clearTimeout(timer);
+    return {
+      outcome: {
+        attempt,
+        status: "failed",
+        result: null,
+        rawText: rawText || null,
+        errorCode:
+          (err as { name?: string } | null)?.name === "AbortError"
+            ? "OCR_ATTEMPT_TIMEOUT"
+            : "OCR_PROVIDER_ERROR",
+        errorMessage: err instanceof Error ? err.message : "Unknown provider error",
+        missingFields: [...listMissingOcrFields(null)],
+        latencyMs: Date.now() - startedAt,
+        usage: null,
+      },
+    };
+  }
+  clearTimeout(timer);
+
+  const parsed = tryParseOcrJson(rawText);
+  const latencyMs = Date.now() - startedAt;
+  if (!parsed.ok) {
+    return {
+      outcome: {
+        attempt,
+        status: "failed",
+        result: null,
+        rawText,
+        errorCode: parsed.errorCode,
+        errorMessage: parsed.errorMessage,
+        missingFields: [...listMissingOcrFields(null)],
+        latencyMs,
+        usage,
+      },
+    };
+  }
+
+  const missingFields = listMissingOcrFields(parsed.result);
+  if (missingFields.length === 0) {
+    const outcome: OcrAttemptOutcome = {
+      attempt,
+      status: "succeeded",
+      result: parsed.result,
+      rawText,
+      errorCode: null,
+      errorMessage: null,
+      missingFields: [],
+      latencyMs,
+      usage,
+    };
+    return {
+      outcome,
+      success: {
+        status: "succeeded",
+        attempts: [outcome],
+        finalResult: parsed.result,
+        missingFields: [],
+        provider: "gemini",
+        model: ctx.modelId,
+        promptVersion: ctx.promptVersion,
+      },
+    };
+  }
+
+  return {
+    outcome: {
+      attempt,
+      status: "failed",
+      result: parsed.result,
+      rawText,
+      errorCode: "OCR_MISSING_REQUIRED_FIELDS",
+      errorMessage: `Missing: ${missingFields.join(",")}`,
+      missingFields,
+      latencyMs,
+      usage,
+    },
+  };
+}
+
 /**
  * Run up to 2 OCR attempts for the passport bio-page image. Succeeds as soon
  * as required fields are present; otherwise falls through to attempt 2 or
@@ -171,110 +299,18 @@ export async function extractPassport(
   const budgetMs = input.overallTimeoutMs ?? 25_000;
   const deadline = Date.now() + budgetMs;
   const attempts: OcrAttemptOutcome[] = [];
+  const ctx = { deadline, call, modelId, promptVersion };
 
-  for (const attempt of [1, 2] as const) {
-    const remaining = deadline - Date.now();
-    if (remaining <= 500) {
-      attempts.push({
-        attempt,
-        status: "failed",
-        result: null,
-        rawText: null,
-        errorCode: "OCR_TIMEOUT_BUDGET",
-        errorMessage: "Overall OCR budget exhausted.",
-        missingFields: [...listMissingOcrFields(null)],
-        latencyMs: 0,
-        usage: null,
-      });
-      break;
-    }
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), Math.max(500, remaining));
-    const startedAt = Date.now();
-    let rawText = "";
-    let usage: unknown = null;
-    try {
-      const out = await call({
-        modelId,
-        prompt: PASSPORT_PROMPT,
-        imageBytes: input.imageBytes,
-        contentType: input.contentType,
-        signal: controller.signal,
-      });
-      rawText = out.text ?? "";
-      usage = out.usage ?? null;
-    } catch (err) {
-      attempts.push({
-        attempt,
-        status: "failed",
-        result: null,
-        rawText: rawText || null,
-        errorCode:
-          (err as { name?: string } | null)?.name === "AbortError"
-            ? "OCR_ATTEMPT_TIMEOUT"
-            : "OCR_PROVIDER_ERROR",
-        errorMessage: err instanceof Error ? err.message : "Unknown provider error",
-        missingFields: [...listMissingOcrFields(null)],
-        latencyMs: Date.now() - startedAt,
-        usage: null,
-      });
-      clearTimeout(timer);
-      continue;
-    }
-    clearTimeout(timer);
+  const first = await runPassportOcrAttempt(1, input, ctx);
+  attempts.push(first.outcome);
+  if (first.success) {
+    return { ...first.success, attempts };
+  }
 
-    const parsed = tryParseOcrJson(rawText);
-    const latencyMs = Date.now() - startedAt;
-    if (!parsed.ok) {
-      attempts.push({
-        attempt,
-        status: "failed",
-        result: null,
-        rawText,
-        errorCode: parsed.errorCode,
-        errorMessage: parsed.errorMessage,
-        missingFields: [...listMissingOcrFields(null)],
-        latencyMs,
-        usage,
-      });
-      continue;
-    }
-    const missingFields = listMissingOcrFields(parsed.result);
-    if (missingFields.length === 0) {
-      attempts.push({
-        attempt,
-        status: "succeeded",
-        result: parsed.result,
-        rawText,
-        errorCode: null,
-        errorMessage: null,
-        missingFields: [],
-        latencyMs,
-        usage,
-      });
-      return {
-        status: "succeeded",
-        attempts,
-        finalResult: parsed.result,
-        missingFields: [],
-        provider: "gemini",
-        model: modelId,
-        promptVersion,
-      };
-    }
-    // Parseable JSON but missing required fields: record as failed attempt
-    // (forces a retry on attempt 1). Spec §6.2.
-    attempts.push({
-      attempt,
-      status: "failed",
-      result: parsed.result,
-      rawText,
-      errorCode: "OCR_MISSING_REQUIRED_FIELDS",
-      errorMessage: `Missing: ${missingFields.join(",")}`,
-      missingFields,
-      latencyMs,
-      usage,
-    });
+  const second = await runPassportOcrAttempt(2, input, ctx);
+  attempts.push(second.outcome);
+  if (second.success) {
+    return { ...second.success, attempts };
   }
 
   const lastValid = [...attempts].reverse().find((a) => a.result !== null);

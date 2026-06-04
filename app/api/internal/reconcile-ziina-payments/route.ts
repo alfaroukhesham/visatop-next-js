@@ -50,24 +50,26 @@ export async function POST(request: Request) {
 
     const nowMs = Date.now();
 
-    for (const payRow of rows) {
-      const createdAt =
-        payRow.createdAt instanceof Date ? payRow.createdAt : new Date(payRow.createdAt);
-      const dueSlots = dueZiinaReconcileSlots(createdAt, nowMs);
+    await Promise.all(
+      rows.map(async (payRow) => {
+        const createdAt =
+          payRow.createdAt instanceof Date ? payRow.createdAt : new Date(payRow.createdAt);
+        const dueSlots = dueZiinaReconcileSlots(createdAt, nowMs);
+        const probed = await Promise.all(
+          dueSlots.map((slot) => hasZiinaReconcileProbe(tx, payRow.id, slot)),
+        );
+        const slotIndex = probed.findIndex((alreadyProbed) => !alreadyProbed);
+        if (slotIndex < 0) return;
 
-      for (const slot of dueSlots) {
-        if (await hasZiinaReconcileProbe(tx, payRow.id, slot)) continue;
-
+        const slot = dueSlots[slotIndex]!;
         const attempt = await reconcileZiinaPaymentRow(tx, payRow, slot, requestId);
         attempts.push(attempt);
 
         if (attempt.process?.firstPaidApplicationId) {
           paidApplicationIds.push(attempt.process.firstPaidApplicationId);
         }
-
-        break;
-      }
-    }
+      }),
+    );
   });
 
   for (const appId of paidApplicationIds) {

@@ -1,4 +1,5 @@
 import { inArray, sql } from "drizzle-orm";
+import { applyChunksInParallel } from "@/lib/async/apply-chunks-in-parallel";
 import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { syncEligibilityForTouchedPairs } from "@/lib/admin/catalog/apply-customer-price-import";
@@ -117,9 +118,7 @@ export async function applyNationalityPriceUiUpdates(
   }
   const uniqueRows = [...deduped.values()];
 
-  for (let i = 0; i < uniqueRows.length; i += UPSERT_CHUNK) {
-    const chunk = uniqueRows.slice(i, i + UPSERT_CHUNK);
-    if (!chunk.length) continue;
+  await applyChunksInParallel(uniqueRows, UPSERT_CHUNK, async (chunk) => {
     await tx
       .insert(schema.catalogCustomerPrice)
       .values(
@@ -143,7 +142,7 @@ export async function applyNationalityPriceUiUpdates(
           updatedAt: new Date(),
         },
       });
-  }
+  });
 
   const touchedKeys = [
     ...new Set(

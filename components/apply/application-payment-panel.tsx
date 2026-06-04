@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ClientDraftPanelSkeleton } from "@/components/client/client-loading";
 import { ApplyJourneyStepBar } from "@/components/apply/apply-journey-step-bar";
 import { DraftPanelError } from "@/components/apply/draft/draft-panel-error";
@@ -10,29 +10,8 @@ import { DraftPaymentSection } from "@/components/apply/draft/draft-payment-sect
 import { useApplicationDraft } from "@/components/apply/draft/use-application-draft";
 import { ClientButton } from "@/components/client/client-button";
 import { APPLY_STEP3_VALIDATION_DISABLED } from "@/lib/apply/apply-flow-config";
+import { paymentPanelMayShow } from "@/lib/applications/payment-panel-may-show";
 import { computeValidation, type Readiness } from "@/lib/documents/validation-readiness";
-
-function paymentPanelMayShow(app: {
-  paymentStatus: string;
-  isGuest: boolean;
-  guestEmail: string | null;
-  applicant: Parameters<typeof computeValidation>[0]["profile"];
-}, draft: { passport: unknown; photo: unknown }): boolean {
-  if (app.paymentStatus === "checkout_created" || app.paymentStatus === "paid") {
-    return true;
-  }
-  const validationEmail = app.isGuest ? app.guestEmail : "signed-in";
-  return (
-    computeValidation({
-      profile: { ...app.applicant, email: validationEmail },
-      uploads: {
-        passportCopyPresent: Boolean(draft.passport),
-        personalPhotoPresent: Boolean(draft.photo),
-      },
-      now: new Date(),
-    }).paymentReadiness === "ready"
-  );
-}
 
 export function ApplicationPaymentPanel({ applicationId }: { applicationId: string }) {
   const router = useRouter();
@@ -43,13 +22,6 @@ export function ApplicationPaymentPanel({ applicationId }: { applicationId: stri
   const submittedPath = `/apply/applications/${encodeURIComponent(applicationId)}/submitted`;
 
   const app = draft.app;
-
-  useEffect(() => {
-    if (draft.loading || !app) return;
-    if (app.paymentStatus === "paid") return;
-    if (paymentPanelMayShow(app, draft)) return;
-    router.replace(documentsPath);
-  }, [app, documentsPath, draft, draft.loading, router]);
 
   if (draft.loading) {
     return <ClientDraftPanelSkeleton />;
@@ -84,7 +56,12 @@ export function ApplicationPaymentPanel({ applicationId }: { applicationId: stri
     },
   };
 
-  if (!paymentPanelMayShow(app, draft) && app.paymentStatus === "unpaid") {
+  const uploads = {
+    passportCopyPresent: Boolean(draft.passport),
+    personalPhotoPresent: Boolean(draft.photo),
+  };
+
+  if (!paymentPanelMayShow(app, uploads) && app.paymentStatus === "unpaid") {
     return <ClientDraftPanelSkeleton />;
   }
 

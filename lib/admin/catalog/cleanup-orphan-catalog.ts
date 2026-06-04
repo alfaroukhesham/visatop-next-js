@@ -17,16 +17,9 @@ export type OrphanCatalogCleanupResult = {
 export async function cleanupOrphanCatalogData(
   tx: DbTransaction,
 ): Promise<OrphanCatalogCleanupResult> {
-  const steps = [
-    removeEligibilityWithoutPrices,
-    removeDuplicateEmptyServices,
-    removeUnusedEmptyServices,
-  ] as const;
-  const counts: number[] = [];
-  for (const step of steps) {
-    counts.push(await step(tx));
-  }
-  const [eligibilityRemoved, duplicateServicesRemoved, unusedServicesRemoved] = counts;
+  const eligibilityRemoved = await removeEligibilityWithoutPrices(tx);
+  const duplicateServicesRemoved = await removeDuplicateEmptyServices(tx);
+  const unusedServicesRemoved = await removeUnusedEmptyServices(tx);
 
   return {
     eligibilityRemoved,

@@ -377,17 +377,19 @@ export async function POST(
 
     await evaluateApplicationReadiness(tx, applicationId, finishedAt);
 
-    for (const attempt of ocrResult.attempts) {
-      await persistExtractionAttempt(tx, {
-        documentId: lease.documentId,
-        provider: ocrResult.provider,
-        model: ocrResult.model,
-        promptVersion: ocrResult.promptVersion,
-        attempt,
-        validationJson: null,
-        now: finishedAt,
-      });
-    }
+    await Promise.all(
+      ocrResult.attempts.map((attempt) =>
+        persistExtractionAttempt(tx, {
+          documentId: lease.documentId,
+          provider: ocrResult.provider,
+          model: ocrResult.model,
+          promptVersion: ocrResult.promptVersion,
+          attempt,
+          validationJson: null,
+          now: finishedAt,
+        }),
+      ),
+    );
 
     return {
       ok: true,

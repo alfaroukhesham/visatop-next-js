@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { loadApplicationRowForRequest } from "@/lib/applications/load-application-row-for-request";
 import { CheckoutReturnClient } from "./checkout-return-client";
 
 export const metadata: Metadata = {
@@ -8,6 +11,10 @@ export const metadata: Metadata = {
 };
 
 export default async function CheckoutReturnPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+  const [{ id }, hdrs] = await Promise.all([params, headers()]);
+  const row = await loadApplicationRowForRequest(id, hdrs.get("cookie"));
+  if (row?.paymentStatus === "paid") {
+    redirect(`/apply/applications/${encodeURIComponent(id)}/submitted`);
+  }
   return <CheckoutReturnClient applicationId={id} />;
 }
