@@ -8,7 +8,7 @@ import { loadApplicationRowForRequest } from "@/lib/applications/load-applicatio
 type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: "Your application | Visatop", robots: { index: false, follow: false } };
+  return { title: "Your application | Visatop" };
 }
 
 export default async function ApplyApplicationPage({ params }: Props) {

@@ -12,7 +12,7 @@ import { withSystemDbActor } from "@/lib/db/actor-context";
 type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: "Secure payment | Visatop", robots: { index: false, follow: false } };
+  return { title: "Secure payment | Visatop" };
 }
 
 export default async function ApplyApplicationPaymentPage({ params }: Props) {

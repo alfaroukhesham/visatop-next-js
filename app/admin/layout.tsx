@@ -1,7 +1,15 @@
+import type { Metadata } from "next";
 import { BfcacheRestoreSync } from "@/components/client/bfcache-restore-sync";
 import { AdminAuthStoreSync } from "@/components/admin/admin-auth-store-sync";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default function AdminLayout({
   children,

@@ -11,7 +11,6 @@ type Props = { params: Promise<{ id: string }> };
 export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Thank you | Visatop",
-    robots: { index: false, follow: false },
   };
 }
 
