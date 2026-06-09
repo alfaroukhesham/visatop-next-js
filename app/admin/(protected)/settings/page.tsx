@@ -5,8 +5,6 @@ import { PaymentsSettings } from "@/components/admin/payments-settings";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { withAdminDbActor } from "@/lib/db/actor-context";
 
-export const dynamic = "force-dynamic";
-
 export default async function AdminSettingsPage() {
   const adminUserId = await getAdminUserId();
 

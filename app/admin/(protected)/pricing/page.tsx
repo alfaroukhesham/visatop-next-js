@@ -1,11 +1,8 @@
 import { getAdminUserId } from "@/lib/admin/get-admin-session";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { withAdminDbActor } from "@/lib/db/actor-context";
-import { CustomerPriceImport } from "@/components/admin/customer-price-import";
-import { NationalityPriceEditor } from "@/components/admin/nationality-price-editor";
+import { AdminPricingSections } from "@/components/admin/admin-pricing-sections";
 import * as schema from "@/lib/db/schema";
-
-export const dynamic = "force-dynamic";
 
 export default async function AdminPricingPage() {
   const adminUserId = await getAdminUserId();
@@ -49,10 +46,7 @@ export default async function AdminPricingPage() {
       active="pricing"
       subtitle="Bulk import from Excel or update prices per nationality in the catalog."
     >
-      <div className="space-y-10">
-        <CustomerPriceImport canWrite={view.canWrite} />
-        <NationalityPriceEditor nationalities={view.nationalities} canWrite={view.canWrite} />
-      </div>
+      <AdminPricingSections canWrite={view.canWrite} nationalities={view.nationalities} />
     </AdminShell>
   );
 }

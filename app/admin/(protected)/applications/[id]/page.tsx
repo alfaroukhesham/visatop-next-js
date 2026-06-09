@@ -14,8 +14,6 @@ import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { ArrowLeft, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
 
-export const dynamic = "force-dynamic";
-
 type AuditRow = {
   id: string;
   action: string;

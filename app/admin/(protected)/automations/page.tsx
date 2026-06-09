@@ -50,7 +50,7 @@ export default function AdminAutomationsPage() {
                   aria-hidden
                 >
                   <path
-                    d="M44 4H30.6666V17.3334H17.3334V30.6666H4V44H44V4Z"
+                    d="M44 4H30.67V17.33H17.33V30.67H4V44H44V4Z"
                     fill="currentColor"
                   />
                 </svg>

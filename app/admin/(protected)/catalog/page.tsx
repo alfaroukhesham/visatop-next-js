@@ -13,8 +13,6 @@ import {
 import { loadCatalogPage } from "@/lib/admin/catalog/load-catalog-page";
 import { getAdminUserId } from "@/lib/admin/get-admin-session";
 
-export const dynamic = "force-dynamic";
-
 export default async function AdminCatalogPage() {
   const adminUserId = await getAdminUserId();
   const view = await loadCatalogPage(adminUserId);

@@ -62,9 +62,8 @@ export function AdminListFilters({
   className,
 }: AdminListFiltersProps) {
   return (
-    <div
+    <search
       className={cn("border border-border bg-card p-4", className)}
-      role="search"
       onKeyDown={(e) => {
         if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "BUTTON") {
           e.preventDefault();
@@ -145,6 +144,6 @@ export function AdminListFilters({
           ) : null}
         </div>
       </div>
-    </div>
+    </search>
   );
 }

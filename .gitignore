@@ -64,3 +64,4 @@ skills-lock.json
 .worktrees/
 todo.md
 docker-commands.md
+.lighthouse-audit/*

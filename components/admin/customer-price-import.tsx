@@ -231,6 +231,56 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
   const [previewMissingNatPage, setPreviewMissingNatPage] = useState(0);
   const [previewAutoFixPage, setPreviewAutoFixPage] = useState(0);
 
+  function resetPreviewPages() {
+    setPreviewPendingPage(0);
+    setPreviewErrorsPage(0);
+    setPreviewMissingNatPage(0);
+    setPreviewAutoFixPage(0);
+  }
+
+  function handlePreviewListPageSizeChange(size: number) {
+    setPreviewListPageSize(size);
+    resetPreviewPages();
+  }
+
+  async function loadPendingList(batchId: string, page: number, pageSize: number) {
+    setPendingListLoading(true);
+    try {
+      const offset = page * pageSize;
+      const qs = new URLSearchParams({
+        batchId,
+        limit: String(pageSize),
+        offset: String(offset),
+      });
+      const res = await fetch(
+        `${apiHref("admin/catalog/customer-prices/import/pending-currency")}?${qs}`,
+      );
+      const json = await res.json();
+      if (!res.ok) {
+        setPendingListRows([]);
+        setPendingListTotal(0);
+        return;
+      }
+      const data = json.data as { rows: PendingImportListRow[]; total: number };
+      const total = typeof data.total === "number" ? data.total : 0;
+      if (total > 0 && offset >= total) {
+        const lastPage = Math.max(0, Math.ceil(total / pageSize) - 1);
+        if (lastPage !== page) {
+          await loadPendingList(batchId, lastPage, pageSize);
+          return;
+        }
+      }
+      setPendingPage(page);
+      setPendingListRows(Array.isArray(data.rows) ? data.rows : []);
+      setPendingListTotal(total);
+    } catch {
+      setPendingListRows([]);
+      setPendingListTotal(0);
+    } finally {
+      setPendingListLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (phase !== "applying") return;
     const t0 = Date.now();
@@ -248,79 +298,6 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
     }, 500);
     return () => window.clearInterval(id);
   }, [phase]);
-
-  useEffect(() => {
-    const batchId = applyResult?.batchId;
-    const pendingCount = applyResult?.pendingCreated ?? 0;
-    if (!batchId || pendingCount <= 0) {
-      setPendingListRows([]);
-      setPendingListTotal(0);
-      return;
-    }
-
-    let cancelled = false;
-    const offset = pendingPage * pendingPageSize;
-
-    void (async () => {
-      setPendingListLoading(true);
-      try {
-        const qs = new URLSearchParams({
-          batchId,
-          limit: String(pendingPageSize),
-          offset: String(offset),
-        });
-        const res = await fetch(
-          `${apiHref("admin/catalog/customer-prices/import/pending-currency")}?${qs}`,
-        );
-        const json = await res.json();
-        if (!res.ok || cancelled) {
-          if (!cancelled) {
-            setPendingListRows([]);
-            setPendingListTotal(0);
-          }
-          return;
-        }
-        const data = json.data as { rows: PendingImportListRow[]; total: number };
-        if (cancelled) return;
-        const total = typeof data.total === "number" ? data.total : 0;
-        if (total > 0 && offset >= total) {
-          const lastPage = Math.max(0, Math.ceil(total / pendingPageSize) - 1);
-          if (lastPage !== pendingPage) {
-            setPendingPage(lastPage);
-            return;
-          }
-        }
-        setPendingListRows(Array.isArray(data.rows) ? data.rows : []);
-        setPendingListTotal(total);
-      } catch {
-        if (!cancelled) {
-          setPendingListRows([]);
-          setPendingListTotal(0);
-        }
-      } finally {
-        if (!cancelled) setPendingListLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [applyResult?.batchId, applyResult?.pendingCreated, pendingPage, pendingPageSize]);
-
-  useEffect(() => {
-    setPreviewPendingPage(0);
-    setPreviewErrorsPage(0);
-    setPreviewMissingNatPage(0);
-    setPreviewAutoFixPage(0);
-  }, [previewListPageSize]);
-
-  useEffect(() => {
-    if (!preview) return;
-    setPreviewPendingPage(0);
-    setPreviewErrorsPage(0);
-    setPreviewMissingNatPage(0);
-    setPreviewAutoFixPage(0);
-  }, [preview]);
 
   const previewSlices = useMemo(() => {
     if (!preview) {
@@ -386,6 +363,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
         ...data,
         missingNationalities: data.missingNationalities ?? [],
       });
+      resetPreviewPages();
       setPhase("previewed");
     } catch {
       setError("Network error during preview.");
@@ -423,9 +401,16 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
         return;
       }
       setApplyResult(json.data);
-      setPendingPage(0);
       setPendingPageSize(previewListPageSize);
       setPhase("applied");
+      const result = json.data as ApplyResult;
+      if (result.batchId && (result.pendingCreated ?? 0) > 0) {
+        void loadPendingList(result.batchId, 0, previewListPageSize);
+      } else {
+        setPendingPage(0);
+        setPendingListRows([]);
+        setPendingListTotal(0);
+      }
     } catch {
       setError("Network error during apply.");
       setPhase("previewed");
@@ -480,10 +465,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
     setPendingPage(0);
     setPendingPageSize(25);
     setPreviewListPageSize(25);
-    setPreviewPendingPage(0);
-    setPreviewErrorsPage(0);
-    setPreviewMissingNatPage(0);
-    setPreviewAutoFixPage(0);
+    resetPreviewPages();
     setPendingListRows([]);
     setPendingListTotal(0);
     setAssignElapsedSec(0);
@@ -613,6 +595,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                 id="price-sheet-file"
                 type="file"
                 accept=".xlsx,.xls"
+                aria-label="Price sheet file"
                 disabled={!canWrite || phase === "previewing" || phase === "applying"}
                 onChange={(e) => {
                   const f = e.target.files?.[0] ?? null;
@@ -778,7 +761,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                   page={previewMissingNatPage}
                   setPage={setPreviewMissingNatPage}
                   pageSize={previewListPageSize}
-                  onPageSizeChange={setPreviewListPageSize}
+                  onPageSizeChange={handlePreviewListPageSizeChange}
                   total={missingNationalities.length}
                   disabled={phase === "applying" || phase === "assigning"}
                 />
@@ -855,7 +838,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                   page={previewErrorsPage}
                   setPage={setPreviewErrorsPage}
                   pageSize={previewListPageSize}
-                  onPageSizeChange={setPreviewListPageSize}
+                  onPageSizeChange={handlePreviewListPageSizeChange}
                   total={preview.errors.length}
                   disabled={phase === "applying" || phase === "assigning"}
                 />
@@ -902,7 +885,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                   page={previewPendingPage}
                   setPage={setPreviewPendingPage}
                   pageSize={previewListPageSize}
-                  onPageSizeChange={setPreviewListPageSize}
+                  onPageSizeChange={handlePreviewListPageSizeChange}
                   total={preview.pending.length}
                   disabled={phase === "applying" || phase === "assigning"}
                 />
@@ -965,7 +948,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                     page={previewAutoFixPage}
                     setPage={setPreviewAutoFixPage}
                     pageSize={previewListPageSize}
-                    onPageSizeChange={setPreviewListPageSize}
+                    onPageSizeChange={handlePreviewListPageSizeChange}
                     total={preview.autoFixPreview.length}
                     disabled={phase === "applying" || phase === "assigning"}
                   />
@@ -1017,8 +1000,13 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                       className="h-9 rounded-md border border-input bg-background px-2 text-sm"
                       value={pendingPageSize}
                       onChange={(e) => {
-                        setPendingPageSize(Number(e.target.value));
-                        setPendingPage(0);
+                        const nextSize = Number(e.target.value);
+                        setPendingPageSize(nextSize);
+                        if (applyResult?.batchId) {
+                          void loadPendingList(applyResult.batchId, 0, nextSize);
+                        } else {
+                          setPendingPage(0);
+                        }
                       }}
                       disabled={phase === "assigning"}
                     >
@@ -1112,7 +1100,14 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                       disabled={
                         phase === "assigning" || pendingPage <= 0 || pendingListLoading
                       }
-                      onClick={() => setPendingPage((p) => Math.max(0, p - 1))}
+                      onClick={() => {
+                        if (!applyResult?.batchId) return;
+                        void loadPendingList(
+                          applyResult.batchId,
+                          Math.max(0, pendingPage - 1),
+                          pendingPageSize,
+                        );
+                      }}
                     >
                       <ChevronLeft className="size-4" />
                       Previous
@@ -1126,7 +1121,10 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                         pendingListLoading ||
                         (pendingPage + 1) * pendingPageSize >= pendingListTotal
                       }
-                      onClick={() => setPendingPage((p) => p + 1)}
+                      onClick={() => {
+                        if (!applyResult?.batchId) return;
+                        void loadPendingList(applyResult.batchId, pendingPage + 1, pendingPageSize);
+                      }}
                     >
                       Next
                       <ChevronRight className="size-4" />
@@ -1223,8 +1221,8 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {applyResult.autoFix.map((f, i) => (
-                      <TableRow key={i}>
+                    {applyResult.autoFix.map((f) => (
+                      <TableRow key={`${f.nationalityCode ?? "na"}:${f.serviceId}:${f.fixedCurrency}`}>
                         <TableCell>{f.nationalityCode}</TableCell>
                         <TableCell>{f.serviceName}</TableCell>
                         <TableCell><Badge>{f.fixedCurrency}</Badge></TableCell>

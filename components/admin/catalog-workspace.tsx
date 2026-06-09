@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown, Loader2, Plus, Search, Trash2 } from "lucide-react";
 import { AdminListFilters } from "@/components/admin/admin-list-filters";
 import {
@@ -170,10 +170,6 @@ function NationalitiesSection({
   const { setPage: setNatPage, ...natPageRest } = usePaginatedList(filteredRows);
   const natPage = { ...natPageRest, setPage: setNatPage };
 
-  useEffect(() => {
-    setNatPage(0);
-  }, [search, setNatPage]);
-
   return (
     <Card className="border-border overflow-hidden border">
       <CardHeader className="border-border bg-muted/20 space-y-4 border-b">
@@ -186,7 +182,10 @@ function NationalitiesSection({
         <CatalogSectionSearch
           id="catalog-nationalities-search"
           value={search}
-          onChange={setSearch}
+          onChange={(value) => {
+            setSearch(value);
+            setNatPage(0);
+          }}
           placeholder="Search by code or name…"
           disabled={busy !== null}
         />
@@ -399,10 +398,6 @@ function ServicesSection({
   const { setPage: setSvcPage, ...svcPageRest } = usePaginatedList(filteredRows);
   const svcPage = { ...svcPageRest, setPage: setSvcPage };
 
-  useEffect(() => {
-    setSvcPage(0);
-  }, [search, setSvcPage]);
-
   return (
     <Card className="border-border overflow-hidden border">
       <CardHeader className="border-border bg-muted/20 space-y-4 border-b">
@@ -486,7 +481,10 @@ function ServicesSection({
         <CatalogSectionSearch
           id="catalog-services-search"
           value={search}
-          onChange={setSearch}
+          onChange={(value) => {
+            setSearch(value);
+            setSvcPage(0);
+          }}
           placeholder="Search by name, id, duration, or entries…"
           disabled={busy !== null}
         />

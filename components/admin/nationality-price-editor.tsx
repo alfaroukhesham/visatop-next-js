@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { apiHref } from "@/lib/app-href";
 import { formatMinorUnitsAmount } from "@/lib/pricing/format-minor-units";
@@ -96,19 +96,15 @@ export function NationalityPriceEditor({
     }
   }, []);
 
-  useEffect(() => {
-    if (!nationalityCode) return;
-    void loadRows(nationalityCode);
-  }, [nationalityCode, loadRows]);
-
   async function savePrices() {
     if (!nationalityCode) return;
-    const updates = rows
-      .map((row) => ({
-        serviceId: row.serviceId,
-        amountMajor: (drafts[row.serviceId] ?? "").trim(),
-      }))
-      .filter((u) => u.amountMajor.length > 0);
+    const updates: { serviceId: string; amountMajor: string }[] = [];
+    for (const row of rows) {
+      const amountMajor = (drafts[row.serviceId] ?? "").trim();
+      if (amountMajor.length > 0) {
+        updates.push({ serviceId: row.serviceId, amountMajor });
+      }
+    }
     if (updates.length === 0) {
       setError("Enter at least one new price.");
       return;
@@ -201,7 +197,18 @@ export function NationalityPriceEditor({
             <select
               id="nat-price-nationality"
               value={nationalityCode}
-              onChange={(e) => setNationalityCode(e.target.value)}
+              onChange={(e) => {
+                const code = e.target.value;
+                setNationalityCode(code);
+                if (code) {
+                  void loadRows(code);
+                } else {
+                  setRows([]);
+                  setDrafts({});
+                  setError(null);
+                  setSuccess(null);
+                }
+              }}
               className="border-border bg-background h-9 w-full rounded-none border px-2 text-sm"
             >
               <option value="">Select nationality…</option>

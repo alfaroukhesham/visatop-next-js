@@ -4,8 +4,6 @@ import { getAttentionRequiredCount } from "@/lib/applications/admin-queries";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { AdminApplicationsListClient } from "@/components/admin/admin-applications-list-client";
 
-export const dynamic = "force-dynamic";
-
 export const metadata = {
   title: "Applications | Admin",
 };
