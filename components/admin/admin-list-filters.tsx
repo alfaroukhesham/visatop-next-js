@@ -62,15 +62,7 @@ export function AdminListFilters({
   className,
 }: AdminListFiltersProps) {
   return (
-    <search
-      className={cn("border border-border bg-card p-4", className)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "BUTTON") {
-          e.preventDefault();
-          onApply();
-        }
-      }}
-    >
+    <search className={cn("border border-border bg-card p-4", className)}>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_repeat(auto-fit,minmax(10rem,1fr))] lg:items-end">
         {fields.map((field) => {
           if (field.kind === "search") {
@@ -88,6 +80,12 @@ export function AdminListFilters({
                     id={`admin-filter-${field.key}`}
                     value={values[field.key] ?? ""}
                     onChange={(e) => onChange(field.key, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        onApply();
+                      }
+                    }}
                     placeholder={field.placeholder}
                     className="pl-9"
                     autoComplete="off"

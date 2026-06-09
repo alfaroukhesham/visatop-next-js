@@ -1,19 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
-import { ChevronDown, Loader2, Plus, Search, Trash2 } from "lucide-react";
-import { AdminListFilters } from "@/components/admin/admin-list-filters";
-import {
-  AdminTableLoadingFrame,
-  AdminTableLoadingSkeleton,
-} from "@/components/admin/admin-loading";
+import { useMemo, useReducer, useState } from "react";
+import { Loader2, Plus, Search } from "lucide-react";
+import { CatalogEligibilitySection } from "@/components/admin/catalog-eligibility-section";
 import { ListPaginatorBar } from "@/components/admin/list-paginator-bar";
-import {
-  EMPTY_CATALOG_ELIGIBILITY_FILTERS,
-  useCatalogEligibilityPage,
-  type CatalogEligibilityFilters,
-} from "@/components/admin/use-catalog-eligibility-page";
 import { usePaginatedList } from "@/components/admin/use-paginated-list";
 import type {
   CatalogEligibility,
@@ -41,7 +32,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
-import { cn } from "@/lib/utils";
 
 export type { CatalogEligibility, CatalogNationality, CatalogService };
 
@@ -136,7 +126,7 @@ export function AdminCatalogWorkspace({
         flash={flash}
       />
       <ServicesSection rows={services} canWrite={canWrite} busy={busy} run={run} flash={flash} />
-      <EligibilitySection
+      <CatalogEligibilitySection
         services={services}
         nationalities={nationalities}
         canWrite={canWrite}
@@ -235,33 +225,7 @@ function NationalitiesSection({
           disabled={busy !== null}
         />
         {canWrite ? (
-          <form
-            className="border-border flex flex-wrap items-end gap-3 border-t bg-muted/10 p-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void run(`nat-add-${code}`, async () => {
-                const res = await fetchApiEnvelope<{ nationality: CatalogNationality }>(
-                  apiHref("/admin/catalog/nationalities"),
-                  {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      code,
-                      name,
-                      enabled: true,
-                    }),
-                  },
-                );
-                if (!res.ok) {
-                  flash(res.error.message, true);
-                  throw new Error("fail");
-                }
-                flash(`Saved nationality ${res.data.nationality.code}`);
-                setCode("");
-                setName("");
-              });
-            }}
-          >
+          <div className="border-border flex flex-wrap items-end gap-3 border-t bg-muted/10 p-4">
             <div className="space-y-1">
               <Label htmlFor="new-nat-code">New code</Label>
               <Input
@@ -282,11 +246,37 @@ function NationalitiesSection({
                 placeholder="United States"
               />
             </div>
-            <Button type="submit" disabled={busy !== null || code.length !== 2 || !name.trim()}>
+            <Button
+              type="button"
+              disabled={busy !== null || code.length !== 2 || !name.trim()}
+              onClick={() =>
+                void run(`nat-add-${code}`, async () => {
+                  const res = await fetchApiEnvelope<{ nationality: CatalogNationality }>(
+                    apiHref("/admin/catalog/nationalities"),
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        code,
+                        name,
+                        enabled: true,
+                      }),
+                    },
+                  );
+                  if (!res.ok) {
+                    flash(res.error.message, true);
+                    throw new Error("fail");
+                  }
+                  flash(`Saved nationality ${res.data.nationality.code}`);
+                  setCode("");
+                  setName("");
+                })
+              }
+            >
               {busy?.startsWith("nat-add") ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
               Add or update
             </Button>
-          </form>
+          </div>
         ) : null}
       </CardContent>
     </Card>
@@ -306,15 +296,21 @@ function NationalityRow({
   run: (k: string, fn: () => Promise<void>) => Promise<void>;
   flash: (t: string, err?: boolean) => void;
 }) {
-  const [name, setName] = useState(n.name);
-  const [enabled, setEnabled] = useState(n.enabled);
+  const [nameOverride, setNameOverride] = useState<string | null>(null);
+  const [enabledOverride, setEnabledOverride] = useState<boolean | null>(null);
+  const name = nameOverride ?? n.name;
+  const enabled = enabledOverride ?? n.enabled;
 
   return (
     <tr className="hover:bg-muted/30">
       <td className="px-4 py-3 font-mono text-xs">{n.code}</td>
       <td className="px-4 py-3">
         {canWrite ? (
-          <Input value={name} onChange={(e) => setName(e.target.value)} className="h-8 max-w-xs font-body" />
+          <Input
+            value={name}
+            onChange={(e) => setNameOverride(e.target.value)}
+            className="h-8 max-w-xs font-body"
+          />
         ) : (
           <span className="font-medium">{n.name}</span>
         )}
@@ -325,7 +321,7 @@ function NationalityRow({
             type="checkbox"
             className="accent-primary size-4"
             checked={enabled}
-            onChange={(e) => setEnabled(e.target.checked)}
+            onChange={(e) => setEnabledOverride(e.target.checked)}
             aria-label={`Enabled ${n.code}`}
           />
         ) : n.enabled ? (
@@ -380,11 +376,35 @@ function ServicesSection({
   run: (k: string, fn: () => Promise<void>) => Promise<void>;
   flash: (t: string, err?: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [durationDays, setDurationDays] = useState("");
-  const [entries, setEntries] = useState("");
-  const [search, setSearch] = useState("");
+  type ServicesUiState = {
+    open: boolean;
+    name: string;
+    durationDays: string;
+    entries: string;
+    search: string;
+  };
+  type ServicesUiAction =
+    | { type: "patch"; patch: Partial<ServicesUiState> }
+    | { type: "reset-create-form" };
+
+  const [ui, dispatchUi] = useReducer(
+    (state: ServicesUiState, action: ServicesUiAction): ServicesUiState => {
+      switch (action.type) {
+        case "patch":
+          return { ...state, ...action.patch };
+        case "reset-create-form":
+          return { ...state, open: false, name: "", durationDays: "", entries: "" };
+        default:
+          return state;
+      }
+    },
+    { open: false, name: "", durationDays: "", entries: "", search: "" },
+  );
+  const { open, name, durationDays, entries, search } = ui;
+  const setOpen = (value: boolean) => dispatchUi({ type: "patch", patch: { open: value } });
+  const setName = (value: string) => dispatchUi({ type: "patch", patch: { name: value } });
+  const setDurationDays = (value: string) => dispatchUi({ type: "patch", patch: { durationDays: value } });
+  const setEntries = (value: string) => dispatchUi({ type: "patch", patch: { entries: value } });
   const filteredRows = useMemo(
     () =>
       filterByQuery(rows, search, (s) => [
@@ -463,10 +483,7 @@ function ServicesSection({
                         throw new Error("fail");
                       }
                       flash(`Created service ${res.data.service.name}`);
-                      setOpen(false);
-                      setName("");
-                      setDurationDays("");
-                      setEntries("");
+                      dispatchUi({ type: "reset-create-form" });
                     })
                   }
                   disabled={busy !== null || !name.trim()}
@@ -482,7 +499,7 @@ function ServicesSection({
           id="catalog-services-search"
           value={search}
           onChange={(value) => {
-            setSearch(value);
+            dispatchUi({ type: "patch", patch: { search: value } });
             setSvcPage(0);
           }}
           placeholder="Search by name, id, duration, or entries…"
@@ -552,19 +569,23 @@ function ServiceRow({
   run: (k: string, fn: () => Promise<void>) => Promise<void>;
   flash: (t: string, err?: boolean) => void;
 }) {
-  const [name, setName] = useState(s.name);
-  const [durationDays, setDurationDays] = useState(
-    s.durationDays === null || s.durationDays === undefined ? "" : String(s.durationDays),
-  );
-  const [entries, setEntries] = useState(s.entries ?? "");
-  const [enabled, setEnabled] = useState(s.enabled);
+  const [nameOverride, setNameOverride] = useState<string | null>(null);
+  const [durationOverride, setDurationOverride] = useState<string | null>(null);
+  const [entriesOverride, setEntriesOverride] = useState<string | null>(null);
+  const [enabledOverride, setEnabledOverride] = useState<boolean | null>(null);
+  const defaultDuration =
+    s.durationDays === null || s.durationDays === undefined ? "" : String(s.durationDays);
+  const name = nameOverride ?? s.name;
+  const durationDays = durationOverride ?? defaultDuration;
+  const entries = entriesOverride ?? (s.entries ?? "");
+  const enabled = enabledOverride ?? s.enabled;
 
   return (
     <tr className="hover:bg-muted/30">
       <td className="px-4 py-3">
         <div className="text-muted-foreground mb-1 font-mono text-[10px] leading-none break-all">{s.id}</div>
         {canWrite ? (
-          <Input value={name} onChange={(e) => setName(e.target.value)} className="h-8 max-w-md font-body" />
+          <Input value={name} onChange={(e) => setNameOverride(e.target.value)} className="h-8 max-w-md font-body" />
         ) : (
           <span className="font-medium">{s.name}</span>
         )}
@@ -575,7 +596,7 @@ function ServiceRow({
             className="h-8 w-24 font-mono"
             inputMode="numeric"
             value={durationDays}
-            onChange={(e) => setDurationDays(e.target.value)}
+            onChange={(e) => setDurationOverride(e.target.value)}
           />
         ) : (
           <span className="font-mono text-xs">{s.durationDays ?? ", "}</span>
@@ -583,7 +604,7 @@ function ServiceRow({
       </td>
       <td className="px-4 py-3">
         {canWrite ? (
-          <Input className="h-8 w-28 font-mono text-xs" value={entries} onChange={(e) => setEntries(e.target.value)} />
+          <Input className="h-8 w-28 font-mono text-xs" value={entries} onChange={(e) => setEntriesOverride(e.target.value)} />
         ) : (
           <span className="font-mono text-xs">{s.entries ?? ", "}</span>
         )}
@@ -594,7 +615,7 @@ function ServiceRow({
             type="checkbox"
             className="accent-primary size-4"
             checked={enabled}
-            onChange={(e) => setEnabled(e.target.checked)}
+            onChange={(e) => setEnabledOverride(e.target.checked)}
             aria-label={`Enabled ${s.name}`}
           />
         ) : s.enabled ? (
@@ -640,281 +661,5 @@ function ServiceRow({
         </td>
       ) : null}
     </tr>
-  );
-}
-
-function EligibilitySection({
-  services,
-  nationalities,
-  canWrite,
-  busy,
-  flash,
-}: {
-  services: CatalogService[];
-  nationalities: CatalogNationality[];
-  canWrite: boolean;
-  busy: string | null;
-  flash: (t: string, err?: boolean) => void;
-}) {
-  const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
-  const [nationalityCode, setNationalityCode] = useState(nationalities[0]?.code ?? "");
-  const [eligBusy, setEligBusy] = useState<string | null>(null);
-  const [draftFilters, setDraftFilters] = useState<CatalogEligibilityFilters>(
-    EMPTY_CATALOG_ELIGIBILITY_FILTERS,
-  );
-  const [appliedFilters, setAppliedFilters] = useState<CatalogEligibilityFilters>(
-    EMPTY_CATALOG_ELIGIBILITY_FILTERS,
-  );
-  const eligPage = useCatalogEligibilityPage(10, appliedFilters);
-  const sectionBusy = busy !== null || eligBusy !== null;
-
-  const serviceFilterOptions = useMemo(
-    () => services.map((s) => ({ value: s.id, label: s.name })),
-    [services],
-  );
-  const nationalityFilterOptions = useMemo(
-    () => nationalities.map((n) => ({ value: n.code, label: `${n.code} ,  ${n.name}` })),
-    [nationalities],
-  );
-  const filterValues = useMemo(
-    () => ({
-      q: draftFilters.q,
-      serviceId: draftFilters.serviceId,
-      nationalityCode: draftFilters.nationalityCode,
-    }),
-    [draftFilters],
-  );
-  const hasActiveFilters =
-    Boolean(appliedFilters.q.trim()) ||
-    Boolean(appliedFilters.serviceId) ||
-    Boolean(appliedFilters.nationalityCode);
-
-  async function runElig(key: string, fn: () => Promise<void>) {
-    setEligBusy(key);
-    try {
-      await fn();
-      eligPage.reload();
-    } finally {
-      setEligBusy(null);
-    }
-  }
-
-  return (
-    <Card className="border-border overflow-hidden border">
-      <CardHeader className="border-border bg-muted/20 border-b">
-        <CardTitle className="font-heading text-lg">Service ↔ nationality eligibility</CardTitle>
-        <CardDescription>
-          Loaded in pages from the server ({eligPage.total.toLocaleString()} links). Controls which
-          combinations appear in the public services list.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4 p-4">
-        {eligPage.error ? (
-          <p className="text-destructive text-sm" role="alert">
-            {eligPage.error}
-          </p>
-        ) : null}
-        <AdminListFilters
-          fields={[
-            {
-              kind: "search",
-              key: "q",
-              label: "Search",
-              placeholder: "Service name, id, or nationality code…",
-            },
-            {
-              kind: "select",
-              key: "serviceId",
-              label: "Service",
-              options: serviceFilterOptions,
-              allLabel: "All services",
-            },
-            {
-              kind: "select",
-              key: "nationalityCode",
-              label: "Nationality",
-              options: nationalityFilterOptions,
-              allLabel: "All nationalities",
-            },
-          ]}
-          values={filterValues}
-          onChange={(key, value) => setDraftFilters((prev) => ({ ...prev, [key]: value }))}
-          onApply={() => {
-            setAppliedFilters({ ...draftFilters });
-            eligPage.setPage(0);
-          }}
-          onClear={() => {
-            setDraftFilters(EMPTY_CATALOG_ELIGIBILITY_FILTERS);
-            setAppliedFilters(EMPTY_CATALOG_ELIGIBILITY_FILTERS);
-            eligPage.setPage(0);
-          }}
-          canClear={hasActiveFilters}
-          applying={eligPage.loading}
-          applyLabel="Apply filters"
-          className="rounded-md"
-        />
-        {canWrite ? (
-          <details className="group border-border rounded-md border">
-            <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
-              <ChevronDown className="text-muted-foreground size-4 shrink-0 transition-transform group-open:rotate-180" />
-              Link a new service to an existing nationality
-            </summary>
-            <form
-              className="border-border flex flex-wrap items-end gap-3 border-t p-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void runElig("elig-add", async () => {
-                  const res = await fetchApiEnvelope<{ eligibility: unknown }>(
-                    apiHref("/admin/catalog/eligibility"),
-                    {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ serviceId, nationalityCode }),
-                    },
-                  );
-                  if (!res.ok) {
-                    flash(res.error.message, true);
-                    throw new Error("fail");
-                  }
-                  flash("Eligibility saved (or already existed).");
-                });
-              }}
-            >
-              <div className="space-y-1">
-                <Label htmlFor="elig-link-service">Service</Label>
-                <select
-                  id="elig-link-service"
-                  className="border-input bg-background h-9 w-56 rounded-md border px-2 text-sm"
-                  value={serviceId}
-                  onChange={(e) => setServiceId(e.target.value)}
-                >
-                  {services.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="elig-link-nationality">Nationality</Label>
-                <select
-                  id="elig-link-nationality"
-                  className="border-input bg-background h-9 w-40 rounded-md border px-2 font-mono text-sm"
-                  value={nationalityCode}
-                  onChange={(e) => setNationalityCode(e.target.value)}
-                >
-                  {nationalities.map((n) => (
-                    <option key={n.code} value={n.code}>
-                      {n.code} ,  {n.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <Button type="submit" disabled={sectionBusy || !serviceId || !nationalityCode}>
-                {eligBusy === "elig-add" ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Plus className="size-4" />
-                )}
-                Link
-              </Button>
-            </form>
-          </details>
-        ) : null}
-        <AdminTableLoadingFrame
-          loading={eligPage.loading}
-          hasRows={eligPage.items.length > 0}
-          className="overflow-x-auto rounded-md border border-border"
-        >
-          <table className="w-full text-left text-sm">
-            <thead className="bg-muted/60 text-muted-foreground text-xs uppercase tracking-wide">
-              <tr>
-                <th className="px-4 py-2 font-medium">Service</th>
-                <th className="px-4 py-2 font-medium">Nationality</th>
-                {canWrite ? <th className="px-4 py-2 font-medium">Remove</th> : null}
-              </tr>
-            </thead>
-            <tbody className={cn("divide-border divide-y", eligPage.loading && eligPage.items.length === 0 && "admin-stagger")}>
-              {eligPage.loading && eligPage.items.length === 0 ? (
-                <AdminTableLoadingSkeleton
-                  rows={Math.min(eligPage.pageSize, 8)}
-                  columns={canWrite ? 3 : 2}
-                  columnWidths={canWrite ? ["w-2/5", "w-20", "w-10"] : ["w-2/5", "w-20"]}
-                />
-              ) : null}
-              {!eligPage.loading && eligPage.items.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={canWrite ? 3 : 2}
-                    className="text-muted-foreground px-4 py-6 text-center text-sm"
-                  >
-                    {hasActiveFilters
-                      ? "No eligibility links match your filters."
-                      : "No eligibility links yet."}
-                  </td>
-                </tr>
-              ) : null}
-              {eligPage.items.map((e) => (
-                <tr key={`${e.serviceId}-${e.nationalityCode}`} className="hover:bg-muted/30">
-                  <td className="px-4 py-2">
-                    <span className="font-medium">{e.serviceName}</span>
-                    <div className="text-muted-foreground font-mono text-[10px] break-all">{e.serviceId}</div>
-                  </td>
-                  <td className="px-4 py-2 font-mono text-xs">{e.nationalityCode}</td>
-                  {canWrite ? (
-                    <td className="px-4 py-2">
-                      <Button
-                        type="button"
-                        size="icon-sm"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive"
-                        disabled={sectionBusy}
-                        aria-label="Remove eligibility"
-                        onClick={() =>
-                          void runElig(`elig-del-${e.serviceId}-${e.nationalityCode}`, async () => {
-                            const res = await fetchApiEnvelope<{ deleted: unknown }>(
-                              apiHref("/admin/catalog/eligibility"),
-                              {
-                                method: "DELETE",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  serviceId: e.serviceId,
-                                  nationalityCode: e.nationalityCode,
-                                }),
-                              },
-                            );
-                            if (!res.ok) {
-                              flash(res.error.message, true);
-                              throw new Error("fail");
-                            }
-                            flash("Removed link.");
-                          })
-                        }
-                      >
-                        {eligBusy === `elig-del-${e.serviceId}-${e.nationalityCode}` ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="size-4" />
-                        )}
-                      </Button>
-                    </td>
-                  ) : null}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </AdminTableLoadingFrame>
-        <ListPaginatorBar
-          selectId="catalog-eligibility-page-size"
-          page={eligPage.page}
-          setPage={eligPage.setPage}
-          pageSize={eligPage.pageSize}
-          onPageSizeChange={eligPage.onPageSizeChange}
-          total={eligPage.total}
-          disabled={sectionBusy || eligPage.loading}
-          loading={eligPage.loading}
-        />
-      </CardContent>
-    </Card>
   );
 }

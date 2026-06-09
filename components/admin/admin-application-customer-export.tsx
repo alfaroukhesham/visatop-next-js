@@ -80,6 +80,7 @@ export function AdminApplicationCustomerExport({ applicationId }: { applicationI
             checked={includePrice}
             onChange={(e) => setIncludePrice(e.target.checked)}
             disabled={loading}
+            aria-label="Include price paid in export"
             className="border-input text-primary focus-visible:ring-ring mt-0.5 size-4 shrink-0 rounded-sm border shadow-xs focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
           />
           <div className="min-w-0 space-y-1">
