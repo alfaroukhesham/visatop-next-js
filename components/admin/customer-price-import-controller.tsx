@@ -162,6 +162,7 @@ export function useCustomerPriceImportController() {
         headers: {
           "Content-Type": "application/octet-stream",
           "X-Import-Mode": state.applyMode,
+          "X-Import-Catalog-Scope": state.catalogScope,
         },
         body,
       });

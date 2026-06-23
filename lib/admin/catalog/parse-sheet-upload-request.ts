@@ -14,6 +14,8 @@ export type ParsedSheetUpload =
       fileHash: string;
       /** Apply only: strict | partial (default strict). */
       mode?: "strict" | "partial";
+      /** Apply only: merge | replace (default replace). */
+      catalogScope?: "merge" | "replace";
     }
   | { ok: false; message: string };
 
@@ -49,7 +51,12 @@ export async function parseSheetUploadRequest(req: Request): Promise<ParsedSheet
     const rawMode = req.headers.get("x-import-mode")?.trim().toLowerCase();
     const mode =
       rawMode === "strict" || rawMode === "partial" ? (rawMode as "strict" | "partial") : undefined;
-    return { ok: true, buffer, fileHash, mode };
+    const rawScope = req.headers.get("x-import-catalog-scope")?.trim().toLowerCase();
+    const catalogScope =
+      rawScope === "merge" || rawScope === "replace"
+        ? (rawScope as "merge" | "replace")
+        : undefined;
+    return { ok: true, buffer, fileHash, mode, catalogScope };
   }
 
   if (contentType.includes("multipart/form-data")) {
@@ -74,7 +81,13 @@ export async function parseSheetUploadRequest(req: Request): Promise<ParsedSheet
         const m = rawMode.trim().toLowerCase();
         if (m === "strict" || m === "partial") mode = m;
       }
-      return { ok: true, buffer, fileHash, mode };
+      let catalogScope: "merge" | "replace" | undefined;
+      const rawScope = formData.get("catalogScope");
+      if (rawScope && typeof rawScope === "string") {
+        const s = rawScope.trim().toLowerCase();
+        if (s === "merge" || s === "replace") catalogScope = s;
+      }
+      return { ok: true, buffer, fileHash, mode, catalogScope };
     } catch {
       return { ok: false, message: "Could not parse multipart upload." };
     }

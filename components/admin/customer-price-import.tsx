@@ -55,7 +55,8 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
           <CardDescription>
             Upload the standard <code>Price Excel</code> format.
             Columns: <code>#</code>, <code>Country</code>, then one column per
-            visa service. Contact info@visatop.com for any questions.
+            visa service. An <strong>empty cell</strong> disables that service for that nationality.
+            Contact info@visatop.com for any questions.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -104,6 +105,7 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
             >
               {state.phase === "applying" && <Loader2 className="mr-2 size-4 animate-spin" />}
               Apply Import {state.applyMode === "partial" ? "(Partial)" : "(Strict)"}
+              {state.catalogScope === "replace" ? " · Replace" : " · Merge"}
             </Button>
           )}
           {(state.preview || state.applyResult || state.error) && (
@@ -138,11 +140,13 @@ export function CustomerPriceImport({ canWrite }: { canWrite: boolean }) {
       {state.preview && state.phase !== "applied" && (
         <CustomerPriceImportPreviewPanel
           preview={state.preview}
+          canWrite={canWrite}
+          catalogScope={state.catalogScope}
+          onCatalogScopeChange={(scope) => patch({ catalogScope: scope })}
           phase={state.phase}
           previewSlices={previewSlices}
           missingNationalities={missingNationalities}
           hasMissingNationalities={hasMissingNationalities}
-          canWrite={canWrite}
           applyMode={state.applyMode}
           onApplyModeChange={(mode) => patch({ applyMode: mode })}
           showAutoFix={state.showAutoFix}

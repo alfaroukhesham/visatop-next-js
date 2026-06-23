@@ -45,9 +45,11 @@ export function CustomerPriceImportApplySummary({
           className={`size-4 ${applyResult.pendingCreated > 0 ? "text-muted-foreground" : "text-green-500"}`}
         />
         <AlertTitle>
-          {applyResult.pendingCreated > 0
-            ? "Import applied ,  finish the currency step above"
-            : "Import applied successfully"}
+          {applyResult.unchanged
+            ? "Import skipped — catalog already matches this sheet"
+            : applyResult.pendingCreated > 0
+              ? "Import applied ,  finish the currency step above"
+              : "Import applied successfully"}
         </AlertTitle>
         <AlertDescription
           className={
@@ -65,6 +67,10 @@ export function CustomerPriceImportApplySummary({
             <>
               <span>Mode:</span>
               <span className="font-medium">{applyResult.partialApplied ? "Partial" : "Strict"}</span>
+              <span>Catalog scope:</span>
+              <span className="font-medium">
+                {applyResult.catalogScope === "merge" ? "Merge" : "Replace"}
+              </span>
               <span>Rows processed:</span>
               <span className="font-medium">{applyResult.rowsProcessed}</span>
               <span>Rows skipped:</span>

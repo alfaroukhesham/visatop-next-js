@@ -57,6 +57,10 @@ export type ApplyResult = {
   }[];
   servicesCreated: { id: string; name: string }[];
   errors: { rowIdx: number; countryRaw: string; message: string }[];
+  /** merge = cell updates only; replace = sheet is the full catalog source of truth. */
+  catalogScope?: "merge" | "replace";
+  /** True when apply detected no catalog changes were needed. */
+  unchanged?: boolean;
 };
 
 export type PendingImportListRow = {
@@ -95,6 +99,8 @@ export type CustomerPriceImportState = {
   error: string | null;
   showAutoFix: boolean;
   applyMode: "strict" | "partial";
+  /** replace clears prices outside the sheet; merge only updates cells present in the sheet. */
+  catalogScope: "merge" | "replace";
   bulkModalOpen: boolean;
   natDrafts: NationalityDraftRow[];
   bulkSaving: boolean;
@@ -127,6 +133,7 @@ export const initialCustomerPriceImportState: CustomerPriceImportState = {
   error: null,
   showAutoFix: false,
   applyMode: "strict",
+  catalogScope: "replace",
   bulkModalOpen: false,
   natDrafts: [],
   bulkSaving: false,

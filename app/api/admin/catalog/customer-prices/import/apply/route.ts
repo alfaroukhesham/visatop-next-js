@@ -17,8 +17,9 @@ export async function POST(req: Request) {
     if (!parsed.ok) {
       return jsonError("VALIDATION_ERROR", parsed.message, { status: 400, requestId });
     }
-    const { buffer, fileHash, mode: parsedMode } = parsed;
+    const { buffer, fileHash, mode: parsedMode, catalogScope: parsedCatalogScope } = parsed;
     const mode: "strict" | "partial" = parsedMode ?? "strict";
+    const catalogScope = parsedCatalogScope ?? "replace";
 
     const rows = await readXlsxBuffer(buffer);
 
@@ -26,6 +27,7 @@ export async function POST(req: Request) {
     const result = await applyPriceSheetImport(tx, rows, adminUserId, {
       fileHash,
       mode,
+      catalogScope,
     });
 
     if (!result.committed) {

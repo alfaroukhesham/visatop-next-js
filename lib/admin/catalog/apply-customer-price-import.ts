@@ -25,7 +25,17 @@ import {
 import { fxUsdToAed, fxAedToUsd, readFxRateString } from "@/lib/pricing/fx-usd-aed";
 import { minorUnitsToJsonSafeNumber } from "@/lib/pricing/minor-units-json";
 import { withSuggestedAlpha2 } from "./suggest-country-alpha2";
-import { buildServiceNameToIdMap } from "./build-service-name-to-id-map";
+import {
+  buildServiceNameToIdMap,
+  findCanonicalServiceIdByNorm,
+} from "./build-service-name-to-id-map";
+import {
+  purgeCatalogOutsideSheetScope,
+  type ImportCatalogScope,
+} from "./purge-catalog-outside-sheet-scope";
+import { filterImportPlanToChanges } from "./filter-import-plan-to-changes";
+
+export type { ImportCatalogScope };
 
 export type ImportRowError = {
   rowIdx: number; // 1-based display row
@@ -77,6 +87,10 @@ export type ApplyImportResult = {
   errors: ImportRowError[];
   /** Country names from the sheet with no matching nationality row (apply blocked until resolved). */
   missingNationalities: MissingNationalityEntry[];
+  /** merge = upsert/delete per cell only; replace = sheet is full catalog source of truth. */
+  catalogScope: ImportCatalogScope;
+  /** True when the sheet matches the catalog — no DB writes performed. */
+  unchanged: boolean;
 };
 
 export type PreviewImportResult = {
@@ -304,6 +318,12 @@ async function resolveServiceId(
   const existing = serviceNameToId.get(norm);
   if (existing) return existing;
 
+  const canonical = await findCanonicalServiceIdByNorm(tx, norm);
+  if (canonical) {
+    serviceNameToId.set(norm, canonical);
+    return canonical;
+  }
+
   // Create a new visa_service (enabled, null duration/entries)
   const newId = createId();
   await tx.insert(schema.visaService).values({
@@ -342,6 +362,7 @@ async function writeImportAudit(
       pendingCreated: summary.pendingCreated,
       eligibilityAdded: summary.eligibilityAdded,
       eligibilityRemoved: summary.eligibilityRemoved,
+      catalogScope: summary.catalogScope,
       autoFix: summary.autoFix,
       servicesCreated: summary.servicesCreated,
       errors: summary.errors,
@@ -501,8 +522,13 @@ export async function applyPriceSheetImport(
   tx: SchemaDb,
   rows: RawRow[],
   adminUserId: string,
-  options: { fileHash?: string; mode?: "strict" | "partial" } = {},
+  options: {
+    fileHash?: string;
+    mode?: "strict" | "partial";
+    catalogScope?: ImportCatalogScope;
+  } = {},
 ): Promise<ApplyImportResult> {
+  const catalogScope = options.catalogScope ?? "replace";
   const batchId = createId();
   const errors: ImportRowError[] = [];
   const autoFix: AutoFix[] = [];
@@ -535,6 +561,8 @@ export async function applyPriceSheetImport(
       autoFix: [],
       servicesCreated: [],
       missingNationalities: [],
+      catalogScope,
+      unchanged: false,
       errors: [
         {
           rowIdx: 0,
@@ -569,12 +597,15 @@ export async function applyPriceSheetImport(
       autoFix: [],
       servicesCreated: [],
       missingNationalities,
+      catalogScope,
+      unchanged: false,
       errors: [],
     };
   }
 
 
   const serviceNameToId = await buildServiceNameToIdMap(tx);
+  const sheetNationalities = new Set<string>();
 
   const serviceColByIdx = new Map<
     number,
@@ -627,6 +658,7 @@ export async function applyPriceSheetImport(
       skippedCells += header.serviceColumns.length;
       continue;
     }
+    sheetNationalities.add(natCode);
 
     for (const col of header.serviceColumns) {
       const meta = serviceColByIdx.get(col.colIdx);
@@ -751,6 +783,8 @@ export async function applyPriceSheetImport(
       autoFix: [],
       servicesCreated: [],
       missingNationalities: [],
+      catalogScope,
+      unchanged: false,
       errors,
     };
   }
@@ -767,6 +801,8 @@ export async function applyPriceSheetImport(
     const id = await resolveServiceId(tx, displayName, serviceNameToId, servicesCreated);
     normToId.set(norm, id);
   }
+
+  const sheetServiceIds = new Set([...normToId.values()]);
 
   const fxRateForAudit = fxRate ?? "";
   for (const u of fxToUpsert) {
@@ -840,7 +876,69 @@ export async function applyPriceSheetImport(
     uniqueDeletePairs.push({ nationalityCode: d.nationalityCode, serviceId: d.serviceId });
   }
 
-  await applyChunksInParallel(uniqueDeletePairs, DELETE_PAIR_CHUNK, async (chunk) => {
+  const filteredPlan = await filterImportPlanToChanges(tx, {
+    upserts: toUpsertUnique.map((u) => ({
+      nationalityCode: u.nationalityCode,
+      serviceId: u.serviceId,
+      currency: u.currency,
+      amountMinor: u.amountMinor,
+      source: u.source,
+    })),
+    deletes: uniqueDeletePairs,
+    pending: toPendingDb.map((p) => ({
+      nationalityCode: p.nationalityCode,
+      serviceId: p.serviceId,
+      amountMinor: p.amountMinor,
+    })),
+    catalogScope,
+    sheetNationalities,
+    sheetServiceIds,
+  });
+
+  if (!filteredPlan.hasChanges) {
+    return {
+      batchId,
+      committed: true,
+      unchanged: true,
+      headerRowIndex: headerRowIdx,
+      partialApplied,
+      rowsProcessed,
+      skippedRows,
+      skippedCells,
+      pricesUpserted: 0,
+      pricesDeleted: 0,
+      pendingCreated: 0,
+      eligibilityAdded: 0,
+      eligibilityRemoved: 0,
+      autoFix: [],
+      servicesCreated: [],
+      missingNationalities: [],
+      catalogScope,
+      errors,
+    };
+  }
+
+  const replacePurgedPairKeys: string[] = [];
+  if (filteredPlan.replacePurgeNeeded || filteredPlan.clearStalePendingNeeded) {
+    const purge = await purgeCatalogOutsideSheetScope(tx, {
+      sheetNationalities,
+      sheetServiceIds,
+      clearStalePending: filteredPlan.clearStalePendingNeeded,
+    });
+    pricesDeleted += purge.deletedPrices;
+    replacePurgedPairKeys.push(...purge.purgedPairKeys);
+  }
+
+  const pendingDbRows = toPendingDb.filter((p) =>
+    filteredPlan.pending.some(
+      (fp) =>
+        fp.nationalityCode === p.nationalityCode &&
+        fp.serviceId === p.serviceId &&
+        fp.amountMinor === p.amountMinor,
+    ),
+  );
+
+  await applyChunksInParallel(filteredPlan.deletes, DELETE_PAIR_CHUNK, async (chunk) => {
     const tupleIn = sql.join(
       chunk.map((c) => sql`(${c.nationalityCode}, ${c.serviceId})`),
       sql`, `,
@@ -852,7 +950,7 @@ export async function applyPriceSheetImport(
     pricesDeleted += del.length;
   });
 
-  await applyChunksInParallel(toUpsertUnique, UPSERT_CHUNK, async (chunk) => {
+  await applyChunksInParallel(filteredPlan.upserts, UPSERT_CHUNK, async (chunk) => {
     await tx
       .insert(schema.catalogCustomerPrice)
       .values(
@@ -879,7 +977,7 @@ export async function applyPriceSheetImport(
     pricesUpserted += chunk.length;
   });
 
-  await applyChunksInParallel(toPendingDb, PENDING_INSERT_CHUNK, async (chunk) => {
+  await applyChunksInParallel(pendingDbRows, PENDING_INSERT_CHUNK, async (chunk) => {
     await tx.insert(schema.catalogCustomerPricePending).values(
       chunk.map((p) => ({
         nationalityCode: p.nationalityCode,
@@ -893,8 +991,9 @@ export async function applyPriceSheetImport(
   });
 
   const touchedPairs = new Set<string>();
-  for (const u of toUpsertUnique) touchedPairs.add(natSvcIdKey(u.nationalityCode, u.serviceId));
-  for (const d of toDeleteDb) touchedPairs.add(natSvcIdKey(d.nationalityCode, d.serviceId));
+  for (const key of replacePurgedPairKeys) touchedPairs.add(key);
+  for (const u of filteredPlan.upserts) touchedPairs.add(natSvcIdKey(u.nationalityCode, u.serviceId));
+  for (const d of filteredPlan.deletes) touchedPairs.add(natSvcIdKey(d.nationalityCode, d.serviceId));
 
   const elig = await syncEligibilityForTouchedPairs(tx, [...touchedPairs]);
   eligibilityAdded = elig.added;
@@ -916,6 +1015,8 @@ export async function applyPriceSheetImport(
     autoFix,
     servicesCreated,
     missingNationalities: [],
+    catalogScope,
+    unchanged: false,
     errors,
   };
 

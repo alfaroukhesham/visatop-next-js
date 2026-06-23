@@ -44,6 +44,7 @@ export const visaService = pgTable(
   (t) => [
     index("visa_service_enabled_idx").on(t.enabled),
     index("visa_service_createdAt_idx").on(t.createdAt),
+    uniqueIndex("visa_service_name_norm_uidx").on(sql`lower(trim(${t.name}))`),
   ],
 );
 
