@@ -3,6 +3,7 @@ import { ClientAppHeader } from "@/components/client/client-app-header";
 import { ClientHeroPanel } from "@/components/client/client-surface";
 import { ApplyJourneyStepBar } from "@/components/apply/apply-journey-step-bar";
 import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
+import { HomeDemoVideo } from "@/components/client/home-demo-video";
 import { HomeNationalityStart } from "@/components/client/home-nationality-start";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +24,7 @@ export default function Home() {
           aria-hidden
         />
         <div className="relative mx-auto w-full max-w-[calc(1300px+3rem)] px-5 pb-16 pt-10 sm:px-4 md:pb-24 md:pt-14">
-          <ApplyTwoColumn currentStep={1} contentClassName="min-w-0">
+          <ApplyTwoColumn currentStep={1} contentClassName="min-w-0 space-y-12 md:space-y-16">
             <ClientHeroPanel
               className={cn(
                 "theme-client-rise border-secondary/40 from-card via-card to-muted/60 relative border-[3px] p-8 shadow-[0_28px_72px_rgba(1,32,49,0.16)] md:p-12 lg:p-14",
@@ -48,6 +49,8 @@ export default function Home() {
 
               <HomeNationalityStart />
             </ClientHeroPanel>
+
+            <HomeDemoVideo />
           </ApplyTwoColumn>
         </div>
       </div>
