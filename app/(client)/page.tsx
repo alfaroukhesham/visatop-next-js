@@ -48,13 +48,13 @@ export default function Home() {
               <p className="text-secondary text-[11px] text-center font-bold uppercase tracking-[0.28em]">
               UAE Tourist Visa
               </p>
-              <h1 className="font-heading text-foreground mt-6 font-semibold text-center">
+              <h1 className="font-heading text-foreground mt-6 text-center text-[2.25rem]! leading-[1.2]! font-semibold md:text-[2.25rem]!">
                 Traveling to Dubai?
                 <span className="text-secondary mt-3 block font-semibold leading-snug tracking-tight text-center">
                   Apply online for your Dubai visa & UAE
                 </span>
               </h1>
-              <h2 className="font-heading text-foreground mt-6 font-semibold text-center">
+              <h2 className="font-heading text-foreground mt-6 text-center text-[1.25rem]! leading-[1.35]! font-semibold">
                 Get your visa in 2 working days
               </h2>
               <p className="text-muted-foreground mt-7  text-base text-center leading-relaxed md:text-lg">
