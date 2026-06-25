@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     canonical: appHref("/"),
   },
   openGraph: {
-    title: "Apply for UAE Tourist Visa Online | Visatop",
+    title: "Apply for UAE Tourist Visa Online | VisaTop",
     description: HOME_DESCRIPTION,
     url: appHref("/"),
     type: "website",
