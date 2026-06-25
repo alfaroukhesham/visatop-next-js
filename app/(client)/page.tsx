@@ -49,7 +49,7 @@ export default function Home() {
               UAE Tourist Visa
               </p>
               <h1 className="font-heading text-foreground mt-6 text-center text-[2.25rem]! leading-[1.2]! font-semibold md:text-[2.25rem]!">
-                Traveling to Dubai?
+                <span className="block">Traveling to Dubai? </span>
                 <span className="text-secondary mt-3 block font-semibold leading-snug tracking-tight text-center">
                   Apply online for your Dubai visa & UAE
                 </span>
