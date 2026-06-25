@@ -1,0 +1,19 @@
+# Visatop
+
+> Visa and residency services — apply for UAE tourist visas online, upload documents, pay securely, and track your application in one place.
+
+Visatop's online visa application is served at `/visa-processing` on visatop.com. Travelers select their passport nationality, choose visa options and currency, upload required documents, pay, and track status through the client portal.
+
+## Primary pages
+
+- [Apply for UAE visa](https://visatop.com/visa-processing/): Start a new UAE tourist visa application from your nationality.
+- [Continue application](https://visatop.com/visa-processing/apply/start): Resume the apply flow after selecting nationality.
+- [Track application](https://visatop.com/visa-processing/portal/track): Look up visa application status with your reference details.
+- [Client sign in](https://visatop.com/visa-processing/sign-in): Sign in to manage documents and track your application.
+- [Create account](https://visatop.com/visa-processing/sign-up): Register to save progress and access the client portal.
+
+## Optional
+
+- [Apply workspace](https://visatop.com/visa-processing/apply): Entry point for the multi-step application form.
+
+Contact: info@visatop.com

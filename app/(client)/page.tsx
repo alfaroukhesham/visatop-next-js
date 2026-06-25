@@ -1,21 +1,36 @@
 import type { Metadata } from "next";
-import { ClientAppHeader } from "@/components/client/client-app-header";
-import { ClientHeroPanel } from "@/components/client/client-surface";
 import { ApplyJourneyStepBar } from "@/components/apply/apply-journey-step-bar";
 import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
+import { ClientAppHeader } from "@/components/client/client-app-header";
+import { ClientHeroPanel } from "@/components/client/client-surface";
 import { HomeDemoVideo } from "@/components/client/home-demo-video";
 import { HomeNationalityStart } from "@/components/client/home-nationality-start";
+import { JsonLdScript } from "@/components/seo/json-ld-script";
+import { appHref } from "@/lib/app-href";
+import { buildHomePageJsonLd } from "@/lib/seo/home-page-json-ld";
 import { cn } from "@/lib/utils";
 
+const HOME_DESCRIPTION =
+  "Start your UAE visa from your nationality—upload documents, pay securely, and track your application in one place.";
+
 export const metadata: Metadata = {
-  title: "Home | Visatop",
-  description:
-    "Start your UAE visa from your nationality—upload documents, pay securely, and track your application in one place.",
+  title: "Apply for UAE Tourist Visa Online",
+  description: HOME_DESCRIPTION,
+  alternates: {
+    canonical: appHref("/"),
+  },
+  openGraph: {
+    title: "Apply for UAE Tourist Visa Online | Visatop",
+    description: HOME_DESCRIPTION,
+    url: appHref("/"),
+    type: "website",
+  },
 };
 
 export default function Home() {
   return (
     <div className="text-foreground flex min-h-0 flex-1 flex-col">
+      <JsonLdScript id="visatop-home-jsonld" data={buildHomePageJsonLd()} />
       <ClientAppHeader />
 
       <div className="relative flex-1 overflow-hidden">
@@ -33,15 +48,15 @@ export default function Home() {
               <p className="text-secondary text-[11px] text-center font-bold uppercase tracking-[0.28em]">
               UAE Tourist Visa
               </p>
-              <h2 className="font-heading text-foreground mt-6 font-semibold text-center">
+              <h1 className="font-heading text-foreground mt-6 font-semibold text-center">
                 Traveling to Dubai?
                 <span className="text-secondary mt-3 block font-semibold leading-snug tracking-tight text-center">
                   Apply online for your Dubai visa & UAE
                 </span>
-              </h2>
-              <h3 className="font-heading text-foreground mt-6 font-semibold text-center">
+              </h1>
+              <h2 className="font-heading text-foreground mt-6 font-semibold text-center">
                 Get your visa in 2 working days
-              </h3>
+              </h2>
               <p className="text-muted-foreground mt-7  text-base text-center leading-relaxed md:text-lg">
                 Select the passport you travel on. We show only what you can apply for, then keep your file in one
                 workspace until you pay and submit.
