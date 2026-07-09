@@ -4,6 +4,7 @@ import {
   getCanonicalPageLocation,
   getCanonicalPagePath,
 } from "@/lib/analytics/canonical-url";
+import { isAnalyticsExcludedPath } from "@/lib/analytics/excluded-paths";
 
 export type GtagEventParams = Record<string, string | number | boolean | undefined | null>;
 
@@ -33,6 +34,7 @@ export function gtagCommand(...args: unknown[]): void {
 
 export function trackEvent(eventName: string, params?: GtagEventParams): void {
   if (typeof window === "undefined") return;
+  if (isAnalyticsExcludedPath(window.location.pathname)) return;
   const page_location = getCanonicalPageLocation();
   const page_path = getCanonicalPagePath();
   const cleaned: Record<string, string | number | boolean> = {
@@ -49,6 +51,7 @@ export function trackEvent(eventName: string, params?: GtagEventParams): void {
 }
 
 export function trackPageView(pathname: string, search: string): void {
+  if (isAnalyticsExcludedPath(pathname)) return;
   trackEvent("page_view", {
     page_location: getCanonicalPageLocation(pathname, search),
     page_path: getCanonicalPagePath(pathname, search),

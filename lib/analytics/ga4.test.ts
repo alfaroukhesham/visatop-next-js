@@ -4,7 +4,27 @@ import {
   applyStepLabel,
 } from "@/lib/analytics/apply-funnel";
 import { SITE_KIT_CONSENT_REGIONS } from "@/lib/analytics/consent-regions";
+import { isAnalyticsExcludedPath } from "@/lib/analytics/excluded-paths";
 import { buildGoogleTagBootstrapScript } from "@/lib/analytics/gtag-bootstrap";
+
+describe("isAnalyticsExcludedPath", () => {
+  it("excludes admin routes with or without basePath", () => {
+    expect(isAnalyticsExcludedPath("/admin")).toBe(true);
+    expect(isAnalyticsExcludedPath("/admin/")).toBe(true);
+    expect(isAnalyticsExcludedPath("/admin/applications")).toBe(true);
+    expect(isAnalyticsExcludedPath("/admin/sign-in")).toBe(true);
+    expect(isAnalyticsExcludedPath("/visa-processing/admin")).toBe(true);
+    expect(isAnalyticsExcludedPath("/visa-processing/admin/catalog")).toBe(true);
+  });
+
+  it("does not exclude client apply routes", () => {
+    expect(isAnalyticsExcludedPath("/")).toBe(false);
+    expect(isAnalyticsExcludedPath("/visa-processing/")).toBe(false);
+    expect(isAnalyticsExcludedPath("/apply/start")).toBe(false);
+    expect(isAnalyticsExcludedPath("/visa-processing/apply/start")).toBe(false);
+    expect(isAnalyticsExcludedPath("/portal")).toBe(false);
+  });
+});
 
 describe("applyStepFromPathname", () => {
   it("maps home and start", () => {

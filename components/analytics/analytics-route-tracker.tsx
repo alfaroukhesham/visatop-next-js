@@ -7,10 +7,12 @@ import {
   applyStepFromPathname,
   applyStepLabel,
 } from "@/lib/analytics/apply-funnel";
+import { isAnalyticsExcludedPath } from "@/lib/analytics/excluded-paths";
 import { trackEvent, trackPageView } from "@/lib/analytics/gtag-client";
 
 /**
  * Fires GA4 `page_view` on App Router navigations and `apply_step_view` for funnel routes.
+ * Skips admin (and any other excluded) paths.
  */
 export function AnalyticsRouteTracker() {
   const pathname = usePathname();
@@ -29,6 +31,10 @@ export function AnalyticsRouteTracker() {
       typeof window !== "undefined"
         ? window.location.pathname
         : `${basePath}${pathname === "/" ? "/" : pathname}`;
+
+    if (isAnalyticsExcludedPath(publicPath) || isAnalyticsExcludedPath(pathname)) {
+      return;
+    }
 
     const key = `${publicPath}${searchWithQ}`;
     if (lastKey.current === key) return;

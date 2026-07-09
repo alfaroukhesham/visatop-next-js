@@ -1,5 +1,7 @@
 import { Inter, Noto_Serif } from "next/font/google";
 import type { ReactNode } from "react";
+import { AnalyticsProviders } from "@/components/analytics/analytics-providers";
+import { GoogleTag } from "@/components/analytics/google-tag";
 import { ClientAuthStoreSync } from "@/components/client/client-auth-store-sync";
 import { BfcacheRestoreSync } from "@/components/client/bfcache-restore-sync";
 import { WpShellFallbackFooter, WpShellFallbackHeader } from "@/components/client/wp-shell/wp-shell-fallback";
@@ -60,6 +62,8 @@ export default async function ClientLayout({ children }: { children: ReactNode }
           zIndex: 0,
         }}
       >
+        <GoogleTag />
+        <AnalyticsProviders />
         <BfcacheRestoreSync />
         <ClientAuthStoreSync />
         {children}
