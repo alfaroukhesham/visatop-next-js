@@ -5,6 +5,8 @@ import Link from "next/link";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { redirectToSubmittedApplication } from "./actions";
 import { ClientCenteredStatus } from "@/components/client/client-loading";
+import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
+import { trackEvent } from "@/lib/analytics/gtag-client";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 
@@ -14,6 +16,7 @@ export function CheckoutReturnClient({ applicationId }: { applicationId: string 
   const [message, setMessage] = useState("Confirming payment with our servers…");
   const startedAt = useRef(0);
   const nextDelayMs = useRef(1000);
+  const paymentCompletedFired = useRef(false);
 
   useEffect(() => {
     if (startedAt.current === 0) {
@@ -55,6 +58,13 @@ export function CheckoutReturnClient({ applicationId }: { applicationId: string 
 
       const ps = res.data.application.paymentStatus;
       if (ps === "paid") {
+        if (!paymentCompletedFired.current) {
+          paymentCompletedFired.current = true;
+          trackEvent(APPLY_FUNNEL_EVENTS.paymentCompleted, {
+            application_id: applicationId,
+            payment_provider: "ziina",
+          });
+        }
         await redirectToSubmittedApplication(applicationId);
         return;
       }

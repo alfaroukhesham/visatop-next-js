@@ -13,6 +13,8 @@ import {
 import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
+import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
+import { trackEvent } from "@/lib/analytics/gtag-client";
 
 type Nationality = { code: string; name: string };
 
@@ -87,6 +89,14 @@ export function HomeNationalityStart() {
 
   function onContinue() {
     if (!selectedCode || selectedCode.length !== 2) return;
+    trackEvent(APPLY_FUNNEL_EVENTS.visaApplication, {
+      nationality: selectedCode,
+      step: 1,
+      step_name: "nationality",
+    });
+    trackEvent(APPLY_FUNNEL_EVENTS.nationalitySelected, {
+      nationality: selectedCode,
+    });
     router.push(`/apply/start?nationality=${encodeURIComponent(selectedCode)}`);
   }
 

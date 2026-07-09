@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Red_Hat_Display, Red_Hat_Mono, Red_Hat_Text } from "next/font/google";
+import { AnalyticsProviders } from "@/components/analytics/analytics-providers";
+import { GoogleTag } from "@/components/analytics/google-tag";
 import { ThemeClassSync } from "@/components/theme-class-sync";
 import { BFCACHE_BOOTSTRAP_SCRIPT } from "@/lib/client/bfcache-bootstrap-script";
 import { getAppOrigin } from "@/lib/app-url";
@@ -61,6 +63,8 @@ export default function RootLayout({
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: BFCACHE_BOOTSTRAP_SCRIPT }}
         />
+        <GoogleTag />
+        <AnalyticsProviders />
         <ThemeClassSync />
         {children}
       </body>

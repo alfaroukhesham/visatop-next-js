@@ -1,0 +1,38 @@
+/**
+ * Site Kit Consent Mode v2 regions (EEA + UK + CH).
+ * @see https://github.com/google/site-kit-wp/blob/develop/includes/Core/Consent_Mode/Regions.php
+ */
+export const SITE_KIT_CONSENT_REGIONS = [
+  "AT",
+  "BE",
+  "BG",
+  "CH",
+  "CY",
+  "CZ",
+  "DE",
+  "DK",
+  "EE",
+  "ES",
+  "FI",
+  "FR",
+  "GB",
+  "GR",
+  "HR",
+  "HU",
+  "IE",
+  "IS",
+  "IT",
+  "LI",
+  "LT",
+  "LU",
+  "LV",
+  "MT",
+  "NL",
+  "NO",
+  "PL",
+  "PT",
+  "RO",
+  "SE",
+  "SI",
+  "SK",
+] as const;

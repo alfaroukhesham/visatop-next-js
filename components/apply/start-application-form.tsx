@@ -13,6 +13,8 @@ import { ClientInput } from "@/components/client/client-input";
 import { convertMinorBetweenUsdAed, parsePublicDisplayFxAedPerUsd } from "@/lib/catalog/display-price";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
+import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
+import { trackEvent } from "@/lib/analytics/gtag-client";
 import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { cn } from "@/lib/utils";
@@ -223,6 +225,13 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
       setError(res.error.message);
       return;
     }
+    trackEvent(APPLY_FUNNEL_EVENTS.applicationCreated, {
+      nationality,
+      service_id: serviceId,
+      currency: displayCurrency,
+      application_id: res.data.application.id,
+      is_guest: res.data.application.isGuest,
+    });
     router.push(`/apply/applications/${res.data.application.id}`);
   }
 

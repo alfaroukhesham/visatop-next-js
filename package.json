@@ -39,6 +39,7 @@
     "@google/genai": "^1.50.1",
     "@napi-rs/canvas": "^0.1.98",
     "@neondatabase/serverless": "^1.0.2",
+    "@next/third-parties": "16.2.1",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/auto-instrumentations-node": "^0.72.0",
     "@opentelemetry/exporter-trace-otlp-http": "^0.214.0",
@@ -74,6 +75,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -86,7 +88,6 @@
     "@vitejs/plugin-react": "^4.3.4",
     "dotenv": "^17.3.1",
     "drizzle-kit": "^0.31.10",
-    "@playwright/test": "^1.52.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "jsdom": "^29.0.2",

@@ -10,6 +10,8 @@ import {
 import { ClientButton } from "@/components/client/client-button";
 import { Loader2 } from "lucide-react";
 import { apiHref } from "@/lib/app-href";
+import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
+import { trackEvent } from "@/lib/analytics/gtag-client";
 import { checkoutErrorToUserMessage } from "@/lib/payments/checkout-client-messages";
 
 interface PaddleCheckoutButtonProps {
@@ -43,6 +45,10 @@ export function PaddleCheckoutButton({
       if (paymentFinished.current) return;
       paymentFinished.current = true;
       setIsInitializing(false);
+      trackEvent(APPLY_FUNNEL_EVENTS.paymentCompleted, {
+        application_id: applicationId,
+        payment_provider: "paddle",
+      });
       onSuccess?.();
     };
 
@@ -90,10 +96,19 @@ export function PaddleCheckoutButton({
 
       const data = envelope.data;
       if ("provider" in data && data.provider === "ziina") {
+        trackEvent(APPLY_FUNNEL_EVENTS.paymentStarted, {
+          application_id: applicationId,
+          payment_provider: "ziina",
+        });
         onExternalRedirect?.();
         window.location.assign(data.redirectUrl);
         return;
       }
+
+      trackEvent(APPLY_FUNNEL_EVENTS.paymentStarted, {
+        application_id: applicationId,
+        payment_provider: "paddle",
+      });
 
       if (!("transactionId" in data) || !data.transactionId) {
         throw new Error(checkoutErrorToUserMessage(envelope.error));
