@@ -17,7 +17,7 @@ describe("sitemap", () => {
     const urls = entries.map((entry) => entry.url);
 
     expect(urls).toEqual([
-      "https://visatop.com/visa-processing/",
+      "https://visatop.com/visa-processing",
       "https://visatop.com/visa-processing/sign-in",
       "https://visatop.com/visa-processing/sign-up",
       "https://visatop.com/visa-processing/apply/track",

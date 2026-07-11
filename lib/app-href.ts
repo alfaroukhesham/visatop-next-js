@@ -31,10 +31,11 @@ function resolveClientBasePath(): string {
 export function appHref(path: string): string {
   const p = path.startsWith("/") ? path : `/${path}`;
   const basePath = resolveClientBasePath();
+  const suffix = p === "/" ? "" : p;
   if (typeof window !== "undefined") {
-    return `${basePath}${p}`;
+    return `${basePath}${suffix}`;
   }
-  return joinUrl(getAppOrigin(), `${basePath}${p}`);
+  return joinUrl(getAppOrigin(), `${basePath}${suffix}`);
 }
 
 /**

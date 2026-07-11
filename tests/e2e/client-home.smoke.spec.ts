@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 /** Client home (nationality step); `/apply` redirects to `/`. */
 const CLIENT_HOME_PATH =
-  process.env.PLAYWRIGHT_CLIENT_HOME_PATH ?? "/visa-processing/";
+  process.env.PLAYWRIGHT_CLIENT_HOME_PATH ?? "/visa-processing";
 
 async function assertAppShellHealthy(page: Page) {
   await expect(page.getByRole("heading", { name: /something went wrong/i })).toHaveCount(0);

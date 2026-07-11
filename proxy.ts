@@ -1,8 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 export function proxy(request: NextRequest) {
+  const requestUrl = new URL(request.url);
+  const { pathname, search } = requestUrl;
+
+  if (pathname.length > 1 && pathname.endsWith("/")) {
+    const destination = new URL(request.url);
+    destination.pathname = pathname.slice(0, -1);
+    destination.search = search;
+    return NextResponse.redirect(destination, 308);
+  }
+
   const requestHeaders = new Headers(request.headers);
-  const { pathname } = request.nextUrl;
+  const appPathname = request.nextUrl.pathname;
 
   const incomingRequestId = requestHeaders.get("x-request-id");
   const requestId =
@@ -12,8 +22,8 @@ export function proxy(request: NextRequest) {
 
   requestHeaders.set("x-request-id", requestId);
 
-  if (pathname.startsWith("/portal") || pathname.startsWith("/admin")) {
-    requestHeaders.set("x-pathname", pathname);
+  if (appPathname.startsWith("/portal") || appPathname.startsWith("/admin")) {
+    requestHeaders.set("x-pathname", appPathname);
   }
 
   const response = NextResponse.next({
@@ -26,6 +36,7 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/visa-processing/:path*/",
     "/api/:path*",
     "/portal",
     "/portal/:path*",

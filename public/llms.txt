@@ -1,19 +1,37 @@
-# Visatop
+# Visatop — UAE tourist visa apply
 
 > Visa and residency services — apply for UAE tourist visas online, upload documents, pay securely, and track your application in one place.
 
 Visatop's online visa application is served at `/visa-processing` on visatop.com. Travelers select their passport nationality, choose visa options and currency, upload required documents, pay, and track status through the client portal.
 
+## Service facts
+
+- **Processing SLA:** Typical turnaround in **2 working days** when documents are complete; track via GDRFA (Dubai) or ICP (UAE federal) after lodgement.
+- **Fees:** All-inclusive price varies by **passport nationality** and visa duration (14-, 30-, or 60-day tourist/visit). Exact fee is shown at checkout in **USD or AED** before you pay — no hidden add-ons in the online flow.
+- **Visa types:** Single- and multi-entry tourist and visit visas for **35+ nationalities**; options depend on your passport country.
+
+## Document checklist
+
+- [UAE tourist visa requirements (FAQ)](https://visatop.com/faq/requirements/): Passport (6+ months validity), passport photo, return ticket, accommodation proof, and nationality-specific extras.
+- [Application process (FAQ)](https://visatop.com/faq/application-process/): Step-by-step guide for online tourist visa applications.
+
 ## Primary pages
 
-- [Apply for UAE visa](https://visatop.com/visa-processing/): Start a new UAE tourist visa application from your nationality.
+- [Apply for UAE visa](https://visatop.com/visa-processing): Start a new UAE tourist visa application from your nationality.
 - [Continue application](https://visatop.com/visa-processing/apply/start): Resume the apply flow after selecting nationality.
 - [Track application](https://visatop.com/visa-processing/portal/track): Look up visa application status with your reference details.
 - [Client sign in](https://visatop.com/visa-processing/sign-in): Sign in to manage documents and track your application.
 - [Create account](https://visatop.com/visa-processing/sign-up): Register to save progress and access the client portal.
 
+## Entity links
+
+- [VisaTop llms.txt (main site)](https://visatop.com/llms.txt): Full VisaTop AI index — residency visas, company setup, blog, and news.
+- [Wikidata: VisaTop (Q140355254)](https://www.wikidata.org/wiki/Q140355254): Official structured entity record for VisaTop.
+- [Visa catalog API (nationalities)](https://visatop.com/visa-processing/api/catalog/nationalities): JSON list of supported passport nationalities for online apply.
+
 ## Optional
 
 - [Apply workspace](https://visatop.com/visa-processing/apply): Entry point for the multi-step application form.
+- [Sitemap (visa application app)](https://visatop.com/visa-processing/sitemap.xml): Indexable routes in the Next.js apply app.
 
 Contact: info@visatop.com

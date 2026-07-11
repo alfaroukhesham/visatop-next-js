@@ -8,6 +8,7 @@ import { HomeNationalityStart } from "@/components/client/home-nationality-start
 import { JsonLdScript } from "@/components/seo/json-ld-script";
 import { appHref } from "@/lib/app-href";
 import { buildHomePageJsonLd } from "@/lib/seo/home-page-json-ld";
+import { HOME_SERVICE_FACTS } from "@/lib/seo/home-page-facts";
 import { cn } from "@/lib/utils";
 
 const HOME_DESCRIPTION =
@@ -76,6 +77,17 @@ export default function Home() {
         title="Start your application"
         subtitle="Type your country, pick from the list, then continue to currency and visa options."
       />
+
+      {/* Crawler-only facts for JSON-LD speakable + AI indexing — not shown to users. */}
+      <ul
+        id="service-facts"
+        aria-hidden="true"
+        className="pointer-events-none absolute size-0 overflow-hidden opacity-0"
+      >
+        {HOME_SERVICE_FACTS.map((fact) => (
+          <li key={fact}>{fact}</li>
+        ))}
+      </ul>
     </div>
   );
 }
