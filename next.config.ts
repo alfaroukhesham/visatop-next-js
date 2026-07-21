@@ -63,10 +63,40 @@ const nextConfig: NextConfig = {
   basePath: "/visa-processing",
   output: "standalone",
   async headers() {
+    // Later matching sources override earlier ones for the same header key.
+    // Default to noindex so 404s / unknown routes are not invited to index.
     return [
       {
         source: "/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, follow" }],
+      },
+      {
+        source: "/",
         headers: [{ key: "X-Robots-Tag", value: "index, follow" }],
+      },
+      {
+        source: "/sign-in",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, follow" }],
+      },
+      {
+        source: "/sign-in/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, follow" }],
+      },
+      {
+        source: "/sign-up",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, follow" }],
+      },
+      {
+        source: "/sign-up/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, follow" }],
+      },
+      {
+        source: "/apply/track",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, follow" }],
+      },
+      {
+        source: "/apply/track/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, follow" }],
       },
       {
         source: "/admin/:path*",

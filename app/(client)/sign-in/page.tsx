@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Sign in",
   description:
     "Sign in to your Visatop portal to create, resume, or track your visa application.",
+  robots: { index: false, follow: true },
 };
 import { isFacebookOAuthConfigured } from "@/lib/social-oauth";
 

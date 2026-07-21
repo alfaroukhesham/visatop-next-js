@@ -3,6 +3,7 @@ import { TrackPageClient } from "@/components/apply/track-page-client";
 
 export const metadata: Metadata = {
   title: "Track application | Visatop",
+  robots: { index: false, follow: true },
 };
 
 export const dynamic = "force-dynamic";
