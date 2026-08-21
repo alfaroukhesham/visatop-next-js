@@ -170,13 +170,14 @@ export function ApplicantReview({
               "text-xs font-medium inline-flex items-center gap-1 " +
               (readinessLabel.tone === "success" ? "text-success" : "text-error")
             }
+            aria-label={readinessLabel.tone === "success" ? readinessLabel.text : undefined}
           >
             {readinessLabel.tone === "success" ? (
               <CheckCircle2 className="size-4" aria-hidden />
             ) : (
               <AlertTriangle className="size-4" aria-hidden />
             )}
-            {readinessLabel.text}
+            {readinessLabel.tone === "success" ? null : readinessLabel.text}
           </span>
         ) : null}
       </div>

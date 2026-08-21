@@ -383,6 +383,10 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
             </div>
           )}
 
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            Please note that prices do not include insurance, which may be mandatory in some cases.
+          </p>
+
           <ClientField id="apply-email" label="Email *">
             <ClientInput
               id="apply-email"

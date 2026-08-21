@@ -3,7 +3,6 @@
 import { AlertTriangle, CheckCircle2, FileStack, Loader2 } from "lucide-react";
 import type { PublicApplication } from "@/lib/applications/public-application";
 import { DocumentUploadSlot } from "./document-upload-slot";
-import { customerFacingExtractionLabel } from "./utils";
 import type { DocType, PublicDocument } from "./types";
 
 export function DraftDocumentsSection({
@@ -40,9 +39,11 @@ export function DraftDocumentsSection({
             Passport + photo present
           </span>
         ) : (
-          <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
+          <span
+            className="text-muted-foreground inline-flex items-center text-xs"
+            aria-label="Passport and photo are required before we can submit to authorities; you can pay first."
+          >
             <AlertTriangle className="size-4" aria-hidden />
-            Passport and photo are required before we can submit to authorities; you can pay first.
           </span>
         )}
       </div>
@@ -75,12 +76,10 @@ export function DraftDocumentsSection({
             <span>Reading passport…</span>
           </p>
         ) : (
-          <p className="text-muted-foreground text-xs">
-            Passport OCR:{" "}
-            <span className="font-medium">{customerFacingExtractionLabel(passportExtractionStatus)}</span>
-            {attemptsLeft > 0 && passportExtractionStatus !== "succeeded"
-              ? ` · ${attemptsLeft} attempt${attemptsLeft === 1 ? "" : "s"} left`
-              : ""}
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            Additional documents may be required by VisaTop to finalize the application (e.g. bank
+            statements, insurance). The VisaTop team will contact you once the passport has been
+            submitted.
           </p>
         )}
       </div>
