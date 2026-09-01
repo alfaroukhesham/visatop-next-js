@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ClientButton, ClientButtonLink } from "@/components/client/client-button";
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { GUEST_LINK_EVENTS, trackGuestLinkEvent } from "@/lib/analytics/guest-link-events";
+import { trackApplyPaymentCompleted } from "@/lib/analytics/gtag-client";
 import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
 import { buildPostLinkLocation } from "@/lib/applications/post-link-redirect";
 import { apiHref, appHref } from "@/lib/app-href";
@@ -40,12 +41,20 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
   const [linkActionError, setLinkActionError] = useState<string | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
   const firedView = useRef(false);
+  const adsConversionFired = useRef(false);
 
   useEffect(() => {
     if (firedView.current) return;
     firedView.current = true;
     trackGuestLinkEvent(GUEST_LINK_EVENTS.submittedView, { applicationId });
   }, [applicationId]);
+
+  useEffect(() => {
+    if (adsConversionFired.current) return;
+    if (app.paymentStatus !== "paid") return;
+    adsConversionFired.current = true;
+    trackApplyPaymentCompleted({ applicationId });
+  }, [app.paymentStatus, applicationId]);
 
   const load = useCallback(async () => {
     const res = await fetch(apiHref(`/applications/${encodeURIComponent(applicationId)}`), {

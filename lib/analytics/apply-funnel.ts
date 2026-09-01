@@ -6,7 +6,29 @@ export const APPLY_FUNNEL_EVENTS = {
   applicationCreated: "apply_application_created",
   paymentStarted: "apply_payment_started",
   paymentCompleted: "apply_payment_completed",
+  /** GA4 recommended event — auto key event, easiest Google Ads import. */
+  purchase: "purchase",
 } as const;
+
+export type TGa4PurchaseParams = {
+  transaction_id: string;
+  value: number;
+  currency: string;
+};
+
+export const buildGa4PurchaseParams = (input: {
+  transactionId: string;
+  value?: number;
+  currency?: string;
+}): TGa4PurchaseParams | null => {
+  const transactionId = input.transactionId.trim();
+  if (!transactionId) return null;
+  return {
+    transaction_id: transactionId,
+    value: input.value ?? 1.0,
+    currency: input.currency ?? "AED",
+  };
+};
 
 export type ApplyFunnelStep = 1 | 2 | 3 | 4 | 5;
 

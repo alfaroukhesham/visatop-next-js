@@ -5,6 +5,11 @@ import {
   getCanonicalPagePath,
 } from "@/lib/analytics/canonical-url";
 import { isAnalyticsExcludedPath } from "@/lib/analytics/excluded-paths";
+import { APPLY_FUNNEL_EVENTS, buildGa4PurchaseParams } from "@/lib/analytics/apply-funnel";
+import {
+  buildGadsCheckoutConversionParams,
+  type TGadsCheckoutConversionInput,
+} from "@/lib/analytics/gads-checkout-conversion";
 
 export type GtagEventParams = Record<string, string | number | boolean | undefined | null>;
 
@@ -58,3 +63,39 @@ export function trackPageView(pathname: string, search: string): void {
     page_title: typeof document !== "undefined" ? document.title : undefined,
   });
 }
+
+/** Google Ads Checkout Completed — fires only the Ads conversion event snippet. */
+export const trackGadsCheckoutConversion = (input: TGadsCheckoutConversionInput): void => {
+  if (typeof window === "undefined") return;
+  if (isAnalyticsExcludedPath(window.location.pathname)) return;
+  const params = buildGadsCheckoutConversionParams(input);
+  if (!params) return;
+  gtagCommand("event", "conversion", params);
+};
+
+const purchaseDedupeKey = (applicationId: string): string => `vt_ga4_purchase:${applicationId}`;
+
+/**
+ * Funnel + standard GA4 purchase. Import `purchase` (or `apply_payment_completed`) in Google Ads.
+ * Dedupes per application for this browser tab so overlay + thank-you do not double-count.
+ */
+export const trackApplyPaymentCompleted = (input: {
+  applicationId: string;
+  paymentProvider?: string;
+}): void => {
+  const purchase = buildGa4PurchaseParams({ transactionId: input.applicationId });
+  if (!purchase) return;
+  try {
+    const key = purchaseDedupeKey(input.applicationId);
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+  } catch {
+    /* private mode — still send */
+  }
+  trackEvent(APPLY_FUNNEL_EVENTS.paymentCompleted, {
+    ...purchase,
+    application_id: input.applicationId,
+    payment_provider: input.paymentProvider,
+  });
+  trackEvent(APPLY_FUNNEL_EVENTS.purchase, purchase);
+};

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyStepFromPathname,
   applyStepLabel,
+  buildGa4PurchaseParams,
 } from "@/lib/analytics/apply-funnel";
 import { SITE_KIT_CONSENT_REGIONS } from "@/lib/analytics/consent-regions";
 import { isAnalyticsExcludedPath } from "@/lib/analytics/excluded-paths";
@@ -49,6 +50,20 @@ describe("applyStepFromPathname", () => {
   it("labels steps", () => {
     expect(applyStepLabel(1)).toBe("nationality");
     expect(applyStepLabel(4)).toBe("payment");
+  });
+});
+
+describe("buildGa4PurchaseParams", () => {
+  it("builds a purchase payload Ads can import", () => {
+    expect(buildGa4PurchaseParams({ transactionId: "app_123" })).toEqual({
+      transaction_id: "app_123",
+      value: 1.0,
+      currency: "AED",
+    });
+  });
+
+  it("returns null without a transaction id", () => {
+    expect(buildGa4PurchaseParams({ transactionId: "  " })).toBeNull();
   });
 });
 
