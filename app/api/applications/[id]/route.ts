@@ -6,6 +6,7 @@ import { loadGuestApplicationRowByResumeCookie } from "@/lib/applications/guest-
 import { loadApplicationRowForRequest } from "@/lib/applications/load-application-row-for-request";
 import { readResumeTokenFromRequestCookies } from "@/lib/applications/resume-cookie";
 import { toPublicApplication } from "@/lib/applications/public-application";
+import { toPublicApplicationWithCharge } from "@/lib/applications/load-application-charge";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withClientDbActor, withSystemDbActor } from "@/lib/db/actor-context";
@@ -38,7 +39,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     if (!row) {
       return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
     }
-    return jsonOk({ application: toPublicApplication(row) }, { requestId });
+    return jsonOk({ application: await toPublicApplicationWithCharge(row) }, { requestId });
   }
 
   const cookieHeader = req.headers.get("cookie");
@@ -52,7 +53,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   if (!row) {
     return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
   }
-  return jsonOk({ application: toPublicApplication(row) }, { requestId });
+  return jsonOk({ application: await toPublicApplicationWithCharge(row) }, { requestId });
 }
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {

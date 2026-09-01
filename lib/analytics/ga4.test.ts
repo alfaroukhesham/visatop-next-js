@@ -54,16 +54,24 @@ describe("applyStepFromPathname", () => {
 });
 
 describe("buildGa4PurchaseParams", () => {
-  it("builds a purchase payload Ads can import", () => {
-    expect(buildGa4PurchaseParams({ transactionId: "app_123" })).toEqual({
+  it("builds a purchase payload from the charged amount", () => {
+    expect(
+      buildGa4PurchaseParams({
+        transactionId: "app_123",
+        value: 149,
+        currency: "usd",
+      }),
+    ).toEqual({
       transaction_id: "app_123",
-      value: 1.0,
-      currency: "AED",
+      value: 149,
+      currency: "USD",
     });
   });
 
-  it("returns null without a transaction id", () => {
-    expect(buildGa4PurchaseParams({ transactionId: "  " })).toBeNull();
+  it("returns null without a transaction id or charged amount", () => {
+    expect(buildGa4PurchaseParams({ transactionId: "  ", value: 10, currency: "USD" })).toBeNull();
+    expect(buildGa4PurchaseParams({ transactionId: "app_123", currency: "USD" })).toBeNull();
+    expect(buildGa4PurchaseParams({ transactionId: "app_123", value: 10 })).toBeNull();
   });
 });
 

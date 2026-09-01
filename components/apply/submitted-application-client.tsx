@@ -52,9 +52,14 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
   useEffect(() => {
     if (adsConversionFired.current) return;
     if (app.paymentStatus !== "paid") return;
+    if (app.chargedAmountMajor == null || !app.chargedCurrency) return;
     adsConversionFired.current = true;
-    trackApplyPaymentCompleted({ applicationId });
-  }, [app.paymentStatus, applicationId]);
+    trackApplyPaymentCompleted({
+      applicationId,
+      value: app.chargedAmountMajor,
+      currency: app.chargedCurrency,
+    });
+  }, [app.paymentStatus, app.chargedAmountMajor, app.chargedCurrency, applicationId]);
 
   const load = useCallback(async () => {
     const res = await fetch(apiHref(`/applications/${encodeURIComponent(applicationId)}`), {

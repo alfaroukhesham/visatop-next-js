@@ -9,7 +9,11 @@ import { trackApplyPaymentCompleted } from "@/lib/analytics/gtag-client";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 
-type AppPoll = { paymentStatus: string };
+type AppPoll = {
+  paymentStatus: string;
+  chargedAmountMajor?: number | null;
+  chargedCurrency?: string | null;
+};
 
 export function CheckoutReturnClient({ applicationId }: { applicationId: string }) {
   const [message, setMessage] = useState("Confirming payment with our servers…");
@@ -62,6 +66,8 @@ export function CheckoutReturnClient({ applicationId }: { applicationId: string 
           trackApplyPaymentCompleted({
             applicationId,
             paymentProvider: "ziina",
+            value: res.data.application.chargedAmountMajor ?? undefined,
+            currency: res.data.application.chargedCurrency ?? undefined,
           });
         }
         await redirectToSubmittedApplication(applicationId);

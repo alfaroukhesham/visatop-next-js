@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
 import { SubmittedApplicationClient } from "@/components/apply/submitted-application-client";
 import { loadApplicationRowForRequest } from "@/lib/applications/load-application-row-for-request";
-import { toPublicApplication } from "@/lib/applications/public-application";
+import { toPublicApplicationWithCharge } from "@/lib/applications/load-application-charge";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -28,7 +28,10 @@ export default async function SubmittedApplicationPage({ params }: Props) {
         applicationId={id}
         contentClassName="theme-client-rise mx-auto w-full max-w-2xl"
       >
-        <SubmittedApplicationClient applicationId={id} initialApplication={toPublicApplication(row)} />
+        <SubmittedApplicationClient
+          applicationId={id}
+          initialApplication={await toPublicApplicationWithCharge(row)}
+        />
       </ApplyTwoColumn>
     </div>
   );

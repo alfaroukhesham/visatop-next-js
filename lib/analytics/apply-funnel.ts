@@ -22,11 +22,15 @@ export const buildGa4PurchaseParams = (input: {
   currency?: string;
 }): TGa4PurchaseParams | null => {
   const transactionId = input.transactionId.trim();
-  if (!transactionId) return null;
+  const currency = input.currency?.trim().toUpperCase() ?? "";
+  if (!transactionId || !currency) return null;
+  if (input.value === undefined || !Number.isFinite(input.value) || input.value < 0) {
+    return null;
+  }
   return {
     transaction_id: transactionId,
-    value: input.value ?? 1.0,
-    currency: input.currency ?? "AED",
+    value: input.value,
+    currency,
   };
 };
 

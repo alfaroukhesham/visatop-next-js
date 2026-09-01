@@ -82,8 +82,14 @@ const purchaseDedupeKey = (applicationId: string): string => `vt_ga4_purchase:${
 export const trackApplyPaymentCompleted = (input: {
   applicationId: string;
   paymentProvider?: string;
+  value?: number;
+  currency?: string;
 }): void => {
-  const purchase = buildGa4PurchaseParams({ transactionId: input.applicationId });
+  const purchase = buildGa4PurchaseParams({
+    transactionId: input.applicationId,
+    value: input.value,
+    currency: input.currency,
+  });
   if (!purchase) return;
   try {
     const key = purchaseDedupeKey(input.applicationId);

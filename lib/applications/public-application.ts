@@ -1,8 +1,14 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type { application } from "@/lib/db/schema";
 import { computeClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
+import { minorUnitsToMajor } from "@/lib/pricing/format-minor-units";
 
 type ApplicationRow = InferSelectModel<typeof application>;
+
+export type TApplicationCharge = {
+  amountMinor: bigint;
+  currency: string;
+};
 
 /**
  * Shape returned from public application endpoints. Fields surfaced here are
@@ -11,7 +17,7 @@ type ApplicationRow = InferSelectModel<typeof application>;
  * intentionally omitted — callers only need to know whether a field was
  * auto-filled (server handles that internally).
  */
-export function toPublicApplication(row: ApplicationRow) {
+export function toPublicApplication(row: ApplicationRow, charge?: TApplicationCharge | null) {
   const clientTracking = computeClientApplicationTracking({
     applicationStatus: row.applicationStatus,
     paymentStatus: row.paymentStatus,
@@ -34,6 +40,8 @@ export function toPublicApplication(row: ApplicationRow) {
     guestEmail: row.guestEmail,
     checkoutState: row.checkoutState,
     adminAttentionRequired: row.adminAttentionRequired,
+    chargedAmountMajor: charge ? minorUnitsToMajor(charge.amountMinor) : null,
+    chargedCurrency: charge?.currency?.trim().toUpperCase() || null,
 
     applicant: {
       fullName: row.fullName,
