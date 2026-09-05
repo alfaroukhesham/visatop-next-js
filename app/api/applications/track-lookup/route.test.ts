@@ -5,17 +5,34 @@ vi.mock("next/headers", () => ({
 }));
 
 vi.mock("@/lib/db/actor-context", () => ({
-  withSystemDbActor: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn({})),
+  withSystemDbActor: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(txMock)),
 }));
 
-vi.mock("@/lib/applications/track-lookup", () => ({
-  findApplicationsForContactTrackLookupPaginated: vi.fn(),
-  isValidTrackContact: vi.fn(),
-}));
+vi.mock("@/lib/applications/track-lookup", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/applications/track-lookup")>();
+  return {
+    ...actual,
+    findApplicationsForContactTrackLookupPaginated: vi.fn(),
+    isValidTrackContact: vi.fn(),
+  };
+});
 
+import { nationality, visaService } from "@/lib/db/schema";
 import * as actor from "@/lib/db/actor-context";
 import * as trackLookup from "@/lib/applications/track-lookup";
 import { POST } from "./route";
+
+const txMock = {
+  select: () => ({
+    from: (table: unknown) => ({
+      where: async () => {
+        if (table === visaService) return [{ id: "svc-1", name: "Tourist Visa" }];
+        if (table === nationality) return [{ code: "US", name: "United States" }];
+        return [];
+      },
+    }),
+  }),
+};
 
 const row = {
   id: "aaaaaaaa-bbbb-5ccc-dddd-eeeeeeeeeeee",
@@ -55,6 +72,9 @@ describe("POST /api/applications/track-lookup", () => {
     expect(body.data.applications).toHaveLength(1);
     expect(body.data.applications[0].applicationId).toBe(row.id);
     expect(body.data.applications[0].referenceDisplay).toBe("REF-1");
+    expect(body.data.applications[0].serviceName).toBe("Tourist Visa");
+    expect(body.data.applications[0].nationalityName).toBe("United States");
+    expect(body.data.applications[0].serviceName).not.toBe("svc-1");
     expect(body.data.applications[0].clientTracking.headline).toBeTruthy();
     expect(body.data.nextCursor).toBeNull();
     expect(actor.withSystemDbActor).toHaveBeenCalledTimes(1);

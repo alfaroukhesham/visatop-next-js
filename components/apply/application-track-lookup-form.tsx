@@ -16,6 +16,8 @@ type TrackApplicationRow = {
   referenceDisplay: string;
   nationalityCode: string;
   serviceId: string;
+  serviceName: string;
+  nationalityName: string;
   clientTracking: ClientApplicationTracking;
 };
 
@@ -142,7 +144,7 @@ export function ApplicationTrackLookupForm() {
                     <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Reference</p>
                     <p className="font-mono text-sm text-foreground">{row.referenceDisplay}</p>
                     <p className="text-muted-foreground text-xs">
-                      Service {row.serviceId} · Nationality {row.nationalityCode}
+                      {row.serviceName} · {row.nationalityName}
                     </p>
                   </div>
                   <ApplicationClientTracking tracking={row.clientTracking} />

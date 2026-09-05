@@ -32,6 +32,7 @@ const ALLOWED_TYPES: readonly DocumentType[] = [
   DOCUMENT_TYPE.PASSPORT_COPY,
   DOCUMENT_TYPE.PERSONAL_PHOTO,
   DOCUMENT_TYPE.SUPPORTING,
+  DOCUMENT_TYPE.BANK_STATEMENT_6M,
 ];
 
 function isDocumentType(v: string): v is DocumentType {

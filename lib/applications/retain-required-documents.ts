@@ -4,10 +4,11 @@
  * Invoked from the idempotent payment webhook in the same DB transaction that
  * sets `paymentStatus = paid`. Callers use `withSystemDbActor` (no user session).
  *
- * **Partial retain:** For each of `passport_copy` and `personal_photo`, if the
- * latest row is `uploaded_temp` **with** blob bytes, flip it to `retained` and
- * set `retainedAt` / clear `tempExpiresAt`. Missing types are skipped (paid
- * with no uploads yet is success with zero ids). If a type has `uploaded_temp`
+ * **Partial retain:** For each of `passport_copy`, `personal_photo`, and
+ * `bank_statement_6m` (optional-to-retain, skipped if absent), if the latest
+ * row is `uploaded_temp` **with** blob bytes, flip it to `retained` and set
+ * `retainedAt` / clear `tempExpiresAt`. Missing types are skipped (paid with
+ * no uploads yet is success with zero ids). If a type has `uploaded_temp`
  * **without** bytes, retain **all good types first**, then return
  * `BLOB_BYTES_MISSING` so the webhook can flag `adminAttentionRequired`.
  */
@@ -35,6 +36,7 @@ export type RetentionResult = RetentionSuccess | RetentionFailure;
 export const REQUIRED_RETENTION_TYPES: readonly DocumentType[] = [
   DOCUMENT_TYPE.PASSPORT_COPY,
   DOCUMENT_TYPE.PERSONAL_PHOTO,
+  DOCUMENT_TYPE.BANK_STATEMENT_6M,
 ] as const;
 
 async function findLatestTempDocumentId(

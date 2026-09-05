@@ -141,6 +141,7 @@ export const DOCUMENT_TYPE = {
   PASSPORT_COPY: "passport_copy",
   PERSONAL_PHOTO: "personal_photo",
   SUPPORTING: "supporting",
+  BANK_STATEMENT_6M: "bank_statement_6m",
   /** Optional admin uploads while processing (non-terminal steps). */
   ADMIN_STEP_ATTACHMENT: "admin_step_attachment",
   /** Required when marking application completed (visa / approval pack). */

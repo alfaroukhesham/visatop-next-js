@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 
-import { and, desc, eq, lt, or } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, or } from "drizzle-orm";
 
 import { decodeCursor, encodeCursor, parseLimit } from "@/lib/api/cursor";
 import { jsonError, jsonOk } from "@/lib/api/response";
@@ -9,9 +9,11 @@ import {
   normalizeSignedInTrackEmail,
   signedInPortalTrackRowFilter,
 } from "@/lib/applications/portal-track-application-access";
-import { computeClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
+import { mapTrackLookupRow } from "@/lib/applications/track-lookup";
+import { nationalityDisplayName } from "@/lib/apply/display-names";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { application } from "@/lib/db/schema/applications";
+import { nationality, visaService } from "@/lib/db/schema/visa";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,7 +47,7 @@ export async function GET(req: Request) {
   const limit = parseLimit(url.searchParams.get("limit"), { defaultLimit: 5, max: 50 });
   const cursor = decodeCursor(url.searchParams.get("cursor"));
 
-  const rows = await withSystemDbActor(async (tx) => {
+  const { rows, services, nationalities } = await withSystemDbActor(async (tx) => {
     const cursorWhere = cursor
       ? or(
           lt(application.createdAt, new Date(cursor.createdAt)),
@@ -55,7 +57,7 @@ export async function GET(req: Request) {
 
     const where = signedInPortalTrackRowFilter(session.user.id, email);
 
-    return tx
+    const rows = await tx
       .select({
         id: application.id,
         referenceNumber: application.referenceNumber,
@@ -72,6 +74,23 @@ export async function GET(req: Request) {
       .where(cursorWhere ? and(where, cursorWhere) : where)
       .orderBy(desc(application.createdAt), desc(application.id))
       .limit(limit + 1);
+
+    const serviceIds = [...new Set(rows.map((r) => r.serviceId))];
+    const nationalityCodes = [...new Set(rows.map((r) => r.nationalityCode))];
+    const services = serviceIds.length
+      ? await tx
+          .select({ id: visaService.id, name: visaService.name })
+          .from(visaService)
+          .where(inArray(visaService.id, serviceIds))
+      : [];
+    const nationalities = nationalityCodes.length
+      ? await tx
+          .select({ code: nationality.code, name: nationality.name })
+          .from(nationality)
+          .where(inArray(nationality.code, nationalityCodes))
+      : [];
+
+    return { rows, services, nationalities };
   });
 
   const hasMore = rows.length > limit;
@@ -83,18 +102,12 @@ export async function GET(req: Request) {
   return jsonOk(
     {
       items: slice.map((r) => ({
-        applicationId: r.id,
-        referenceDisplay: r.referenceNumber ?? r.id.slice(0, 8),
-        nationalityCode: r.nationalityCode,
-        serviceId: r.serviceId,
+        ...mapTrackLookupRow(r, {
+          serviceName: services.find((s) => s.id === r.serviceId)?.name ?? null,
+          nationalityName: nationalityDisplayName(r.nationalityCode, nationalities),
+        }),
         paymentStatus: r.paymentStatus,
         draftExpiresAt: r.draftExpiresAt ? r.draftExpiresAt.toISOString() : null,
-        clientTracking: computeClientApplicationTracking({
-          applicationStatus: r.applicationStatus,
-          paymentStatus: r.paymentStatus,
-          fulfillmentStatus: r.fulfillmentStatus,
-          adminAttentionRequired: r.adminAttentionRequired,
-        }),
       })),
       nextCursor,
     },

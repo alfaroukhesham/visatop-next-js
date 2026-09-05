@@ -3,6 +3,7 @@ import type { DbTransaction } from "@/lib/db";
 import { application, user } from "@/lib/db/schema";
 import type { InferSelectModel } from "drizzle-orm";
 import type { Cursor } from "@/lib/api/cursor";
+import { computeClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
 
 type ApplicationRow = InferSelectModel<typeof application>;
 
@@ -106,4 +107,48 @@ export async function findApplicationsForContactTrackLookupPaginated(
   const apps = rows.map((r) => r.app);
   const hasMore = apps.length > limit;
   return { items: hasMore ? apps.slice(0, limit) : apps, hasMore };
+}
+
+export type TrackLookupDisplayRow = {
+  applicationId: string;
+  referenceDisplay: string;
+  nationalityCode: string;
+  serviceId: string;
+  serviceName: string;
+  nationalityName: string;
+  clientTracking: ReturnType<typeof computeClientApplicationTracking>;
+};
+
+/**
+ * Maps a track-lookup application row into the customer-facing display shape.
+ * `serviceName` falls back to a generic "Visa" (never the raw id/UUID); `nationalityName`
+ * is already resolved to a display name (ISO fallback handled by the caller).
+ */
+export function mapTrackLookupRow(
+  row: {
+    id: string;
+    referenceNumber: string | null;
+    nationalityCode: string;
+    serviceId: string;
+    applicationStatus: string;
+    paymentStatus: string;
+    fulfillmentStatus: string;
+    adminAttentionRequired: boolean;
+  },
+  names: { serviceName: string | null; nationalityName: string },
+): TrackLookupDisplayRow {
+  return {
+    applicationId: row.id,
+    referenceDisplay: row.referenceNumber ?? row.id.slice(0, 8),
+    nationalityCode: row.nationalityCode,
+    serviceId: row.serviceId,
+    serviceName: names.serviceName ?? "Visa",
+    nationalityName: names.nationalityName,
+    clientTracking: computeClientApplicationTracking({
+      applicationStatus: row.applicationStatus,
+      paymentStatus: row.paymentStatus,
+      fulfillmentStatus: row.fulfillmentStatus,
+      adminAttentionRequired: row.adminAttentionRequired,
+    }),
+  };
 }

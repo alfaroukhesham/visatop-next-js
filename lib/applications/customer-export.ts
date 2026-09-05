@@ -20,6 +20,7 @@ import { formatMinorUnitsAmount } from "@/lib/pricing/format-minor-units";
 export const CUSTOMER_UPLOAD_DOCUMENT_TYPES = [
   DOCUMENT_TYPE.PASSPORT_COPY,
   DOCUMENT_TYPE.PERSONAL_PHOTO,
+  DOCUMENT_TYPE.BANK_STATEMENT_6M,
   DOCUMENT_TYPE.SUPPORTING,
 ] as const satisfies readonly DocumentType[];
 
