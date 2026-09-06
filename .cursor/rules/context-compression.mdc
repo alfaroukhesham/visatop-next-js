@@ -22,6 +22,7 @@ Avoid aggressive prose-only compression that drops **paths, error strings, and d
 
 ## Pairing with graphify
 
-- Use **graphify** outputs (`graphify-out/`, wiki) for **navigation and surprise discovery** across many files.
-- Use **structured summaries** above for **conversation / plan** continuity.
+- Query first: `graphify query "<question>" --budget 1200`. Do not ingest the full `GRAPH_REPORT.md`.
+- Use the graph for **navigation**; use structured summaries above for **conversation / plan** continuity.
 - Do not treat the graph as a substitute for reading the exact source before a precise edit.
+

@@ -82,6 +82,31 @@ describe("GET /api/admin/catalog/document-requirements", () => {
     expect(frCountry.services).toHaveLength(1);
     spy.mockRestore();
   });
+
+  it("returns countries that already have this document assigned", async () => {
+    mockSession();
+    mockActor(["catalog.read"]);
+    const listMod = await import("@/lib/admin/catalog/list-catalog-document-requirement-countries");
+    const spy = vi.spyOn(listMod, "listCatalogDocumentRequirementCountries").mockResolvedValue([
+      { code: "IN", name: "India", serviceCount: 8 },
+      { code: "EG", name: "Egypt", serviceCount: 3 },
+    ]);
+
+    const res = await GET(
+      new Request(
+        "http://localhost/api/admin/catalog/document-requirements?group=countries&documentType=bank_statement_6m",
+      ),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.data.countries).toEqual([
+      { code: "IN", name: "India", serviceCount: 8 },
+      { code: "EG", name: "Egypt", serviceCount: 3 },
+    ]);
+    expect(spy).toHaveBeenCalledWith(expect.anything(), "bank_statement_6m");
+    spy.mockRestore();
+  });
 });
 
 describe("POST /api/admin/catalog/document-requirements/preview", () => {

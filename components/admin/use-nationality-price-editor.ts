@@ -155,13 +155,6 @@ export function useNationalityPriceEditor(nationalities: NationalityOption[]) {
   }
 
   async function cleanupOrphans() {
-    if (
-      !window.confirm(
-        "Remove duplicate empty services (from repeated imports), eligibility without prices, and other unused catalog rows? This cannot be undone.",
-      )
-    ) {
-      return;
-    }
     dispatch({ type: "SET_CLEANING", value: true });
     dispatch({ type: "CLEAR_FEEDBACK" });
     try {

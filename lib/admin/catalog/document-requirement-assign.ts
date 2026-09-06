@@ -2,9 +2,9 @@ import { inArray } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import {
-  ASSIGNABLE_DOCUMENT_TYPE_KEYS,
-  FLOOR_DOCUMENT_TYPE_KEYS,
-} from "@/lib/apply/document-slot-catalog";
+  DOCUMENT_TYPE_KEY_RE,
+  isReservedDocumentTypeKey,
+} from "@/lib/admin/catalog/document-type";
 
 export const DOCUMENT_REQUIREMENT_PAIR_LIMIT = 2000;
 
@@ -52,10 +52,15 @@ const dedupePairs = (pairs: TDocumentRequirementPair[]): TDocumentRequirementPai
   return [...seen.values()];
 };
 
-const assertValidType = (documentType: string): void => {
-  const assignable = ASSIGNABLE_DOCUMENT_TYPE_KEYS as readonly string[];
-  const floor = FLOOR_DOCUMENT_TYPE_KEYS as readonly string[];
-  if (!assignable.includes(documentType) || floor.includes(documentType)) {
+const assertValidType = async (tx: DbTransaction, documentType: string): Promise<void> => {
+  if (!DOCUMENT_TYPE_KEY_RE.test(documentType) || isReservedDocumentTypeKey(documentType)) {
+    throw { code: "DOCUMENT_REQUIREMENTS_TYPE_INVALID" };
+  }
+  const rows = await tx
+    .select({ key: schema.catalogDocumentType.key })
+    .from(schema.catalogDocumentType)
+    .where(inArray(schema.catalogDocumentType.key, [documentType]));
+  if (rows.length === 0) {
     throw { code: "DOCUMENT_REQUIREMENTS_TYPE_INVALID" };
   }
 };
@@ -98,7 +103,7 @@ export const previewDocumentRequirementAssign = async (
   input: TDocumentRequirementAssignInput,
 ): Promise<TDocumentRequirementAssignPreview> => {
   const pairs = dedupePairs(input.pairs);
-  assertValidType(input.documentType);
+  await assertValidType(tx, input.documentType);
   assertPairCount(pairs);
   await assertRefsExist(tx, pairs);
 
@@ -165,7 +170,7 @@ export const assignDocumentRequirements = async (
   input: TDocumentRequirementAssignInput,
 ): Promise<TDocumentRequirementAssignResult> => {
   const pairs = dedupePairs(input.pairs);
-  assertValidType(input.documentType);
+  await assertValidType(tx, input.documentType);
   assertPairCount(pairs);
   await assertRefsExist(tx, pairs);
 

@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useState, type FC } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Label } from "@/components/ui/label";
 import { CardContent, CardFooter } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -10,18 +12,21 @@ import { NationalityPriceEditorTable } from "@/components/admin/nationality-pric
 import type { useNationalityPriceEditor } from "@/components/admin/use-nationality-price-editor";
 import type { NationalityOption } from "@/components/admin/use-nationality-price-editor";
 
-type EditorApi = ReturnType<typeof useNationalityPriceEditor>;
+type TEditorApi = ReturnType<typeof useNationalityPriceEditor>;
 
-export function NationalityPriceEditorCard({
+interface INationalityPriceEditorCardProps {
+  nationalities: NationalityOption[];
+  canWrite: boolean;
+  editor: TEditorApi;
+}
+
+export const NationalityPriceEditorCard: FC<INationalityPriceEditorCardProps> = ({
   nationalities,
   canWrite,
   editor,
-}: {
-  nationalities: NationalityOption[];
-  canWrite: boolean;
-  editor: EditorApi;
-}) {
+}) => {
   const { state, dispatch, selectedNat, handleNationalityChange, savePrices, cleanupOrphans } = editor;
+  const [cleanupOpen, setCleanupOpen] = useState(false);
 
   return (
     <>
@@ -69,7 +74,7 @@ export function NationalityPriceEditorCard({
               size="sm"
               className="rounded-none"
               disabled={state.cleaning || state.saving}
-              onClick={() => void cleanupOrphans()}
+              onClick={() => setCleanupOpen(true)}
             >
               {state.cleaning ? <Loader2 className="size-4 animate-spin" /> : null}
               Clean up orphan catalog data
@@ -138,6 +143,18 @@ export function NationalityPriceEditorCard({
           ) : null}
         </CardFooter>
       ) : null}
+      <ConfirmDialog
+        open={cleanupOpen}
+        onOpenChange={setCleanupOpen}
+        title="Clean up orphan catalog data?"
+        description="Remove duplicate empty services (from repeated imports), eligibility without prices, and other unused catalog rows? This cannot be undone."
+        confirmLabel="Clean up"
+        confirmVariant="destructive"
+        confirmBusy={state.cleaning}
+        onConfirm={() => {
+          void cleanupOrphans().then(() => setCleanupOpen(false));
+        }}
+      />
     </>
   );
-}
+};

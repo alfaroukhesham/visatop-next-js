@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useReducer } from "react";
 import { AdminListFilters } from "@/components/admin/admin-list-filters";
 import { CatalogEligibilityLinkForm } from "@/components/admin/catalog-eligibility-link-form";
@@ -156,8 +157,12 @@ export function CatalogEligibilitySection({
       <CardHeader className="border-border bg-muted/20 border-b">
         <CardTitle className="font-heading text-lg">Service ↔ nationality eligibility</CardTitle>
         <CardDescription>
-          Loaded in pages from the server ({eligPage.total.toLocaleString()} links). Controls which
-          combinations appear in the public services list.
+          Loaded in pages from the server ({eligPage.total.toLocaleString()} links). Extra documents
+          are assigned on{" "}
+          <Link href="/admin/document-rules" className="underline underline-offset-4">
+            Document rules
+          </Link>
+          .
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 p-4">

@@ -1,11 +1,11 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Camera, Loader2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
 import { ClientField } from "@/components/client/client-field";
 import { apiHref } from "@/lib/app-href";
-import { customerUploadStateLabel } from "@/lib/apply/customer-upload-copy";
+import { customerUploadStateLabel, oversizedUploadMessage } from "@/lib/apply/customer-upload-copy";
 import { MIME_BY_TYPE, UPLOAD_MAX_BYTES, type DocType, type PublicDocument } from "./types";
 
 export function DocumentUploadSlot({
@@ -29,12 +29,18 @@ export function DocumentUploadSlot({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const cameraFacing = docType === "personal_photo" ? "user" : "environment";
+  const [sizeError, setSizeError] = useState<string | null>(null);
 
   const handleFileChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     e.target.value = "";
     if (!file) return;
-    if (file.size > UPLOAD_MAX_BYTES) return;
+    const tooLarge = oversizedUploadMessage(file.size, UPLOAD_MAX_BYTES);
+    if (tooLarge) {
+      setSizeError(tooLarge);
+      return;
+    }
+    setSizeError(null);
     onUpload(file);
   };
 
@@ -81,6 +87,11 @@ export function DocumentUploadSlot({
           tabIndex={-1}
           aria-hidden
         />
+        {sizeError ? (
+          <p className="text-destructive text-xs" role="alert">
+            {sizeError}
+          </p>
+        ) : null}
         {uploading ? (
           <div className="flex items-center gap-2 text-xs text-muted-foreground py-1" role="status">
             <Loader2 className="size-4 animate-spin" aria-hidden />

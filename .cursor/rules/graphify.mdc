@@ -1,19 +1,30 @@
 ---
-description: graphify knowledge graph context (when graphify-out exists)
+description: Use graphify first (1200-token query budget) before exploring the repo
 alwaysApply: true
 ---
 
-This repo can use **graphify** outputs under `graphify-out/` after you run `graphify` on the codebase (CLI: `graphify` from the `graphifyy` PyPI package, e.g. `pipx install graphifyy`).
+# Graphify first (1200-token budget)
 
-**When `graphify-out/GRAPH_REPORT.md` exists**
+This repo has a knowledge graph at `graphify-out/`. Keep it current with `graphify watch .` (AST rebuilds on code changes; no extra process manager).
 
-- Prefer reading `graphify-out/GRAPH_REPORT.md` before very broad architecture questions (god nodes, communities, suggested questions).
-- If `graphify-out/wiki/index.md` exists, use the wiki as a navigation index instead of rereading large raw areas blindly.
+**Before Read, Grep, Glob, or Shell exploration, query the graph first.** This applies to you and every subagent you spawn — pass this rule into those prompts.
 
-**Keeping the graph fresh**
+```bash
+graphify query "<question>" --budget 1200
+```
 
-- After meaningful code edits in an area that is already graphed, run `graphify update .` when you want the code graph refreshed (AST-oriented update path; see graphify docs for limits).
+- Relationships: `graphify path "<A>" "<B>"`
+- One concept: `graphify explain "<concept>"`
+- Hubs only if needed: `graphify god-nodes --top 8`
 
-**If outputs are missing**
+Do **not** read all of `GRAPH_REPORT.md` (it is large). Stay inside the 1200-token query result, then open only cited source files.
 
-- Run `/graphify .` (or `graphify` CLI on the repo root) once to generate `graphify-out/`. Until then, skip graph-specific steps and use normal code search.
+Skip graphify only when `graphify-out/graph.json` is missing, or the user says not to use it. Dirty `graphify-out/` files are expected.
+
+Do **not** run `graphify update .` after every edit — `graphify watch` and the post-commit hook do AST rebuilds. Run `graphify update .` only if watch is not running or `graphify-out/needs_update` exists.
+
+The graph is a map, not a substitute for reading the exact lines you will edit.
+
+## Complementary: RTK
+
+RTK compresses **Shell** output (git, pnpm, lint, test, next build). Cursor rewrites those commands automatically. Do not re-run a command just to get full logs; if output is insufficient, read the tee path printed on failure.

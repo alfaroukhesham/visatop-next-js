@@ -13,8 +13,21 @@ import {
 import { loadCatalogPage } from "@/lib/admin/catalog/load-catalog-page";
 import { getAdminUserId } from "@/lib/admin/get-admin-session";
 
-export default async function AdminCatalogPage() {
-  const adminUserId = await getAdminUserId();
+function normalizePrefillNat(value: string | string[] | undefined): string | undefined {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw !== "string") return undefined;
+  const t = raw.trim().toUpperCase();
+  if (t.length !== 2 || !/^[A-Z]{2}$/.test(t)) return undefined;
+  return t;
+}
+
+type PageProps = {
+  searchParams: Promise<{ prefillNat?: string | string[] }>;
+};
+
+export default async function AdminCatalogPage({ searchParams }: PageProps) {
+  const [adminUserId, sp] = await Promise.all([getAdminUserId(), searchParams]);
+  const initialPrefillNat = normalizePrefillNat(sp.prefillNat);
   const view = await loadCatalogPage(adminUserId);
 
   if (view.kind === "forbidden") {
@@ -55,6 +68,7 @@ export default async function AdminCatalogPage() {
         nationalities={nationalities}
         services={services}
         canWrite={view.canWrite}
+        initialPrefillNat={initialPrefillNat}
       />
     </AdminShell>
   );

@@ -14,6 +14,11 @@ import { withClientDbActor, withSystemDbActor } from "@/lib/db/actor-context";
 import type { DocumentType } from "@/lib/db/schema";
 import { DOCUMENT_TYPE } from "@/lib/db/schema";
 import {
+  DOCUMENT_TYPE_KEY_RE,
+  getCatalogDocumentType,
+  isReservedDocumentTypeKey,
+} from "@/lib/admin/catalog/document-type";
+import {
   CorruptImageError,
   NORMALIZED_CONTENT_TYPE,
 } from "@/lib/documents/normalize-image";
@@ -35,9 +40,8 @@ const ALLOWED_TYPES: readonly DocumentType[] = [
   DOCUMENT_TYPE.BANK_STATEMENT_6M,
 ];
 
-function isDocumentType(v: string): v is DocumentType {
-  return (ALLOWED_TYPES as readonly string[]).includes(v);
-}
+const isBuiltInUploadType = (v: string): v is DocumentType =>
+  (ALLOWED_TYPES as readonly string[]).includes(v);
 
 export async function POST(
   req: Request,
@@ -75,13 +79,35 @@ export async function POST(
   }
 
   const rawType = form.get("documentType");
-  if (typeof rawType !== "string" || !isDocumentType(rawType)) {
+  if (typeof rawType !== "string" || rawType.length === 0) {
     return jsonError("VALIDATION_ERROR", "documentType is required.", {
       status: 400,
       requestId,
     });
   }
-  const documentType: DocumentType = rawType;
+  let documentType: DocumentType | string = rawType;
+  if (!isBuiltInUploadType(rawType)) {
+    if (isReservedDocumentTypeKey(rawType) || !DOCUMENT_TYPE_KEY_RE.test(rawType)) {
+      return jsonError("VALIDATION_ERROR", "documentType is required.", {
+        status: 400,
+        requestId,
+      });
+    }
+    const registered = await withSystemDbActor(async (tx) => {
+      try {
+        return await getCatalogDocumentType(tx, rawType);
+      } catch {
+        return null;
+      }
+    });
+    if (!registered) {
+      return jsonError("VALIDATION_ERROR", "documentType is required.", {
+        status: 400,
+        requestId,
+      });
+    }
+    documentType = rawType;
+  }
 
   const fileEntry = form.get("file");
   if (!(fileEntry instanceof Blob)) {
@@ -105,7 +131,10 @@ export async function POST(
   }
 
   const mime = fileEntry.type || "";
-  const mimeAllow = UPLOAD_MIME_ALLOWLIST[documentType];
+  const mimeAllow =
+    documentType in UPLOAD_MIME_ALLOWLIST
+      ? UPLOAD_MIME_ALLOWLIST[documentType as DocumentType]
+      : (["image/jpeg", "image/png", "application/pdf"] as const);
   if (!mimeAllow.includes(mime)) {
     return jsonError("UNSUPPORTED_TYPE", "File type is not allowed for this document.", {
       status: 415,
@@ -185,7 +214,7 @@ export async function POST(
   const persist = async (tx: Parameters<Parameters<typeof withSystemDbActor>[0]>[0]) =>
     persistUploadedDocument(tx, {
       applicationId,
-      documentType,
+      documentType: documentType as DocumentType,
       sha256: normalized.sha256,
       contentType: normalized.contentType,
       byteLength: normalized.byteLength,

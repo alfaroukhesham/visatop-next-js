@@ -8,7 +8,7 @@ export type TDocumentSlotKey =
   | typeof DOCUMENT_TYPE.BANK_STATEMENT_6M;
 
 export type TDocumentSlot = {
-  key: TDocumentSlotKey;
+  key: string;
   label: string;
   description: string;
   role: TDocSlotRole;

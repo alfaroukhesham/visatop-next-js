@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { customerUploadStateLabel } from "./customer-upload-copy";
+import { customerUploadStateLabel, oversizedUploadMessage } from "./customer-upload-copy";
 
 describe("customerUploadStateLabel", () => {
   it("returns Uploaded when a document exists", () => {
@@ -15,5 +15,18 @@ describe("customerUploadStateLabel", () => {
     for (const label of labels) {
       expect(label).not.toMatch(/byte|kb|filename|original/i);
     }
+  });
+});
+
+describe("oversizedUploadMessage", () => {
+  const maxBytes = 8 * 1024 * 1024;
+
+  it("returns a customer message when the file is over the limit", () => {
+    expect(oversizedUploadMessage(maxBytes + 1, maxBytes)).toBe("File exceeds 8MB limit.");
+  });
+
+  it("returns null when the file is within the limit", () => {
+    expect(oversizedUploadMessage(maxBytes, maxBytes)).toBeNull();
+    expect(oversizedUploadMessage(0, maxBytes)).toBeNull();
   });
 });

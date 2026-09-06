@@ -1,10 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useReducer, useState } from "react";
+import { useEffect, useMemo, useReducer, useState } from "react";
 import { Loader2, Plus, Search } from "lucide-react";
 import { CatalogEligibilitySection } from "@/components/admin/catalog-eligibility-section";
-import { CatalogDocumentRulesSection } from "@/components/admin/catalog-document-rules-section";
 import { ListPaginatorBar } from "@/components/admin/list-paginator-bar";
 import { usePaginatedList } from "@/components/admin/use-paginated-list";
 import type {
@@ -78,19 +77,20 @@ type Props = {
   nationalities: CatalogNationality[];
   services: CatalogService[];
   canWrite: boolean;
+  initialPrefillNat?: string;
 };
 
 export function AdminCatalogWorkspace({
   nationalities,
   services,
   canWrite,
+  initialPrefillNat,
 }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [banner, setBanner] = useState<{ type: "ok" | "err"; text: string } | null>(null);
-  const [eligibilityPrefill, setEligibilityPrefill] = useState<string | undefined>(undefined);
-  const [eligibilityPrefillEpoch, setEligibilityPrefillEpoch] = useState(0);
-  const [pickerRefreshKey, setPickerRefreshKey] = useState(0);
+  const [eligibilityPrefill] = useState(initialPrefillNat);
+  const [eligibilityPrefillEpoch] = useState(initialPrefillNat ? 1 : 0);
 
   function flash(msg: string, err = false) {
     setBanner({ type: err ? "err" : "ok", text: msg });
@@ -106,6 +106,11 @@ export function AdminCatalogWorkspace({
       setBusy(null);
     }
   }
+
+  useEffect(() => {
+    if (!initialPrefillNat) return;
+    document.getElementById("catalog-eligibility")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [initialPrefillNat]);
 
   return (
     <div className="space-y-10">
@@ -138,18 +143,6 @@ export function AdminCatalogWorkspace({
         flash={flash}
         prefillNationalityCode={eligibilityPrefill}
         prefillEpoch={eligibilityPrefillEpoch}
-        onEligibilityChanged={() => setPickerRefreshKey((n) => n + 1)}
-      />
-      <CatalogDocumentRulesSection
-        canWrite={canWrite}
-        busy={busy !== null}
-        flash={flash}
-        pickerRefreshKey={pickerRefreshKey}
-        onAddEligibility={(nationalityCode) => {
-          setEligibilityPrefill(nationalityCode);
-          setEligibilityPrefillEpoch((n) => n + 1);
-          document.getElementById("catalog-eligibility")?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }}
       />
     </div>
   );

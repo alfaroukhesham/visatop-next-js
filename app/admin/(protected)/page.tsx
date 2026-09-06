@@ -2,10 +2,10 @@ import Link from "next/link";
 import {
   ArrowRight,
   Banknote,
+  ClipboardList,
   FileStack,
   Globe2,
   SlidersHorizontal,
-  Sparkles,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -21,6 +21,12 @@ const links = [
     title: "Services & nationalities",
     description: "Manage services and nationalities.",
     icon: Globe2,
+  },
+  {
+    href: "/admin/document-rules",
+    title: "Document rules",
+    description: "Assign extra documents to each country’s eligible products.",
+    icon: ClipboardList,
   },
   {
     href: "/admin/pricing",

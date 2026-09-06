@@ -1,23 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FC } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { apiHref } from "@/lib/app-href";
 
-export function ApplicationActions({
-  applicationId,
-  hasAttention,
-}: {
+interface IApplicationActionsProps {
   applicationId: string;
   hasAttention: boolean;
-}) {
+}
+
+export const ApplicationActions: FC<IApplicationActionsProps> = ({
+  applicationId,
+  hasAttention,
+}) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  async function clearAttention() {
+  const clearAttention = async () => {
     setLoading(true);
     setMsg(null);
     try {
@@ -33,15 +37,9 @@ export function ApplicationActions({
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  async function deleteApp() {
-    if (
-      !confirm(
-        "Delete this application permanently? All documents and payment records will be removed. This cannot be undone."
-      )
-    )
-      return;
+  const deleteApp = async () => {
     setLoading(true);
     setMsg(null);
     try {
@@ -51,15 +49,17 @@ export function ApplicationActions({
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setMsg(data?.error?.message ?? "Delete failed.");
+        setDeleteOpen(false);
         setLoading(false);
-      } else {
-        router.push("/admin/applications");
+        return;
       }
+      setDeleteOpen(false);
+      router.push("/admin/applications");
     } catch {
       setMsg("Unexpected error.");
       setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="flex flex-col items-end gap-2">
@@ -83,12 +83,22 @@ export function ApplicationActions({
           size="sm"
           className="rounded-none border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
           disabled={loading}
-          onClick={() => void deleteApp()}
+          onClick={() => setDeleteOpen(true)}
         >
           Delete Application
         </Button>
       </div>
       {msg && <p className="text-destructive text-xs">{msg}</p>}
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete this application?"
+        description="Delete this application permanently? All documents and payment records will be removed. This cannot be undone."
+        confirmLabel="Delete application"
+        confirmVariant="destructive"
+        confirmBusy={loading}
+        onConfirm={() => void deleteApp()}
+      />
     </div>
   );
-}
+};

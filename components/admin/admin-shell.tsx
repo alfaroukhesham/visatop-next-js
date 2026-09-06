@@ -2,12 +2,19 @@ import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
-export type AdminNavKey = "home" | "applications" | "catalog" | "pricing" | "settings";
+export type AdminNavKey =
+  | "home"
+  | "applications"
+  | "catalog"
+  | "document-rules"
+  | "pricing"
+  | "settings";
 
 const NAV: { href: string; key: AdminNavKey; label: string }[] = [
   { href: "/admin", key: "home", label: "Overview" },
   { href: "/admin/applications", key: "applications", label: "Applications" },
   { href: "/admin/catalog", key: "catalog", label: "Services" },
+  { href: "/admin/document-rules", key: "document-rules", label: "Document rules" },
   { href: "/admin/pricing", key: "pricing", label: "Pricing" },
   { href: "/admin/settings", key: "settings", label: "Settings" },
 ];

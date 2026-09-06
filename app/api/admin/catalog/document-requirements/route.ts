@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 import { listEligibilityByNationality } from "@/lib/admin/catalog/list-eligibility-by-nationality";
+import { listCatalogDocumentRequirementCountries } from "@/lib/admin/catalog/list-catalog-document-requirement-countries";
 import { listCatalogDocumentRequirements } from "@/lib/admin/catalog/list-catalog-document-requirements";
 import {
   assignDocumentRequirements,
@@ -25,14 +26,18 @@ export const pairSchema = z.object({
   serviceId: z.string().min(1),
 });
 
+const documentTypeSchema = z
+  .string()
+  .regex(/^[a-z][a-z0-9_]{1,62}$/);
+
 export const assignBodySchema = z.object({
-  documentType: z.enum(["bank_statement_6m"]),
+  documentType: documentTypeSchema,
   role: z.enum(["required", "additional"]),
   pairs: z.array(pairSchema).min(1).max(2000),
 });
 
 export const removeBodySchema = z.object({
-  documentType: z.enum(["bank_statement_6m"]),
+  documentType: documentTypeSchema,
   pairs: z.array(pairSchema).min(1).max(2000),
 });
 
@@ -84,6 +89,17 @@ export async function GET(req: Request) {
   if (url.searchParams.get("picker") === "1") {
     return runAdminDbJson(requestId, ["catalog.read"], async ({ tx }) => {
       const countries = await listEligibilityByNationality(tx);
+      return jsonOk({ countries }, { requestId });
+    });
+  }
+
+  if (url.searchParams.get("group") === "countries") {
+    const documentType = url.searchParams.get("documentType")?.trim() ?? "";
+    if (!documentTypeSchema.safeParse(documentType).success) {
+      return jsonError("VALIDATION_ERROR", "documentType is required", { status: 400, requestId });
+    }
+    return runAdminDbJson(requestId, ["catalog.read"], async ({ tx }) => {
+      const countries = await listCatalogDocumentRequirementCountries(tx, documentType);
       return jsonOk({ countries }, { requestId });
     });
   }

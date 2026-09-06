@@ -20,6 +20,7 @@ type Store = {
   visa_service: Set<string>;
   visa_service_eligibility: Set<string>;
   catalog_customer_price: Set<string>;
+  catalog_document_type: Set<string>;
   catalog_document_requirement: ReqRow[];
 };
 
@@ -28,6 +29,7 @@ type StoreInit = {
   visa_service?: string[];
   visa_service_eligibility?: string[];
   catalog_customer_price?: string[];
+  catalog_document_type?: string[];
   catalog_document_requirement?: ReqRow[];
 };
 
@@ -37,6 +39,7 @@ function makeStore(init?: StoreInit): Store {
     visa_service: new Set(init?.visa_service ?? []),
     visa_service_eligibility: new Set(init?.visa_service_eligibility ?? []),
     catalog_customer_price: new Set(init?.catalog_customer_price ?? []),
+    catalog_document_type: new Set(init?.catalog_document_type ?? ["bank_statement_6m"]),
     catalog_document_requirement: init?.catalog_document_requirement ?? [],
   };
 }
@@ -84,6 +87,8 @@ function rowsForTable(store: Store, tableName: string): Record<string, unknown>[
       });
     case "catalog_document_requirement":
       return store.catalog_document_requirement;
+    case "catalog_document_type":
+      return [...store.catalog_document_type].map((key) => ({ key }));
     default:
       return [];
   }
@@ -309,6 +314,22 @@ describe("assignDocumentRequirements", () => {
     await expect(
       assignDocumentRequirements(tx, { ...base, pairs: many }),
     ).rejects.toMatchObject({ code: "DOCUMENT_REQUIREMENTS_PAIR_LIMIT" });
+  });
+
+  it("assigns an admin-created document type that is registered", async () => {
+    const store = makeStore({
+      nationality: ["US"],
+      visa_service: ["svc1"],
+      catalog_document_type: ["bank_statement_6m", "invitation_letter"],
+    });
+    const tx = makeTx(store);
+    const result = await assignDocumentRequirements(tx, {
+      documentType: "invitation_letter",
+      role: "additional",
+      pairs: [{ nationalityCode: "US", serviceId: "svc1" }],
+    });
+    expect(result).toEqual({ pairCount: 1, eligibilityCreated: 1, upserted: 1 });
+    expect(store.catalog_document_requirement[0]?.document_type).toBe("invitation_letter");
   });
 
   it("dedupes duplicate pairs and uppercases nationality codes", async () => {

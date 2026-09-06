@@ -14,8 +14,10 @@ import {
   type CatalogDocumentRequirementFilters,
 } from "@/components/admin/use-catalog-document-requirements-page";
 import { removeOneDocumentRequirement } from "@/lib/admin/catalog/document-requirement-mutations";
+import { humanizeDocumentTypeKey } from "@/lib/admin/catalog/document-type";
 import { slotForDocumentType } from "@/lib/apply/document-slot-catalog";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 
 interface ICatalogDocumentRulesTableProps {
@@ -24,6 +26,7 @@ interface ICatalogDocumentRulesTableProps {
   flash: (text: string, err?: boolean) => void;
   onChanged: () => void;
   refreshKey: number;
+  lockedDocumentType?: string;
 }
 
 export const CatalogDocumentRulesTable: FC<ICatalogDocumentRulesTableProps> = ({
@@ -32,10 +35,12 @@ export const CatalogDocumentRulesTable: FC<ICatalogDocumentRulesTableProps> = ({
   flash,
   onChanged,
   refreshKey,
+  lockedDocumentType,
 }) => {
   type UiState = {
     draftFilters: CatalogDocumentRequirementFilters;
     appliedFilters: CatalogDocumentRequirementFilters;
+    pendingRemoveId: string | null;
     removeBusy: string | null;
   };
   type UiAction =
@@ -50,20 +55,33 @@ export const CatalogDocumentRulesTable: FC<ICatalogDocumentRulesTableProps> = ({
         case "clear-filters":
           return {
             ...state,
-            draftFilters: EMPTY_CATALOG_DOCUMENT_REQUIREMENT_FILTERS,
-            appliedFilters: EMPTY_CATALOG_DOCUMENT_REQUIREMENT_FILTERS,
+            draftFilters: {
+              ...EMPTY_CATALOG_DOCUMENT_REQUIREMENT_FILTERS,
+              documentType: lockedDocumentType ?? "",
+            },
+            appliedFilters: {
+              ...EMPTY_CATALOG_DOCUMENT_REQUIREMENT_FILTERS,
+              documentType: lockedDocumentType ?? "",
+            },
           };
         default:
           return state;
       }
     },
     {
-      draftFilters: EMPTY_CATALOG_DOCUMENT_REQUIREMENT_FILTERS,
-      appliedFilters: EMPTY_CATALOG_DOCUMENT_REQUIREMENT_FILTERS,
+      draftFilters: {
+        ...EMPTY_CATALOG_DOCUMENT_REQUIREMENT_FILTERS,
+        documentType: lockedDocumentType ?? "",
+      },
+      appliedFilters: {
+        ...EMPTY_CATALOG_DOCUMENT_REQUIREMENT_FILTERS,
+        documentType: lockedDocumentType ?? "",
+      },
+      pendingRemoveId: null,
       removeBusy: null,
     },
   );
-  const { draftFilters, appliedFilters, removeBusy } = ui;
+  const { draftFilters, appliedFilters, pendingRemoveId, removeBusy } = ui;
   const setDraftFilters = (
     updater:
       | CatalogDocumentRequirementFilters
@@ -78,6 +96,8 @@ export const CatalogDocumentRulesTable: FC<ICatalogDocumentRulesTableProps> = ({
   };
   const setAppliedFilters = (value: CatalogDocumentRequirementFilters) =>
     dispatchUi({ type: "patch", patch: { appliedFilters: value } });
+  const setPendingRemoveId = (value: string | null) =>
+    dispatchUi({ type: "patch", patch: { pendingRemoveId: value } });
   const setRemoveBusy = (value: string | null) =>
     dispatchUi({ type: "patch", patch: { removeBusy: value } });
 
@@ -95,19 +115,21 @@ export const CatalogDocumentRulesTable: FC<ICatalogDocumentRulesTableProps> = ({
   const hasActiveFilters =
     Boolean(appliedFilters.nationalityCode) ||
     Boolean(appliedFilters.serviceId) ||
-    Boolean(appliedFilters.documentType);
+    (!lockedDocumentType && Boolean(appliedFilters.documentType));
+  const showDocumentColumn = !lockedDocumentType;
 
-  const onRemoveOne = async (id: string) => {
-    const ok = window.confirm("Remove this document from this pair. Eligibility stays.");
-    if (!ok) return;
-    setRemoveBusy(id);
+  const onConfirmRemove = async () => {
+    if (!pendingRemoveId) return;
+    setRemoveBusy(pendingRemoveId);
     try {
-      const res = await removeOneDocumentRequirement(id);
+      const res = await removeOneDocumentRequirement(pendingRemoveId);
       if (!res.ok) {
         flash(res.error.message, true);
+        setPendingRemoveId(null);
         return;
       }
       flash("Removed document requirement.");
+      setPendingRemoveId(null);
       onChanged();
     } finally {
       setRemoveBusy(null);
@@ -135,13 +157,16 @@ export const CatalogDocumentRulesTable: FC<ICatalogDocumentRulesTableProps> = ({
             label: "Service",
             placeholder: "Service name or id…",
           },
-          {
-            kind: "select",
-            key: "documentType",
-            label: "Document",
-            options: [{ value: "bank_statement_6m", label: "Last 6 months bank account statement" }],
-            allLabel: "All documents",
-          },
+          ...(lockedDocumentType
+            ? []
+            : [
+                {
+                  kind: "search" as const,
+                  key: "documentType",
+                  label: "Document",
+                  placeholder: "Document key…",
+                },
+              ]),
         ]}
         values={filterValues}
         onChange={(key, value) => setDraftFilters((prev) => ({ ...prev, [key]: value }))}
@@ -168,7 +193,7 @@ export const CatalogDocumentRulesTable: FC<ICatalogDocumentRulesTableProps> = ({
             <tr>
               <th className="px-4 py-2 font-medium">Nationality</th>
               <th className="px-4 py-2 font-medium">Service</th>
-              <th className="px-4 py-2 font-medium">Document</th>
+              {showDocumentColumn ? <th className="px-4 py-2 font-medium">Document</th> : null}
               <th className="px-4 py-2 font-medium">Role</th>
               {canWrite ? <th className="px-4 py-2 font-medium">Remove</th> : null}
             </tr>
@@ -182,14 +207,22 @@ export const CatalogDocumentRulesTable: FC<ICatalogDocumentRulesTableProps> = ({
             {page.loading && page.items.length === 0 ? (
               <AdminTableLoadingSkeleton
                 rows={Math.min(page.pageSize, 8)}
-                columns={canWrite ? 5 : 4}
-                columnWidths={canWrite ? ["w-20", "w-2/5", "w-2/5", "w-20", "w-10"] : ["w-20", "w-2/5", "w-2/5", "w-20"]}
+                columns={canWrite ? (showDocumentColumn ? 5 : 4) : showDocumentColumn ? 4 : 3}
+                columnWidths={
+                  canWrite
+                    ? showDocumentColumn
+                      ? ["w-20", "w-2/5", "w-2/5", "w-20", "w-10"]
+                      : ["w-20", "w-2/5", "w-20", "w-10"]
+                    : showDocumentColumn
+                      ? ["w-20", "w-2/5", "w-2/5", "w-20"]
+                      : ["w-20", "w-2/5", "w-20"]
+                }
               />
             ) : null}
             {!page.loading && page.items.length === 0 ? (
               <tr>
                 <td
-                  colSpan={canWrite ? 5 : 4}
+                  colSpan={canWrite ? (showDocumentColumn ? 5 : 4) : showDocumentColumn ? 4 : 3}
                   className="text-muted-foreground px-4 py-6 text-center text-sm"
                 >
                   {hasActiveFilters
@@ -207,7 +240,12 @@ export const CatalogDocumentRulesTable: FC<ICatalogDocumentRulesTableProps> = ({
                     {item.serviceId}
                   </div>
                 </td>
-                <td className="px-4 py-2">{slotForDocumentType(item.documentType)?.label ?? item.documentType}</td>
+                {showDocumentColumn ? (
+                  <td className="px-4 py-2">
+                    {slotForDocumentType(item.documentType)?.label ??
+                      humanizeDocumentTypeKey(item.documentType)}
+                  </td>
+                ) : null}
                 <td className="px-4 py-2 text-xs capitalize">{item.role}</td>
                 {canWrite ? (
                   <td className="px-4 py-2">
@@ -218,7 +256,7 @@ export const CatalogDocumentRulesTable: FC<ICatalogDocumentRulesTableProps> = ({
                       className="text-destructive hover:text-destructive"
                       disabled={sectionBusy}
                       aria-label="Remove document requirement"
-                      onClick={() => void onRemoveOne(item.id)}
+                      onClick={() => setPendingRemoveId(item.id)}
                     >
                       {removeBusy === item.id ? (
                         <Loader2 className="size-4 animate-spin" />
@@ -242,6 +280,18 @@ export const CatalogDocumentRulesTable: FC<ICatalogDocumentRulesTableProps> = ({
         total={page.total}
         disabled={sectionBusy || page.loading}
         loading={page.loading}
+      />
+      <ConfirmDialog
+        open={pendingRemoveId !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingRemoveId(null);
+        }}
+        title="Remove this document?"
+        description="Remove this document from this pair. Eligibility stays."
+        confirmLabel="Remove"
+        confirmVariant="destructive"
+        confirmBusy={removeBusy !== null}
+        onConfirm={() => void onConfirmRemove()}
       />
     </div>
   );

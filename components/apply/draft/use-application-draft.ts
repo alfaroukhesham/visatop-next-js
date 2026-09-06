@@ -7,6 +7,7 @@ import { apiHref } from "@/lib/app-href";
 import type { PublicApplication } from "@/lib/applications/public-application";
 import { resolveDocumentRequirements, type TDocumentSlot } from "@/lib/apply/document-requirements";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
+import { oversizedUploadMessage } from "@/lib/apply/customer-upload-copy";
 import { UPLOAD_MAX_BYTES, type DocType, type ExtractResponse, type PublicDocument } from "./types";
 import { latestByType } from "./utils";
 
@@ -168,8 +169,9 @@ export function useApplicationDraft(applicationId: string) {
 
   const onUpload = useCallback(
     async (type: DocType, file: File) => {
-      if (file.size > UPLOAD_MAX_BYTES) {
-        setActionMsg("File exceeds 8MB limit.");
+      const tooLarge = oversizedUploadMessage(file.size, UPLOAD_MAX_BYTES);
+      if (tooLarge) {
+        setActionMsg(tooLarge);
         return;
       }
       setActionMsg(null);

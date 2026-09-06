@@ -31,11 +31,16 @@ describe("resolveDocumentRequirements", () => {
     expect(requiredDocumentTypeKeys(slots)).toEqual(["passport_copy", "personal_photo"]);
   });
 
-  it("ignores unknown types and floor keys in extras", () => {
+  it("appends admin-created extras and ignores floor keys in extras", () => {
     const slots = resolveDocumentRequirements([
-      { documentType: "not_a_real_type", role: "required" },
+      { documentType: "invitation_letter", role: "required", label: "Invitation letter" },
       { documentType: "passport_copy", role: "additional" },
     ]);
-    expect(slots.map((s) => s.key)).toEqual(["passport_copy", "personal_photo"]);
+    expect(slots.map((s) => s.key)).toEqual([
+      "passport_copy",
+      "personal_photo",
+      "invitation_letter",
+    ]);
+    expect(slots.find((s) => s.key === "invitation_letter")?.label).toBe("Invitation letter");
   });
 });
