@@ -199,7 +199,7 @@ export const DocumentRulesCountryServices: FC<IDocumentRulesCountryServicesProps
             size="sm"
             variant="secondary"
             onClick={() =>
-              router.push(`/admin/catalog?prefillNat=${encodeURIComponent(countryCode)}#catalog-eligibility`)
+              router.push(`/admin/catalog/nationalities/${encodeURIComponent(countryCode)}`)
             }
           >
             Add eligibility

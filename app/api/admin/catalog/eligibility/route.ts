@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { listCatalogEligibility } from "@/lib/admin/catalog/list-catalog-eligibility";
+import { linkEligibilityPairs, LinkEligibilityValidationError } from "@/lib/admin/catalog/link-eligibility-pairs";
 import { runAdminDbJson } from "@/lib/admin-api/require-admin-db";
 import { writeAdminAudit } from "@/lib/admin-api/write-admin-audit";
 import { parseLimit } from "@/lib/api/cursor";
@@ -47,7 +48,7 @@ export async function GET(req: Request) {
   });
 }
 
-const bodySchema = z.object({
+const pairSchema = z.object({
   serviceId: z.string().min(1),
   nationalityCode: z
     .string()
@@ -55,6 +56,11 @@ const bodySchema = z.object({
     .regex(/^[A-Za-z]{2}$/, "Nationality code must be two letters")
     .transform((s) => s.toUpperCase()),
 });
+
+const bodySchema = z.union([
+  pairSchema,
+  z.object({ pairs: z.array(pairSchema).min(1).max(200) }),
+]);
 
 function eligibilityEntityId(serviceId: string, nationalityCode: string) {
   return `${serviceId}:${nationalityCode}`;
@@ -70,29 +76,55 @@ export async function POST(req: Request) {
       const parsed = await parseJsonBody(req, bodySchema, requestId);
       if (!parsed.ok) return parsed.response;
 
-      const inserted = await tx
-        .insert(schema.visaServiceEligibility)
-        .values({
-          serviceId: parsed.data.serviceId,
-          nationalityCode: parsed.data.nationalityCode,
-        })
-        .onConflictDoNothing()
-        .returning();
-      const row = inserted[0];
-      if (!row) {
-        return jsonOk({ eligibility: null, deduped: true }, { status: 200, requestId });
+      if ("pairs" in parsed.data) {
+        try {
+          const { created, deduped } = await linkEligibilityPairs(tx, parsed.data.pairs, {
+            adminUserId,
+            writeAudit: async (pair) => {
+              await writeAdminAudit(tx, {
+                adminUserId,
+                action: "catalog.eligibility.create",
+                entityType: "visa_service_eligibility",
+                entityId: eligibilityEntityId(pair.serviceId, pair.nationalityCode),
+                afterJson: JSON.stringify(pair),
+              });
+            },
+          });
+          return jsonOk(
+            { createdCount: created.length, dedupedCount: deduped, items: created },
+            { status: created.length > 0 ? 201 : 200, requestId },
+          );
+        } catch (e) {
+          if (e instanceof LinkEligibilityValidationError) {
+            return jsonError("VALIDATION_ERROR", e.message, { status: 400, requestId });
+          }
+          throw e;
+        }
+      } else {
+        try {
+          const { created, deduped } = await linkEligibilityPairs(tx, [parsed.data], {
+            adminUserId,
+            writeAudit: async (pair) => {
+              await writeAdminAudit(tx, {
+                adminUserId,
+                action: "catalog.eligibility.create",
+                entityType: "visa_service_eligibility",
+                entityId: eligibilityEntityId(pair.serviceId, pair.nationalityCode),
+                afterJson: JSON.stringify(pair),
+              });
+            },
+          });
+          if (created.length === 1) {
+            return jsonOk({ eligibility: created[0] }, { status: 201, requestId });
+          }
+          return jsonOk({ eligibility: null, deduped: deduped > 0 }, { status: 200, requestId });
+        } catch (e) {
+          if (e instanceof LinkEligibilityValidationError) {
+            return jsonError("VALIDATION_ERROR", e.message, { status: 400, requestId });
+          }
+          throw e;
+        }
       }
-      await writeAdminAudit(tx, {
-        adminUserId,
-        action: "catalog.eligibility.create",
-        entityType: "visa_service_eligibility",
-        entityId: eligibilityEntityId(row.serviceId, row.nationalityCode),
-        afterJson: JSON.stringify({
-          serviceId: row.serviceId,
-          nationalityCode: row.nationalityCode,
-        }),
-      });
-      return jsonOk({ eligibility: row }, { status: 201, requestId });
     },
   );
 }
@@ -104,7 +136,7 @@ export async function DELETE(req: Request) {
     requestId,
     ["catalog.read", "catalog.write", "audit.write"],
     async ({ tx, adminUserId }) => {
-      const parsed = await parseJsonBody(req, bodySchema, requestId);
+      const parsed = await parseJsonBody(req, pairSchema, requestId);
       if (!parsed.ok) return parsed.response;
 
       const eid = eligibilityEntityId(parsed.data.serviceId, parsed.data.nationalityCode);

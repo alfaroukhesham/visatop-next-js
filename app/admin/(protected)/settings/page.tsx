@@ -1,6 +1,7 @@
 import { SlidersHorizontal } from "lucide-react";
 import { getAdminUserId } from "@/lib/admin/get-admin-session";
 import { DraftTtlSettings } from "@/components/admin/draft-ttl-settings";
+import { DisplayFxSettings } from "@/components/admin/display-fx-settings";
 import { PaymentsSettings } from "@/components/admin/payments-settings";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { withAdminDbActor } from "@/lib/db/actor-context";
@@ -51,6 +52,26 @@ export default async function AdminSettingsPage() {
           </div>
         </div>
         <DraftTtlSettings />
+      </section>
+
+      <section
+        id="display-fx"
+        className="border-border mt-8 max-w-xl space-y-4 border border-b-2 border-b-primary bg-card p-6"
+      >
+        <div className="flex items-start gap-3">
+          <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center border border-primary/20">
+            <SlidersHorizontal className="size-5" aria-hidden />
+          </span>
+          <div>
+            <h2 className="font-heading text-base font-semibold tracking-tight">Display FX</h2>
+            <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
+              Key <span className="font-mono text-xs">fx_aed_per_usd</span> in{" "}
+              <span className="font-mono text-xs">platform_setting</span>. Used when catalog prices need a USD ↔ AED
+              conversion.
+            </p>
+          </div>
+        </div>
+        <DisplayFxSettings />
       </section>
 
       <section className="border-border mt-8 max-w-3xl space-y-4 border border-b-2 border-b-primary bg-card p-6">

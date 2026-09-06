@@ -219,9 +219,7 @@ export const DocumentRulesWizard: FC<IDocumentRulesWizardProps> = ({ document, c
               onTogglePair={togglePair}
               onToggleCountry={toggleCountry}
               onAddEligibility={(nationalityCode) => {
-                router.push(
-                  `/admin/catalog?prefillNat=${encodeURIComponent(nationalityCode)}#catalog-eligibility`,
-                );
+                router.push(`/admin/catalog/nationalities/${encodeURIComponent(nationalityCode)}`);
               }}
               refreshKey={pickerRefreshKey}
             />

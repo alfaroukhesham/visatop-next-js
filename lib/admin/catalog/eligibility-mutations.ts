@@ -22,6 +22,18 @@ export async function linkCatalogEligibility({
   flash("Eligibility saved (or already existed).");
 }
 
+export const linkCatalogEligibilityPairs = async (
+  pairs: Array<{ serviceId: string; nationalityCode: string }>,
+) =>
+  fetchApiEnvelope<{ createdCount: number; dedupedCount: number }>(
+    apiHref("/admin/catalog/eligibility"),
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pairs }),
+    },
+  );
+
 export async function removeCatalogEligibility({
   serviceId,
   nationalityCode,

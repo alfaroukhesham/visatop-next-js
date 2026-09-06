@@ -5,6 +5,11 @@ import { runAdminDbJson } from "@/lib/admin-api/require-admin-db";
 import { writeAdminAudit } from "@/lib/admin-api/write-admin-audit";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonOk } from "@/lib/api/response";
+import {
+  CatalogDeleteBlockedError,
+  CatalogEntityNotFoundError,
+  deleteCatalogNationality,
+} from "@/lib/admin/catalog/delete-catalog-entity";
 import * as schema from "@/lib/db/schema";
 
 export const runtime = "nodejs";
@@ -59,6 +64,40 @@ export async function PATCH(
         }),
       });
       return jsonOk({ nationality: row }, { requestId });
+    },
+  );
+}
+
+export async function DELETE(
+  _req: Request,
+  ctx: { params: Promise<{ code: string }> },
+) {
+  const hdrs = await headers();
+  const requestId = hdrs.get("x-request-id");
+  const { code } = await ctx.params;
+  return runAdminDbJson(
+    requestId,
+    ["catalog.read", "catalog.write", "audit.write"],
+    async ({ tx, adminUserId }) => {
+      try {
+        const row = await deleteCatalogNationality(tx, code);
+        await writeAdminAudit(tx, {
+          adminUserId,
+          action: "catalog.nationality.delete",
+          entityType: "nationality",
+          entityId: row.code,
+          beforeJson: JSON.stringify({ code: row.code, name: row.name, enabled: row.enabled }),
+        });
+        return jsonOk({ deleted: { code: row.code } }, { requestId });
+      } catch (e) {
+        if (e instanceof CatalogEntityNotFoundError) {
+          return jsonError("NOT_FOUND", e.message, { status: 404, requestId });
+        }
+        if (e instanceof CatalogDeleteBlockedError) {
+          return jsonError("CONFLICT", e.message, { status: 409, requestId });
+        }
+        throw e;
+      }
     },
   );
 }

@@ -55,11 +55,16 @@ export async function listCatalogEligibility(
       serviceId: schema.visaServiceEligibility.serviceId,
       nationalityCode: schema.visaServiceEligibility.nationalityCode,
       serviceName: schema.visaService.name,
+      nationalityName: schema.nationality.name,
     })
     .from(schema.visaServiceEligibility)
     .innerJoin(
       schema.visaService,
       eq(schema.visaService.id, schema.visaServiceEligibility.serviceId),
+    )
+    .innerJoin(
+      schema.nationality,
+      eq(schema.nationality.code, schema.visaServiceEligibility.nationalityCode),
     );
   if (where) itemsQuery = itemsQuery.where(where) as typeof itemsQuery;
 
@@ -69,6 +74,10 @@ export async function listCatalogEligibility(
     .innerJoin(
       schema.visaService,
       eq(schema.visaService.id, schema.visaServiceEligibility.serviceId),
+    )
+    .innerJoin(
+      schema.nationality,
+      eq(schema.nationality.code, schema.visaServiceEligibility.nationalityCode),
     );
   if (where) countQuery = countQuery.where(where) as typeof countQuery;
 
