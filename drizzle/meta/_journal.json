@@ -155,6 +155,13 @@
       "when": 1782153600000,
       "tag": "0021_visa_service_name_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1782160000000,
+      "tag": "0022_catalog_document_requirement",
+      "breakpoints": true
     }
   ]
 }

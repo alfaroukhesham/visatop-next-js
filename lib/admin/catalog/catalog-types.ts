@@ -16,4 +16,5 @@ export type CatalogEligibility = {
   serviceId: string;
   nationalityCode: string;
   serviceName: string;
+  hasPrice: boolean;
 };

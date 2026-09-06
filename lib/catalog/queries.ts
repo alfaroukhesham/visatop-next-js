@@ -1,4 +1,4 @@
-import { and, eq, exists } from "drizzle-orm";
+import { and, eq, exists, inArray } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import {
@@ -57,6 +57,7 @@ export type PublicServiceRow = {
   entries: string | null;
   displayPriceMinor: string | null;
   currency: string | null;
+  documentTypes: Array<{ key: string; role: "required" | "additional" }>;
 };
 
 /**
@@ -116,6 +117,27 @@ export async function listPublicServicesForNationality(
   if (!services.length) return [];
 
   const serviceIds = services.map((s) => s.id);
+
+  const requirementRows = await tx
+    .select({
+      serviceId: schema.catalogDocumentRequirement.serviceId,
+      documentType: schema.catalogDocumentRequirement.documentType,
+      role: schema.catalogDocumentRequirement.role,
+    })
+    .from(schema.catalogDocumentRequirement)
+    .where(
+      and(
+        eq(schema.catalogDocumentRequirement.nationalityCode, nationalityCode),
+        inArray(schema.catalogDocumentRequirement.serviceId, serviceIds),
+      ),
+    );
+  const requirementsByService = new Map<string, Array<{ key: string; role: "required" | "additional" }>>();
+  for (const row of requirementRows) {
+    const list = requirementsByService.get(row.serviceId) ?? [];
+    list.push({ key: row.documentType, role: row.role as "required" | "additional" });
+    requirementsByService.set(row.serviceId, list);
+  }
+
   const priceMap = await batchCustomerPricesForServices(
     tx,
     nationalityCode,
@@ -142,6 +164,7 @@ export async function listPublicServicesForNationality(
       entries: s.entries,
       displayPriceMinor: resolved ? resolved.displayMinor.toString() : null,
       currency: resolved ? resolved.currency : null,
+      documentTypes: requirementsByService.get(s.id) ?? [],
     };
   });
 }

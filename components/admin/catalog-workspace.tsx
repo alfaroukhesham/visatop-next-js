@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useReducer, useState } from "react";
 import { Loader2, Plus, Search } from "lucide-react";
 import { CatalogEligibilitySection } from "@/components/admin/catalog-eligibility-section";
+import { CatalogDocumentRulesSection } from "@/components/admin/catalog-document-rules-section";
 import { ListPaginatorBar } from "@/components/admin/list-paginator-bar";
 import { usePaginatedList } from "@/components/admin/use-paginated-list";
 import type {
@@ -87,6 +88,8 @@ export function AdminCatalogWorkspace({
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [banner, setBanner] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [eligibilityPrefill, setEligibilityPrefill] = useState<string | undefined>(undefined);
+  const [pickerRefreshKey, setPickerRefreshKey] = useState(0);
 
   function flash(msg: string, err = false) {
     setBanner({ type: err ? "err" : "ok", text: msg });
@@ -132,6 +135,19 @@ export function AdminCatalogWorkspace({
         canWrite={canWrite}
         busy={busy}
         flash={flash}
+        prefillNationalityCode={eligibilityPrefill}
+        onPrefillConsumed={() => setEligibilityPrefill(undefined)}
+        onEligibilityChanged={() => setPickerRefreshKey((n) => n + 1)}
+      />
+      <CatalogDocumentRulesSection
+        canWrite={canWrite}
+        busy={busy !== null}
+        flash={flash}
+        pickerRefreshKey={pickerRefreshKey}
+        onAddEligibility={(nationalityCode) => {
+          setEligibilityPrefill(nationalityCode);
+          document.getElementById("catalog-eligibility")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
       />
     </div>
   );

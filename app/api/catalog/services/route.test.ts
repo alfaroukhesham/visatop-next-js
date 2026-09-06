@@ -81,6 +81,7 @@ describe("GET /api/catalog/services", () => {
         entries: "single",
         displayPriceMinor: "12000",
         currency: "USD",
+        documentTypes: [],
       },
     ]);
 
@@ -93,8 +94,9 @@ describe("GET /api/catalog/services", () => {
     expect(body.data.currency).toBe("USD");
     const svc = body.data.services[0];
     expect(Object.keys(svc).sort()).toEqual(
-      ["currency", "displayPriceMinor", "durationDays", "entries", "id", "name"].sort(),
+      ["currency", "displayPriceMinor", "documentTypes", "durationDays", "entries", "id", "name"].sort(),
     );
+    expect(svc.documentTypes).toEqual([]);
     expect(svc).not.toHaveProperty("margin");
     expect(svc).not.toHaveProperty("reference");
   });

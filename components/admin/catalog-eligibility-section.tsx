@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useReducer } from "react";
+import { useEffect, useMemo, useReducer, useState } from "react";
 import { AdminListFilters } from "@/components/admin/admin-list-filters";
 import { CatalogEligibilityLinkForm } from "@/components/admin/catalog-eligibility-link-form";
 import { CatalogEligibilityTable } from "@/components/admin/catalog-eligibility-table";
@@ -28,6 +28,9 @@ export type CatalogEligibilitySectionProps = {
   canWrite: boolean;
   busy: string | null;
   flash: (t: string, err?: boolean) => void;
+  prefillNationalityCode?: string;
+  onPrefillConsumed?: () => void;
+  onEligibilityChanged?: () => void;
 };
 
 export function CatalogEligibilitySection({
@@ -36,6 +39,9 @@ export function CatalogEligibilitySection({
   canWrite,
   busy,
   flash,
+  prefillNationalityCode,
+  onPrefillConsumed,
+  onEligibilityChanged,
 }: CatalogEligibilitySectionProps) {
   type EligibilityUiState = {
     serviceId: string;
@@ -91,6 +97,16 @@ export function CatalogEligibilitySection({
   const eligPage = useCatalogEligibilityPage(10, appliedFilters);
   const sectionBusy = busy !== null || eligBusy !== null;
 
+  const [linkOpen, setLinkOpen] = useState(false);
+
+  useEffect(() => {
+    if (prefillNationalityCode) {
+      setNationalityCode(prefillNationalityCode);
+      setLinkOpen(true);
+      onPrefillConsumed?.();
+    }
+  }, [prefillNationalityCode, onPrefillConsumed]);
+
   const serviceFilterOptions = useMemo(
     () => services.map((s) => ({ value: s.id, label: s.name })),
     [services],
@@ -117,13 +133,14 @@ export function CatalogEligibilitySection({
     try {
       await fn();
       eligPage.reload();
+      onEligibilityChanged?.();
     } finally {
       setEligBusy(null);
     }
   }
 
   return (
-    <Card className="border-border overflow-hidden border">
+    <Card id="catalog-eligibility" className="border-border overflow-hidden border">
       <CardHeader className="border-border bg-muted/20 border-b">
         <CardTitle className="font-heading text-lg">Service ↔ nationality eligibility</CardTitle>
         <CardDescription>
@@ -185,6 +202,7 @@ export function CatalogEligibilitySection({
             onNationalityCodeChange={setNationalityCode}
             sectionBusy={sectionBusy}
             eligBusy={eligBusy}
+            open={linkOpen}
             onLink={() =>
               void runElig("elig-add", () =>
                 linkCatalogEligibility({ serviceId, nationalityCode, flash }),

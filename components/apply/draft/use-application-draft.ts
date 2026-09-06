@@ -14,6 +14,7 @@ type CatalogService = {
   id: string;
   name: string;
   durationDays: number | null;
+  documentTypes?: Array<{ key: string; role: "required" | "additional" }>;
 };
 
 type CatalogNationality = {
@@ -140,14 +141,16 @@ export function useApplicationDraft(applicationId: string) {
     await load({ silent: true });
   }, [applicationId, load]);
 
+  // slots follow the last catalog payload; a mid-session admin edit appears after remount or nationality / service / currency change.
   const slots = useMemo<TDocumentSlot[]>(
     () =>
-      resolveDocumentRequirements({
-        nationalityCode: app?.nationalityCode ?? "",
-        serviceName: service?.name ?? "",
-        durationDays: service?.durationDays ?? null,
-      }),
-    [app?.nationalityCode, service],
+      resolveDocumentRequirements(
+        (service?.documentTypes ?? []).map((d) => ({
+          documentType: d.key,
+          role: d.role,
+        })),
+      ),
+    [service],
   );
 
   const nationalityName = useMemo(

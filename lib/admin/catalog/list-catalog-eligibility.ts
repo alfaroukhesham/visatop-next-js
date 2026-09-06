@@ -1,7 +1,10 @@
-import { and, asc, count, eq, ilike, or, type SQL } from "drizzle-orm";
+import { and, asc, count, eq, ilike, inArray, or, type SQL } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import type { CatalogEligibility } from "@/lib/admin/catalog/catalog-types";
+
+const pairKey = (nationalityCode: string, serviceId: string): string =>
+  `${nationalityCode}:${serviceId}`;
 
 export type ListCatalogEligibilityParams = {
   limit: number;
@@ -77,5 +80,23 @@ export async function listCatalogEligibility(
     countQuery,
   ]);
 
-  return { items, total: Number(countRows[0]?.total ?? 0) };
+  const serviceIds = [...new Set(items.map((i) => i.serviceId))];
+  let priceSet = new Set<string>();
+  if (serviceIds.length > 0) {
+    const prices = await tx
+      .selectDistinct({
+        nationalityCode: schema.catalogCustomerPrice.nationalityCode,
+        serviceId: schema.catalogCustomerPrice.serviceId,
+      })
+      .from(schema.catalogCustomerPrice)
+      .where(inArray(schema.catalogCustomerPrice.serviceId, serviceIds));
+    priceSet = new Set(prices.map((p) => pairKey(p.nationalityCode, p.serviceId)));
+  }
+
+  const withPrice = items.map((i) => ({
+    ...i,
+    hasPrice: priceSet.has(pairKey(i.nationalityCode, i.serviceId)),
+  }));
+
+  return { items: withPrice, total: Number(countRows[0]?.total ?? 0) };
 }
