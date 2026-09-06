@@ -46,15 +46,15 @@ export const CatalogDocumentRulesAssignForm: FC<ICatalogDocumentRulesAssignFormP
   const [documentType, setDocumentType] = useState<string>(BANK_SLOT.key);
   const [role, setRole] = useState<"required" | "additional">("required");
   const [countries, setCountries] = useState<TPickerCountry[]>([]);
-  const [pickerLoading, setPickerLoading] = useState(true);
+  const [loadedPickerKey, setLoadedPickerKey] = useState<number | null>(null);
   const [pickerError, setPickerError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [assignBusy, setAssignBusy] = useState<string | null>(null);
+  const pickerLoading = loadedPickerKey !== pickerRefreshKey;
 
   useEffect(() => {
     let active = true;
-    setPickerLoading(true);
     void (async () => {
       const res = await fetchApiEnvelope<TPickerResponse>(
         apiHref("/admin/catalog/document-requirements?picker=1"),
@@ -67,7 +67,7 @@ export const CatalogDocumentRulesAssignForm: FC<ICatalogDocumentRulesAssignFormP
         setPickerError(null);
         setCountries(res.data.countries);
       }
-      setPickerLoading(false);
+      setLoadedPickerKey(pickerRefreshKey);
     })();
     return () => {
       active = false;

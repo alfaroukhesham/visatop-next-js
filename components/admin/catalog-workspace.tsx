@@ -89,6 +89,7 @@ export function AdminCatalogWorkspace({
   const [busy, setBusy] = useState<string | null>(null);
   const [banner, setBanner] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [eligibilityPrefill, setEligibilityPrefill] = useState<string | undefined>(undefined);
+  const [eligibilityPrefillEpoch, setEligibilityPrefillEpoch] = useState(0);
   const [pickerRefreshKey, setPickerRefreshKey] = useState(0);
 
   function flash(msg: string, err = false) {
@@ -136,7 +137,7 @@ export function AdminCatalogWorkspace({
         busy={busy}
         flash={flash}
         prefillNationalityCode={eligibilityPrefill}
-        onPrefillConsumed={() => setEligibilityPrefill(undefined)}
+        prefillEpoch={eligibilityPrefillEpoch}
         onEligibilityChanged={() => setPickerRefreshKey((n) => n + 1)}
       />
       <CatalogDocumentRulesSection
@@ -146,6 +147,7 @@ export function AdminCatalogWorkspace({
         pickerRefreshKey={pickerRefreshKey}
         onAddEligibility={(nationalityCode) => {
           setEligibilityPrefill(nationalityCode);
+          setEligibilityPrefillEpoch((n) => n + 1);
           document.getElementById("catalog-eligibility")?.scrollIntoView({ behavior: "smooth", block: "start" });
         }}
       />

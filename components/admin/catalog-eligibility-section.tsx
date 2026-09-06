@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useReducer, useState } from "react";
+import { useMemo, useReducer } from "react";
 import { AdminListFilters } from "@/components/admin/admin-list-filters";
 import { CatalogEligibilityLinkForm } from "@/components/admin/catalog-eligibility-link-form";
 import { CatalogEligibilityTable } from "@/components/admin/catalog-eligibility-table";
@@ -29,7 +29,7 @@ export type CatalogEligibilitySectionProps = {
   busy: string | null;
   flash: (t: string, err?: boolean) => void;
   prefillNationalityCode?: string;
-  onPrefillConsumed?: () => void;
+  prefillEpoch?: number;
   onEligibilityChanged?: () => void;
 };
 
@@ -40,13 +40,15 @@ export function CatalogEligibilitySection({
   busy,
   flash,
   prefillNationalityCode,
-  onPrefillConsumed,
+  prefillEpoch = 0,
   onEligibilityChanged,
 }: CatalogEligibilitySectionProps) {
   type EligibilityUiState = {
     serviceId: string;
     nationalityCode: string;
     eligBusy: string | null;
+    appliedPrefillEpoch: number;
+    linkOpen: boolean;
     draftFilters: CatalogEligibilityFilters;
     appliedFilters: CatalogEligibilityFilters;
   };
@@ -73,11 +75,31 @@ export function CatalogEligibilitySection({
       serviceId: services[0]?.id ?? "",
       nationalityCode: nationalities[0]?.code ?? "",
       eligBusy: null,
+      appliedPrefillEpoch: 0,
+      linkOpen: false,
       draftFilters: EMPTY_CATALOG_ELIGIBILITY_FILTERS,
       appliedFilters: EMPTY_CATALOG_ELIGIBILITY_FILTERS,
     },
   );
-  const { serviceId, nationalityCode, eligBusy, draftFilters, appliedFilters } = ui;
+  const {
+    serviceId,
+    nationalityCode,
+    eligBusy,
+    appliedPrefillEpoch,
+    linkOpen,
+    draftFilters,
+    appliedFilters,
+  } = ui;
+  if (prefillEpoch !== appliedPrefillEpoch && prefillNationalityCode) {
+    dispatchUi({
+      type: "patch",
+      patch: {
+        appliedPrefillEpoch: prefillEpoch,
+        nationalityCode: prefillNationalityCode,
+        linkOpen: true,
+      },
+    });
+  }
   const setServiceId = (value: string) => dispatchUi({ type: "patch", patch: { serviceId: value } });
   const setNationalityCode = (value: string) =>
     dispatchUi({ type: "patch", patch: { nationalityCode: value } });
@@ -96,16 +118,6 @@ export function CatalogEligibilitySection({
   const setEligBusy = (value: string | null) => dispatchUi({ type: "patch", patch: { eligBusy: value } });
   const eligPage = useCatalogEligibilityPage(10, appliedFilters);
   const sectionBusy = busy !== null || eligBusy !== null;
-
-  const [linkOpen, setLinkOpen] = useState(false);
-
-  useEffect(() => {
-    if (prefillNationalityCode) {
-      setNationalityCode(prefillNationalityCode);
-      setLinkOpen(true);
-      onPrefillConsumed?.();
-    }
-  }, [prefillNationalityCode, onPrefillConsumed]);
 
   const serviceFilterOptions = useMemo(
     () => services.map((s) => ({ value: s.id, label: s.name })),
@@ -203,6 +215,7 @@ export function CatalogEligibilitySection({
             sectionBusy={sectionBusy}
             eligBusy={eligBusy}
             open={linkOpen}
+            onOpenChange={(next) => dispatchUi({ type: "patch", patch: { linkOpen: next } })}
             onLink={() =>
               void runElig("elig-add", () =>
                 linkCatalogEligibility({ serviceId, nationalityCode, flash }),
