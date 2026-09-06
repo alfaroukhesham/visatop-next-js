@@ -1,8 +1,4 @@
-import {
-  AdminCatalogWorkspace,
-  type CatalogNationality,
-  type CatalogService,
-} from "@/components/admin/catalog-workspace";
+import { CatalogHub } from "@/components/admin/catalog-hub";
 import { AdminShell } from "@/components/admin/admin-shell";
 import {
   Card,
@@ -12,22 +8,20 @@ import {
 } from "@/components/ui/card";
 import { loadCatalogPage } from "@/lib/admin/catalog/load-catalog-page";
 import { getAdminUserId } from "@/lib/admin/get-admin-session";
+import type { CatalogNationality, CatalogService } from "@/lib/admin/catalog/catalog-types";
 
-function normalizePrefillNat(value: string | string[] | undefined): string | undefined {
+function normalizeTab(value: string | string[] | undefined): "services" | "nationalities" {
   const raw = Array.isArray(value) ? value[0] : value;
-  if (typeof raw !== "string") return undefined;
-  const t = raw.trim().toUpperCase();
-  if (t.length !== 2 || !/^[A-Z]{2}$/.test(t)) return undefined;
-  return t;
+  return raw === "nationalities" ? "nationalities" : "services";
 }
 
 type PageProps = {
-  searchParams: Promise<{ prefillNat?: string | string[] }>;
+  searchParams: Promise<{ tab?: string | string[] }>;
 };
 
 export default async function AdminCatalogPage({ searchParams }: PageProps) {
   const [adminUserId, sp] = await Promise.all([getAdminUserId(), searchParams]);
-  const initialPrefillNat = normalizePrefillNat(sp.prefillNat);
+  const tab = normalizeTab(sp.tab);
   const view = await loadCatalogPage(adminUserId);
 
   if (view.kind === "forbidden") {
@@ -60,16 +54,11 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
 
   return (
     <AdminShell
-      title="Visa catalog"
+      title="Catalog"
       active="catalog"
       subtitle="Manage services and nationalities."
     >
-      <AdminCatalogWorkspace
-        nationalities={nationalities}
-        services={services}
-        canWrite={view.canWrite}
-        initialPrefillNat={initialPrefillNat}
-      />
+      <CatalogHub tab={tab} nationalities={nationalities} services={services} canWrite={view.canWrite} />
     </AdminShell>
   );
 }

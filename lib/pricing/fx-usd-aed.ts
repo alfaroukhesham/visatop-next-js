@@ -9,8 +9,21 @@
  * ops must also set FX_AED_PER_USD as a server-side mirror (see .env.example).
  */
 
+import { eq } from "drizzle-orm";
+import type { DbTransaction } from "@/lib/db";
+import { platformSetting } from "@/lib/db/schema";
+
 const ENV_KEY = "NEXT_PUBLIC_DISPLAY_FX_AED_PER_USD";
 const ENV_KEY_SERVER = "FX_AED_PER_USD"; // optional server-side mirror
+
+export const PLATFORM_KEY_FX_AED_PER_USD = "fx_aed_per_usd";
+
+export type TFxRateSource = "setting" | "env" | "missing";
+
+export type TPeekResolvedFxRate = {
+  fxAedPerUsd: string | null;
+  source: TFxRateSource;
+};
 
 export class FxRateMissingError extends Error {
   constructor() {
@@ -61,6 +74,49 @@ export function readFxRateString(): string {
   if (!Number.isFinite(rate) || rate <= 0) throw new FxRateInvalidError(raw);
   return raw;
 }
+
+/** Normalize stored `platform_setting.value` for `fx_aed_per_usd`. */
+export const parseFxAedPerUsdFromStored = (
+  value: string | null | undefined,
+): string | null => {
+  if (value === undefined || value === null || value === "") return null;
+  const raw = value.trim();
+  if (!raw) return null;
+  const rate = parseFloat(raw);
+  if (!Number.isFinite(rate) || rate <= 0) return null;
+  return raw;
+};
+
+export const peekResolvedFxRateFromTx = async (
+  tx: DbTransaction,
+): Promise<TPeekResolvedFxRate> => {
+  const rows = await tx
+    .select({ value: platformSetting.value })
+    .from(platformSetting)
+    .where(eq(platformSetting.key, PLATFORM_KEY_FX_AED_PER_USD))
+    .limit(1);
+  const stored = parseFxAedPerUsdFromStored(rows[0]?.value);
+  if (stored !== null) {
+    return { fxAedPerUsd: stored, source: "setting" };
+  }
+  try {
+    const envRate = readFxRateString();
+    return { fxAedPerUsd: envRate, source: "env" };
+  } catch (e) {
+    if (e instanceof FxRateMissingError || e instanceof FxRateInvalidError) {
+      return { fxAedPerUsd: null, source: "missing" };
+    }
+    throw e;
+  }
+};
+
+export const getResolvedFxRateFromTx = async (tx: DbTransaction): Promise<string> => {
+  const resolved = await peekResolvedFxRateFromTx(tx);
+  if (resolved.fxAedPerUsd !== null) {
+    return resolved.fxAedPerUsd;
+  }
+  return readFxRateString();
+};
 
 type FxRateFraction = { numerator: bigint; denominator: bigint; raw: string };
 

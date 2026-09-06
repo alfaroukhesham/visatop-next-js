@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import {
   readFxRate,
   readFxRateString,
@@ -8,6 +8,10 @@ import {
   deriveUsdFromAed,
   FxRateMissingError,
   FxRateInvalidError,
+  PLATFORM_KEY_FX_AED_PER_USD,
+  parseFxAedPerUsdFromStored,
+  peekResolvedFxRateFromTx,
+  getResolvedFxRateFromTx,
 } from "./fx-usd-aed";
 
 describe("readFxRate", () => {
@@ -114,5 +118,100 @@ describe("deriveUsdFromAed", () => {
     const result = deriveUsdFromAed(BigInt(36725), 3.6725);
     expect(result.fxLeg).toBe("usd_from_aed");
     expect(result.usdMinor).toBe(BigInt(10000));
+  });
+});
+
+describe("PLATFORM_KEY_FX_AED_PER_USD", () => {
+  it("is fx_aed_per_usd", () => {
+    expect(PLATFORM_KEY_FX_AED_PER_USD).toBe("fx_aed_per_usd");
+  });
+});
+
+describe("parseFxAedPerUsdFromStored", () => {
+  it("returns null for empty or missing values", () => {
+    expect(parseFxAedPerUsdFromStored(undefined)).toBeNull();
+    expect(parseFxAedPerUsdFromStored(null)).toBeNull();
+    expect(parseFxAedPerUsdFromStored("")).toBeNull();
+    expect(parseFxAedPerUsdFromStored("   ")).toBeNull();
+  });
+
+  it("returns null for zero, negative, or non-numeric values", () => {
+    expect(parseFxAedPerUsdFromStored("0")).toBeNull();
+    expect(parseFxAedPerUsdFromStored("-3.67")).toBeNull();
+    expect(parseFxAedPerUsdFromStored("bad")).toBeNull();
+  });
+
+  it("returns trimmed positive decimal string", () => {
+    expect(parseFxAedPerUsdFromStored(" 3.6725 ")).toBe("3.6725");
+    expect(parseFxAedPerUsdFromStored("3.67")).toBe("3.67");
+  });
+});
+
+function mockTxWithStoredFx(value: string | undefined) {
+  const limit = vi.fn().mockResolvedValue(value !== undefined ? [{ value }] : []);
+  const where = vi.fn().mockReturnValue({ limit });
+  const from = vi.fn().mockReturnValue({ where });
+  return { select: vi.fn().mockReturnValue({ from }) };
+}
+
+describe("peekResolvedFxRateFromTx", () => {
+  const ORIG_ENV = { ...process.env };
+
+  afterEach(() => {
+    delete process.env["NEXT_PUBLIC_DISPLAY_FX_AED_PER_USD"];
+    delete process.env["FX_AED_PER_USD"];
+    Object.assign(process.env, ORIG_ENV);
+  });
+
+  it("returns setting source when platform row is valid", async () => {
+    const tx = mockTxWithStoredFx("3.6725");
+    const result = await peekResolvedFxRateFromTx(tx as never);
+    expect(result).toEqual({ fxAedPerUsd: "3.6725", source: "setting" });
+  });
+
+  it("falls back to env when stored setting is invalid", async () => {
+    process.env["FX_AED_PER_USD"] = "3.67";
+    const tx = mockTxWithStoredFx("0");
+    const result = await peekResolvedFxRateFromTx(tx as never);
+    expect(result).toEqual({ fxAedPerUsd: "3.67", source: "env" });
+  });
+
+  it("returns env source when no platform row exists", async () => {
+    process.env["NEXT_PUBLIC_DISPLAY_FX_AED_PER_USD"] = "3.6725";
+    const tx = mockTxWithStoredFx(undefined);
+    const result = await peekResolvedFxRateFromTx(tx as never);
+    expect(result).toEqual({ fxAedPerUsd: "3.6725", source: "env" });
+  });
+
+  it("returns missing when neither setting nor env is configured", async () => {
+    const tx = mockTxWithStoredFx(undefined);
+    const result = await peekResolvedFxRateFromTx(tx as never);
+    expect(result).toEqual({ fxAedPerUsd: null, source: "missing" });
+  });
+});
+
+describe("getResolvedFxRateFromTx", () => {
+  const ORIG_ENV = { ...process.env };
+
+  afterEach(() => {
+    delete process.env["NEXT_PUBLIC_DISPLAY_FX_AED_PER_USD"];
+    delete process.env["FX_AED_PER_USD"];
+    Object.assign(process.env, ORIG_ENV);
+  });
+
+  it("returns platform setting when valid", async () => {
+    const tx = mockTxWithStoredFx("3.6725");
+    await expect(getResolvedFxRateFromTx(tx as never)).resolves.toBe("3.6725");
+  });
+
+  it("falls back to env when no platform row", async () => {
+    process.env["FX_AED_PER_USD"] = "3.67";
+    const tx = mockTxWithStoredFx(undefined);
+    await expect(getResolvedFxRateFromTx(tx as never)).resolves.toBe("3.67");
+  });
+
+  it("throws FxRateMissingError when neither setting nor env works", async () => {
+    const tx = mockTxWithStoredFx(undefined);
+    await expect(getResolvedFxRateFromTx(tx as never)).rejects.toThrow(FxRateMissingError);
   });
 });

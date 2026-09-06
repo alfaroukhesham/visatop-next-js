@@ -22,8 +22,9 @@ export type ApplyNationalityPriceUiResult = {
   eligibilityRemoved: number;
 };
 
+/** Must match `syncEligibilityForTouchedPairs` (`\\x1f`). Colon keys are ignored. */
 function natSvcIdKey(nationalityCode: string, serviceId: string): string {
-  return `${nationalityCode}:${serviceId}`;
+  return `${nationalityCode}\x1f${serviceId}`;
 }
 
 export function parseAdminPriceMajorInput(raw: string): bigint | null {

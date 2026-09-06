@@ -18,7 +18,7 @@ import {
 const links = [
   {
     href: "/admin/catalog",
-    title: "Services & nationalities",
+    title: "Catalog",
     description: "Manage services and nationalities.",
     icon: Globe2,
   },

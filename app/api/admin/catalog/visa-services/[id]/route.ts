@@ -5,6 +5,11 @@ import { runAdminDbJson } from "@/lib/admin-api/require-admin-db";
 import { writeAdminAudit } from "@/lib/admin-api/write-admin-audit";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonOk } from "@/lib/api/response";
+import {
+  CatalogDeleteBlockedError,
+  CatalogEntityNotFoundError,
+  deleteCatalogVisaService,
+} from "@/lib/admin/catalog/delete-catalog-entity";
 import * as schema from "@/lib/db/schema";
 
 export const runtime = "nodejs";
@@ -71,6 +76,40 @@ export async function PATCH(
         }),
       });
       return jsonOk({ service: row }, { requestId });
+    },
+  );
+}
+
+export async function DELETE(
+  _req: Request,
+  ctx: { params: Promise<{ id: string }> },
+) {
+  const hdrs = await headers();
+  const requestId = hdrs.get("x-request-id");
+  const { id } = await ctx.params;
+  return runAdminDbJson(
+    requestId,
+    ["catalog.read", "catalog.write", "audit.write"],
+    async ({ tx, adminUserId }) => {
+      try {
+        const row = await deleteCatalogVisaService(tx, id);
+        await writeAdminAudit(tx, {
+          adminUserId,
+          action: "catalog.visa_service.delete",
+          entityType: "visa_service",
+          entityId: row.id,
+          beforeJson: JSON.stringify({ id: row.id, name: row.name, enabled: row.enabled }),
+        });
+        return jsonOk({ deleted: { id: row.id } }, { requestId });
+      } catch (e) {
+        if (e instanceof CatalogEntityNotFoundError) {
+          return jsonError("NOT_FOUND", e.message, { status: 404, requestId });
+        }
+        if (e instanceof CatalogDeleteBlockedError) {
+          return jsonError("CONFLICT", e.message, { status: 409, requestId });
+        }
+        throw e;
+      }
     },
   );
 }
