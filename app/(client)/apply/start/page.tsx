@@ -4,6 +4,9 @@ import { ApplyJourneyStepBar } from "@/components/apply/apply-journey-step-bar";
 import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
 import { StartApplicationForm } from "@/components/apply/start-application-form";
 import { ClientSurface } from "@/components/client/client-surface";
+import { nationalityDisplayName } from "@/lib/apply/display-names";
+import { listPublicNationalities } from "@/lib/catalog/queries";
+import { withSystemDbActor } from "@/lib/db/actor-context";
 
 export const metadata: Metadata = {
   title: "Start application",
@@ -28,6 +31,9 @@ export default async function ApplyStartPage({ searchParams }: PageProps) {
     redirect("/");
   }
 
+  const nationalities = await withSystemDbActor((tx) => listPublicNationalities(tx));
+  const nationalityName = nationalityDisplayName(initialNationalityCode, nationalities);
+
   return (
     <div className="max-w-6xl pb-8">
       <ApplyTwoColumn currentStep={2} contentClassName="space-y-10">
@@ -37,7 +43,7 @@ export default async function ApplyStartPage({ searchParams }: PageProps) {
                 Choose your visa
               </h1>
               <p className="text-muted-foreground max-w-prose text-base leading-relaxed md:text-lg">
-                Nationality <span className="text-foreground font-semibold">{initialNationalityCode}</span> is set from
+                Nationality <span className="text-foreground font-semibold">{nationalityName}</span> is set from
                 the home page. Choose how prices are shown, pick your visa, then continue to your application file.
               </p>
             </div>
