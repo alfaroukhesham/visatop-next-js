@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type FC } from "react";
+import { useState, type FC } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -33,7 +33,11 @@ interface ICatalogServicePriceAllModalProps {
   onSuccess?: (applied: { aedMajor: string; usdMajor: string }) => void;
 }
 
-export const CatalogServicePriceAllModal: FC<ICatalogServicePriceAllModalProps> = ({
+export const CatalogServicePriceAllModal: FC<ICatalogServicePriceAllModalProps> = (props) => (
+  <CatalogServicePriceAllModalSession key={props.open ? "open" : "closed"} {...props} />
+);
+
+const CatalogServicePriceAllModalSession: FC<ICatalogServicePriceAllModalProps> = ({
   open,
   onOpenChange,
   serviceId,
@@ -42,7 +46,7 @@ export const CatalogServicePriceAllModal: FC<ICatalogServicePriceAllModalProps> 
   canWrite,
   onSuccess,
 }) => {
-  const { aedMajor, usdMajor, onAedChange, onUsdChange, reset } = useDualCurrencyFxFill(
+  const { aedMajor, usdMajor, onAedChange, onUsdChange } = useDualCurrencyFxFill(
     fxConfigured,
     fxAedPerUsd,
   );
@@ -50,15 +54,6 @@ export const CatalogServicePriceAllModal: FC<ICatalogServicePriceAllModalProps> 
   const [error, setError] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [preview, setPreview] = useState<TServicePricingPreview | null>(null);
-
-  useEffect(() => {
-    if (!open) {
-      reset();
-      setError(null);
-      setPreviewOpen(false);
-      setPreview(null);
-    }
-  }, [open, reset]);
 
   const startApply = async () => {
     if (!canWrite) return;
