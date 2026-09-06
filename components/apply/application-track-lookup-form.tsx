@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
+import { nationalityLabelWithFlag } from "@/lib/apply/display-names";
 import { apiHref } from "@/lib/app-href";
 import type { ClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
 import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
@@ -144,7 +145,7 @@ export function ApplicationTrackLookupForm() {
                     <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Reference</p>
                     <p className="font-mono text-sm text-foreground">{row.referenceDisplay}</p>
                     <p className="text-muted-foreground text-xs">
-                      {row.serviceName} · {row.nationalityName}
+                      {row.serviceName} · {nationalityLabelWithFlag(row.nationalityCode, row.nationalityName)}
                     </p>
                   </div>
                   <ApplicationClientTracking tracking={row.clientTracking} />

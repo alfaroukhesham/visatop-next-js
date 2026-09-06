@@ -7,6 +7,7 @@ import { ClientInlineLoading, ClientTrackListSkeleton } from "@/components/clien
 import { ClientButton, ClientButtonLink } from "@/components/client/client-button";
 import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
 import type { ClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
+import { nationalityLabelWithFlag } from "@/lib/apply/display-names";
 import { apiHref } from "@/lib/app-href";
 import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 
@@ -117,7 +118,7 @@ export function SignedInTrackList() {
                   </p>
                   <p className="font-mono text-sm text-foreground">{row.referenceDisplay}</p>
                   <p className="text-muted-foreground text-xs">
-                    {row.serviceName} · {row.nationalityName}
+                    {row.serviceName} · {nationalityLabelWithFlag(row.nationalityCode, row.nationalityName)}
                   </p>
                   {row.paymentStatus === "unpaid" && row.draftExpiresAt ? (
                     <p className="text-muted-foreground text-xs">

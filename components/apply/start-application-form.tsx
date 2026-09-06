@@ -17,6 +17,7 @@ import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { trackEvent } from "@/lib/analytics/gtag-client";
 import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
+import { nationalityDisplayName } from "@/lib/apply/display-names";
 import { cn } from "@/lib/utils";
 
 type Nationality = { code: string; name: string };
@@ -247,9 +248,11 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
     return (
       <div className="space-y-4 pb-24">
         <p className="text-muted-foreground text-sm leading-relaxed" role="alert">
-          We could not load visa options for nationality{" "}
-          <span className="text-foreground font-semibold">{nationalityCode || "—"}</span>. Return to the
-          home page and choose your nationality again.
+          We could not load visa options for{" "}
+          <span className="text-foreground font-semibold">
+            {nationalityDisplayName(nationalityCode, nationalities)}
+          </span>
+          . Return to the home page and choose your nationality again.
         </p>
         <ClientButton type="button" brand="cta" onClick={() => router.push("/")}>
           Back to home

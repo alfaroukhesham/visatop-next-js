@@ -12,6 +12,7 @@ import {
 import { createPortal } from "react-dom";
 import { ChevronDown, Globe } from "lucide-react";
 import { ClientInput } from "@/components/client/client-input";
+import { iso2FlagEmoji } from "@/lib/apply/display-names";
 import { cn } from "@/lib/utils";
 
 export type NationalityOption = { code: string; name: string };
@@ -36,7 +37,7 @@ export function NationalityCombobox({
   nationalities,
   valueCode,
   onSelectCode,
-  placeholder = "Type your country or code…",
+  placeholder = "Type your country…",
   disabled,
   size = "default",
   className,
@@ -51,7 +52,8 @@ export function NationalityCombobox({
     [nationalities, valueCode],
   );
 
-  const closedLabel = selected ? `${selected.name} (${selected.code})` : "";
+  const closedLabel = selected ? selected.name : "";
+  const selectedFlag = selected ? iso2FlagEmoji(selected.code) : "";
 
   const [open, setOpen] = useState(false);
   const [draftQuery, setDraftQuery] = useState("");
@@ -66,10 +68,7 @@ export function NationalityCombobox({
     const q = (open ? draftQuery : "").trim().toLowerCase();
     if (!q) return nationalities;
     return nationalities.filter(
-      (n) =>
-        n.name.toLowerCase().includes(q) ||
-        n.code.toLowerCase().includes(q) ||
-        `${n.name} (${n.code})`.toLowerCase().includes(q),
+      (n) => n.name.toLowerCase().includes(q) || n.code.toLowerCase().includes(q),
     );
   }, [nationalities, draftQuery, open]);
 
@@ -163,27 +162,32 @@ export function NationalityCombobox({
       >
         {showList ? (
           <ul id={listId} role="listbox" className="max-h-[min(22rem,calc(100dvh-2rem))] overflow-auto py-1">
-            {filtered.map((n, i) => (
-              <li key={n.code} role="presentation">
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={i === activeIndex}
-                  className={cn(
-                    "hover:bg-accent hover:text-accent-foreground flex w-full items-center gap-2 px-4 py-3 text-left text-sm transition-colors",
-                    i === activeIndex && "bg-accent text-accent-foreground",
-                  )}
-                  onMouseEnter={() => setHighlight(i)}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => pick(n.code)}
-                >
-                  <span className="text-muted-foreground w-9 shrink-0 font-mono text-xs uppercase">
-                    {n.code}
-                  </span>
-                  <span className="min-w-0 font-medium">{n.name}</span>
-                </button>
-              </li>
-            ))}
+            {filtered.map((n, i) => {
+              const flag = iso2FlagEmoji(n.code);
+              return (
+                <li key={n.code} role="presentation">
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={i === activeIndex}
+                    className={cn(
+                      "hover:bg-accent hover:text-accent-foreground flex w-full items-center gap-2 px-4 py-3 text-left text-sm transition-colors",
+                      i === activeIndex && "bg-accent text-accent-foreground",
+                    )}
+                    onMouseEnter={() => setHighlight(i)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => pick(n.code)}
+                  >
+                    {flag ? (
+                      <span className="w-6 shrink-0 text-base leading-none" aria-hidden>
+                        {flag}
+                      </span>
+                    ) : null}
+                    <span className="min-w-0 font-medium">{n.name}</span>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <p id={listId} className="text-muted-foreground px-4 py-3 text-sm" role="status">
@@ -197,13 +201,25 @@ export function NationalityCombobox({
   return (
     <div ref={wrapRef} className={cn("relative w-full", className)}>
       <div className="relative">
-        <Globe
-          className={cn(
-            "text-muted-foreground pointer-events-none absolute top-1/2 -translate-y-1/2",
-            hero ? "left-4 size-6" : "left-3 size-5",
-          )}
-          aria-hidden
-        />
+        {selectedFlag && !open ? (
+          <span
+            className={cn(
+              "pointer-events-none absolute top-1/2 -translate-y-1/2 leading-none",
+              hero ? "left-4 text-2xl" : "left-3 text-lg",
+            )}
+            aria-hidden
+          >
+            {selectedFlag}
+          </span>
+        ) : (
+          <Globe
+            className={cn(
+              "text-muted-foreground pointer-events-none absolute top-1/2 -translate-y-1/2",
+              hero ? "left-4 size-6" : "left-3 size-5",
+            )}
+            aria-hidden
+          />
+        )}
         <ClientInput
           id={id}
           type="text"
