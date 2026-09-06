@@ -53,6 +53,7 @@ function buildReadinessLabel(readiness: string | null, paymentReadiness: Readine
 export function ApplicantReview({
   applicationId,
   nationalityCode,
+  nationalityName,
   applicant,
   guestEmail,
   extraction,
@@ -64,6 +65,7 @@ export function ApplicantReview({
 }: {
   applicationId: string;
   nationalityCode: string;
+  nationalityName: string;
   applicant: ApplicantProfile;
   guestEmail: string | null;
   extraction: ExtractResponse["extraction"] | null;
@@ -78,6 +80,7 @@ export function ApplicantReview({
 
   const initial: Record<string, string> = {};
   for (const r of APPLICANT_ROWS) initial[r.apiKey] = applicantFieldValue(applicant, r.key, guestEmail);
+  if (!applicant.nationality) initial.applicantNationality = nationalityName;
 
   const [values, setValues] = useState<Record<string, string>>(initial);
   const [saving, setSaving] = useState(false);

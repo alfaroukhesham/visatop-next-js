@@ -15,6 +15,8 @@ type Row = {
   referenceDisplay: string;
   nationalityCode: string;
   serviceId: string;
+  serviceName: string;
+  nationalityName: string;
   paymentStatus: string;
   draftExpiresAt: string | null;
   clientTracking: ClientApplicationTracking;
@@ -115,7 +117,7 @@ export function SignedInTrackList() {
                   </p>
                   <p className="font-mono text-sm text-foreground">{row.referenceDisplay}</p>
                   <p className="text-muted-foreground text-xs">
-                    Service {row.serviceId} · Nationality {row.nationalityCode}
+                    {row.serviceName} · {row.nationalityName}
                   </p>
                   {row.paymentStatus === "unpaid" && row.draftExpiresAt ? (
                     <p className="text-muted-foreground text-xs">

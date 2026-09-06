@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Camera, Loader2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
 import { ClientField } from "@/components/client/client-field";
 import { apiHref } from "@/lib/app-href";
+import { customerUploadStateLabel, oversizedUploadMessage } from "@/lib/apply/customer-upload-copy";
 import { MIME_BY_TYPE, UPLOAD_MAX_BYTES, type DocType, type PublicDocument } from "./types";
 
 export function DocumentUploadSlot({
@@ -28,12 +29,18 @@ export function DocumentUploadSlot({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const cameraFacing = docType === "personal_photo" ? "user" : "environment";
+  const [sizeError, setSizeError] = useState<string | null>(null);
 
   const handleFileChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     e.target.value = "";
     if (!file) return;
-    if (file.size > UPLOAD_MAX_BYTES) return;
+    const tooLarge = oversizedUploadMessage(file.size, UPLOAD_MAX_BYTES);
+    if (tooLarge) {
+      setSizeError(tooLarge);
+      return;
+    }
+    setSizeError(null);
     onUpload(file);
   };
 
@@ -44,27 +51,19 @@ export function DocumentUploadSlot({
         <p className="text-muted-foreground text-xs">{description}</p>
       </div>
       {currentDoc ? (
-        <div className="text-xs space-y-1">
-          <p className="text-foreground">
-            <span className="font-mono break-all">{currentDoc.originalFilename ?? currentDoc.id}</span>
-          </p>
-          <p className="text-muted-foreground">
-            {currentDoc.status} ·{" "}
-            {currentDoc.byteLength ? `${(currentDoc.byteLength / 1024).toFixed(1)} KB` : "?"}
-          </p>
-          <div className="flex gap-3 pt-1">
-            <a
-              href={apiHref(`/applications/${applicationId}/documents/${currentDoc.id}/preview`)}
-              target="_blank"
-              rel="noreferrer"
-              className="text-link hover:underline"
-            >
-              Preview
-            </a>
-          </div>
+        <div className="space-y-2">
+          <p className="text-success text-sm font-medium">{customerUploadStateLabel(true)}</p>
+          <a
+            href={apiHref(`/applications/${applicationId}/documents/${currentDoc.id}/preview`)}
+            target="_blank"
+            rel="noreferrer"
+            className="text-link text-xs hover:underline"
+          >
+            Preview
+          </a>
         </div>
       ) : (
-        <p className="text-muted-foreground text-xs">Not uploaded yet.</p>
+        <p className="text-muted-foreground text-xs">{customerUploadStateLabel(false)}</p>
       )}
 
       <ClientField id={inputId} label={label} labelClassName="sr-only">
@@ -88,6 +87,11 @@ export function DocumentUploadSlot({
           tabIndex={-1}
           aria-hidden
         />
+        {sizeError ? (
+          <p className="text-destructive text-xs" role="alert">
+            {sizeError}
+          </p>
+        ) : null}
         {uploading ? (
           <div className="flex items-center gap-2 text-xs text-muted-foreground py-1" role="status">
             <Loader2 className="size-4 animate-spin" aria-hidden />

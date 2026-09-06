@@ -85,6 +85,35 @@ describe("retainRequiredDocuments", () => {
     expect(docUpdates[0]?.values.status).toBe("retained");
   });
 
+  it("retains passport, photo, and bank_statement_6m when all three temps have bytes", async () => {
+    const { tx, updates } = makeTx([
+      { id: "d1", status: "uploaded_temp", hasBytes: "d1" },
+      { id: "d2", status: "uploaded_temp", hasBytes: "d2" },
+      { id: "d3", status: "uploaded_temp", hasBytes: "d3" },
+    ]);
+    const result = await retainRequiredDocuments(tx, "app-1");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.retainedDocumentIds).toEqual(["d1", "d2", "d3"]);
+    }
+    const docUpdates = updates.filter((u) => u.table === applicationDocument);
+    expect(docUpdates).toHaveLength(3);
+  });
+
+  it("succeeds with passport+photo ids when bank row is absent (third select null)", async () => {
+    const { tx, updates } = makeTx([
+      { id: "d1", status: "uploaded_temp", hasBytes: "d1" },
+      { id: "d2", status: "uploaded_temp", hasBytes: "d2" },
+    ]);
+    const result = await retainRequiredDocuments(tx, "app-1");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.retainedDocumentIds).toEqual(["d1", "d2"]);
+    }
+    const docUpdates = updates.filter((u) => u.table === applicationDocument);
+    expect(docUpdates).toHaveLength(2);
+  });
+
   it("flips status + sets retainedAt + clears tempExpiresAt for both required docs", async () => {
     const { tx, updates } = makeTx([
       { id: "d1", status: "uploaded_temp", hasBytes: "d1" },

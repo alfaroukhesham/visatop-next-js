@@ -15,6 +15,8 @@ type CatalogEligibilityLinkFormProps = {
   sectionBusy: boolean;
   eligBusy: string | null;
   onLink: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 export function CatalogEligibilityLinkForm({
@@ -27,9 +29,15 @@ export function CatalogEligibilityLinkForm({
   sectionBusy,
   eligBusy,
   onLink,
+  open,
+  onOpenChange,
 }: CatalogEligibilityLinkFormProps) {
   return (
-    <details className="group border-border rounded-md border">
+    <details
+      className="group border-border rounded-md border"
+      open={open}
+      onToggle={(e) => onOpenChange?.(e.currentTarget.open)}
+    >
       <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium [&::-webkit-details-marker]:hidden">
         <ChevronDown className="text-muted-foreground size-4 shrink-0 transition-transform group-open:rotate-180" />
         Link a new service to an existing nationality

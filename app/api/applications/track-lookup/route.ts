@@ -1,13 +1,16 @@
 import { headers } from "next/headers";
 import { z } from "zod";
+import { inArray } from "drizzle-orm";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { decodeCursor, encodeCursor, parseLimit } from "@/lib/api/cursor";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor } from "@/lib/db/actor-context";
-import { computeClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
+import { nationality, visaService } from "@/lib/db/schema";
+import { nationalityDisplayName } from "@/lib/apply/display-names";
 import {
   findApplicationsForContactTrackLookupPaginated,
   isValidTrackContact,
+  mapTrackLookupRow,
 } from "@/lib/applications/track-lookup";
 
 export const runtime = "nodejs";
@@ -41,22 +44,31 @@ export async function POST(req: Request) {
   });
   const cursor = decodeCursor(parsed.data.cursor ?? null);
 
-  const { items: rows, hasMore } = await withSystemDbActor(async (tx) => {
-    return findApplicationsForContactTrackLookupPaginated(tx, contact, { limit, cursor });
+  const { items: rows, hasMore, services, nationalities } = await withSystemDbActor(async (tx) => {
+    const result = await findApplicationsForContactTrackLookupPaginated(tx, contact, { limit, cursor });
+    const serviceIds = [...new Set(result.items.map((r) => r.serviceId))];
+    const nationalityCodes = [...new Set(result.items.map((r) => r.nationalityCode))];
+    const services = serviceIds.length
+      ? await tx
+          .select({ id: visaService.id, name: visaService.name })
+          .from(visaService)
+          .where(inArray(visaService.id, serviceIds))
+      : [];
+    const nationalities = nationalityCodes.length
+      ? await tx
+          .select({ code: nationality.code, name: nationality.name })
+          .from(nationality)
+          .where(inArray(nationality.code, nationalityCodes))
+      : [];
+    return { items: result.items, hasMore: result.hasMore, services, nationalities };
   });
 
-  const applications = rows.map((row) => ({
-    applicationId: row.id,
-    referenceDisplay: row.referenceNumber ?? row.id.slice(0, 8),
-    nationalityCode: row.nationalityCode,
-    serviceId: row.serviceId,
-    clientTracking: computeClientApplicationTracking({
-      applicationStatus: row.applicationStatus,
-      paymentStatus: row.paymentStatus,
-      fulfillmentStatus: row.fulfillmentStatus,
-      adminAttentionRequired: row.adminAttentionRequired,
+  const applications = rows.map((row) =>
+    mapTrackLookupRow(row, {
+      serviceName: services.find((s) => s.id === row.serviceId)?.name ?? null,
+      nationalityName: nationalityDisplayName(row.nationalityCode, nationalities),
     }),
-  }));
+  );
 
   const last = rows[rows.length - 1];
   const nextCursor =

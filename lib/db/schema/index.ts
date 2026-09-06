@@ -9,3 +9,5 @@ export * from "./platform-setting";
 export * from "./payments";
 export * from "./affiliate";
 export * from "./catalog-customer-price";
+export * from "./catalog-document-requirement";
+export * from "./catalog-document-type";

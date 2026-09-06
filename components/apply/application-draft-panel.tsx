@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ClientDraftPanelSkeleton } from "@/components/client/client-loading";
+import { AppShimmer } from "@/components/ui/app-loading";
 import { ApplyJourneyStepBar } from "@/components/apply/apply-journey-step-bar";
 import { computeValidation } from "@/lib/documents/validation-readiness";
 import { ApplicantReview } from "./draft/applicant-review";
@@ -22,7 +23,6 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
   }
 
   const {app} = draft;
-  const gotBoth = Boolean(draft.passport && draft.photo);
   const validationEmail = app.isGuest ? app.guestEmail : "signed-in";
 
   const { readiness, paymentReadiness, requiredFieldsMissing: missing } = computeValidation({
@@ -42,22 +42,34 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
         </p>
       ) : null}
 
-      <DraftDocumentsSection
-        applicationId={applicationId}
-        passport={draft.passport}
-        photo={draft.photo}
-        gotBoth={gotBoth}
-        uploading={draft.uploading}
-        extracting={draft.extracting}
-        passportExtractionStatus={app.passportExtraction.status}
-        attemptsLeft={draft.attemptsLeft}
-        onUpload={(type, file) => void draft.onUpload(type, file)}
-      />
+      {draft.docsLoading ? (
+        <section
+          className="border-border bg-card space-y-4 rounded-[12px] border p-5 shadow-[0_4px_20px_rgba(0,0,0,0.06)] sm:p-6"
+          aria-busy="true"
+          aria-label="Loading documents"
+        >
+          <AppShimmer className="h-5 w-40" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <AppShimmer className="h-32 w-full rounded-lg" />
+            <AppShimmer className="h-32 w-full rounded-lg" />
+          </div>
+        </section>
+      ) : (
+        <DraftDocumentsSection
+          applicationId={applicationId}
+          slots={draft.slots}
+          docsByType={draft.docsByType}
+          uploading={draft.uploading}
+          extracting={draft.extracting}
+          onUpload={(type, file) => void draft.onUpload(type, file)}
+        />
+      )}
 
       <ApplicantReview
-        key={applicantFormResetKey(app.applicant, draft.extractResult?.extraction ?? null, app.guestEmail)}
+        key={`${applicantFormResetKey(app.applicant, draft.extractResult?.extraction ?? null, app.guestEmail)}\u001e${draft.nationalityName}`}
         applicationId={applicationId}
         nationalityCode={app.nationalityCode}
+        nationalityName={draft.nationalityName}
         applicant={app.applicant}
         guestEmail={app.guestEmail}
         extraction={draft.extractResult?.extraction ?? null}

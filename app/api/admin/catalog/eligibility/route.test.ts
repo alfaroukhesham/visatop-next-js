@@ -46,6 +46,7 @@ describe("GET /api/admin/catalog/eligibility", () => {
           serviceId: "svc-1",
           nationalityCode: "US",
           serviceName: "Tourist",
+          hasPrice: true,
         },
       ],
       total: 1743,
