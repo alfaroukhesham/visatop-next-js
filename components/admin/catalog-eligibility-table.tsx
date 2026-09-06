@@ -83,6 +83,9 @@ export function CatalogEligibilityTable({
                 <td className="px-4 py-2">
                   <span className="font-medium">{e.serviceName}</span>
                   <div className="text-muted-foreground font-mono text-[10px] break-all">{e.serviceId}</div>
+                  {!e.hasPrice ? (
+                    <p className="text-muted-foreground text-sm">No price — hidden on apply.</p>
+                  ) : null}
                 </td>
                 <td className="px-4 py-2 font-mono text-xs">{e.nationalityCode}</td>
                 {canWrite ? (

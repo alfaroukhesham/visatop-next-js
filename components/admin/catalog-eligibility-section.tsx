@@ -28,6 +28,9 @@ export type CatalogEligibilitySectionProps = {
   canWrite: boolean;
   busy: string | null;
   flash: (t: string, err?: boolean) => void;
+  prefillNationalityCode?: string;
+  prefillEpoch?: number;
+  onEligibilityChanged?: () => void;
 };
 
 export function CatalogEligibilitySection({
@@ -36,11 +39,16 @@ export function CatalogEligibilitySection({
   canWrite,
   busy,
   flash,
+  prefillNationalityCode,
+  prefillEpoch = 0,
+  onEligibilityChanged,
 }: CatalogEligibilitySectionProps) {
   type EligibilityUiState = {
     serviceId: string;
     nationalityCode: string;
     eligBusy: string | null;
+    appliedPrefillEpoch: number;
+    linkOpen: boolean;
     draftFilters: CatalogEligibilityFilters;
     appliedFilters: CatalogEligibilityFilters;
   };
@@ -67,11 +75,31 @@ export function CatalogEligibilitySection({
       serviceId: services[0]?.id ?? "",
       nationalityCode: nationalities[0]?.code ?? "",
       eligBusy: null,
+      appliedPrefillEpoch: 0,
+      linkOpen: false,
       draftFilters: EMPTY_CATALOG_ELIGIBILITY_FILTERS,
       appliedFilters: EMPTY_CATALOG_ELIGIBILITY_FILTERS,
     },
   );
-  const { serviceId, nationalityCode, eligBusy, draftFilters, appliedFilters } = ui;
+  const {
+    serviceId,
+    nationalityCode,
+    eligBusy,
+    appliedPrefillEpoch,
+    linkOpen,
+    draftFilters,
+    appliedFilters,
+  } = ui;
+  if (prefillEpoch !== appliedPrefillEpoch && prefillNationalityCode) {
+    dispatchUi({
+      type: "patch",
+      patch: {
+        appliedPrefillEpoch: prefillEpoch,
+        nationalityCode: prefillNationalityCode,
+        linkOpen: true,
+      },
+    });
+  }
   const setServiceId = (value: string) => dispatchUi({ type: "patch", patch: { serviceId: value } });
   const setNationalityCode = (value: string) =>
     dispatchUi({ type: "patch", patch: { nationalityCode: value } });
@@ -117,13 +145,14 @@ export function CatalogEligibilitySection({
     try {
       await fn();
       eligPage.reload();
+      onEligibilityChanged?.();
     } finally {
       setEligBusy(null);
     }
   }
 
   return (
-    <Card className="border-border overflow-hidden border">
+    <Card id="catalog-eligibility" className="border-border overflow-hidden border">
       <CardHeader className="border-border bg-muted/20 border-b">
         <CardTitle className="font-heading text-lg">Service ↔ nationality eligibility</CardTitle>
         <CardDescription>
@@ -185,6 +214,8 @@ export function CatalogEligibilitySection({
             onNationalityCodeChange={setNationalityCode}
             sectionBusy={sectionBusy}
             eligBusy={eligBusy}
+            open={linkOpen}
+            onOpenChange={(next) => dispatchUi({ type: "patch", patch: { linkOpen: next } })}
             onLink={() =>
               void runElig("elig-add", () =>
                 linkCatalogEligibility({ serviceId, nationalityCode, flash }),
