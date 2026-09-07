@@ -88,11 +88,13 @@ function serviceTitle(s: CatalogService): string {
   return parts.join(" · ");
 }
 
-function contactEmailLine(app: PublicApplication): string {
+const NotAddedYet = () => <span className="text-muted-foreground">Not added yet</span>;
+
+function contactEmailContent(app: PublicApplication) {
   const em = app.guestEmail?.trim();
   if (em) return em;
   if (!app.isGuest) return "Your sign-in email (for updates)";
-  return ", ";
+  return <NotAddedYet />;
 }
 
 export function CheckoutOrderRecap({
@@ -176,9 +178,9 @@ export function CheckoutOrderRecap({
 
   const totalText = totalMinor === null ? null : formatDisplayMinor(totalMinor.toString(), currency);
 
-  const fullName = application.applicant.fullName?.trim() || ", ";
-  const passportNo = application.applicant.passportNumber?.trim() || ", ";
-  const dob = formatIsoDateAsDdMmYyyy(application.applicant.dateOfBirth ?? null) || ", ";
+  const fullName = application.applicant.fullName?.trim() ?? "";
+  const passportNo = application.applicant.passportNumber?.trim() ?? "";
+  const dob = formatIsoDateAsDdMmYyyy(application.applicant.dateOfBirth ?? null) ?? "";
 
   const subtotalText = price?.text ?? null;
 
@@ -217,7 +219,7 @@ export function CheckoutOrderRecap({
                   </div>
                   <div className="text-right">
                     {line.price ? (
-                      <p className="text-primary font-heading text-base font-bold tabular-nums">{line.price.text}</p>
+                      <p className="text-foreground font-heading text-base font-bold tabular-nums">{line.price.text}</p>
                     ) : (
                       <p className="text-muted-foreground text-sm">Total at checkout</p>
                     )}
@@ -238,26 +240,32 @@ export function CheckoutOrderRecap({
                 <div className="flex flex-wrap gap-x-2 gap-y-0.5">
                   <dt className="sr-only">Name</dt>
                   <dd>
-                    <span className="font-medium text-foreground/80">Name</span> {fullName}
+                    <span className="font-medium text-foreground/80">Name</span>{" "}
+                    {fullName ? fullName : <NotAddedYet />}
                   </dd>
                 </div>
                 <div className="flex flex-wrap gap-x-2 gap-y-0.5">
                   <dt className="sr-only">Email</dt>
                   <dd>
-                    <span className="font-medium text-foreground/80">Email</span> {contactEmailLine(application)}
+                    <span className="font-medium text-foreground/80">Email</span> {contactEmailContent(application)}
                   </dd>
                 </div>
                 <div className="flex flex-wrap gap-x-2 gap-y-0.5">
                   <dt className="sr-only">Date of birth</dt>
                   <dd>
-                    <span className="font-medium text-foreground/80">Date of birth</span> {dob}
+                    <span className="font-medium text-foreground/80">Date of birth</span>{" "}
+                    {dob ? dob : <NotAddedYet />}
                   </dd>
                 </div>
                 <div className="flex flex-wrap gap-x-2 gap-y-0.5">
                   <dt className="sr-only">Passport</dt>
                   <dd>
                     <span className="font-medium text-foreground/80">Passport</span>{" "}
-                    <span className="font-mono tabular-nums">{passportNo}</span>
+                    {passportNo ? (
+                      <span className="font-mono tabular-nums">{passportNo}</span>
+                    ) : (
+                      <NotAddedYet />
+                    )}
                   </dd>
                 </div>
               </dl>
@@ -266,7 +274,7 @@ export function CheckoutOrderRecap({
                 <p className="text-muted-foreground text-sm tabular-nums">× 1</p>
                 <div className="text-right">
                   {subtotalText ? (
-                    <p className="text-primary font-heading text-lg font-bold tabular-nums">{subtotalText}</p>
+                    <p className="text-foreground font-heading text-lg font-bold tabular-nums">{subtotalText}</p>
                   ) : (
                     <p className="text-muted-foreground text-sm">Total at checkout</p>
                   )}
@@ -274,14 +282,14 @@ export function CheckoutOrderRecap({
               </div>
               {price?.isEstimate ? (
                 <p className="text-muted-foreground mt-2 text-[10px] font-medium uppercase tracking-wide">
-                  Estimated ,  exact total confirmed when you pay
+                  Estimated — exact total confirmed when you pay
                 </p>
               ) : null}
             </>
           ) : (
             <p className="text-muted-foreground text-sm">
               Visa service{" "}
-              <span className="font-mono text-xs break-all">{application.serviceId}</span> ,  catalog details unavailable.
+              <span className="font-mono text-xs break-all">{application.serviceId}</span> — catalog details unavailable.
             </p>
           )}
         </div>
@@ -291,11 +299,11 @@ export function CheckoutOrderRecap({
         <div className="space-y-2 text-sm">
           <div className="text-muted-foreground flex justify-between gap-4">
             <span>Subtotal</span>
-            <span className="text-primary font-heading font-bold tabular-nums">{totalText}</span>
+            <span className="text-foreground font-heading font-bold tabular-nums">{totalText}</span>
           </div>
           <div className="text-muted-foreground flex justify-between gap-4">
             <span>Total</span>
-            <span className="text-primary font-heading text-base font-bold tabular-nums">{totalText}</span>
+            <span className="text-foreground font-heading text-base font-bold tabular-nums">{totalText}</span>
           </div>
         </div>
       ) : null}

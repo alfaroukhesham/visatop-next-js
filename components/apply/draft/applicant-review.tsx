@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FC } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertTriangle, ChevronDown, Loader2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
 import { ClientInput } from "@/components/client/client-input";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 import { APPLY_STEP3_VALIDATION_DISABLED } from "@/lib/apply/apply-flow-config";
+import { customerFacingOcrMessage } from "@/lib/apply/ocr-customer-copy";
+import { PAY_BLOCKED_MISSING_DOCS_COPY } from "@/lib/apply/payment-copy";
 import { parseDobInputToIsoUtc, type Readiness } from "@/lib/documents/validation-readiness";
+import { cn } from "@/lib/utils";
 import { DATE_API_KEYS, type ApplicantProfile, type ApplicantProfileFieldKey, type ExtractResponse } from "./types";
 import { applicantFieldValue, applyDateMask } from "./utils";
 
@@ -29,16 +32,20 @@ const APPLICANT_ROWS: Array<{
   { label: "Phone", key: "phone", apiKey: "phone", placeholder: "+1 555 000 0000" },
 ];
 
-function buildReadinessLabel(readiness: string | null, paymentReadiness: Readiness) {
-  if (APPLY_STEP3_VALIDATION_DISABLED && paymentReadiness === "ready") {
-    return { text: "Ready for payment", tone: "success" as const };
+const buildReadinessLabel = (
+  readiness: string | null,
+  paymentReadiness: Readiness,
+  requiredDocsPresent: boolean,
+) => {
+  if (!requiredDocsPresent) {
+    return { text: PAY_BLOCKED_MISSING_DOCS_COPY, tone: "warn" as const };
   }
-  if (paymentReadiness === "ready" && readiness !== "ready") {
-    return { text: "Ready for payment — add passport and photo when you can", tone: "success" as const };
+  if (APPLY_STEP3_VALIDATION_DISABLED && paymentReadiness === "ready") {
+    return { text: "Continue to payment", tone: "neutral" as const };
   }
   switch (readiness) {
     case "ready":
-      return { text: "Ready for payment", tone: "success" as const };
+      return { text: "Continue to payment", tone: "neutral" as const };
     case "blocked_validation":
       return { text: "Needs attention before checkout", tone: "warn" as const };
     case "blocked_missing_docs":
@@ -48,22 +55,9 @@ function buildReadinessLabel(readiness: string | null, paymentReadiness: Readine
     default:
       return null;
   }
-}
+};
 
-export function ApplicantReview({
-  applicationId,
-  paymentApplicationId,
-  nationalityCode,
-  nationalityName,
-  applicant,
-  guestEmail,
-  extraction,
-  readiness,
-  paymentReadiness,
-  missing,
-  locked,
-  onSaved,
-}: {
+export interface IApplicantReviewProps {
   applicationId: string;
   paymentApplicationId?: string;
   nationalityCode: string;
@@ -73,12 +67,35 @@ export function ApplicantReview({
   extraction: ExtractResponse["extraction"] | null;
   readiness: string | null;
   paymentReadiness: Readiness;
+  requiredDocsPresent: boolean;
   missing: string[];
+  documentsReady: boolean;
+  passportUploaded: boolean;
   locked: boolean;
   onSaved: () => void;
-}) {
+}
+
+export const ApplicantReview: FC<IApplicantReviewProps> = ({
+  applicationId,
+  paymentApplicationId,
+  nationalityCode,
+  nationalityName,
+  applicant,
+  guestEmail,
+  extraction,
+  readiness,
+  paymentReadiness,
+  requiredDocsPresent,
+  missing,
+  documentsReady,
+  passportUploaded,
+  locked,
+  onSaved,
+}) => {
   const router = useRouter();
   const prefilled = new Set<string>(Object.keys(extraction?.prefill ?? {}));
+  const shouldAutoExpand = passportUploaded || documentsReady || Boolean(extraction);
+  const [expanded, setExpanded] = useState(shouldAutoExpand);
 
   const initial: Record<string, string> = {};
   for (const r of APPLICANT_ROWS) initial[r.apiKey] = applicantFieldValue(applicant, r.key, guestEmail);
@@ -163,30 +180,63 @@ export function ApplicantReview({
     }
   }
 
-  const readinessLabel = buildReadinessLabel(readiness, paymentReadiness);
+  const readinessLabel = requiredDocsPresent
+    ? buildReadinessLabel(readiness, paymentReadiness, requiredDocsPresent)
+    : null;
+  const isSecondary = !documentsReady;
 
   return (
-    <section className="space-y-4 rounded-[12px] border border-border bg-card p-5 shadow-[0_4px_20px_rgba(0,0,0,0.06)] sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-heading text-base font-semibold tracking-tight">Applicant details</h2>
-        {readinessLabel ? (
-          <span
-            className={
-              "text-xs font-medium inline-flex items-center gap-1 " +
-              (readinessLabel.tone === "success" ? "text-success" : "text-error")
-            }
-            aria-label={readinessLabel.tone === "success" ? readinessLabel.text : undefined}
-          >
-            {readinessLabel.tone === "success" ? (
-              <CheckCircle2 className="size-4" aria-hidden />
-            ) : (
-              <AlertTriangle className="size-4" aria-hidden />
+    <details
+      open={expanded}
+      onToggle={(e) => setExpanded((e.currentTarget as HTMLDetailsElement).open)}
+      className={cn(
+        "group space-y-4 rounded-3xl border bg-card p-5 shadow-[0_18px_48px_rgba(1,32,49,0.07)] sm:p-6 md:p-8",
+        isSecondary ? "border-border/60 bg-muted/15" : "border-border",
+      )}
+    >
+      <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+        <div className="space-y-1">
+          <h2
+            className={cn(
+              "font-heading text-xl font-semibold tracking-tight",
+              isSecondary && "text-muted-foreground",
             )}
-            {readinessLabel.tone === "success" ? null : readinessLabel.text}
-          </span>
-        ) : null}
-      </div>
+          >
+            Applicant details
+          </h2>
+          {isSecondary ? (
+            <p className="text-muted-foreground text-sm font-normal">
+              {passportUploaded
+                ? "Review auto-filled details from your passport, then finish uploading."
+                : "Optional for now — add details after upload"}
+            </p>
+          ) : null}
+        </div>
+        <div className="flex items-center gap-2">
+          {readinessLabel ? (
+            <span
+              className={cn(
+                "text-xs font-medium inline-flex items-center gap-1",
+                readinessLabel.tone === "warn" ? "text-error" : "text-muted-foreground",
+              )}
+            >
+              {readinessLabel.tone === "warn" ? (
+                <AlertTriangle className="size-4" aria-hidden />
+              ) : null}
+              {readinessLabel.text}
+            </span>
+          ) : null}
+          <ChevronDown
+            className={cn(
+              "text-muted-foreground size-5 shrink-0 transition-transform",
+              expanded && "rotate-180",
+            )}
+            aria-hidden
+          />
+        </div>
+      </summary>
 
+      <div className="space-y-4 pt-2">
       {!APPLY_STEP3_VALIDATION_DISABLED && missing.length > 0 && (
         <div className="border-error bg-error/5 border-b-2 px-3 py-2 text-sm">
           <p className="text-error font-semibold">Required fields missing:</p>
@@ -194,14 +244,11 @@ export function ApplicantReview({
         </div>
       )}
 
-      {extraction && (
+      {extraction ? (
         <p className="text-muted-foreground text-xs">
-          Auto-fill {extraction.status} · {extraction.attemptsUsed} attempt(s)
-          {extraction.ocrMissingFields.length > 0
-            ? ` · could not read: ${extraction.ocrMissingFields.join(", ")}`
-            : ""}
+          {customerFacingOcrMessage(extraction.status)}
         </p>
-      )}
+      ) : null}
 
       {locked && (
         <p className="text-muted-foreground bg-muted px-3 py-2 text-xs rounded">
@@ -215,7 +262,7 @@ export function ApplicantReview({
           const wasOcr = prefilled.has(r.key);
           return (
             <div key={r.key}>
-              <dt className="text-foreground flex flex-col gap-0.5 text-xs font-medium">
+              <dt className="text-foreground flex flex-col gap-0.5 text-[11px] font-bold uppercase tracking-wide">
                 <span className="flex flex-wrap items-center gap-1">
                   {r.label}
                   {wasOcr && (
@@ -238,7 +285,7 @@ export function ApplicantReview({
                     setValues((prev) => ({ ...prev, [r.apiKey]: v }));
                   }}
                   invalid={isMissing && !values[r.apiKey]}
-                  className={["rounded-[5px]", locked ? "cursor-not-allowed opacity-70" : ""].join(" ")}
+                  className={["rounded-xl", locked ? "cursor-not-allowed opacity-70" : ""].join(" ")}
                 />
               </dd>
             </div>
@@ -248,10 +295,10 @@ export function ApplicantReview({
 
       <div className="flex flex-wrap items-center gap-3 pt-2">
         <ClientButton
-          type="submit"
+          type="button"
           variant="outline"
-          brand="cta"
-          className="rounded-none"
+          brand="white"
+          className="rounded-xl"
           onClick={() =>
             router.push(`/apply/start?nationality=${encodeURIComponent(nationalityCode)}`)
           }
@@ -271,7 +318,7 @@ export function ApplicantReview({
                 }
                 void handleSave();
               }}
-              className="rounded-none"
+              className="rounded-xl"
             >
               {saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
               {saving ? "Saving…" : !dirty && canContinueToPayment ? "Continue to payment" : "Next"}
@@ -281,6 +328,7 @@ export function ApplicantReview({
           </>
         ) : null}
       </div>
-    </section>
+      </div>
+    </details>
   );
-}
+};

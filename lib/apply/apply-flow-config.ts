@@ -1,6 +1,7 @@
 /**
- * When `true`, step 3 applicant fields and document uploads are optional on the client.
- * Payment readiness only requires an email (captured at step 2) plus a chosen service.
- * Set to `false` to restore full profile + validation gates before checkout.
+ * When `APPLY_STEP3_VALIDATION_DISABLED`, step 3 profile fields are optional on
+ * the client. Payment readiness requires email (step 2) plus all required
+ * document slots; missing profile fields warn only. Set to `false` to restore
+ * full profile + validation gates before checkout.
  */
 export const APPLY_STEP3_VALIDATION_DISABLED = true;

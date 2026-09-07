@@ -9,6 +9,10 @@ import type { TPublicPartyMember } from "@/lib/applications/load-party-members";
 import { resolveDocumentRequirements, type TDocumentSlot } from "@/lib/apply/document-requirements";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
 import { oversizedUploadMessage } from "@/lib/apply/customer-upload-copy";
+import {
+  buildUploadPresence,
+  memberUploadStateFromDraft,
+} from "@/lib/apply/payment-upload-presence";
 import { UPLOAD_MAX_BYTES, type DocType, type ExtractResponse, type PublicDocument } from "./types";
 import { latestByType } from "./utils";
 
@@ -273,6 +277,13 @@ export function useApplicationDraft(applicationId: string) {
   const selectedMember = members.find((m) => m.applicationId === selectedMemberId) ?? null;
   const primaryState = app ? memberStates[app.id] : undefined;
 
+  const uploadPresence = buildUploadPresence(
+    members.map((m) => {
+      const state = memberStates[m.applicationId] ?? emptyMemberState();
+      return memberUploadStateFromDraft(state.slots, state.docsByType);
+    }),
+  );
+
   return {
     app,
     loading,
@@ -293,5 +304,6 @@ export function useApplicationDraft(applicationId: string) {
     passport: primaryState?.passport ?? null,
     photo: primaryState?.photo ?? null,
     nationalityName: primaryState?.nationalityName ?? "",
+    uploadPresence,
   };
 }

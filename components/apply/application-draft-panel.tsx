@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { ClientDraftPanelSkeleton } from "@/components/client/client-loading";
 import { AppShimmer } from "@/components/ui/app-loading";
-import { ApplyJourneyStepBar } from "@/components/apply/apply-journey-step-bar";
-import { computeValidation } from "@/lib/documents/validation-readiness";
+import { computeValidation, allRequiredDocumentsPresent } from "@/lib/documents/validation-readiness";
 import { ApplicantReview } from "./draft/applicant-review";
 import { DraftDocumentsSection } from "./draft/draft-documents-section";
 import { DraftPanelError } from "./draft/draft-panel-error";
 import { PartyDocumentsTabs } from "./draft/party-documents-tabs";
+import type { DocType } from "./draft/types";
 import { applicantFormResetKey } from "./draft/utils";
 import { useApplicationDraft } from "./draft/use-application-draft";
 
@@ -32,16 +32,21 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
 
   const { readiness, paymentReadiness, requiredFieldsMissing: missing } = computeValidation({
     profile: { ...selectedApp.applicant, email: validationEmail },
-    uploads: {
-      passportCopyPresent: Boolean(draft.selected.passport),
-      personalPhotoPresent: Boolean(draft.selected.photo),
-    },
+    uploads: draft.uploadPresence,
     now: new Date(),
   });
+
+  const requiredDocsPresent = allRequiredDocumentsPresent(draft.uploadPresence);
 
   const primaryMember =
     draft.members.find((m) => m.travelerRole === "primary") ?? draft.members[0];
   const payApplicationId = primaryMember?.applicationId ?? applicationId;
+
+  const requiredSlots = draft.selected.slots.filter((s) => s.role === "required");
+  const allRequiredUploaded = requiredSlots.every(
+    (s) => draft.selected.docsByType[s.key as DocType],
+  );
+  const passportUploaded = Boolean(draft.selected.passport);
 
   return (
     <div className="space-y-8">
@@ -82,7 +87,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
       )}
 
       <ApplicantReview
-        key={`${applicantFormResetKey(selectedApp.applicant, draft.selected.extractResult?.extraction ?? null, selectedApp.guestEmail)}\u001e${draft.selected.nationalityName}`}
+        key={`${applicantFormResetKey(selectedApp.applicant, draft.selected.extractResult?.extraction ?? null, selectedApp.guestEmail)}\u001e${draft.selected.nationalityName}\u001e${passportUploaded ? "p" : "n"}\u001e${allRequiredUploaded ? "d" : "u"}`}
         applicationId={selectedApp.id}
         paymentApplicationId={payApplicationId}
         nationalityCode={selectedApp.nationalityCode}
@@ -92,7 +97,10 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
         extraction={draft.selected.extractResult?.extraction ?? null}
         readiness={readiness}
         paymentReadiness={paymentReadiness}
+        requiredDocsPresent={requiredDocsPresent}
         missing={missing}
+        documentsReady={allRequiredUploaded}
+        passportUploaded={passportUploaded}
         locked={selectedApp.checkoutState === "pending" || selectedApp.paymentStatus === "paid"}
         onSaved={() => void draft.load({ silent: true })}
       />
@@ -103,16 +111,10 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
         </Link>
         {" · "}
         <Link href="/portal/track" className="hover:text-foreground">
-          Portal
+          Your applications
         </Link>
       </p>
 
-      <ApplyJourneyStepBar
-        step={3}
-        totalSteps={5}
-        title="Upload documents"
-        subtitle="Upload what we ask for, then confirm your passport details."
-      />
     </div>
   );
 }

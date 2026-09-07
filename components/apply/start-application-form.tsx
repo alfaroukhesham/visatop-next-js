@@ -20,9 +20,11 @@ import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
 import { DEFAULT_APPLY_PRICE_BADGES, DEFAULT_PARTY_ENABLED, DEFAULT_PARTY_MAX_TRAVELERS, type TApplyPriceBadges } from "@/lib/apply/apply-config";
 import { assertTravelersReady, canAddTraveler, type TPartyTravelerDraft } from "@/lib/apply/party-travelers";
-import { filterGuidedServices } from "@/lib/apply/guided-visa-filter";
+import { filterGuidedServices, type TChooserPhase } from "@/lib/apply/guided-visa-filter";
+import { APPLY_STAY_LABELS } from "@/lib/apply/apply-stay-labels";
 import type { TStayBucket, TTravelerKind } from "@/lib/catalog/guided-choice";
 import { AllInPriceBadges } from "@/components/apply/all-in-price-badges";
+import { ApplyStepsRail } from "@/components/apply/apply-steps-rail";
 import { GuidedVisaChooser, type IService } from "@/components/apply/guided-visa-chooser";
 import { cn } from "@/lib/utils";
 
@@ -83,12 +85,62 @@ const toDisplayMinor = (s: Service, tab: DisplayCurrency): number | null => {
   return Number(converted);
 }
 
+interface ISelectedVisaSummaryProps {
+  service: Service;
+  answers: { stay: TStayBucket | null; entry: "single" | "multiple"; kind: TTravelerKind };
+  totalText: string | null;
+  price: { text: string; isEstimate: boolean } | null;
+  badges: TApplyPriceBadges;
+}
+
+function SelectedVisaSummary({ service, answers, totalText, price, badges }: ISelectedVisaSummaryProps) {
+  return (
+    <aside className="border-secondary/25 bg-card h-fit space-y-4 rounded-2xl border p-4 shadow-[0_12px_30px_rgba(1,32,49,0.08)] lg:sticky lg:top-24">
+      <div>
+        <p className="text-secondary text-[10px] font-bold uppercase tracking-[0.2em]">Your visa</p>
+        <h2 className="font-heading text-foreground mt-1 text-lg font-bold leading-snug">{service.name}</h2>
+      </div>
+      <dl className="text-muted-foreground space-y-1.5 text-xs">
+        {service.durationDays != null ? <div className="flex justify-between gap-3"><dt>Stay</dt><dd className="text-foreground font-semibold">{service.durationDays} days</dd></div> : null}
+        {answers.stay ? <div className="flex justify-between gap-3"><dt>Trip</dt><dd className="text-foreground font-semibold">{APPLY_STAY_LABELS[answers.stay]}</dd></div> : null}
+        <div className="flex justify-between gap-3"><dt>Entry</dt><dd className="text-foreground font-semibold">{answers.entry === "multiple" ? "Multiple" : "Single"}</dd></div>
+        {answers.kind === "child" ? <div className="flex justify-between gap-3"><dt>Traveller</dt><dd className="text-foreground font-semibold">Child</dd></div> : null}
+      </dl>
+      <div className="border-border border-t pt-3">
+        <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">Total</p>
+        <p className="font-heading text-foreground mt-0.5 text-xl font-bold tabular-nums">{totalText ?? price?.text ?? "At checkout"}</p>
+        {price?.isEstimate ? <p className="text-muted-foreground mt-1 text-[10px]">Estimated total</p> : null}
+      </div>
+      <AllInPriceBadges badges={badges} />
+    </aside>
+  );
+}
+
+interface IChooserCardHeaderProps {
+  nationalityName: string;
+}
+
+const ChooserCardHeader: FC<IChooserCardHeaderProps> = ({ nationalityName }) => (
+  <header className="min-w-0 space-y-1">
+    <h1 className="font-heading text-foreground text-xl! font-semibold leading-snug tracking-tight md:text-[1.75rem]!">
+      Choose your visa
+    </h1>
+    <p className="text-muted-foreground text-sm leading-relaxed">
+      Passport: <span className="text-foreground font-semibold">{nationalityName}</span>
+    </p>
+  </header>
+);
+
 interface IStartApplicationFormProps {
   /** Set on home; this page is only reachable as `/apply/start?nationality=XX`. */
   initialNationalityCode: string;
+  nationalityName: string;
 }
 
-export const StartApplicationForm: FC<IStartApplicationFormProps> = ({ initialNationalityCode }) => {
+export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
+  initialNationalityCode,
+  nationalityName,
+}) => {
   const router = useRouter();
   const sessionEmail = useClientAuthStore((s) => s.session?.user?.email);
   const [nationalities, setNationalities] = useState<Nationality[]>([]);
@@ -111,6 +163,7 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({ initialNa
     kind: TTravelerKind;
   }>({ stay: null, entry: "single", kind: "adult" });
   const [additionalTravelers, setAdditionalTravelers] = useState<TPartyTravelerDraft[]>([]);
+  const [chooserPhase, setChooserPhase] = useState<TChooserPhase>("stay");
 
   const reloadCatalog = useCallback(() => {
     setCatalogReloadEpoch((n) => n + 1);
@@ -319,7 +372,8 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({ initialNa
 
   if (loadingList) {
     return (
-      <div className="pb-24" aria-busy="true">
+      <div className="space-y-6 pb-24" aria-busy="true">
+        <ChooserCardHeader nationalityName={nationalityName} />
         <ClientStartStepSkeleton />
       </div>
     );
@@ -328,6 +382,7 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({ initialNa
   if (nationalityUnavailable) {
     return (
       <div className="space-y-4 pb-24">
+        <ChooserCardHeader nationalityName={nationalityName} />
         <p className="text-muted-foreground text-sm leading-relaxed" role="alert">
           We could not load visa options for{" "}
           <span className="text-foreground font-semibold">
@@ -343,25 +398,22 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({ initialNa
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-10 pb-24">
+    <form onSubmit={onSubmit} className="space-y-8 pb-24">
       {error ? (
-        <p className="text-error border-error/30 bg-error/5 text-sm leading-relaxed border-b-2 pl-3">
+        <p className="text-error border-error/30 bg-error/5 rounded-2xl border px-4 py-3 text-sm leading-relaxed">
           {error}
         </p>
       ) : null}
 
+      {serviceId ? <ApplyStepsRail currentStep={2} /> : null}
+
+      <div className={serviceId ? "lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start lg:gap-6" : undefined}>
+        <div className={serviceId ? "order-2 min-w-0 lg:order-1" : undefined}>
       {nationality ? (
         <section className="space-y-6">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 className="font-heading text-foreground text-lg font-semibold tracking-tight">
-                Find your visa
-              </h2>
-              <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
-                Answer one question at a time. We only show visas that match.
-              </p>
-            </div>
-            <div className="flex items-center gap-1" role="group" aria-label="Show prices in">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <ChooserCardHeader nationalityName={nationalityName} />
+            <div className="flex items-center gap-1 sm:pt-1" role="group" aria-label="Show prices in">
               {(["USD", "AED"] as const).map((c) => {
                 const active = displayCurrency === c;
                 return (
@@ -370,9 +422,8 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({ initialNa
                     type="button"
                     onClick={() => setDisplayCurrency(c)}
                     className={cn(
-                      "rounded-[5px] border-2 px-3 py-1.5 text-xs font-bold uppercase tracking-widest",
-                      active
-                        ? "border-primary bg-primary text-primary-foreground"
+                      "rounded-xl border-2 px-3 py-1.5 text-xs font-bold uppercase tracking-widest",
+                      active ? "border-secondary bg-secondary text-white"
                         : "border-border bg-card text-foreground hover:border-secondary",
                     )}
                   >
@@ -382,8 +433,6 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({ initialNa
               })}
             </div>
           </div>
-
-          <AllInPriceBadges badges={badges} />
 
           {!nationality ? null : loadingServices ? (
             <ClientServiceCardsSkeleton />
@@ -397,10 +446,11 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({ initialNa
               canAddTraveler={canAddTraveler(additionalTravelers.length + 1, partyMaxTravelers)}
               onAddTraveler={addTraveler}
               onAnswersChange={setAnswers}
+              onPhaseChange={setChooserPhase}
             />
           )}
 
-          {partyEnabled && additionalTravelers.length > 0 ? (
+          {serviceId && partyEnabled && additionalTravelers.length > 0 ? (
             <div className="space-y-4">
               {additionalTravelers.map((t, idx) => {
                 const shortlist = answers.stay
@@ -418,7 +468,7 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({ initialNa
                 return (
                   <div
                     key={t.key}
-                    className="border-border bg-card space-y-3 rounded-[12px] border-2 p-4"
+                    className="border-border bg-muted/30 space-y-4 rounded-2xl border-2 p-5"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-foreground text-sm font-semibold">
@@ -439,7 +489,7 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({ initialNa
                           type="button"
                           onClick={() => updateTraveler(t.key, { kind: k, serviceId: "" })}
                           className={cn(
-                            "border-border bg-card text-foreground rounded-[12px] border-2 px-4 py-2 text-sm font-semibold transition-colors",
+                            "border-border bg-card text-foreground rounded-xl border-2 px-4 py-2 text-sm font-semibold transition-colors",
                             t.kind === k ? "border-primary bg-accent/25" : "hover:border-secondary",
                           )}
                         >
@@ -450,7 +500,7 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({ initialNa
                     <select
                       value={t.serviceId}
                       onChange={(e) => updateTraveler(t.key, { serviceId: e.target.value })}
-                      className="border-border bg-card text-foreground w-full rounded-[5px] border-2 px-3 py-2 text-sm"
+                      className="border-border bg-card text-foreground w-full rounded-xl border-2 px-3 py-3 text-sm"
                     >
                       <option value="">Choose a visa</option>
                       {shortlist.map((s) => {
@@ -469,59 +519,72 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({ initialNa
             </div>
           ) : null}
 
-          <p className="text-muted-foreground text-xs leading-relaxed">
-            Please note that prices do not include insurance, which may be mandatory in some cases.
-          </p>
+          {serviceId ? (
+            <>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                Price includes the visa service. Travel insurance is separate if your destination requires it.
+              </p>
 
-          <ClientField id="apply-email" label="Email *">
-            <ClientInput
-              id="apply-email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="rounded-[5px]"
-            />
-            <p className="text-muted-foreground mt-1.5 text-xs leading-relaxed">
-              We’ll send application updates and your receipt to this address.
-            </p>
-          </ClientField>
+              <div className="border-t border-border/80 pt-6">
+                <ClientField id="apply-email" label="Email *">
+                  <ClientInput
+                    id="apply-email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="rounded-xl"
+                  />
+                  <p className="text-muted-foreground mt-1.5 text-xs leading-relaxed">
+                    We’ll send application updates and your receipt to this address.
+                  </p>
+                </ClientField>
+              </div>
+            </>
+          ) : null}
         </section>
       ) : null}
 
-      {totalText ? (
-        <div className="border-border bg-card flex flex-wrap items-center justify-between gap-3 rounded-[12px] border-2 px-4 py-3">
+      {serviceId && totalText ? (
+        <div className="border-secondary/20 bg-secondary/5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 px-5 py-4">
           <p className="text-foreground text-sm font-semibold">Checkout total</p>
           <p className="font-heading text-foreground text-xl font-bold tabular-nums">{totalText}</p>
         </div>
       ) : null}
+        </div>
+        {serviceId && primaryService ? <div className="order-1 lg:order-2"><SelectedVisaSummary service={primaryService} answers={answers} totalText={totalText} price={formatPriceForDisplay(primaryService, displayCurrency)} badges={badges} /></div> : null}
+      </div>
 
-      <div className="flex flex-wrap items-center gap-3 pt-1">
-        <ClientButton
-          type="button"
-          brand="cta"
-          onClick={() => router.push("/")}
-          className="justify-center font-semibold"
-        >
-          Previous
-        </ClientButton>
-        <ClientButton
-          type="submit"
-          brand="cta"
-          disabled={submitting || loadingList || !serviceId}
-          className="justify-center font-semibold"
-        >
-          {submitting ? (
-            <>
-              <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
-              Loading…
-            </>
-          ) : (
-            "Next"
-          )}
-        </ClientButton>
+      <div className="flex flex-col-reverse items-stretch gap-3 pt-1 sm:flex-row sm:items-center sm:justify-end">
+        {chooserPhase === "stay" ? (
+          <ClientButton
+            type="button"
+            brand="white"
+            onClick={() => router.push("/")}
+            className="w-full justify-center rounded-xl font-semibold sm:w-auto"
+          >
+            Previous
+          </ClientButton>
+        ) : null}
+        {serviceId ? (
+          <ClientButton
+            type="submit"
+            brand="cta"
+            disabled={submitting || loadingList}
+            className="w-full justify-center rounded-xl font-semibold sm:w-auto"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
+                Loading…
+              </>
+            ) : (
+              "Continue with this visa"
+            )}
+          </ClientButton>
+        ) : null}
         {/* <ClientNavLink href="/portal" className="text-muted-foreground hover:text-foreground text-sm pb-1">
           My applications
         </ClientNavLink>

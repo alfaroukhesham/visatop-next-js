@@ -45,24 +45,25 @@ export const DraftDocumentsSection: FC<IDraftDocumentsSectionProps> = ({
   };
 
   return (
-    <section className="space-y-4 rounded-[12px] border border-border bg-card p-5 shadow-[0_4px_20px_rgba(0,0,0,0.06)] sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-heading flex items-center gap-2 text-base font-semibold tracking-tight">
-          <FileStack className="text-primary size-5" aria-hidden />
-          Documents
-        </h2>
-        {allRequiredUploaded ? (
-          <span className="text-success inline-flex items-center gap-1 text-xs font-medium">
-            <CheckCircle2 className="size-4" aria-hidden />
-            Documents uploaded
-          </span>
-        ) : (
-          <span
-            className="text-muted-foreground inline-flex items-center text-xs"
-            aria-label="Passport and photo are required before we can submit to authorities; you can pay first."
-          >
-            <AlertTriangle className="size-4" aria-hidden />
-          </span>
+    <section className="space-y-4 rounded-3xl border border-border bg-card p-5 shadow-[0_18px_48px_rgba(1,32,49,0.07)] sm:p-6 md:p-8">
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-heading flex items-center gap-2 text-xl font-semibold tracking-tight">
+            <FileStack className="text-primary size-5" aria-hidden />
+            Documents
+          </h2>
+          {allRequiredUploaded ? (
+            <span className="text-success inline-flex items-center gap-1 text-xs font-medium">
+              <CheckCircle2 className="size-4" aria-hidden />
+              Documents uploaded
+            </span>
+          ) : null}
+        </div>
+        {allRequiredUploaded ? null : (
+          <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+            <AlertTriangle className="text-error size-3.5 shrink-0" aria-hidden />
+            <span>Upload required files to pay. Details can wait.</span>
+          </p>
         )}
       </div>
 
@@ -70,7 +71,7 @@ export const DraftDocumentsSection: FC<IDraftDocumentsSectionProps> = ({
 
       {additional.length > 0 ? (
         <>
-          <h3 className="font-heading text-foreground text-sm font-semibold tracking-tight">
+          <h3 className="font-heading text-foreground text-sm font-bold uppercase tracking-wide">
             Additional documents
           </h3>
           <div className="grid gap-4 sm:grid-cols-2">{additional.map(renderSlot)}</div>

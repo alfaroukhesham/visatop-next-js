@@ -53,7 +53,7 @@ EOF
 
 | Topic | Decision |
 |---|---|
-| Pay-first | `APPLY_STEP3_VALIDATION_DISABLED = true` stays. Missing docs/fields **warn**, never block Pay. |
+| Pay-first | `APPLY_STEP3_VALIDATION_DISABLED = true` stays. **Required documents must be uploaded** before Pay; missing **details** warn, never block Pay. |
 | Email | Collected on visa-choice (step 2). One email per **multi-traveller application**. |
 | Currency | Labels **USD** / **AED** only. Badge *text* is admin Settings (not JSX constants). No gov/service fee lines. |
 | Guided choice | Filter a shortlist from **admin service fields** (`stayBucket`, `entryKind`, `travelerKind`, `showInGuidedChooser`). Do not auto-pick. No travel-date step in v1. No name-regex / ISO-region classifiers. |

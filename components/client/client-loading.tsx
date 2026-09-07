@@ -44,10 +44,6 @@ export function ClientAccountCardSkeleton() {
 export function ClientStartStepSkeleton() {
   return (
     <div className="app-stagger space-y-6" aria-busy="true" aria-label="Loading visa options">
-      <div className="space-y-2">
-        <AppShimmer className="h-5 w-36" />
-        <AppShimmer className="h-4 w-full max-w-md" />
-      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <AppShimmer className="h-[7.5rem] rounded-[12px] border-2 border-border" />
         <AppShimmer className="h-[7.5rem] rounded-[12px] border-2 border-border" />

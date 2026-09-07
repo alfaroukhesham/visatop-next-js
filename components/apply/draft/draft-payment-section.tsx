@@ -3,10 +3,13 @@
 import { CheckCircle2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
 import type { PublicApplication } from "@/lib/applications/public-application";
-import type { TPublicPartyMember } from "@/lib/applications/load-party-members";
+import {
+  customerLooksCompleteForPayCopy,
+  initiatePaymentBody,
+  PAY_BLOCKED_MISSING_DOCS_COPY,
+} from "@/lib/apply/payment-copy";
 import type { Readiness } from "@/lib/documents/validation-readiness";
 import { CheckoutErrorAlert } from "../checkout-error-alert";
-import { CheckoutOrderRecap } from "../checkout-order-recap";
 import { PaddleCheckoutButton } from "../paddle-checkout-button";
 
 type CheckoutHandlers = {
@@ -20,8 +23,9 @@ type CheckoutHandlers = {
 export function DraftPaymentSection({
   applicationId,
   app,
-  members = [],
   paymentReadiness,
+  requiredSlotKeys,
+  uploadedTypes,
   countdown,
   checkoutError,
   onDismissCheckoutError,
@@ -30,23 +34,35 @@ export function DraftPaymentSection({
 }: {
   applicationId: string;
   app: PublicApplication;
-  members?: TPublicPartyMember[];
   paymentReadiness: Readiness;
+  requiredSlotKeys: string[];
+  uploadedTypes: string[];
   countdown: number | null;
   checkoutError: string | null;
   onDismissCheckoutError: () => void;
   onCancelCheckout: () => void;
   checkout: CheckoutHandlers;
 }) {
+  const payCopyComplete = customerLooksCompleteForPayCopy({
+    requiredSlotKeys,
+    uploadedTypes,
+    hasFullName: Boolean(app.applicant.fullName?.trim()),
+    hasDateOfBirth: Boolean(app.applicant.dateOfBirth?.trim()),
+    hasPassportNumber: Boolean(app.applicant.passportNumber?.trim()),
+  });
+
   return (
     <section id="draft-payment-section" className="space-y-4">
+      {paymentReadiness !== "ready" && app.paymentStatus === "unpaid" && (
+        <div className="rounded-[12px] border border-border bg-muted/20 p-5 sm:p-6">
+          <p className="text-muted-foreground text-sm">{PAY_BLOCKED_MISSING_DOCS_COPY}</p>
+        </div>
+      )}
+
       {paymentReadiness === "ready" && app.paymentStatus === "unpaid" && (
         <div className="space-y-4 rounded-[12px] border-2 border-primary bg-primary/5 p-5 shadow-[0_8px_32px_rgba(1,32,49,0.08)] sm:p-6">
-          <h2 className="font-heading text-lg font-bold">Initiate payment</h2>
-          <p className="text-sm text-muted-foreground">
-            Your application is complete and ready for submission. Please pay the service fee to begin processing.
-          </p>
-          <CheckoutOrderRecap application={app} members={members} />
+          <h2 className="font-heading text-base! font-semibold md:text-lg!">Initiate payment</h2>
+          <p className="text-sm text-muted-foreground">{initiatePaymentBody(payCopyComplete)}</p>
           {checkoutError ? <CheckoutErrorAlert message={checkoutError} /> : null}
           <PaddleCheckoutButton
             applicationId={applicationId}
@@ -66,7 +82,7 @@ export function DraftPaymentSection({
         <div className="space-y-6 rounded-[12px] border-2 border-primary bg-primary/5 p-5 shadow-[0_8px_32px_rgba(1,32,49,0.08)] sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="font-heading text-lg font-bold">Complete your payment</h2>
+              <h2 className="font-heading text-base! font-semibold md:text-lg!">Complete your payment</h2>
               <p className="text-sm text-muted-foreground">Checkout is in progress.</p>
             </div>
             {countdown !== null && (
@@ -77,7 +93,6 @@ export function DraftPaymentSection({
             )}
           </div>
 
-          <CheckoutOrderRecap application={app} members={members} />
           {checkoutError ? <CheckoutErrorAlert message={checkoutError} /> : null}
 
           <div className="flex flex-col sm:flex-row gap-3">
@@ -95,7 +110,7 @@ export function DraftPaymentSection({
             </div>
             <ClientButton
               variant="ghost"
-              className="rounded-none hover:bg-destructive/10 hover:text-destructive"
+              className="hover:bg-destructive/10 hover:text-destructive"
               onClick={onCancelCheckout}
             >
               Cancel & Reset

@@ -54,19 +54,4 @@ export function applyDateMask(raw: string): string {
   return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4)}`;
 }
 
-export function customerFacingExtractionLabel(status: string | null | undefined): string {
-  switch (status) {
-    case "not_started":
-      return "Not started";
-    case "running":
-      return "In progress";
-    case "succeeded":
-      return "Completed";
-    case "needs_manual":
-      return "Needs manual review";
-    case "failed":
-      return "Needs manual entry";
-    default:
-      return "Not started";
-  }
-}
+export { customerFacingOcrMessage as customerFacingExtractionLabel } from "@/lib/apply/ocr-customer-copy";

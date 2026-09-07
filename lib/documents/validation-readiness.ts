@@ -8,10 +8,10 @@ import { APPLY_STEP3_VALIDATION_DISABLED } from "@/lib/apply/apply-flow-config";
  * - DOB sanity 1900-01-01 ≤ dob ≤ today (spec §7.2).
  * - Readiness precedence: `validationFailures` dominates `requiredFieldsMissing`
  *   (spec §6.5); missing uploads contribute to **case** `readiness` only.
- * - **`paymentReadiness`:** same precedence for profile fields and validation,
- *   but **passport_copy / personal_photo presence is not required** for `ready`
- *   (checkout gate). **Full `readiness`** still requires both uploads when
- *   profile + validation are satisfied (case-complete / submission-oriented).
+ * - **`paymentReadiness`:** when `APPLY_STEP3_VALIDATION_DISABLED`, email plus
+ *   all required document slots (floor + catalog extras) gate checkout; profile
+ *   fields warn only. When validation is enabled, profile + validation gate
+ *   payment; uploads gate full `readiness` only.
  */
 
 export const VALIDATION_SCHEMA_VERSION = 1 as const;
@@ -50,7 +50,7 @@ export type ValidationResult = {
   nowUtcDate: string;
   /** Profile + validation + both uploads; submission / case-complete gate. */
   readiness: Readiness;
-  /** Profile + validation only; ignores upload booleans (payment / checkout gate). */
+  /** Checkout gate: email + required uploads when pay-first; otherwise profile + validation. */
   paymentReadiness: Readiness;
   requiredFieldsMissing: SubmissionRequiredField[];
   validationFailures: ValidationFailure[];
@@ -69,9 +69,40 @@ export type ApplicantProfile = {
   address?: string | null;
 };
 
+export type TMemberRequiredUploads = {
+  requiredSlotKeys: string[];
+  uploadedDocumentTypes: string[];
+};
+
 export type UploadPresence = {
   passportCopyPresent: boolean;
   personalPhotoPresent: boolean;
+  /** Single-traveller or legacy callers: required keys for this application. */
+  requiredSlotKeys?: string[];
+  uploadedDocumentTypes?: string[];
+  /** Multi-traveller: every member must satisfy its own required keys. */
+  memberRequiredUploads?: TMemberRequiredUploads[];
+};
+
+const FLOOR_SLOT_KEYS = ["passport_copy", "personal_photo"] as const;
+
+export const allRequiredDocumentsPresent = (uploads: UploadPresence): boolean => {
+  if (uploads.memberRequiredUploads?.length) {
+    return uploads.memberRequiredUploads.every(({ requiredSlotKeys, uploadedDocumentTypes }) => {
+      const uploaded = new Set(uploadedDocumentTypes);
+      return requiredSlotKeys.every((k) => uploaded.has(k));
+    });
+  }
+
+  const requiredKeys = uploads.requiredSlotKeys ?? [...FLOOR_SLOT_KEYS];
+  const uploaded = new Set(
+    uploads.uploadedDocumentTypes ??
+      [
+        ...(uploads.passportCopyPresent ? ["passport_copy"] : []),
+        ...(uploads.personalPhotoPresent ? ["personal_photo"] : []),
+      ],
+  );
+  return requiredKeys.every((k) => uploaded.has(k));
 };
 
 /** `YYYY-MM-DD` in UTC. */
@@ -158,11 +189,13 @@ export function computeValidation(input: ComputeValidationInput): ValidationResu
 
   if (APPLY_STEP3_VALIDATION_DISABLED) {
     const hasEmail = isPresent(input.profile.email);
+    const docsReady = allRequiredDocumentsPresent(input.uploads);
+    const paymentReady = hasEmail && docsReady;
     return {
       schemaVersion: VALIDATION_SCHEMA_VERSION,
       nowUtcDate,
       readiness: hasEmail ? "ready" : "blocked_missing_required_fields",
-      paymentReadiness: hasEmail ? "ready" : "blocked_missing_required_fields",
+      paymentReadiness: paymentReady ? "ready" : "blocked_missing_required_fields",
       requiredFieldsMissing: hasEmail ? [] : (["email"] as SubmissionRequiredField[]),
       validationFailures: [],
     };
