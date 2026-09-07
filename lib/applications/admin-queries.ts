@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, or, count } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, or, count } from "drizzle-orm";
 import { type DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 
@@ -67,10 +67,28 @@ export async function listAdminApplications(
 
   const [rows, [totalResult]] = await Promise.all([query, totalQuery]);
 
+  const partyIds = [
+    ...new Set(rows.map((r) => r.application.partyId).filter((p): p is string => !!p)),
+  ];
+  const partyCounts = new Map<string, number>();
+  if (partyIds.length > 0) {
+    const countRows = await tx
+      .select({ partyId: schema.application.partyId, value: count() })
+      .from(schema.application)
+      .where(inArray(schema.application.partyId, partyIds))
+      .groupBy(schema.application.partyId);
+    for (const r of countRows) {
+      if (r.partyId) partyCounts.set(r.partyId, r.value);
+    }
+  }
+
   return {
     items: rows.map((row) => ({
       ...row.application,
       serviceName: row.serviceName,
+      partyMemberCount: row.application.partyId
+        ? (partyCounts.get(row.application.partyId) ?? 1)
+        : 1,
     })),
     total: totalResult.value,
   };

@@ -44,7 +44,8 @@ export default async function ApplyStartPage({ searchParams }: PageProps) {
               </h1>
               <p className="text-muted-foreground max-w-prose text-base leading-relaxed md:text-lg">
                 Nationality <span className="text-foreground font-semibold">{nationalityName}</span> is set from
-                the home page. Choose how prices are shown, pick your visa, then continue to your application file.
+                the home page. Answer a few questions to find a matching visa, then continue to your application
+                file.
               </p>
             </div>
           </header>
@@ -63,7 +64,7 @@ export default async function ApplyStartPage({ searchParams }: PageProps) {
             step={2}
             totalSteps={5}
             title="Pick visa type"
-            subtitle="Choose pay-in currency, then tap a service card."
+            subtitle="Answer stay, entry, and traveller questions, then pick a visa."
           />
       </ApplyTwoColumn>
     </div>

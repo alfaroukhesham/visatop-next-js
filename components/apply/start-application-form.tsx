@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FC, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   ClientServiceCardsSkeleton,
   ClientStartStepSkeleton,
 } from "@/components/client/client-loading";
-import { ChevronDown, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
@@ -18,21 +18,20 @@ import { trackEvent } from "@/lib/analytics/gtag-client";
 import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
+import { DEFAULT_APPLY_PRICE_BADGES, DEFAULT_PARTY_ENABLED, DEFAULT_PARTY_MAX_TRAVELERS, type TApplyPriceBadges } from "@/lib/apply/apply-config";
+import { assertTravelersReady, canAddTraveler, type TPartyTravelerDraft } from "@/lib/apply/party-travelers";
+import { filterGuidedServices } from "@/lib/apply/guided-visa-filter";
+import type { TStayBucket, TTravelerKind } from "@/lib/catalog/guided-choice";
+import { AllInPriceBadges } from "@/components/apply/all-in-price-badges";
+import { GuidedVisaChooser, type IService } from "@/components/apply/guided-visa-chooser";
 import { cn } from "@/lib/utils";
 
 type Nationality = { code: string; name: string };
-type Service = {
-  id: string;
-  name: string;
-  durationDays: number | null;
-  entries: string | null;
-  displayPriceMinor: string | null;
-  currency: string | null;
-};
+type Service = IService;
 
 type DisplayCurrency = "USD" | "AED";
 
-function formatDisplayMinor(minor: string | null, currency: string | null): string | null {
+const formatDisplayMinor = (minor: string | null, currency: string | null): string | null => {
   if (minor === null || currency === null) return null;
   const n = Number(minor);
   if (!Number.isFinite(n)) return null;
@@ -47,10 +46,10 @@ function formatDisplayMinor(minor: string | null, currency: string | null): stri
   }
 }
 
-function formatPriceForDisplay(
+const formatPriceForDisplay = (
   s: Service,
   tab: DisplayCurrency,
-): { text: string; isEstimate: boolean } | null {
+): { text: string; isEstimate: boolean } | null => {
   const minorStr = s.displayPriceMinor;
   const cur = s.currency;
   if (minorStr === null || cur === null) return null;
@@ -69,20 +68,27 @@ function formatPriceForDisplay(
   return text ? { text, isEstimate: true } : null;
 }
 
-function entriesLabel(entries: string | null): string | null {
-  if (!entries) return null;
-  const e = entries.toLowerCase();
-  if (e.includes("multi")) return "Multiple entry";
-  if (e.includes("single")) return "Single entry";
-  return entries;
+const toDisplayMinor = (s: Service, tab: DisplayCurrency): number | null => {
+  const minorStr = s.displayPriceMinor;
+  const cur = s.currency;
+  if (minorStr === null || cur === null) return null;
+  const n = Number(minorStr);
+  if (!Number.isFinite(n)) return null;
+  const minor = BigInt(Math.trunc(n));
+  if (cur === tab) return Number(minor);
+  const fx = parsePublicDisplayFxAedPerUsd();
+  if (!fx) return null;
+  const converted = convertMinorBetweenUsdAed(minor, cur, tab, fx);
+  if (converted === null) return null;
+  return Number(converted);
 }
 
-type StartApplicationFormProps = {
+interface IStartApplicationFormProps {
   /** Set on home; this page is only reachable as `/apply/start?nationality=XX`. */
   initialNationalityCode: string;
-};
+}
 
-export function StartApplicationForm({ initialNationalityCode }: StartApplicationFormProps) {
+export const StartApplicationForm: FC<IStartApplicationFormProps> = ({ initialNationalityCode }) => {
   const router = useRouter();
   const sessionEmail = useClientAuthStore((s) => s.session?.user?.email);
   const [nationalities, setNationalities] = useState<Nationality[]>([]);
@@ -96,12 +102,45 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [catalogReloadEpoch, setCatalogReloadEpoch] = useState(0);
+  const [badges, setBadges] = useState<TApplyPriceBadges>(DEFAULT_APPLY_PRICE_BADGES);
+  const [partyEnabled, setPartyEnabled] = useState(DEFAULT_PARTY_ENABLED);
+  const [partyMaxTravelers, setPartyMaxTravelers] = useState(DEFAULT_PARTY_MAX_TRAVELERS);
+  const [answers, setAnswers] = useState<{
+    stay: TStayBucket | null;
+    entry: "single" | "multiple";
+    kind: TTravelerKind;
+  }>({ stay: null, entry: "single", kind: "adult" });
+  const [additionalTravelers, setAdditionalTravelers] = useState<TPartyTravelerDraft[]>([]);
 
   const reloadCatalog = useCallback(() => {
     setCatalogReloadEpoch((n) => n + 1);
-  }, [nationality]);
+  }, []);
 
   useOnBfcacheRestore(reloadCatalog);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetchApiEnvelope<{
+          badges: TApplyPriceBadges;
+          partyEnabled: boolean;
+          partyMaxTravelers: number;
+        }>(apiHref("/catalog/apply-config"));
+        if (cancelled) return;
+        if (res.ok) {
+          setBadges(res.data.badges);
+          setPartyEnabled(res.data.partyEnabled);
+          setPartyMaxTravelers(res.data.partyMaxTravelers);
+        }
+      } catch {
+        // keep defaults
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [catalogReloadEpoch]);
 
   useEffect(() => {
     const fromSession = sessionEmail?.trim();
@@ -190,12 +229,21 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
     };
   }, [nationality, displayCurrency, catalogReloadEpoch]);
 
-  async function onSubmit(e: React.FormEvent) {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     const trimmedEmail = email.trim();
-    if (!nationality || !serviceId) {
+    if (!nationality) {
       setError("Choose a service.");
+      return;
+    }
+    const travelers: TPartyTravelerDraft[] = [
+      { key: "primary", kind: answers.kind, serviceId },
+      ...additionalTravelers,
+    ];
+    const ready = assertTravelersReady(travelers, partyMaxTravelers);
+    if (!ready.ok) {
+      setError(ready.message);
       return;
     }
     if (!trimmedEmail) {
@@ -212,6 +260,7 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
       serviceId,
       catalogCurrency: displayCurrency,
       guestEmail: trimmedEmail.toLowerCase(),
+      travelers: travelers.map((t) => ({ serviceId: t.serviceId, kind: t.kind })),
     };
     const res = await fetchApiEnvelope<{ application: { id: string; isGuest: boolean } }>(
       apiHref("/applications"),
@@ -235,6 +284,38 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
     });
     router.push(`/apply/applications/${res.data.application.id}`);
   }
+
+  const addTraveler = () => {
+    setAdditionalTravelers((prev) => [
+      ...prev,
+      { key: crypto.randomUUID(), kind: "adult", serviceId: "" },
+    ]);
+  }
+
+  const removeTraveler = (key: string) => {
+    setAdditionalTravelers((prev) => prev.filter((t) => t.key !== key));
+  }
+
+  const updateTraveler = (key: string, patch: Partial<TPartyTravelerDraft>) => {
+    setAdditionalTravelers((prev) => prev.map((t) => (t.key === key ? { ...t, ...patch } : t)));
+  }
+
+  const primaryService = services.find((s) => s.id === serviceId) ?? null;
+  const selectedServices = [
+    primaryService,
+    ...additionalTravelers.map((t) => services.find((s) => s.id === t.serviceId) ?? null),
+  ].filter((s): s is Service => s !== null);
+  const totalMinor = (() => {
+    let sum = 0;
+    for (const s of selectedServices) {
+      const m = toDisplayMinor(s, displayCurrency);
+      if (m === null) return null;
+      sum += m;
+    }
+    return sum;
+  })();
+  const totalText =
+    totalMinor === null ? null : formatDisplayMinor(totalMinor.toString(), displayCurrency);
 
   if (loadingList) {
     return (
@@ -271,120 +352,122 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
 
       {nationality ? (
         <section className="space-y-6">
-          <div>
-            <h2 className="font-heading text-foreground text-lg font-semibold tracking-tight">Show prices in</h2>
-            <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
-              Prices follow the currency you select. If we show an estimate in the other currency, we confirm the exact
-              total at checkout.
-            </p>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {(["USD", "AED"] as const).map((c) => {
-              const active = displayCurrency === c;
-              return (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setDisplayCurrency(c)}
-                  className={cn(
-                    "border-border bg-card flex flex-col items-center justify-center gap-2 rounded-[12px] border-2 px-4 py-8 text-center transition-shadow",
-                    active
-                      ? "border-primary shadow-[0_8px_28px_rgba(1,32,49,0.12)] ring-2 ring-[color:var(--ring)] ring-offset-2 ring-offset-background"
-                      : "hover:border-secondary hover:shadow-sm",
-                  )}
-                >
-                  <span className="text-4xl leading-none" aria-hidden>
-                    {c === "USD" ? "🇺🇸" : "🇦🇪"}
-                  </span>
-                  <span className="text-foreground text-sm font-semibold">
-                    {c === "USD" ? "United States (US) dollar" : "United Arab Emirates dirham"}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div>
-            <h2 className="font-heading text-foreground text-lg font-semibold tracking-tight">Visa type</h2>
-            <p className="text-muted-foreground mt-1 text-sm">Choose duration and entry ,  tap a card to select.</p>
-          </div>
-
-          {!nationality ? null : loadingServices ? (
-            <ClientServiceCardsSkeleton />
-          ) : services.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No services for this nationality.</p>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {services.map((s) => {
-                const price = formatPriceForDisplay(s, displayCurrency);
-                const entry = entriesLabel(s.entries);
-                const selected = serviceId === s.id;
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="font-heading text-foreground text-lg font-semibold tracking-tight">
+                Find your visa
+              </h2>
+              <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
+                Answer one question at a time. We only show visas that match.
+              </p>
+            </div>
+            <div className="flex items-center gap-1" role="group" aria-label="Show prices in">
+              {(["USD", "AED"] as const).map((c) => {
+                const active = displayCurrency === c;
                 return (
                   <button
-                    key={s.id}
+                    key={c}
                     type="button"
-                    onClick={() => setServiceId(s.id)}
+                    onClick={() => setDisplayCurrency(c)}
                     className={cn(
-                      "border-border bg-card group flex flex-col rounded-[12px] border-2 text-left transition-colors",
-                      selected
-                        ? "border-primary bg-accent/25 shadow-[0_10px_32px_rgba(1,32,49,0.12)]"
-                        : "hover:border-secondary",
+                      "rounded-[5px] border-2 px-3 py-1.5 text-xs font-bold uppercase tracking-widest",
+                      active
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card text-foreground hover:border-secondary",
                     )}
                   >
-                    <div
-                      className={cn(
-                        "flex flex-1 flex-col gap-2 px-4 pb-3 pt-5",
-                        selected && "text-foreground",
-                      )}
-                    >
-                      {s.durationDays != null ? (
-                        <p className="font-heading text-center text-xl font-bold uppercase tracking-tight sm:text-2xl">
-                          {s.durationDays} days
-                        </p>
-                      ) : null}
-                      {entry ? (
-                        <p className="text-muted-foreground text-center text-[11px] font-bold uppercase tracking-widest">
-                          {entry}
-                        </p>
-                      ) : null}
-                      <div className="border-border my-1 border-t" />
-                      <p className="text-foreground line-clamp-2 text-center text-sm font-semibold leading-snug">
-                        {s.name}
-                      </p>
-                    </div>
-                    <div
-                      className={cn(
-                        "text-primary px-4 py-4 text-center",
-                        selected && "bg-primary/10",
-                      )}
-                    >
-                      {price ? (
-                        <>
-                          <p className="font-heading text-xl font-bold tabular-nums sm:text-2xl">{price.text}</p>
-                          {price.isEstimate ? (
-                            <p className="text-muted-foreground mt-1 text-[10px] font-medium uppercase tracking-wide">
-                              Estimated at checkout
-                            </p>
-                          ) : null}
-                        </>
-                      ) : (
-                        <p className="text-muted-foreground text-sm">Price at checkout</p>
-                      )}
-                    </div>
-                    <div
-                      className={cn(
-                        "text-primary flex flex-col items-center gap-1 px-4 pb-4 pt-1 text-xs font-bold uppercase tracking-widest",
-                        selected && "text-accent-foreground bg-accent",
-                      )}
-                    >
-                      <span>{selected ? "Selected" : "Choose"}</span>
-                      <ChevronDown className="size-4 shrink-0 opacity-80" aria-hidden />
-                    </div>
+                    {c}
                   </button>
                 );
               })}
             </div>
+          </div>
+
+          <AllInPriceBadges badges={badges} />
+
+          {!nationality ? null : loadingServices ? (
+            <ClientServiceCardsSkeleton />
+          ) : (
+            <GuidedVisaChooser
+              services={services}
+              formatPrice={(s) => formatPriceForDisplay(s, displayCurrency)}
+              selectedServiceId={serviceId}
+              onSelectService={setServiceId}
+              partyEnabled={partyEnabled}
+              canAddTraveler={canAddTraveler(additionalTravelers.length + 1, partyMaxTravelers)}
+              onAddTraveler={addTraveler}
+              onAnswersChange={setAnswers}
+            />
           )}
+
+          {partyEnabled && additionalTravelers.length > 0 ? (
+            <div className="space-y-4">
+              {additionalTravelers.map((t, idx) => {
+                const shortlist = answers.stay
+                  ? (() => {
+                      const ids = new Set(
+                        filterGuidedServices(services, {
+                          stay: answers.stay,
+                          entry: answers.entry,
+                          kind: t.kind,
+                        }).map((s) => s.id),
+                      );
+                      return services.filter((s) => ids.has(s.id));
+                    })()
+                  : [];
+                return (
+                  <div
+                    key={t.key}
+                    className="border-border bg-card space-y-3 rounded-[12px] border-2 p-4"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-foreground text-sm font-semibold">
+                        Traveller {idx + 2}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => removeTraveler(t.key)}
+                        className="text-muted-foreground hover:text-error text-xs font-semibold uppercase tracking-widest"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {(["adult", "child"] as const).map((k) => (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => updateTraveler(t.key, { kind: k, serviceId: "" })}
+                          className={cn(
+                            "border-border bg-card text-foreground rounded-[12px] border-2 px-4 py-2 text-sm font-semibold transition-colors",
+                            t.kind === k ? "border-primary bg-accent/25" : "hover:border-secondary",
+                          )}
+                        >
+                          {k === "adult" ? "Adult" : "Child"}
+                        </button>
+                      ))}
+                    </div>
+                    <select
+                      value={t.serviceId}
+                      onChange={(e) => updateTraveler(t.key, { serviceId: e.target.value })}
+                      className="border-border bg-card text-foreground w-full rounded-[5px] border-2 px-3 py-2 text-sm"
+                    >
+                      <option value="">Choose a visa</option>
+                      {shortlist.map((s) => {
+                        const price = formatPriceForDisplay(s, displayCurrency);
+                        return (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                            {price ? ` — ${price.text}` : ""}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
 
           <p className="text-muted-foreground text-xs leading-relaxed">
             Please note that prices do not include insurance, which may be mandatory in some cases.
@@ -408,9 +491,16 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
         </section>
       ) : null}
 
+      {totalText ? (
+        <div className="border-border bg-card flex flex-wrap items-center justify-between gap-3 rounded-[12px] border-2 px-4 py-3">
+          <p className="text-foreground text-sm font-semibold">Checkout total</p>
+          <p className="font-heading text-foreground text-xl font-bold tabular-nums">{totalText}</p>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-3 pt-1">
         <ClientButton
-          type="submit"
+          type="button"
           brand="cta"
           onClick={() => router.push("/")}
           className="justify-center font-semibold"
@@ -420,7 +510,7 @@ export function StartApplicationForm({ initialNationalityCode }: StartApplicatio
         <ClientButton
           type="submit"
           brand="cta"
-          disabled={submitting || loadingList}
+          disabled={submitting || loadingList || !serviceId}
           className="justify-center font-semibold"
         >
           {submitting ? (

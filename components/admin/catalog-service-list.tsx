@@ -103,6 +103,9 @@ export const CatalogServiceList: FC<ICatalogServiceListProps> = ({ services, can
             <li key={s.id} className="flex items-center justify-between gap-3 px-4 py-4">
               <p className="min-w-0 font-medium">{s.name}</p>
               <div className="flex shrink-0 items-center gap-2">
+                {s.stayBucket === null ? (
+                  <Badge variant="outline">Needs guided fields</Badge>
+                ) : null}
                 <Badge variant={s.enabled ? "default" : "secondary"}>
                   {s.enabled ? "On" : "Off"}
                 </Badge>

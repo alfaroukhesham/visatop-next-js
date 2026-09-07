@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
+import type { TEntryKind, TTravelerKind } from "@/lib/catalog/guided-choice";
 import type { CatalogService } from "@/lib/admin/catalog/catalog-types";
 
 interface ICatalogServiceFormProps {
@@ -33,6 +34,12 @@ export const CatalogServiceForm: FC<ICatalogServiceFormProps> = ({ mode, service
       : String(service.durationDays),
   );
   const [entries, setEntries] = useState(service?.entries ?? "");
+  const [stayBucket, setStayBucket] = useState(service?.stayBucket ?? "");
+  const [entryKind, setEntryKind] = useState(service?.entryKind ?? "either");
+  const [travelerKind, setTravelerKind] = useState(service?.travelerKind ?? "adult");
+  const [showInGuidedChooser, setShowInGuidedChooser] = useState(
+    service?.showInGuidedChooser ?? true,
+  );
   const [enabled, setEnabled] = useState(service?.enabled ?? true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +64,10 @@ export const CatalogServiceForm: FC<ICatalogServiceFormProps> = ({ mode, service
         enabled,
         durationDays: dRaw === "" ? null : Number.isFinite(d) ? d : null,
         entries: entries.trim() === "" ? null : entries.trim(),
+        stayBucket: stayBucket === "" ? null : stayBucket,
+        entryKind,
+        travelerKind,
+        showInGuidedChooser,
       };
       if (mode === "create") {
         const res = await fetchApiEnvelope<{ service: CatalogService }>(
@@ -175,6 +186,66 @@ export const CatalogServiceForm: FC<ICatalogServiceFormProps> = ({ mode, service
                 placeholder="single"
                 disabled={!canWrite || busy}
               />
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="svc-stay-bucket">Stay bucket</Label>
+              <select
+                id="svc-stay-bucket"
+                value={stayBucket}
+                onChange={(e) => setStayBucket(e.target.value)}
+                disabled={!canWrite || busy}
+                className="border-border bg-background focus-visible:ring-ring h-9 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+              >
+                <option value="">Unset</option>
+                <option value="1_14">1–14</option>
+                <option value="15_30">15–30</option>
+                <option value="31_60">31–60</option>
+                <option value="transit">Transit</option>
+                <option value="5_year">5 years</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="svc-entry-kind">Entry</Label>
+              <select
+                id="svc-entry-kind"
+                value={entryKind}
+                onChange={(e) => setEntryKind(e.target.value as TEntryKind)}
+                disabled={!canWrite || busy}
+                className="border-border bg-background focus-visible:ring-ring h-9 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+              >
+                <option value="single">Single</option>
+                <option value="multiple">Multiple</option>
+                <option value="either">Either</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="svc-traveler-kind">Traveler</Label>
+              <select
+                id="svc-traveler-kind"
+                value={travelerKind}
+                onChange={(e) => setTravelerKind(e.target.value as TTravelerKind)}
+                disabled={!canWrite || busy}
+                className="border-border bg-background focus-visible:ring-ring h-9 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+              >
+                <option value="adult">Adult</option>
+                <option value="child">Child</option>
+              </select>
+            </div>
+            <div className="flex items-end gap-2 pb-1">
+              <input
+                id="svc-show-guided"
+                type="checkbox"
+                className="accent-primary size-4"
+                checked={showInGuidedChooser}
+                onChange={(e) => setShowInGuidedChooser(e.target.checked)}
+                disabled={!canWrite || busy}
+                aria-label="Show in guided chooser"
+              />
+              <Label htmlFor="svc-show-guided" className="font-normal">
+                Show in guided chooser
+              </Label>
             </div>
           </div>
           <div className="flex items-center gap-2">

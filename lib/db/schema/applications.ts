@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { nationality, visaService } from "./visa";
+import { applicationParty } from "./application-party";
 
 export const application = pgTable(
   "application",
@@ -32,6 +33,11 @@ export const application = pgTable(
 
     /** Catalog / checkout price book: USD or AED (matched against catalog_customer_price). */
     catalogCurrency: text("catalog_currency").default("USD").notNull(),
+
+    partyId: text("party_id").references(() => applicationParty.id, { onDelete: "cascade" }),
+    travelerRole: text("traveler_role").notNull().default("primary"),
+    travelerKind: text("traveler_kind").notNull().default("adult"),
+    travelerIndex: integer("traveler_index").notNull().default(0),
 
     applicationStatus: text("application_status").notNull(),
     paymentStatus: text("payment_status").notNull(),
@@ -97,6 +103,7 @@ export const application = pgTable(
   (t) => [
     index("application_userId_idx").on(t.userId),
     index("application_serviceId_idx").on(t.serviceId),
+    index("application_partyId_idx").on(t.partyId),
     index("application_nationalityCode_idx").on(t.nationalityCode),
     index("application_status_idx").on(t.applicationStatus),
     index("application_paymentStatus_idx").on(t.paymentStatus),

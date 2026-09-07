@@ -3,6 +3,7 @@
 import { CheckCircle2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
 import type { PublicApplication } from "@/lib/applications/public-application";
+import type { TPublicPartyMember } from "@/lib/applications/load-party-members";
 import type { Readiness } from "@/lib/documents/validation-readiness";
 import { CheckoutErrorAlert } from "../checkout-error-alert";
 import { CheckoutOrderRecap } from "../checkout-order-recap";
@@ -19,6 +20,7 @@ type CheckoutHandlers = {
 export function DraftPaymentSection({
   applicationId,
   app,
+  members = [],
   paymentReadiness,
   countdown,
   checkoutError,
@@ -28,6 +30,7 @@ export function DraftPaymentSection({
 }: {
   applicationId: string;
   app: PublicApplication;
+  members?: TPublicPartyMember[];
   paymentReadiness: Readiness;
   countdown: number | null;
   checkoutError: string | null;
@@ -43,7 +46,7 @@ export function DraftPaymentSection({
           <p className="text-sm text-muted-foreground">
             Your application is complete and ready for submission. Please pay the service fee to begin processing.
           </p>
-          <CheckoutOrderRecap application={app} />
+          <CheckoutOrderRecap application={app} members={members} />
           {checkoutError ? <CheckoutErrorAlert message={checkoutError} /> : null}
           <PaddleCheckoutButton
             applicationId={applicationId}
@@ -74,7 +77,7 @@ export function DraftPaymentSection({
             )}
           </div>
 
-          <CheckoutOrderRecap application={app} />
+          <CheckoutOrderRecap application={app} members={members} />
           {checkoutError ? <CheckoutErrorAlert message={checkoutError} /> : null}
 
           <div className="flex flex-col sm:flex-row gap-3">

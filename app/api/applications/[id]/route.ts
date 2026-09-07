@@ -4,6 +4,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { loadGuestApplicationRowByResumeCookie } from "@/lib/applications/guest-resume-access";
 import { loadApplicationRowForRequest } from "@/lib/applications/load-application-row-for-request";
+import { loadPartyMembers } from "@/lib/applications/load-party-members";
 import { readResumeTokenFromRequestCookies } from "@/lib/applications/resume-cookie";
 import { toPublicApplication } from "@/lib/applications/public-application";
 import { toPublicApplicationWithCharge } from "@/lib/applications/load-application-charge";
@@ -26,6 +27,14 @@ async function loadApplicationForGuest(
   return loadGuestApplicationRowByResumeCookie(applicationId, resumePlain);
 }
 
+async function applicationWithMembers(row: typeof application.$inferSelect) {
+  const [publicApp, members] = await Promise.all([
+    toPublicApplicationWithCharge(row),
+    withSystemDbActor((tx) => loadPartyMembers(tx, row)),
+  ]);
+  return { application: publicApp, members };
+}
+
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const hdrs = await headers();
   const requestId = hdrs.get("x-request-id");
@@ -39,7 +48,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     if (!row) {
       return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
     }
-    return jsonOk({ application: await toPublicApplicationWithCharge(row) }, { requestId });
+    return jsonOk(await applicationWithMembers(row), { requestId });
   }
 
   const cookieHeader = req.headers.get("cookie");
@@ -53,7 +62,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   if (!row) {
     return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
   }
-  return jsonOk({ application: await toPublicApplicationWithCharge(row) }, { requestId });
+  return jsonOk(await applicationWithMembers(row), { requestId });
 }
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {

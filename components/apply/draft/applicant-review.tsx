@@ -52,6 +52,7 @@ function buildReadinessLabel(readiness: string | null, paymentReadiness: Readine
 
 export function ApplicantReview({
   applicationId,
+  paymentApplicationId,
   nationalityCode,
   nationalityName,
   applicant,
@@ -64,6 +65,7 @@ export function ApplicantReview({
   onSaved,
 }: {
   applicationId: string;
+  paymentApplicationId?: string;
   nationalityCode: string;
   nationalityName: string;
   applicant: ApplicantProfile;
@@ -89,7 +91,7 @@ export function ApplicantReview({
 
   const dirty = APPLICANT_ROWS.some((r) => (values[r.apiKey] ?? "") !== (initial[r.apiKey] ?? ""));
 
-  const paymentPath = `/apply/applications/${encodeURIComponent(applicationId)}/payment`;
+  const paymentPath = `/apply/applications/${encodeURIComponent(paymentApplicationId ?? applicationId)}/payment`;
   const canContinueToPayment = !locked && paymentReadiness === "ready";
 
   function goToPayment() {

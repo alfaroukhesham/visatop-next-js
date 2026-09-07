@@ -3,17 +3,21 @@ import { getAdminUserId } from "@/lib/admin/get-admin-session";
 import { DraftTtlSettings } from "@/components/admin/draft-ttl-settings";
 import { DisplayFxSettings } from "@/components/admin/display-fx-settings";
 import { PaymentsSettings } from "@/components/admin/payments-settings";
+import { PartySettings } from "@/components/admin/party-settings";
+import { ApplyPriceBadgeSettings } from "@/components/admin/apply-price-badge-settings";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { withAdminDbActor } from "@/lib/db/actor-context";
+import { getApplyConfigFromTx } from "@/lib/apply/apply-config";
 
 export default async function AdminSettingsPage() {
   const adminUserId = await getAdminUserId();
 
-  const gate = await withAdminDbActor(adminUserId, async ({ permissions }) => {
+  const gate = await withAdminDbActor(adminUserId, async ({ tx, permissions }) => {
     if (!permissions.includes("settings.read")) {
       return "forbidden" as const;
     }
-    return "ok" as const;
+    const applyConfig = await getApplyConfigFromTx(tx);
+    return { applyConfig } as const;
   });
 
   if (gate === "forbidden") {
@@ -52,6 +56,48 @@ export default async function AdminSettingsPage() {
           </div>
         </div>
         <DraftTtlSettings />
+      </section>
+
+      <section
+        id="multi-traveller"
+        className="border-border mt-8 max-w-xl space-y-4 border border-b-2 border-b-primary bg-card p-6"
+      >
+        <div className="flex items-start gap-3">
+          <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center border border-primary/20">
+            <SlidersHorizontal className="size-5" aria-hidden />
+          </span>
+          <div>
+            <h2 className="font-heading text-base font-semibold tracking-tight">Multi-traveller applications</h2>
+            <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
+              Controls how many travellers can be added to a single checkout. Stored in{" "}
+              <span className="font-mono text-xs">platform_setting</span>.
+            </p>
+          </div>
+        </div>
+        <PartySettings
+          partyEnabled={gate.applyConfig.partyEnabled}
+          partyMaxTravelers={gate.applyConfig.partyMaxTravelers}
+        />
+      </section>
+
+      <section
+        id="apply-price-badges"
+        className="border-border mt-8 max-w-xl space-y-4 border border-b-2 border-b-primary bg-card p-6"
+      >
+        <div className="flex items-start gap-3">
+          <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center border border-primary/20">
+            <SlidersHorizontal className="size-5" aria-hidden />
+          </span>
+          <div>
+            <h2 className="font-heading text-base font-semibold tracking-tight">Price badges</h2>
+            <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
+              Key <span className="font-mono text-xs">apply_price_badges</span> in{" "}
+              <span className="font-mono text-xs">platform_setting</span>. These strings appear on the apply
+              chooser.
+            </p>
+          </div>
+        </div>
+        <ApplyPriceBadgeSettings badges={gate.applyConfig.badges} />
       </section>
 
       <section

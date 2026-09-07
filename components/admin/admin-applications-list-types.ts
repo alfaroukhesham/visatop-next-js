@@ -10,6 +10,9 @@ export type AdminApplicationListItem = {
   guestEmail: string | null;
   adminAttentionRequired: boolean;
   createdAt: string;
+  partyId: string | null;
+  travelerKind: string;
+  partyMemberCount: number;
 };
 
 export type ApplicationsListFilters = {

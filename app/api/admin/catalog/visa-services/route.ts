@@ -5,6 +5,7 @@ import { runAdminDbJson } from "@/lib/admin-api/require-admin-db";
 import { writeAdminAudit } from "@/lib/admin-api/write-admin-audit";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonOk } from "@/lib/api/response";
+import { ENTRY_KINDS, STAY_BUCKETS, TRAVELER_KINDS } from "@/lib/catalog/guided-choice";
 import * as schema from "@/lib/db/schema";
 
 export const runtime = "nodejs";
@@ -15,6 +16,10 @@ const postBody = z.object({
   enabled: z.boolean().optional(),
   durationDays: z.number().int().positive().nullable().optional(),
   entries: z.string().max(64).nullable().optional(),
+  stayBucket: z.enum(STAY_BUCKETS).nullable().optional(),
+  entryKind: z.enum(ENTRY_KINDS).optional(),
+  travelerKind: z.enum(TRAVELER_KINDS).optional(),
+  showInGuidedChooser: z.boolean().optional(),
 });
 
 export async function GET() {
@@ -46,6 +51,10 @@ export async function POST(req: Request) {
           enabled: parsed.data.enabled ?? true,
           durationDays: parsed.data.durationDays ?? null,
           entries: parsed.data.entries ?? null,
+          stayBucket: parsed.data.stayBucket ?? null,
+          entryKind: parsed.data.entryKind ?? "either",
+          travelerKind: parsed.data.travelerKind ?? "adult",
+          showInGuidedChooser: parsed.data.showInGuidedChooser ?? true,
         })
         .returning();
       const row = inserted[0];

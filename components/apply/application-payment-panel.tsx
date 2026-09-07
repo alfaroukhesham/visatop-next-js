@@ -76,6 +76,7 @@ export function ApplicationPaymentPanel({ applicationId }: { applicationId: stri
       <DraftPaymentSection
         applicationId={applicationId}
         app={app}
+        members={draft.members}
         paymentReadiness={paymentReadiness}
         countdown={draft.countdown}
         checkoutError={checkoutError}

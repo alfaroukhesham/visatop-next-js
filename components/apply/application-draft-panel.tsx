@@ -8,6 +8,7 @@ import { computeValidation } from "@/lib/documents/validation-readiness";
 import { ApplicantReview } from "./draft/applicant-review";
 import { DraftDocumentsSection } from "./draft/draft-documents-section";
 import { DraftPanelError } from "./draft/draft-panel-error";
+import { PartyDocumentsTabs } from "./draft/party-documents-tabs";
 import { applicantFormResetKey } from "./draft/utils";
 import { useApplicationDraft } from "./draft/use-application-draft";
 
@@ -22,17 +23,25 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
     return <DraftPanelError error={draft.error} onRetry={() => void draft.load()} />;
   }
 
-  const {app} = draft;
-  const validationEmail = app.isGuest ? app.guestEmail : "signed-in";
+  const selectedApp = draft.selected.app;
+  if (!selectedApp) {
+    return <ClientDraftPanelSkeleton />;
+  }
+
+  const validationEmail = selectedApp.isGuest ? selectedApp.guestEmail : "signed-in";
 
   const { readiness, paymentReadiness, requiredFieldsMissing: missing } = computeValidation({
-    profile: { ...app.applicant, email: validationEmail },
+    profile: { ...selectedApp.applicant, email: validationEmail },
     uploads: {
-      passportCopyPresent: Boolean(draft.passport),
-      personalPhotoPresent: Boolean(draft.photo),
+      passportCopyPresent: Boolean(draft.selected.passport),
+      personalPhotoPresent: Boolean(draft.selected.photo),
     },
     now: new Date(),
   });
+
+  const primaryMember =
+    draft.members.find((m) => m.travelerRole === "primary") ?? draft.members[0];
+  const payApplicationId = primaryMember?.applicationId ?? applicationId;
 
   return (
     <div className="space-y-8">
@@ -42,7 +51,13 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
         </p>
       ) : null}
 
-      {draft.docsLoading ? (
+      <PartyDocumentsTabs
+        members={draft.members}
+        selectedMemberId={draft.selectedMemberId}
+        onSelect={draft.setSelectedMemberId}
+      />
+
+      {draft.selected.docsLoading ? (
         <section
           className="border-border bg-card space-y-4 rounded-[12px] border p-5 shadow-[0_4px_20px_rgba(0,0,0,0.06)] sm:p-6"
           aria-busy="true"
@@ -56,27 +71,29 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
         </section>
       ) : (
         <DraftDocumentsSection
-          applicationId={applicationId}
-          slots={draft.slots}
-          docsByType={draft.docsByType}
-          uploading={draft.uploading}
-          extracting={draft.extracting}
+          key={selectedApp.id}
+          applicationId={selectedApp.id}
+          slots={draft.selected.slots}
+          docsByType={draft.selected.docsByType}
+          uploading={draft.selected.uploading}
+          extracting={draft.selected.extracting}
           onUpload={(type, file) => void draft.onUpload(type, file)}
         />
       )}
 
       <ApplicantReview
-        key={`${applicantFormResetKey(app.applicant, draft.extractResult?.extraction ?? null, app.guestEmail)}\u001e${draft.nationalityName}`}
-        applicationId={applicationId}
-        nationalityCode={app.nationalityCode}
-        nationalityName={draft.nationalityName}
-        applicant={app.applicant}
-        guestEmail={app.guestEmail}
-        extraction={draft.extractResult?.extraction ?? null}
+        key={`${applicantFormResetKey(selectedApp.applicant, draft.selected.extractResult?.extraction ?? null, selectedApp.guestEmail)}\u001e${draft.selected.nationalityName}`}
+        applicationId={selectedApp.id}
+        paymentApplicationId={payApplicationId}
+        nationalityCode={selectedApp.nationalityCode}
+        nationalityName={draft.selected.nationalityName}
+        applicant={selectedApp.applicant}
+        guestEmail={selectedApp.guestEmail}
+        extraction={draft.selected.extractResult?.extraction ?? null}
         readiness={readiness}
         paymentReadiness={paymentReadiness}
         missing={missing}
-        locked={app.checkoutState === "pending" || app.paymentStatus === "paid"}
+        locked={selectedApp.checkoutState === "pending" || selectedApp.paymentStatus === "paid"}
         onSaved={() => void draft.load({ silent: true })}
       />
 

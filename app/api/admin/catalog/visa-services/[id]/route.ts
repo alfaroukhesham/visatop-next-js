@@ -5,6 +5,7 @@ import { runAdminDbJson } from "@/lib/admin-api/require-admin-db";
 import { writeAdminAudit } from "@/lib/admin-api/write-admin-audit";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonOk } from "@/lib/api/response";
+import { ENTRY_KINDS, STAY_BUCKETS, TRAVELER_KINDS } from "@/lib/catalog/guided-choice";
 import {
   CatalogDeleteBlockedError,
   CatalogEntityNotFoundError,
@@ -21,13 +22,21 @@ const patchBody = z
     enabled: z.boolean().optional(),
     durationDays: z.number().int().positive().nullable().optional(),
     entries: z.string().max(64).nullable().optional(),
+    stayBucket: z.enum(STAY_BUCKETS).nullable().optional(),
+    entryKind: z.enum(ENTRY_KINDS).optional(),
+    travelerKind: z.enum(TRAVELER_KINDS).optional(),
+    showInGuidedChooser: z.boolean().optional(),
   })
   .refine(
     (v) =>
       v.name !== undefined ||
       v.enabled !== undefined ||
       v.durationDays !== undefined ||
-      v.entries !== undefined,
+      v.entries !== undefined ||
+      v.stayBucket !== undefined ||
+      v.entryKind !== undefined ||
+      v.travelerKind !== undefined ||
+      v.showInGuidedChooser !== undefined,
     { message: "At least one field is required" },
   );
 
@@ -55,6 +64,14 @@ export async function PATCH(
             ? { durationDays: parsed.data.durationDays }
             : {}),
           ...(parsed.data.entries !== undefined ? { entries: parsed.data.entries } : {}),
+          ...(parsed.data.stayBucket !== undefined ? { stayBucket: parsed.data.stayBucket } : {}),
+          ...(parsed.data.entryKind !== undefined ? { entryKind: parsed.data.entryKind } : {}),
+          ...(parsed.data.travelerKind !== undefined
+            ? { travelerKind: parsed.data.travelerKind }
+            : {}),
+          ...(parsed.data.showInGuidedChooser !== undefined
+            ? { showInGuidedChooser: parsed.data.showInGuidedChooser }
+            : {}),
         })
         .where(eq(schema.visaService.id, id))
         .returning();
@@ -73,6 +90,10 @@ export async function PATCH(
           enabled: row.enabled,
           durationDays: row.durationDays,
           entries: row.entries,
+          stayBucket: row.stayBucket,
+          entryKind: row.entryKind,
+          travelerKind: row.travelerKind,
+          showInGuidedChooser: row.showInGuidedChooser,
         }),
       });
       return jsonOk({ service: row }, { requestId });

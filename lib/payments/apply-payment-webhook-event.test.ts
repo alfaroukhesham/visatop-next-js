@@ -192,5 +192,72 @@ describe("applyPaymentWebhookEvent", () => {
     });
     expect(retainFailedAudits).toHaveLength(1);
   });
+
+  it("fans out paid transition to all party members and retains docs per member", async () => {
+    vi.mocked(retainRequiredDocuments).mockClear();
+    vi.mocked(retainRequiredDocuments).mockResolvedValue({
+      ok: true,
+      retainedDocumentIds: [],
+      retainedAt: new Date(),
+    } as never);
+    const { tx, updates } = makeTx();
+
+    const primary = {
+      id: "app_primary",
+      partyId: "party_1",
+      travelerRole: "primary",
+      applicationStatus: "ready_for_payment",
+      paymentStatus: "checkout_created",
+      checkoutState: "pending",
+      fulfillmentStatus: "none",
+      adminAttentionRequired: false,
+    } as never;
+    const additional = {
+      id: "app_additional",
+      partyId: "party_1",
+      travelerRole: "additional",
+      applicationStatus: "ready_for_payment",
+      paymentStatus: "checkout_created",
+      checkoutState: "pending",
+      fulfillmentStatus: "none",
+      adminAttentionRequired: false,
+    } as never;
+
+    await applyPaymentWebhookEvent(
+      tx,
+      {
+        provider: "paddle",
+        kind: "payment_completed",
+        providerPaymentId: "txn_1",
+        amountMinor: 20000,
+        currency: "USD",
+        metadata: { applicationId: "app_primary" },
+        rawEventType: "transaction.paid",
+        providerEventId: "evt_1",
+      },
+      { id: "pay_1", provider: "paddle", applicationId: "app_primary", amount: 20000, providerTransactionId: null } as never,
+      primary,
+      "evt_1",
+      {
+        loadPartyApplicationRows: async () => [primary, additional],
+      },
+    );
+
+    expect(retainRequiredDocuments).toHaveBeenCalledTimes(2);
+    const retainedIds = vi.mocked(retainRequiredDocuments).mock.calls.map((c) => c[1]);
+    expect(retainedIds).toEqual(["app_primary", "app_additional"]);
+
+    const memberPaidUpdates = updates.filter(
+      (u) => (u.set as { applicationStatus?: string }).applicationStatus === "in_progress",
+    );
+    expect(memberPaidUpdates).toHaveLength(2);
+
+    const partyUpdates = updates.filter(
+      (u) =>
+        (u.set as { paymentStatus?: string; applicationStatus?: string }).paymentStatus === "paid" &&
+        (u.set as { applicationStatus?: string }).applicationStatus === undefined,
+    );
+    expect(partyUpdates).toHaveLength(1);
+  });
 });
 

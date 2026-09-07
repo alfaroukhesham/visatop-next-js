@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { headers } from "next/headers";
 import { appHref } from "@/lib/app-href";
 import { jsonError, jsonOk } from "@/lib/api/response";
-import { withSystemDbActor, withClientDbActor } from "@/lib/db/actor-context";
+import { withSystemDbActor } from "@/lib/db/actor-context";
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
 import { resolveCheckoutTotal } from "@/lib/pricing/resolve-customer-catalog-price";
 import { FxRateInvalidError, FxRateMissingError } from "@/lib/pricing/fx-usd-aed";
@@ -18,8 +18,9 @@ import {
 import { createZiinaPaymentIntent, ZiinaProviderError } from "@/lib/payments/ziina-client";
 import type { CheckoutSessionData } from "@/lib/payments/checkout-types";
 import { diagnoseCheckoutBlock } from "@/lib/payments/diagnose-checkout-block";
+import { sumCheckoutTotals, sumPartyLines, type TPartyLine } from "@/lib/payments/party-checkout-total";
 import * as schema from "@/lib/db/schema";
-import { eq, and, or, isNull } from "drizzle-orm";
+import { asc, eq, and, or, inArray, isNull } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import type { DbTransaction } from "@/lib/db";
 
@@ -60,19 +61,43 @@ export async function POST(req: Request) {
     const provider = getActivePaymentProvider();
 
     const runTx = async (tx: DbTransaction) => {
-      const [lockedApp] = await tx
+      const [requestedApp] = await tx
+        .select()
+        .from(schema.application)
+        .where(eq(schema.application.id, applicationId))
+        .limit(1);
+
+      if (!requestedApp) {
+        return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
+      }
+
+      const memberIds = requestedApp.partyId
+        ? (
+            await tx
+              .select({ id: schema.application.id })
+              .from(schema.application)
+              .where(eq(schema.application.partyId, requestedApp.partyId))
+              .orderBy(asc(schema.application.travelerIndex))
+          ).map((m) => m.id)
+        : [applicationId];
+
+      const lockedRows = await tx
         .update(schema.application)
         .set({ checkoutState: "pending" })
         .where(
           and(
-            eq(schema.application.id, applicationId),
+            inArray(schema.application.id, memberIds),
             or(isNull(schema.application.checkoutState), eq(schema.application.checkoutState, "none")),
             eq(schema.application.applicationStatus, "ready_for_payment"),
           ),
         )
         .returning();
 
-      if (!lockedApp) {
+      if (lockedRows.length !== memberIds.length) {
+        await tx
+          .update(schema.application)
+          .set({ checkoutState: "none" })
+          .where(inArray(schema.application.id, lockedRows.map((r) => r.id)));
         const block = await diagnoseCheckoutBlock(tx, applicationId);
         return jsonError("CONFLICT", "Checkout cannot be started for this application", {
           status: 409,
@@ -81,8 +106,10 @@ export async function POST(req: Request) {
         });
       }
 
-      if (lockedApp.isGuest && !lockedApp.guestEmail?.trim()) {
-        await tx.update(schema.application).set({ checkoutState: "none" }).where(eq(schema.application.id, applicationId));
+      const primary = lockedRows.find((r) => r.travelerRole === "primary") ?? lockedRows[0];
+
+      if (primary.isGuest && !primary.guestEmail?.trim()) {
+        await tx.update(schema.application).set({ checkoutState: "none" }).where(inArray(schema.application.id, memberIds));
         return jsonError(
           "VALIDATION_ERROR",
           "Guest email is required on the application before checkout.",
@@ -91,28 +118,32 @@ export async function POST(req: Request) {
       }
 
       const catalogCurrency =
-        lockedApp.catalogCurrency?.trim().toUpperCase() === "AED" ? "AED" : "USD";
+        primary.catalogCurrency?.trim().toUpperCase() === "AED" ? "AED" : "USD";
 
-      let price;
-      try {
-        price = await resolveCheckoutTotal(tx, {
-          nationalityCode: lockedApp.nationalityCode,
-          serviceId: lockedApp.serviceId,
-          catalogCurrency,
-        });
-      } catch (e) {
-        await tx.update(schema.application).set({ checkoutState: "none" }).where(eq(schema.application.id, applicationId));
-        if (e instanceof FxRateMissingError) {
-          return jsonError("SERVICE_UNAVAILABLE", e.message, { status: 503, requestId });
+      const prices: Array<Awaited<ReturnType<typeof resolveCheckoutTotal>>> = [];
+      for (const member of lockedRows) {
+        let price;
+        try {
+          price = await resolveCheckoutTotal(tx, {
+            nationalityCode: member.nationalityCode,
+            serviceId: member.serviceId,
+            catalogCurrency,
+          });
+        } catch (e) {
+          await tx.update(schema.application).set({ checkoutState: "none" }).where(inArray(schema.application.id, memberIds));
+          if (e instanceof FxRateMissingError) {
+            return jsonError("SERVICE_UNAVAILABLE", e.message, { status: 503, requestId });
+          }
+          if (e instanceof FxRateInvalidError) {
+            return jsonError("INTERNAL_ERROR", e.message, { status: 500, requestId });
+          }
+          throw e;
         }
-        if (e instanceof FxRateInvalidError) {
-          return jsonError("INTERNAL_ERROR", e.message, { status: 500, requestId });
-        }
-        throw e;
+        prices.push(price);
       }
 
-      if (!price) {
-        await tx.update(schema.application).set({ checkoutState: "none" }).where(eq(schema.application.id, applicationId));
+      if (sumCheckoutTotals(prices) === null) {
+        await tx.update(schema.application).set({ checkoutState: "none" }).where(inArray(schema.application.id, memberIds));
         return jsonError(
           "VALIDATION_ERROR",
           "Pricing unavailable for this nationality/service/currency combination",
@@ -120,10 +151,19 @@ export async function POST(req: Request) {
         );
       }
 
+      const lines: TPartyLine[] = lockedRows.map((member, i) => ({
+        applicationId: member.id,
+        serviceId: member.serviceId,
+        amountMinor: prices[i]!.displayMinor,
+        currency: prices[i]!.currency,
+      }));
+      const totalMinor = sumPartyLines(lines);
+      const currency = prices[0]!.currency;
+
       try {
-        minorUnitsToJsonSafeNumber(price.displayMinor);
+        minorUnitsToJsonSafeNumber(totalMinor);
       } catch (e) {
-        await tx.update(schema.application).set({ checkoutState: "none" }).where(eq(schema.application.id, applicationId));
+        await tx.update(schema.application).set({ checkoutState: "none" }).where(inArray(schema.application.id, memberIds));
         return jsonError(
           "VALIDATION_ERROR",
           e instanceof Error ? e.message : "Checkout amount is out of supported range.",
@@ -134,16 +174,19 @@ export async function POST(req: Request) {
       const quoteId = createId();
       await tx.insert(schema.priceQuote).values({
         id: quoteId,
-        applicationId,
-        totalAmount: price.displayMinor,
-        currency: price.currency,
+        applicationId: primary.id,
+        totalAmount: totalMinor,
+        currency,
         breakdownJson: JSON.stringify({
           kind: "customer_catalog",
-          amountMinor: price.displayMinor.toString(),
-          currency: price.currency,
-          fxRate: price.fxRateUsed ?? undefined,
-          fxLeg: price.fxLeg ?? undefined,
-          source: price.source,
+          amountMinor: totalMinor.toString(),
+          currency,
+          lines: prices.map((p, i) => ({
+            applicationId: lockedRows[i]!.id,
+            serviceId: lockedRows[i]!.serviceId,
+            amountMinor: p!.displayMinor.toString(),
+            currency: p!.currency,
+          })),
         }),
         lockedAt: new Date(),
       });
@@ -151,32 +194,37 @@ export async function POST(req: Request) {
       const paymentId = createId();
       await tx.insert(schema.payment).values({
         id: paymentId,
-        applicationId,
+        applicationId: primary.id,
         provider,
-        amount: price.displayMinor,
-        currency: price.currency,
+        amount: totalMinor,
+        currency,
         status: "checkout_created",
       });
 
       await tx
         .update(schema.application)
         .set({ paymentStatus: "checkout_created" })
-        .where(eq(schema.application.id, applicationId));
+        .where(inArray(schema.application.id, memberIds));
+
+      const metadata: Record<string, string> = {
+        applicationId: primary.id,
+        priceQuoteId: quoteId,
+        serviceId: primary.serviceId,
+        isGuest: primary.isGuest ? "true" : "false",
+      };
+      if (requestedApp.partyId) metadata.partyId = requestedApp.partyId;
+      if (primary.userId) metadata.userId = primary.userId;
 
       if (provider === "paddle") {
         assertPaddleServerConfigured();
         const result = await paddleAdapter.createCheckout({
-          applicationId,
+          applicationId: primary.id,
           priceQuoteId: quoteId,
-          totalAmount: price.displayMinor,
-          currency: price.currency,
-          serviceLabel: `Visa Service for ${lockedApp.nationalityCode}`,
-          customerEmail: lockedApp.guestEmail,
-          metadata: {
-            applicationId,
-            serviceId: lockedApp.serviceId,
-            catalogCurrency,
-          },
+          totalAmount: totalMinor,
+          currency,
+          serviceLabel: `Visa Service for ${primary.nationalityCode}`,
+          customerEmail: primary.guestEmail,
+          metadata,
         });
 
         await tx
@@ -206,7 +254,7 @@ export async function POST(req: Request) {
         .set({ providerOperationId: operationId })
         .where(eq(schema.payment.id, paymentId));
 
-      const encId = encodeURIComponent(applicationId);
+      const encId = encodeURIComponent(primary.id);
       const successUrl = `${appHref(`/apply/applications/${encId}/checkout/return`)}?pi={PAYMENT_INTENT_ID}`;
       const cancelUrl = `${appHref(`/apply/applications/${encId}/checkout/cancel`)}?pi={PAYMENT_INTENT_ID}`;
       const failureUrl = `${appHref(`/apply/applications/${encId}/checkout/cancel`)}?pi={PAYMENT_INTENT_ID}&reason=failed`;
@@ -215,9 +263,9 @@ export async function POST(req: Request) {
         const ziina = await createZiinaPaymentIntent({
           baseUrl: ziinaCfg.apiBaseUrl,
           accessToken: ziinaCfg.accessToken,
-          amountMinor: minorUnitsToJsonSafeNumber(price.displayMinor),
-          currencyCode: price.currency,
-          message: `Visa service — ${lockedApp.nationalityCode}`,
+          amountMinor: minorUnitsToJsonSafeNumber(totalMinor),
+          currencyCode: currency,
+          message: `Visa service — ${primary.nationalityCode}`,
           successUrl,
           cancelUrl,
           failureUrl,
@@ -251,9 +299,6 @@ export async function POST(req: Request) {
       }
     };
 
-    if (accessRes.access.kind === "user") {
-      return await withClientDbActor(accessRes.access.userId, runTx);
-    }
     return await withSystemDbActor(runTx);
   } catch (err) {
     console.error("[api/checkout]", err);

@@ -82,6 +82,10 @@ describe("GET /api/catalog/services", () => {
         displayPriceMinor: "12000",
         currency: "USD",
         documentTypes: [],
+        stayBucket: "15_30",
+        entryKind: "single",
+        travelerKind: "adult",
+        showInGuidedChooser: true,
       },
     ]);
 
@@ -94,10 +98,39 @@ describe("GET /api/catalog/services", () => {
     expect(body.data.currency).toBe("USD");
     const svc = body.data.services[0];
     expect(Object.keys(svc).sort()).toEqual(
-      ["currency", "displayPriceMinor", "documentTypes", "durationDays", "entries", "id", "name"].sort(),
+      ["currency", "displayPriceMinor", "documentTypes", "durationDays", "entries", "id", "name", "stayBucket", "entryKind", "travelerKind", "showInGuidedChooser"].sort(),
     );
     expect(svc.documentTypes).toEqual([]);
     expect(svc).not.toHaveProperty("margin");
     expect(svc).not.toHaveProperty("reference");
+  });
+
+  it("includes stayBucket on the payload", async () => {
+    vi.spyOn(actorContext, "withSystemDbActor").mockImplementation(async (fn) =>
+      fn({} as never),
+    );
+    vi.spyOn(catalogQueries, "listPublicServicesForNationality").mockResolvedValue([
+      {
+        id: "svc-1",
+        name: "Tourist",
+        durationDays: 30,
+        entries: "single",
+        displayPriceMinor: "12000",
+        currency: "USD",
+        documentTypes: [],
+        stayBucket: "15_30",
+        entryKind: "single",
+        travelerKind: "adult",
+        showInGuidedChooser: true,
+      },
+    ]);
+
+    const res = await GET(
+      new Request("http://localhost/api/catalog/services?nationality=US"),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const svc = body.data.services[0];
+    expect(svc.stayBucket).toBe("15_30");
   });
 });

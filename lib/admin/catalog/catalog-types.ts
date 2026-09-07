@@ -1,3 +1,5 @@
+import type { TEntryKind, TStayBucket, TTravelerKind } from "@/lib/catalog/guided-choice";
+
 export type CatalogNationality = {
   code: string;
   name: string;
@@ -10,6 +12,10 @@ export type CatalogService = {
   enabled: boolean;
   durationDays: number | null;
   entries: string | null;
+  stayBucket: TStayBucket | null;
+  entryKind: TEntryKind;
+  travelerKind: TTravelerKind;
+  showInGuidedChooser: boolean;
 };
 
 export type CatalogEligibility = {

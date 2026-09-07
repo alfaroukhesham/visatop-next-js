@@ -36,6 +36,10 @@ export async function loadCatalogPickerCandidates(
           enabled: schema.visaService.enabled,
           durationDays: schema.visaService.durationDays,
           entries: schema.visaService.entries,
+          stayBucket: schema.visaService.stayBucket,
+          entryKind: schema.visaService.entryKind,
+          travelerKind: schema.visaService.travelerKind,
+          showInGuidedChooser: schema.visaService.showInGuidedChooser,
         })
         .from(schema.visaService)
         .orderBy(asc(schema.visaService.name)),
@@ -48,7 +52,7 @@ export async function loadCatalogPickerCandidates(
     return {
       kind: "nationality",
       nationality,
-      services: services.filter((s) => !linked.has(s.id)),
+      services: services.filter((s) => !linked.has(s.id)) as CatalogService[],
     };
   }
 
@@ -61,6 +65,10 @@ export async function loadCatalogPickerCandidates(
         enabled: schema.visaService.enabled,
         durationDays: schema.visaService.durationDays,
         entries: schema.visaService.entries,
+        stayBucket: schema.visaService.stayBucket,
+        entryKind: schema.visaService.entryKind,
+        travelerKind: schema.visaService.travelerKind,
+        showInGuidedChooser: schema.visaService.showInGuidedChooser,
       })
       .from(schema.visaService)
       .where(eq(schema.visaService.id, id))
@@ -84,7 +92,7 @@ export async function loadCatalogPickerCandidates(
     const linked = new Set(linkedRows.map((r) => r.nationalityCode));
     return {
       kind: "service",
-      service,
+      service: service as CatalogService,
       nationalities: nationalities.filter((n) => !linked.has(n.code)),
     };
   }
