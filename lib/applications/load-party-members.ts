@@ -2,6 +2,11 @@ import { asc, eq } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
 import { application, visaService } from "@/lib/db/schema";
 import type { ApplicationRow } from "@/lib/applications/load-application-row-for-request";
+import { loadMemberDocumentSlots } from "@/lib/applications/load-document-requirement-rows";
+import {
+  resolveDocumentRequirements,
+  type TDocumentSlot,
+} from "@/lib/apply/document-requirements";
 
 export type TPublicPartyMember = {
   applicationId: string;
@@ -10,7 +15,10 @@ export type TPublicPartyMember = {
   travelerIndex: number;
   serviceId: string;
   serviceName: string;
+  slots: TDocumentSlot[];
 };
+
+export type TPublicPartyMemberBase = Omit<TPublicPartyMember, "slots">;
 
 type TPartyRow = {
   applicationId: string;
@@ -39,7 +47,7 @@ export function buildPublicPartyMembers(
   app: TAppForMembers,
   appServiceName: string,
   partyRows: TPartyRow[],
-): TPublicPartyMember[] {
+): TPublicPartyMemberBase[] {
   if (!app.partyId) {
     return [
       {
@@ -64,6 +72,21 @@ export function buildPublicPartyMembers(
     }));
 }
 
+export const attachMemberDocumentSlots = (
+  members: TPublicPartyMemberBase[],
+  slotsByApplicationId: Record<string, TDocumentSlot[]>,
+): TPublicPartyMember[] =>
+  members.map((m) => ({
+    ...m,
+    slots: slotsByApplicationId[m.applicationId] ?? resolveDocumentRequirements([]),
+  }));
+
+export const slotsForPartyMember = (
+  members: TPublicPartyMember[],
+  memberId: string,
+): TDocumentSlot[] =>
+  members.find((m) => m.applicationId === memberId)?.slots ?? resolveDocumentRequirements([]);
+
 /**
  * Load the party members for an application. If the application belongs to a
  * party, returns every member (ordered by `travelerIndex`) with its service
@@ -80,23 +103,31 @@ export async function loadPartyMembers(
     .limit(1);
   const appServiceName = service?.name ?? "";
 
-  if (!app.partyId) {
-    return buildPublicPartyMembers(app, appServiceName, []);
-  }
+  const partyRows = app.partyId
+    ? await tx
+        .select({
+          applicationId: application.id,
+          travelerRole: application.travelerRole,
+          travelerKind: application.travelerKind,
+          travelerIndex: application.travelerIndex,
+          serviceId: application.serviceId,
+          serviceName: visaService.name,
+        })
+        .from(application)
+        .innerJoin(visaService, eq(visaService.id, application.serviceId))
+        .where(eq(application.partyId, app.partyId))
+        .orderBy(asc(application.travelerIndex))
+    : [];
 
-  const rows = await tx
-    .select({
-      applicationId: application.id,
-      travelerRole: application.travelerRole,
-      travelerKind: application.travelerKind,
-      travelerIndex: application.travelerIndex,
-      serviceId: application.serviceId,
-      serviceName: visaService.name,
-    })
-    .from(application)
-    .innerJoin(visaService, eq(visaService.id, application.serviceId))
-    .where(eq(application.partyId, app.partyId))
-    .orderBy(asc(application.travelerIndex));
-
-  return buildPublicPartyMembers(app, appServiceName, rows);
+  const baseMembers = buildPublicPartyMembers(app, appServiceName, partyRows);
+  const slotsByApplicationId: Record<string, TDocumentSlot[]> = {};
+  await Promise.all(
+    baseMembers.map(async (m) => {
+      slotsByApplicationId[m.applicationId] = await loadMemberDocumentSlots(tx, {
+        serviceId: m.serviceId,
+        nationalityCode: app.nationalityCode,
+      });
+    }),
+  );
+  return attachMemberDocumentSlots(baseMembers, slotsByApplicationId);
 }

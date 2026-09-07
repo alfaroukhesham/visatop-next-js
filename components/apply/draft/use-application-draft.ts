@@ -5,8 +5,14 @@ import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 import type { PublicApplication } from "@/lib/applications/public-application";
-import type { TPublicPartyMember } from "@/lib/applications/load-party-members";
-import { resolveDocumentRequirements, type TDocumentSlot } from "@/lib/apply/document-requirements";
+import {
+  slotsForPartyMember,
+  type TPublicPartyMember,
+} from "@/lib/applications/load-party-members";
+import {
+  resolveDocumentRequirements,
+  type TDocumentSlot,
+} from "@/lib/apply/document-requirements";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
 import { oversizedUploadMessage } from "@/lib/apply/customer-upload-copy";
 import {
@@ -16,13 +22,6 @@ import {
 import { UPLOAD_MAX_BYTES, type DocType, type ExtractResponse, type PublicDocument } from "./types";
 import { latestByType } from "./utils";
 
-type CatalogService = {
-  id: string;
-  name: string;
-  durationDays: number | null;
-  documentTypes?: Array<{ key: string; role: "required" | "additional" }>;
-};
-
 type CatalogNationality = {
   code: string;
   name: string;
@@ -31,7 +30,6 @@ type CatalogNationality = {
 type TMemberState = {
   app: PublicApplication | null;
   docs: PublicDocument[];
-  service: CatalogService | null;
   slots: TDocumentSlot[];
   docsByType: Partial<Record<DocType, PublicDocument | null>>;
   passport: PublicDocument | null;
@@ -46,8 +44,7 @@ type TMemberState = {
 const emptyMemberState = (): TMemberState => ({
   app: null,
   docs: [],
-  service: null,
-  slots: [],
+  slots: resolveDocumentRequirements([]),
   docsByType: {},
   passport: null,
   photo: null,
@@ -80,27 +77,16 @@ export function useApplicationDraft(applicationId: string) {
   const loadMemberData = useCallback(
     async (memberId: string) => {
       const [appRes, docsRes] = await Promise.all([
-        fetchApiEnvelope<{ application: PublicApplication }>(apiHref(`/applications/${memberId}`)),
+        fetchApiEnvelope<{
+          application: PublicApplication;
+          members: TPublicPartyMember[];
+        }>(apiHref(`/applications/${memberId}`)),
         fetchApiEnvelope<{ documents: PublicDocument[] }>(apiHref(`/applications/${memberId}/documents`)),
       ]);
       if (!appRes.ok) return;
       const memberApp = appRes.data.application;
       const docs = docsRes.ok ? docsRes.data.documents : [];
-      const currency = memberApp.catalogCurrency?.toUpperCase() === "AED" ? "AED" : "USD";
-      const servicesRes = await fetchApiEnvelope<{ services: CatalogService[] }>(
-        apiHref(
-          `/catalog/services?nationality=${encodeURIComponent(memberApp.nationalityCode)}&currency=${encodeURIComponent(currency)}`,
-        ),
-      );
-      const service = servicesRes.ok
-        ? servicesRes.data.services.find((s) => s.id === memberApp.serviceId) ?? null
-        : null;
-      const slots = resolveDocumentRequirements(
-        (service?.documentTypes ?? []).map((d) => ({
-          documentType: d.key,
-          role: d.role,
-        })),
-      );
+      const slots = slotsForPartyMember(appRes.data.members ?? [], memberId);
       const docsByType: Partial<Record<DocType, PublicDocument | null>> = {};
       for (const slot of slots) {
         docsByType[slot.key as DocType] = latestByType(docs, slot.key as DocType);
@@ -108,7 +94,6 @@ export function useApplicationDraft(applicationId: string) {
       updateMemberState(memberId, {
         app: memberApp,
         docs,
-        service,
         slots,
         docsByType,
         passport: latestByType(docs, "passport_copy"),
@@ -273,14 +258,22 @@ export function useApplicationDraft(applicationId: string) {
     }
   }, [countdown, cancelCheckout]);
 
-  const selected = memberStates[selectedMemberId] ?? emptyMemberState();
+  const selectedBase = memberStates[selectedMemberId] ?? emptyMemberState();
   const selectedMember = members.find((m) => m.applicationId === selectedMemberId) ?? null;
+  const selected = {
+    ...selectedBase,
+    slots:
+      selectedMember && selectedMember.slots.length > 0
+        ? selectedMember.slots
+        : selectedBase.slots,
+  };
   const primaryState = app ? memberStates[app.id] : undefined;
 
   const uploadPresence = buildUploadPresence(
     members.map((m) => {
       const state = memberStates[m.applicationId] ?? emptyMemberState();
-      return memberUploadStateFromDraft(state.slots, state.docsByType);
+      const slots = m.slots.length > 0 ? m.slots : state.slots;
+      return memberUploadStateFromDraft(slots, state.docsByType);
     }),
   );
 
