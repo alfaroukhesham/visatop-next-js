@@ -17,9 +17,9 @@ export const ClientDialogTrigger = DialogPrimitive.Trigger;
 
 export const ClientDialogClose = DialogPrimitive.Close;
 
-interface IClientDialogOverlayProps extends DialogPrimitive.Backdrop.Props {}
+type TClientDialogOverlayProps = DialogPrimitive.Backdrop.Props;
 
-const ClientDialogOverlay: FC<IClientDialogOverlayProps> = ({ className, ...props }) => (
+const ClientDialogOverlay: FC<TClientDialogOverlayProps> = ({ className, ...props }) => (
   <DialogPrimitive.Backdrop
     data-slot="client-dialog-overlay"
     className={cn(
@@ -72,9 +72,9 @@ export const ClientDialogContent: FC<IClientDialogContentProps> = ({
   </DialogPrimitive.Portal>
 );
 
-interface IClientDialogHeaderProps extends ComponentProps<"div"> {}
+type TClientDialogHeaderProps = ComponentProps<"div">;
 
-export const ClientDialogHeader: FC<IClientDialogHeaderProps> = ({ className, ...props }) => (
+export const ClientDialogHeader: FC<TClientDialogHeaderProps> = ({ className, ...props }) => (
   <div data-slot="client-dialog-header" className={cn("flex flex-col gap-2 pr-8", className)} {...props} />
 );
 

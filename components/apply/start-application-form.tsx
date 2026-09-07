@@ -488,14 +488,14 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
 
           {serviceId && partyEnabled && additionalTravelers.length > 0 ? (
             <div className="space-y-4">
-              {additionalTravelers.map((t, idx) => {
+              {additionalTravelers.map((traveler, idx) => {
                 const shortlist = answers.stay
                   ? (() => {
                       const ids = new Set(
                         filterGuidedServices(services, {
                           stay: answers.stay,
                           entry: answers.entry,
-                          kind: t.kind,
+                          kind: traveler.kind,
                         }).map((s) => s.id),
                       );
                       return services.filter((s) => ids.has(s.id));
@@ -503,7 +503,7 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
                   : [];
                 return (
                   <div
-                    key={t.key}
+                    key={traveler.key}
                     className="border-border bg-muted/30 space-y-4 rounded-2xl border-2 p-5"
                   >
                     <div className="flex items-center justify-between gap-3">
@@ -512,7 +512,7 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
                       </p>
                       <button
                         type="button"
-                        onClick={() => removeTraveler(t.key)}
+                        onClick={() => removeTraveler(traveler.key)}
                         className="text-muted-foreground hover:text-error text-xs font-semibold uppercase tracking-widest"
                       >
                         {t("start.party.remove")}
@@ -523,10 +523,10 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
                         <button
                           key={k}
                           type="button"
-                          onClick={() => updateTraveler(t.key, { kind: k, serviceId: "" })}
+                          onClick={() => updateTraveler(traveler.key, { kind: k, serviceId: "" })}
                           className={cn(
                             "border-border bg-card text-foreground rounded-xl border-2 px-4 py-2 text-sm font-semibold transition-colors",
-                            t.kind === k ? "border-primary bg-accent/25" : "hover:border-secondary",
+                            traveler.kind === k ? "border-primary bg-accent/25" : "hover:border-secondary",
                           )}
                         >
                           {k === "adult" ? t("start.party.adult") : t("start.party.child")}
@@ -534,8 +534,8 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
                       ))}
                     </div>
                     <select
-                      value={t.serviceId}
-                      onChange={(e) => updateTraveler(t.key, { serviceId: e.target.value })}
+                      value={traveler.serviceId}
+                      onChange={(e) => updateTraveler(traveler.key, { serviceId: e.target.value })}
                       className="border-border bg-card text-foreground w-full rounded-xl border-2 px-3 py-3 text-sm"
                     >
                       <option value="">{t("start.party.chooseVisaOption")}</option>
