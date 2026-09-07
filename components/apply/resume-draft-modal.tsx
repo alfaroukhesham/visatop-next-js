@@ -10,11 +10,10 @@ import {
   ClientDialogHeader,
   ClientDialogTitle,
 } from "@/components/client/client-dialog";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { apiHref } from "@/lib/app-href";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import type { TResumeHint } from "@/lib/applications/resume-hint";
-
-export const RESUME_DRAFT_MODAL_CTA = "Continue";
 
 const RESUME_PROMPT_DISMISSED_KEY = "vt_resume_prompt_dismissed";
 
@@ -38,9 +37,11 @@ interface IResumeDraftModalProps {
   resumeBannerCta?: string;
 }
 
-export const ResumeDraftModal: FC<IResumeDraftModalProps> = ({ resumeBannerCta = RESUME_DRAFT_MODAL_CTA }) => {
+export const ResumeDraftModal: FC<IResumeDraftModalProps> = ({ resumeBannerCta }) => {
+  const t = useCustomerT();
   const [hint, setHint] = useState<TResumeHint | null>(null);
   const [open, setOpen] = useState(false);
+  const confirmLabel = resumeBannerCta ?? t("resume.continue");
 
   useEffect(() => {
     if (readResumePromptDismissed()) return;
@@ -71,7 +72,9 @@ export const ResumeDraftModal: FC<IResumeDraftModalProps> = ({ resumeBannerCta =
   if (!hint) return null;
 
   const travelerLabel =
-    hint.travelerCount === 1 ? "1 traveler" : `${hint.travelerCount} travelers`;
+    hint.travelerCount === 1
+      ? t("resume.oneTraveler")
+      : t("resume.manyTravelers", { count: hint.travelerCount });
 
   return (
     <ClientDialog
@@ -85,16 +88,19 @@ export const ResumeDraftModal: FC<IResumeDraftModalProps> = ({ resumeBannerCta =
     >
       <ClientDialogContent showCloseButton>
         <ClientDialogHeader>
-          <ClientDialogTitle>Resume from where you started</ClientDialogTitle>
+          <ClientDialogTitle>{t("resume.modalTitle")}</ClientDialogTitle>
           <ClientDialogDescription>
-            Continue your application — {hint.nationalityName} · {hint.serviceName}
+            {t("resume.modalDescription", {
+              nationality: hint.nationalityName,
+              service: hint.serviceName,
+            })}
           </ClientDialogDescription>
         </ClientDialogHeader>
         <p className="text-secondary text-sm font-medium">{travelerLabel}</p>
         <ClientDialogFooter>
           <DoubleDecision
-            dismissLabel="Not now"
-            confirmLabel={resumeBannerCta}
+            dismissLabel={t("resume.notNow")}
+            confirmLabel={confirmLabel}
             confirmHref={hint.href}
             onDismiss={dismissPrompt}
           />

@@ -13,7 +13,7 @@ import {
   Repeat2,
   UserRound,
 } from "lucide-react";
-import { APPLY_STAY_LABELS } from "@/lib/apply/apply-stay-labels";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import {
   defaultEntryForStay,
   filterGuidedServices,
@@ -52,7 +52,7 @@ export interface IGuidedVisaChooserProps {
   onPhaseChange?: (phase: TChooserPhase) => void;
 }
 
-const EMPTY_SHORTLIST = "No visa matches these answers. Change your answers or contact us.";
+const EMPTY_SHORTLIST_KEY = "chooser.noMatches";
 
 const entriesLabel = (entries: string | null): string | null => {
   if (!entries) return null;
@@ -89,12 +89,12 @@ export const serviceResultSubtitle = (
   return parts.length > 0 ? parts.join(" · ") : null;
 };
 
-const STAY_TILE_META: Record<TStayBucket, { hint: string; icon: FC<{ className?: string }> }> = {
-  "1_14": { hint: "Short trip", icon: Clock3 },
-  "15_30": { hint: "Up to a month", icon: CalendarDays },
-  "31_60": { hint: "Extended stay", icon: CalendarRange },
-  transit: { hint: "Passing through", icon: Plane },
-  "5_year": { hint: "Long-term", icon: CalendarClock },
+const STAY_TILE_META: Record<TStayBucket, { hintKey: string; icon: FC<{ className?: string }> }> = {
+  "1_14": { hintKey: "chooser.stayHints.shortTrip", icon: Clock3 },
+  "15_30": { hintKey: "chooser.stayHints.upToMonth", icon: CalendarDays },
+  "31_60": { hintKey: "chooser.stayHints.extendedStay", icon: CalendarRange },
+  transit: { hintKey: "chooser.stayHints.passingThrough", icon: Plane },
+  "5_year": { hintKey: "chooser.stayHints.longTerm", icon: CalendarClock },
 };
 
 interface IStayChoiceTileProps {
@@ -211,6 +211,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
   onAnswersChange,
   onPhaseChange,
 }) => {
+  const t = useCustomerT();
   const stayBuckets = useMemo(() => stayOptionsForChooser(services), [services]);
   const [phase, setPhase] = useState<TChooserPhase>("stay");
   const [stay, setStay] = useState<TStayBucket | null>(null);
@@ -276,12 +277,12 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
 
   const phaseLabel =
     phase === "results"
-      ? "Your visa shortlist"
+      ? t("chooser.phaseShortlist")
       : phase === "stay"
-        ? "Your trip"
+        ? t("chooser.phaseYourTrip")
         : phase === "entry"
-          ? "Entry preference"
-          : "Traveller type";
+          ? t("chooser.phaseEntryPreference")
+          : t("chooser.phaseTravellerType");
   const progress = phase === "results" ? 100 : Math.round((questionIndex / totalQuestions) * 100);
 
   return (
@@ -292,13 +293,13 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
           onClick={goBack}
           className="text-secondary hover:text-foreground inline-flex items-center gap-1 text-sm font-semibold transition-colors"
         >
-          <ChevronLeft className="size-4" aria-hidden /> Back
+          <ChevronLeft className="size-4" aria-hidden /> {t("chooser.back")}
         </button>
       ) : null}
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-4">
           <p className="text-secondary text-[11px] font-bold uppercase tracking-[0.2em]">
-            {phase === "results" ? "Ready to apply" : `Step ${questionIndex} of ${totalQuestions}`}
+            {phase === "results" ? t("chooser.readyToApply") : t("chooser.stepOf", { current: questionIndex, total: totalQuestions })}
           </p>
           <p className="text-muted-foreground text-xs font-medium">{phaseLabel}</p>
         </div>
@@ -314,7 +315,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
           <div className="space-y-4">
             <div className="mx-auto max-w-2xl">
               <h3 className="font-heading text-foreground text-2xl font-semibold tracking-tight sm:text-3xl">
-                How long is your stay?
+                {t("chooser.howLongStay")}
               </h3>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -325,8 +326,8 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                   <StayChoiceTile
                     key={b}
                     selected={stay === b}
-                    label={APPLY_STAY_LABELS[b]}
-                    hint={meta.hint}
+                    label={t(`chooser.stayLabels.${b}`)}
+                    hint={t(meta.hintKey)}
                     icon={<Icon className="size-3.5" />}
                     onClick={() => goStay(b)}
                   />
@@ -339,21 +340,21 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
           <div className="space-y-4">
             <div className="mx-auto max-w-2xl">
               <h3 className="font-heading text-foreground text-2xl font-semibold tracking-tight sm:text-3xl">
-                Single or multiple entry?
+                {t("chooser.singleOrMultiple")}
               </h3>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <ChoiceButton
                 selected={entry === "single"}
-                label="Single entry"
-                hint="One arrival into the country"
+                label={t("chooser.singleEntry")}
+                hint={t("chooser.singleEntryHint")}
                 icon={<Plane className="size-6" />}
                 onClick={() => goEntry("single")}
               />
               <ChoiceButton
                 selected={entry === "multiple"}
-                label="Multiple entry"
-                hint="Leave and return while the visa is valid"
+                label={t("chooser.multipleEntry")}
+                hint={t("chooser.multipleEntryHint")}
                 icon={<Repeat2 className="size-6" />}
                 onClick={() => goEntry("multiple")}
               />
@@ -364,19 +365,19 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
           <div className="space-y-4">
             <div className="mx-auto max-w-2xl">
               <h3 className="font-heading text-foreground text-2xl font-semibold tracking-tight sm:text-3xl">
-                Who is this visa for?
+                {t("chooser.whoIsVisaFor")}
               </h3>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <ChoiceButton
                 selected={kind === "adult"}
-                label="Adult"
+                label={t("chooser.adult")}
                 icon={<UserRound className="size-6" />}
                 onClick={() => goKind("adult")}
               />
               <ChoiceButton
                 selected={kind === "child"}
-                label="Child"
+                label={t("chooser.child")}
                 icon={<Baby className="size-6" />}
                 onClick={() => goKind("child")}
               />
@@ -386,13 +387,16 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
         {phase === "results" ? (
           matches.length === 0 ? (
             <p className="text-muted-foreground text-sm leading-relaxed" role="status">
-              {EMPTY_SHORTLIST}
+              {t(EMPTY_SHORTLIST_KEY)}
             </p>
           ) : (
             <div className="space-y-4">
               <div className="rounded-2xl border border-secondary/20 bg-secondary/5 px-4 py-3 text-sm text-secondary">
-                Matching visas for a {stay ? APPLY_STAY_LABELS[stay].toLowerCase() : "selected"} stay
-                {kind === "child" ? " · child traveller" : " · adult traveller"}
+                {t("chooser.matchingVisasBanner", {
+                  stay: stay ? t(`chooser.stayLabels.${stay}`) : "",
+                  travellerKind:
+                    kind === "child" ? t("chooser.travellerKindChild") : t("chooser.travellerKindAdult"),
+                })}
               </div>
               <ul className="space-y-3">
                 {matches.map((s) => {
@@ -441,12 +445,12 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                               </span>
                               {price.isEstimate ? (
                                 <span className="text-muted-foreground block text-[10px] font-medium uppercase tracking-wide">
-                                  Estimate
+                                  {t("chooser.estimate")}
                                 </span>
                               ) : null}
                             </>
                           ) : (
-                            <span className="text-muted-foreground text-sm">At checkout</span>
+                            <span className="text-muted-foreground text-sm">{t("chooser.atCheckout")}</span>
                           )}
                         </span>
                       </button>
@@ -459,9 +463,9 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
         ) : null}
         {phase === "results" && matches.length > 0 && partyEnabled && selectedServiceId ? (
           <div className="border-border bg-card space-y-3 rounded-2xl border-2 px-5 py-5 shadow-[0_10px_28px_rgba(1,32,49,0.05)]">
-            <p className="text-foreground text-sm font-semibold">Travelling with others?</p>
+            <p className="text-foreground text-sm font-semibold">{t("chooser.travellingWithOthersTitle")}</p>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              Add another traveller to this checkout. Each person can have a different visa.
+              {t("chooser.travellingWithOthersBody")}
             </p>
             <button
               type="button"
@@ -469,7 +473,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
               disabled={!canAddTraveler}
               className="border-secondary text-secondary hover:bg-secondary hover:text-white rounded-xl border-2 px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Add traveller
+              {t("chooser.addTraveller")}
             </button>
           </div>
         ) : null}

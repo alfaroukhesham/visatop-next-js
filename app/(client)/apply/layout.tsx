@@ -1,13 +1,24 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import type { FC, ReactNode } from "react";
 import { ClientAppHeader } from "@/components/client/client-app-header";
+import { CUSTOMER_LOCALE_COOKIE, parseCustomerLocale } from "@/lib/i18n/customer-locale";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 
-export const metadata: Metadata = {
-  title: "Apply | Visatop",
-  description:
-    "Choose your nationality and visa service to open your application—available for guests and signed-in customers.",
+export const generateMetadata = async (): Promise<Metadata> => {
+  const cookieStore = await cookies();
+  const t = createCustomerT(parseCustomerLocale(cookieStore.get(CUSTOMER_LOCALE_COOKIE)?.value));
+  return {
+    title: t("seo.applyLayoutTitle"),
+    description: t("seo.applyLayoutDescription"),
+  };
 };
 
-export default function ApplyLayout({ children }: { children: React.ReactNode }) {
+interface IApplyLayoutProps {
+  children: ReactNode;
+}
+
+const ApplyLayout: FC<IApplyLayoutProps> = ({ children }) => {
   return (
     <div className="text-foreground flex min-h-0 flex-1 flex-col">
       <ClientAppHeader />
@@ -18,4 +29,6 @@ export default function ApplyLayout({ children }: { children: React.ReactNode })
       </div>
     </div>
   );
-}
+};
+
+export default ApplyLayout;

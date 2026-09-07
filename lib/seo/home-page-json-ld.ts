@@ -1,15 +1,20 @@
+import { createCustomerT, customerInLanguageTag } from "@/lib/i18n/load-customer-catalog";
+import { parseCustomerLocale } from "@/lib/i18n/customer-locale";
 import { appHref } from "@/lib/app-href";
 import { getAppOrigin } from "@/lib/app-url";
 import { getSiteSchemaIds } from "@/lib/seo/site-schema-ids";
 
-const HOME_DESCRIPTION =
-  "Start your UAE visa from your nationality—upload documents, pay securely, and track your application in one place.";
+interface IBuildHomePageJsonLdOptions {
+  locale?: string;
+}
 
 /**
  * Page-level JSON-LD for /visa-processing.
  * Organization + WebSite are owned by Yoast on visatop.com — reference by @id only.
  */
-export function buildHomePageJsonLd() {
+export const buildHomePageJsonLd = (opts?: IBuildHomePageJsonLdOptions) => {
+  const locale = parseCustomerLocale(opts?.locale);
+  const t = createCustomerT(locale);
   const { organizationId, websiteId } = getSiteSchemaIds();
   const origin = getAppOrigin();
   const homeUrl = appHref("/");
@@ -24,12 +29,12 @@ export function buildHomePageJsonLd() {
         "@type": "WebPage",
         "@id": webPageId,
         url: homeUrl,
-        name: "Apply for UAE Tourist Visa Online",
-        description: HOME_DESCRIPTION,
+        name: t("seo.jsonLd.webPageName"),
+        description: t("seo.jsonLd.webPageDescription"),
         isPartOf: { "@id": websiteId },
         about: { "@id": serviceId },
         breadcrumb: { "@id": breadcrumbId },
-        inLanguage: "en-GB",
+        inLanguage: customerInLanguageTag(locale),
         speakable: {
           "@type": "SpeakableSpecification",
           cssSelector: ["#service-facts"],
@@ -42,13 +47,13 @@ export function buildHomePageJsonLd() {
           {
             "@type": "ListItem",
             position: 1,
-            name: "VisaTop",
+            name: t("seo.jsonLd.breadcrumbBrand"),
             item: `${origin}/`,
           },
           {
             "@type": "ListItem",
             position: 2,
-            name: "Apply for UAE Tourist Visa Online",
+            name: t("seo.jsonLd.breadcrumbApply"),
             item: homeUrl,
           },
         ],
@@ -56,15 +61,14 @@ export function buildHomePageJsonLd() {
       {
         "@type": "Service",
         "@id": serviceId,
-        name: "UAE Tourist Visa Application",
-        description:
-          "Online UAE tourist visa processing for travelers to Dubai and the UAE. Select your nationality, upload documents, pay securely, and track your application.",
+        name: t("seo.jsonLd.serviceName"),
+        description: t("seo.jsonLd.serviceDescription"),
         provider: { "@id": organizationId },
         areaServed: {
           "@type": "Country",
-          name: "United Arab Emirates",
+          name: t("seo.jsonLd.areaServed"),
         },
-        serviceType: "Visa processing",
+        serviceType: t("seo.jsonLd.serviceType"),
         url: homeUrl,
         offers: {
           "@type": "Offer",
@@ -75,11 +79,10 @@ export function buildHomePageJsonLd() {
             "@type": "PriceSpecification",
             priceCurrency: "USD",
             valueAddedTaxIncluded: true,
-            description:
-              "All-inclusive fee varies by passport nationality and visa type (14-, 30-, or 60-day); exact price confirmed at checkout in USD or AED.",
+            description: t("seo.jsonLd.priceDescription"),
           },
         },
       },
     ],
   };
-}
+};

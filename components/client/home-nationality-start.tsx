@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FC } from "react";
 import { useRouter } from "next/navigation";
 import { ClientComboboxSkeleton } from "@/components/client/client-loading";
 import { ClientButton } from "@/components/client/client-button";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { NationalityCombobox } from "@/components/client/nationality-combobox";
 import {
   clearLeftPageMarker,
@@ -27,7 +28,8 @@ declare global {
 /**
  * Home hero: searchable nationality → `/apply/start` with nationality query set.
  */
-export function HomeNationalityStart() {
+export const HomeNationalityStart: FC = () => {
+  const t = useCustomerT();
   const router = useRouter();
   const [nationalities, setNationalities] = useState<Nationality[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,7 +89,7 @@ export function HomeNationalityStart() {
     void loadNationalities();
   }, [loadNationalities]);
 
-  function onContinue() {
+  const onContinue = () => {
     if (!selectedCode || selectedCode.length !== 2) return;
     trackEvent(APPLY_FUNNEL_EVENTS.visaApplication, {
       nationality: selectedCode,
@@ -98,14 +100,14 @@ export function HomeNationalityStart() {
       nationality: selectedCode,
     });
     router.push(`/apply/start?nationality=${encodeURIComponent(selectedCode)}`);
-  }
+  };
 
   return (
     <div className="mt-10 w-full">
       <div className="border-secondary/35 bg-card overflow-visible rounded-[12px] border-[3px] shadow-[0_20px_56px_rgba(1,32,49,0.14)]">
         <div className="p-4 sm:p-6 md:p-8">
           <label htmlFor="home-nationality-input" className="sr-only">
-            Nationality
+            {t("home.nationalityLabelSrOnly")}
           </label>
           {loading ? (
             <ClientComboboxSkeleton />
@@ -119,14 +121,14 @@ export function HomeNationalityStart() {
               nationalities={nationalities}
               valueCode={selectedCode}
               onSelectCode={setSelectedCode}
-              placeholder="Type your country and select to begin"
+              placeholder={t("home.nationalityPlaceholder")}
               size="hero"
             />
           )}
         </div>
       </div>
       <p className="text-muted-foreground mt-4 max-w-prose text-sm leading-relaxed">
-        Next you choose your visa and currency. An account is optional.
+        {t("home.nationalityHelper")}
       </p>
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
@@ -138,7 +140,7 @@ export function HomeNationalityStart() {
           onClick={onContinue}
           className="min-w-[148px] justify-center border-secondary/40 text-secondary hover:bg-secondary/10 disabled:pointer-events-none disabled:opacity-50"
         >
-          Next
+          {t("home.nextButton")}
         </ClientButton>
       </div>
     </div>

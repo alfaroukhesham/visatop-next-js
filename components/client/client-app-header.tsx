@@ -1,21 +1,23 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FC } from "react";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { ClientHeaderAuthSkeleton } from "@/components/client/client-loading";
 import { ClientButtonLink } from "@/components/client/client-button";
 import { authClient } from "@/lib/auth-client";
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { cn } from "@/lib/utils";
 
-type Props = {
+interface IClientAppHeaderProps {
   className?: string;
-};
+}
 
 /**
  * Auth-only bar below the WP header (Apply / Track live in WP chrome).
  */
-export function ClientAppHeader({ className }: Props) {
+export const ClientAppHeader: FC<IClientAppHeaderProps> = ({ className }) => {
+  const t = useCustomerT();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const storeSession = useClientAuthStore((s) => s.session);
@@ -34,6 +36,11 @@ export function ClientAppHeader({ className }: Props) {
       router.push("/");
     }
   };
+
+  const welcomeName =
+    storeSession?.user.name?.trim() ||
+    storeSession?.user.email?.split("@")[0] ||
+    t("header.welcomeFallback");
 
   return (
     <header
@@ -55,24 +62,21 @@ export function ClientAppHeader({ className }: Props) {
                 undefined
               }
             >
-              Welcome,{" "}
-              {storeSession.user.name?.trim() ||
-                storeSession.user.email?.split("@")[0] ||
-                "there"}
+              {t("header.welcome", { name: welcomeName })}
             </span>
             <ClientButtonLink
               href="/portal/track"
               brand="cta"
               className="h-9 shrink-0 px-3 text-xs font-bold"
             >
-              Account
+              {t("header.account")}
             </ClientButtonLink>
             <button
               type="button"
               onClick={onSignOut}
               className="h-9 shrink-0 rounded-md border border-white/15 bg-transparent px-3 text-xs font-medium text-white transition-colors hover:border-[#FCCD64]/50 hover:bg-white/5 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#92C0D7]"
             >
-              Sign out
+              {t("header.signOut")}
             </button>
           </>
         ) : (
@@ -81,10 +85,10 @@ export function ClientAppHeader({ className }: Props) {
             brand="cta"
             className="h-9 shrink-0 px-3 text-xs font-bold"
           >
-            Login / Register
+            {t("header.loginRegister")}
           </ClientButtonLink>
         )}
       </div>
     </header>
   );
-}
+};

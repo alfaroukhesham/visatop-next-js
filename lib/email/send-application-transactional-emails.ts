@@ -30,6 +30,7 @@ import {
   supportContactPlainText,
 } from "./transactional-email-html";
 import { transactionalSubjectPrefix, withTransactionalFooter } from "./transactional-footer";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 
 function safeFilename(name: string | null, fallback: string) {
   const n = (name ?? "").replace(/[^\w.\-()+ ]/g, "_").slice(0, 120);
@@ -469,9 +470,12 @@ const formatDraftExpiryLine = (draftExpiresAt: Date): string => {
   });
 };
 
-const formatTravelerCountLine = (count: number): string => {
-  if (count === 1) return "1 traveler";
-  return `${count} travelers`;
+const formatTravelerCountLine = (
+  count: number,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string => {
+  if (count === 1) return t("email.draftStarted.oneTraveler");
+  return t("email.draftStarted.manyTravelers", { count });
 };
 
 const buildApplicationDraftStartedBodies = (input: {
@@ -481,33 +485,35 @@ const buildApplicationDraftStartedBodies = (input: {
   resumeUrl: string;
   ctaLabel: string;
   draftExpiresAt: Date;
+  locale: string;
 }): { text: string; html: string } => {
-  const travelersLine = formatTravelerCountLine(input.travelerCount);
+  const t = createCustomerT(input.locale);
+  const travelersLine = formatTravelerCountLine(input.travelerCount, t);
   const expiresLine = formatDraftExpiryLine(input.draftExpiresAt);
   const contactText = supportContactPlainText();
   const text = [
-    "Hello,",
+    t("email.draftStarted.greeting"),
     "",
-    "You started a visa application with VisaTop.",
+    t("email.draftStarted.intro"),
     "",
-    `Nationality: ${input.nationalityName}`,
-    `Visa product: ${input.serviceName}`,
-    `Travelers: ${travelersLine}`,
+    `${t("email.draftStarted.nationalityLabel")} ${input.nationalityName}`,
+    `${t("email.draftStarted.visaProductLabel")} ${input.serviceName}`,
+    `${t("email.draftStarted.travelersLabel")} ${travelersLine}`,
     "",
-    `Continue your application before ${expiresLine}:`,
+    t("email.draftStarted.continueBefore", { expiresAt: expiresLine }),
     input.resumeUrl,
     "",
     contactText,
   ].join("\n");
 
-  const headerDetailsHtml = `<div><strong>Visa product</strong> ${escapeHtml(input.serviceName)}</div>
-          <div><strong>Nationality</strong> ${escapeHtml(input.nationalityName)}</div>
-          <div><strong>Travelers</strong> ${escapeHtml(travelersLine)}</div>`;
+  const headerDetailsHtml = `<div><strong>${escapeHtml(t("email.draftStarted.visaProductLabel"))}</strong> ${escapeHtml(input.serviceName)}</div>
+          <div><strong>${escapeHtml(t("email.draftStarted.nationalityLabel"))}</strong> ${escapeHtml(input.nationalityName)}</div>
+          <div><strong>${escapeHtml(t("email.draftStarted.travelersLabel"))}</strong> ${escapeHtml(travelersLine)}</div>`;
 
   const bodyRowsHtml = `<tr>
       <td style="padding:16px 18px;">
-        <p style="margin:0;">You started a visa application with VisaTop. Use the button below to continue where you left off.</p>
-        <p style="margin:12px 0 0;font-size:13px;color:#6b7280;">This link expires on ${escapeHtml(expiresLine)}.</p>
+        <p style="margin:0;">${escapeHtml(t("email.draftStarted.bodyIntro"))}</p>
+        <p style="margin:12px 0 0;font-size:13px;color:#6b7280;">${escapeHtml(t("email.draftStarted.linkExpires", { expiresAt: expiresLine }))}</p>
         <p style="margin:20px 0 0;text-align:center;">
           <a href="${escapeHtml(input.resumeUrl)}" style="display:inline-block;padding:12px 24px;background:#111827;color:#ffffff;text-decoration:none;font-weight:600;border-radius:4px;">${escapeHtml(input.ctaLabel)}</a>
         </p>
@@ -516,7 +522,7 @@ const buildApplicationDraftStartedBodies = (input: {
     </tr>`;
 
   const html = buildTransactionalEmailHtml({
-    eyebrow: "Continue your application",
+    eyebrow: t("email.draftStarted.eyebrow"),
     headerDetailsHtml,
     bodyRowsHtml,
   });
@@ -529,6 +535,7 @@ export async function sendApplicationDraftStartedEmail(input: {
   partyId: string;
   guestEmail: string;
   requestId: string | null;
+  locale?: string;
 }): Promise<void> {
   const { primaryApplicationId, partyId, guestEmail, requestId } = input;
 
@@ -586,9 +593,10 @@ export async function sendApplicationDraftStartedEmail(input: {
       serviceName: svc?.name ?? "",
       travelerCount: members.length > 0 ? members.length : 1,
       resumeUrl,
-      ctaLabel: "Continue",
+      ctaLabel: createCustomerT(input.locale ?? "en")("email.draftStarted.cta"),
       draftExpiresAt: party.draftExpiresAt,
       to: guestEmail.trim().toLowerCase(),
+      locale: input.locale ?? "en",
     };
   });
 
@@ -613,7 +621,8 @@ export async function sendApplicationDraftStartedEmail(input: {
     return;
   }
 
-  const subject = `${transactionalSubjectPrefix()}Continue your visa application`;
+  const t = createCustomerT(payload.locale);
+  const subject = `${transactionalSubjectPrefix()}${t("email.draftStarted.subject")}`;
   const { text: bodyText, html: bodyHtml } = buildApplicationDraftStartedBodies(payload);
   const text = withTransactionalFooter(bodyText);
   const html = appendTransactionalHtmlFooter(bodyHtml);

@@ -12,8 +12,9 @@ import { isForeignKeyViolation } from "@/lib/db/pg-errors";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { sendAdminStep2ServiceSelectedEmail } from "@/lib/email/send-admin-notification-emails";
 import { sendApplicationDraftStartedEmail } from "@/lib/email/send-application-transactional-emails";
+import { readCustomerLocaleFromCookieHeader } from "@/lib/i18n/customer-locale";
 
-function queueAdminStep2Email(applicationId: string, requestId: string | null) {
+const queueAdminStep2Email = (applicationId: string, requestId: string | null) => {
   after(() => {
     void sendAdminStep2ServiceSelectedEmail(applicationId, requestId).catch((err) => {
       console.error("[api/applications] admin_step2_service_selected email failed", {
@@ -23,14 +24,15 @@ function queueAdminStep2Email(applicationId: string, requestId: string | null) {
       });
     });
   });
-}
+};
 
-function queueApplicationDraftStartedEmail(input: {
+const queueApplicationDraftStartedEmail = (input: {
   primaryApplicationId: string;
   partyId: string;
   guestEmail: string;
   requestId: string | null;
-}) {
+  locale: string;
+}) => {
   after(() => {
     void sendApplicationDraftStartedEmail(input).catch((err) => {
       console.error("[api/applications] application_draft_started email failed", {
@@ -41,7 +43,7 @@ function queueApplicationDraftStartedEmail(input: {
       });
     });
   });
-}
+};
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -84,6 +86,7 @@ export async function POST(req: Request) {
         partyId: result.partyId,
         guestEmail,
         requestId,
+        locale: readCustomerLocaleFromCookieHeader(hdrs.get("cookie")),
       });
     }
 
