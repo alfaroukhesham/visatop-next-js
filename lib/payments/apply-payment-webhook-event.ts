@@ -1,12 +1,34 @@
 import { retainRequiredDocuments } from "@/lib/applications/retain-required-documents";
-import { application, auditLog, payment } from "@/lib/db/schema";
+import { application, applicationParty, auditLog, payment } from "@/lib/db/schema";
 import type { DbTransaction } from "@/lib/db";
-import { and, desc, eq, ne, or } from "drizzle-orm";
+import { and, asc, desc, eq, ne, or } from "drizzle-orm";
 import type { NormalizedPaymentWebhookEvent } from "./normalized-webhook";
+import type { ApplicationRow } from "@/lib/applications/load-application-row-for-request";
 
 export type ApplyPaymentWebhookContext = {
   requestId?: string | null;
+  /** Override for loading all party member application rows (tests inject a stub). */
+  loadPartyApplicationRows?: (
+    tx: DbTransaction,
+    appRow: ApplicationRow,
+  ) => Promise<ApplicationRow[]>;
 };
+
+/**
+ * Load every application row in the party (ordered by travelerIndex), or just
+ * the app itself for legacy single-traveller rows (null `partyId`).
+ */
+async function loadPartyApplicationRows(
+  tx: DbTransaction,
+  appRow: ApplicationRow,
+): Promise<ApplicationRow[]> {
+  if (!appRow.partyId) return [appRow];
+  return tx
+    .select()
+    .from(application)
+    .where(eq(application.partyId, appRow.partyId))
+    .orderBy(asc(application.travelerIndex));
+}
 
 /**
  * Resolve `payment` by provider id or latest checkout for application from metadata.
@@ -72,7 +94,6 @@ export async function applyPaymentWebhookEvent(
   providerEventId: string,
   ctx?: ApplyPaymentWebhookContext,
 ): Promise<ApplyPaymentWebhookEventResult> {
-  void ctx;
   if (payRow.provider !== event.provider) {
     console.warn("[applyPaymentWebhookEvent] provider mismatch — caller should reject before insert", {
       paymentId: payRow.id,
@@ -141,18 +162,29 @@ export async function applyPaymentWebhookEvent(
       .where(and(eq(payment.id, payRow.id), ne(payment.status, "paid")))
       .returning({ id: payment.id });
 
-    const applicationBecamePaid = await tx
-      .update(application)
-      .set({
-        paymentStatus: "paid",
-        checkoutState: "none",
-        applicationStatus: "in_progress",
-        fulfillmentStatus: "automation_running",
-      })
-      .where(and(eq(application.id, appRow.id), ne(application.paymentStatus, "paid")))
-      .returning({ id: application.id });
+    const loadMembers = ctx?.loadPartyApplicationRows ?? loadPartyApplicationRows;
+    const memberRows = await loadMembers(tx, appRow);
 
-    const isFirstPaidTransition = paymentBecamePaid.length > 0 || applicationBecamePaid.length > 0;
+    let anyMemberBecamePaid = false;
+    const newlyPaidIds: string[] = [];
+    for (const member of memberRows) {
+      const res = await tx
+        .update(application)
+        .set({
+          paymentStatus: "paid",
+          checkoutState: "none",
+          applicationStatus: "in_progress",
+          fulfillmentStatus: "automation_running",
+        })
+        .where(and(eq(application.id, member.id), ne(application.paymentStatus, "paid")))
+        .returning({ id: application.id });
+      if (res.length > 0) {
+        anyMemberBecamePaid = true;
+        newlyPaidIds.push(member.id);
+      }
+    }
+
+    const isFirstPaidTransition = paymentBecamePaid.length > 0 || anyMemberBecamePaid;
 
     if (isFirstPaidTransition) {
       await tx.insert(auditLog).values({
@@ -179,23 +211,32 @@ export async function applyPaymentWebhookEvent(
         }),
       });
 
-      const retainRes = await retainRequiredDocuments(tx, appRow.id);
-      if (!retainRes.ok) {
-        await tx.update(application).set({ adminAttentionRequired: true }).where(eq(application.id, appRow.id));
-        await tx.insert(auditLog).values({
-          actorType: "system",
-          actorId: null,
-          action: "payment_paid_docs_retain_failed_flagged",
-          entityType: "application",
-          entityId: appRow.id,
-          beforeJson: JSON.stringify({ adminAttentionRequired: appRow.adminAttentionRequired }),
-          afterJson: JSON.stringify({
-            providerEventId,
-            transactionId: event.providerPaymentId ?? null,
-            paymentId: payRow.id,
-            retention: retainRes,
-          }),
-        });
+      for (const memberId of newlyPaidIds) {
+        const retainRes = await retainRequiredDocuments(tx, memberId);
+        if (!retainRes.ok) {
+          await tx.update(application).set({ adminAttentionRequired: true }).where(eq(application.id, memberId));
+          await tx.insert(auditLog).values({
+            actorType: "system",
+            actorId: null,
+            action: "payment_paid_docs_retain_failed_flagged",
+            entityType: "application",
+            entityId: memberId,
+            beforeJson: JSON.stringify({ adminAttentionRequired: appRow.adminAttentionRequired }),
+            afterJson: JSON.stringify({
+              providerEventId,
+              transactionId: event.providerPaymentId ?? null,
+              paymentId: payRow.id,
+              retention: retainRes,
+            }),
+          });
+        }
+      }
+
+      if (appRow.partyId) {
+        await tx
+          .update(applicationParty)
+          .set({ paymentStatus: "paid" })
+          .where(eq(applicationParty.id, appRow.partyId));
       }
     }
     return { didFirstPaidTransition: isFirstPaidTransition };
@@ -203,7 +244,11 @@ export async function applyPaymentWebhookEvent(
 
   if (event.kind === "payment_failed") {
     await tx.update(payment).set({ status: "failed" }).where(eq(payment.id, payRow.id));
-    await tx.update(application).set({ checkoutState: "none" }).where(eq(application.id, appRow.id));
+    const loadMembers = ctx?.loadPartyApplicationRows ?? loadPartyApplicationRows;
+    const memberRows = await loadMembers(tx, appRow);
+    for (const member of memberRows) {
+      await tx.update(application).set({ checkoutState: "none" }).where(eq(application.id, member.id));
+    }
     await tx.insert(auditLog).values({
       actorType: "system",
       actorId: null,

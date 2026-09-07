@@ -18,7 +18,6 @@ import {
   AdminTableLoadingSkeleton,
 } from "@/components/admin/admin-loading";
 import {
-  EMPTY_APPLICATIONS_FILTERS,
   type ApplicationsListFilters,
 } from "@/components/admin/admin-applications-list-types";
 import { useAdminApplicationsList } from "@/components/admin/use-admin-applications-list";
@@ -285,6 +284,16 @@ export function AdminApplicationsListClient({ initialAttentionCount }: Props) {
                   {app.fullName ?? app.guestEmail ?? (
                     <span className="text-muted-foreground italic">Unnamed draft</span>
                   )}
+                  {app.partyId && app.partyMemberCount > 1 ? (
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-medium bg-primary/10 text-primary border border-primary/20">
+                        Multi-traveller · {app.partyMemberCount} travellers
+                      </span>
+                      <span className="text-[10px] text-muted-foreground capitalize">
+                        {app.travelerKind}
+                      </span>
+                    </div>
+                  ) : null}
                 </td>
                 <td className="px-4 py-3 text-xs">
                   {app.serviceName ?? (

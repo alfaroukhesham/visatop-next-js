@@ -207,7 +207,23 @@ describe("computeValidation", () => {
 describe("computeValidation when APPLY_STEP3_VALIDATION_DISABLED", () => {
   const NOW = new Date(Date.UTC(2026, 3, 16));
 
-  it("returns payment ready when only email is present", async () => {
+  it("returns payment ready when email and floor uploads are present", async () => {
+    vi.resetModules();
+    vi.doMock("@/lib/apply/apply-flow-config", () => ({
+      APPLY_STEP3_VALIDATION_DISABLED: true,
+    }));
+    const { computeValidation: computeWithFlag } = await import("./validation-readiness");
+    const v = computeWithFlag({
+      profile: { email: "guest@example.com" },
+      uploads: { passportCopyPresent: true, personalPhotoPresent: true },
+      now: NOW,
+    });
+    expect(v.paymentReadiness).toBe("ready");
+    expect(v.requiredFieldsMissing).toEqual([]);
+    expect(v.validationFailures).toEqual([]);
+  });
+
+  it("blocks payment when email is present but required uploads are missing", async () => {
     vi.resetModules();
     vi.doMock("@/lib/apply/apply-flow-config", () => ({
       APPLY_STEP3_VALIDATION_DISABLED: true,
@@ -218,9 +234,27 @@ describe("computeValidation when APPLY_STEP3_VALIDATION_DISABLED", () => {
       uploads: { passportCopyPresent: false, personalPhotoPresent: false },
       now: NOW,
     });
-    expect(v.paymentReadiness).toBe("ready");
+    expect(v.paymentReadiness).toBe("blocked_missing_required_fields");
     expect(v.requiredFieldsMissing).toEqual([]);
-    expect(v.validationFailures).toEqual([]);
+  });
+
+  it("allows payment when required uploads are present even without profile fields", async () => {
+    vi.resetModules();
+    vi.doMock("@/lib/apply/apply-flow-config", () => ({
+      APPLY_STEP3_VALIDATION_DISABLED: true,
+    }));
+    const { computeValidation: computeWithFlag } = await import("./validation-readiness");
+    const v = computeWithFlag({
+      profile: { email: "guest@example.com", fullName: "" },
+      uploads: {
+        passportCopyPresent: true,
+        personalPhotoPresent: true,
+        requiredSlotKeys: ["passport_copy", "personal_photo", "bank_statement_6m"],
+        uploadedDocumentTypes: ["passport_copy", "personal_photo", "bank_statement_6m"],
+      },
+      now: NOW,
+    });
+    expect(v.paymentReadiness).toBe("ready");
   });
 
   it("blocks payment when email is missing", async () => {

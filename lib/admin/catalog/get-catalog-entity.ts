@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import type { CatalogService } from "@/lib/admin/catalog/catalog-types";
 
 export const getCatalogNationality = async (tx: DbTransaction, code: string) => {
   const rows = await tx
@@ -23,9 +24,13 @@ export const getCatalogVisaService = async (tx: DbTransaction, id: string) => {
       enabled: schema.visaService.enabled,
       durationDays: schema.visaService.durationDays,
       entries: schema.visaService.entries,
+      stayBucket: schema.visaService.stayBucket,
+      entryKind: schema.visaService.entryKind,
+      travelerKind: schema.visaService.travelerKind,
+      showInGuidedChooser: schema.visaService.showInGuidedChooser,
     })
     .from(schema.visaService)
     .where(eq(schema.visaService.id, id))
     .limit(1);
-  return rows[0] ?? null;
+  return (rows[0] as CatalogService | undefined) ?? null;
 };

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { AdminApplicationOpsPanel } from "@/components/admin/admin-application-ops-panel";
+import { AdminApplicationTravellers } from "@/components/admin/admin-application-travellers";
 import { ApplicationActions } from "@/components/admin/application-actions";
 import { ApplicationRefundForm } from "@/components/admin/application-refund-form";
 import { formatMinorUnitsAmount } from "@/lib/pricing/format-minor-units";
@@ -14,6 +15,7 @@ import {
   type AdminApplicationAuditRow,
 } from "@/lib/admin/application-audit-format";
 import { ProfileRow, StatusBadge } from "@/components/admin/admin-application-detail-parts";
+import type { TAdminTraveller } from "@/lib/admin/load-application-travellers";
 
 type ApplicationDetail = {
   id: string;
@@ -63,12 +65,16 @@ export function AdminApplicationDetailView({
   payments,
   shownAuditLogs,
   adminDocuments,
+  travellers,
+  selectedTravellerId,
 }: {
   app: ApplicationDetail;
   serviceLabel: string | null;
   payments: PaymentRow[];
   shownAuditLogs: AdminApplicationAuditRow[];
   adminDocuments: AdminDocumentRow[];
+  travellers: TAdminTraveller[];
+  selectedTravellerId: string;
 }) {
   return (
     <AdminShell
@@ -122,24 +128,31 @@ export function AdminApplicationDetailView({
           </dl>
         </div>
 
-        <div className="border border-border bg-card p-5 space-y-4">
-          <h2 className="font-heading text-base font-semibold tracking-tight border-b-2 border-primary pb-0.5">
-            Fulfillment & outcomes
-          </h2>
-          <AdminApplicationOpsPanel
-            applicationId={app.id}
-            paymentStatus={app.paymentStatus}
-            applicationStatus={app.applicationStatus}
-            documents={adminDocuments.map((d) => ({
-              id: d.id,
-              documentType: d.documentType,
-              status: d.status,
-              createdAt: d.createdAt.toISOString(),
-              originalFilename: d.originalFilename,
-              byteLength: d.byteLength,
-            }))}
+        {travellers.length > 0 ? (
+          <AdminApplicationTravellers
+            travellers={travellers}
+            initialSelectedId={selectedTravellerId}
           />
-        </div>
+        ) : (
+          <div className="border border-border bg-card p-5 space-y-4">
+            <h2 className="font-heading text-base font-semibold tracking-tight border-b-2 border-primary pb-0.5">
+              Fulfillment & outcomes
+            </h2>
+            <AdminApplicationOpsPanel
+              applicationId={app.id}
+              paymentStatus={app.paymentStatus}
+              applicationStatus={app.applicationStatus}
+              documents={adminDocuments.map((d) => ({
+                id: d.id,
+                documentType: d.documentType,
+                status: d.status,
+                createdAt: d.createdAt.toISOString(),
+                originalFilename: d.originalFilename,
+                byteLength: d.byteLength,
+              }))}
+            />
+          </div>
+        )}
 
         <div className="border border-border bg-card p-5 space-y-4">
           <h2 className="font-heading text-base font-semibold tracking-tight border-b-2 border-primary pb-0.5">

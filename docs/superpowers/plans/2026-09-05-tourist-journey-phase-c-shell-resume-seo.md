@@ -3,13 +3,23 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.  
 > **Prerequisite:** Phase B complete and Cursor-reviewed.  
 > **Executor:** OpenCode. **Reviewer:** Cursor.  
-> **Index:** [2026-09-05-tourist-journey-README.md](./2026-09-05-tourist-journey-README.md)
+> **Index:** [2026-09-05-tourist-journey-README.md](./2026-09-05-tourist-journey-README.md)  
+> **Rule:** `.cursor/rules/visa-admin-and-customer-together.mdc`
 
-**Goal:** Tourist-only chrome (no coach overlay, no Featured bar, no autoplay, Status not pre-pay), phone country-code picker, **resume banner + signed email link + track Continue**, visa-processing H1/meta + blog row, EN message catalog.
+**Goal:** Tourist chrome (no coach overlay, no Featured bar, no autoplay, 4 pre-pay steps), phone country-code from **nationality.dialCode**, resume banner + signed email link + track Continue, apply-home H1/meta/blog row from **Settings**.
 
-**Architecture:** Reuse `vt_resume` and HMAC pattern from `lib/applications/guest-link-intent.ts`. Resume token is **not** the cookie plaintext in email — sign `{ partyId, exp }` (or primary `applicationId` if no party) with `GUEST_LINK_INTENT_SECRET`. GET `/apply/resume?t=` sets `vt_resume` and redirects. Track already has names from Phase A; add Continue when the cookie matches a listed row.
+**Architecture:** Reuse `vt_resume` and HMAC from `lib/applications/guest-link-intent.ts`. Email token is `{ partyId, primaryApplicationId, exp }` signed with `GUEST_LINK_INTENT_SECRET` — not the cookie plaintext. GET `/apply/resume?t=` sets `vt_resume` and redirects. Draft TTL already admin (`draft_ttl_hours`). Track names already shipped in Phase A.
 
-**Tech Stack:** Existing apply layout, `WpShellFrame`, `HomeDemoVideo`, Mailgun transactional kinds, Next `metadata` on `app/(client)/page.tsx`.
+**Tech Stack:** Existing apply layout, `WpShellFrame`, Settings/`platform_setting` (same pattern as draft TTL), Catalog nationality form/PATCH, Mailgun transactional kinds.
+
+**Do not:**
+
+- Hardcode a 9-country `DIAL_BY_ISO2` map. Dial lives on `nationality`.
+- Hardcode apply-home title / H1 / blog hrefs in `page.tsx`.
+- Put resume tokens or PII in localStorage.
+- Regress Catalog list-then-edit or Document rules.
+
+**Allowed in code (product chrome, not catalog):** removing `ApplyJourneyStepBar`, 4-step rail, hiding WP Featured strip, not mounting `HomeDemoVideo`.
 
 ---
 
@@ -17,34 +27,25 @@
 
 | Area | Create | Modify |
 |---|---|---|
-| Chrome | — | `apply-journey-step-bar.tsx` usage sites, `apply-steps-rail.tsx`, `wp-shell-frame.tsx`, `home-demo-video.tsx`, `app/(client)/page.tsx` |
-| Phone | `lib/apply/phone-country.ts`, `components/apply/draft/phone-country-field.tsx` | `applicant-review.tsx` |
-| Resume | `lib/applications/resume-email-link.ts`, `app/api/applications/resume-hint/route.ts`, `app/(client)/apply/resume/page.tsx`, `components/apply/resume-banner.tsx` | create-draft route (send email), track form |
-| SEO | `lib/seo/apply-home-copy.ts` | `app/(client)/page.tsx`, `lib/seo/home-page-facts.ts`, `lib/seo/home-page-json-ld.ts` |
-| i18n | `lib/i18n/apply-messages.ts` | apply strings that Phase B/C added |
+| Chrome | — | `ApplyJourneyStepBar` call sites, `apply-steps-rail.tsx`, `wp-shell-frame.tsx`, `app/(client)/page.tsx` |
+| Dial (admin + apply) | `drizzle/0026_nationality_dial_code.sql` | `visa.ts` nationality, `catalog-types.ts`, nationality form + PATCH, `get-catalog-entity.ts`, `applicant-review.tsx`, `phone-country-field.tsx` |
+| Apply-home copy (admin) | `lib/apply/apply-home-copy.ts`, `components/admin/apply-home-seo-settings.tsx`, `components/admin/apply-blog-link-settings.tsx` | Settings page, `app/(client)/page.tsx`, `lib/seo/home-page-facts.ts`, `lib/seo/home-page-json-ld.ts` |
+| Resume | `lib/applications/resume-email-link.ts`, `lib/applications/resume-hint.ts`, `app/api/applications/resume-hint/route.ts`, `app/(client)/apply/resume/page.tsx`, `components/apply/resume-banner.tsx` | create-draft route, track form, transactional email kinds |
+| Track Continue | — | track-lookup API + form, signed-in list if needed |
 
 ---
 
 ### Task 1: Kill coach overlay + Status-as-pre-pay + autoplay + Featured bar
 
 **Files:**
-- Modify: `app/(client)/page.tsx`, start page, draft/payment pages — **stop rendering** `ApplyJourneyStepBar`.
+- Modify: `app/(client)/page.tsx`, start, draft, payment — **stop rendering** `ApplyJourneyStepBar`.
 - Modify: `components/apply/apply-steps-rail.tsx`
 - Modify: `components/client/wp-shell/wp-shell-frame.tsx`
-- Modify: `components/client/home-demo-video.tsx` / home page
+- Modify: home page — remove `<HomeDemoVideo />`
 
-**Rail:** remove step 5 (Status) from the pre-pay list. Four steps only:
+**Rail:** four pre-pay steps only: Nationality → Visa → Documents → Payment. `currentStep`: `1 | 2 | 3 | 4`. Submitted page has no pre-pay rail.
 
-1. Nationality  
-2. Visa  
-3. Documents  
-4. Payment  
-
-`currentStep` type becomes `1 | 2 | 3 | 4`. Submitted page has **no** pre-pay rail (or a post-pay status heading, not “Step 5”).
-
-Update `hrefForStep` / `ApplyTwoColumn` callers so they pass 1–4 only.
-
-**Featured / Khaleej bar:** in `WpShellFrame` tourist CSS, hide WP featured strip on apply routes:
+**Featured / Khaleej:** tourist CSS on apply routes:
 
 ```css
 header#header .featured_on,
@@ -53,41 +54,43 @@ header#header .time_in_uae {
 }
 ```
 
-(Adjust selectors to match the live WP markup already targeted in that file.)
+Match selectors already used in `WpShellFrame`.
 
-**Video:** remove `<HomeDemoVideo />` from `app/(client)/page.tsx`. Do not autoplay anywhere. If a Help link is desired, a text link “How it works” to an existing WP page is enough — no new video player.
+**Video:** no autoplay. Optional text link “How it works” to an existing WP URL **from Settings** (Task 4), not a new player.
 
 - [ ] **Step 1:** Grep `ApplyJourneyStepBar` and `HomeDemoVideo`; remove from tourist apply surfaces.
-- [ ] **Step 2:** Rail is 4 steps. `pnpm exec vitest run` if any layout tests exist; otherwise visual check in review.
+- [ ] **Step 2:** Rail is 4 steps.
 
 ---
 
-### Task 2: Phone country-code picker
+### Task 2: Nationality dial code (admin) + phone field (apply)
 
 **Files:**
+- Create: `drizzle/0026_nationality_dial_code.sql` (journal idx 26)
+- Modify: `lib/db/schema/visa.ts` — `nationality.dialCode` text null
+- Modify: `lib/admin/catalog/catalog-types.ts`, `get-catalog-entity.ts`
+- Modify: `components/admin/catalog-nationality-form.tsx`
+- Modify: `app/api/admin/catalog/nationalities/route.ts` (POST)
+- Modify: `app/api/admin/catalog/nationalities/[code]/route.ts` (PATCH)
 - Create: `lib/apply/phone-country.ts` + test
 - Create: `components/apply/draft/phone-country-field.tsx`
 - Modify: `applicant-review.tsx`
 
+```sql
+ALTER TABLE "nationality" ADD COLUMN "dial_code" text;
+```
+
+Admin form field: **Dial code** (digits only, no `+`). Empty = this nationality has no default; the customer must pick another country or type the full number. Francesco fills IN=`91`, NG=`234`, etc. on `/admin/catalog/nationalities/[code]`.
+
+PATCH/POST:
+
 ```typescript
-export type TDialCountry = { code: string; name: string; dial: string };
+dialCode: z.string().regex(/^\d{1,6}$/).nullable().optional(),
+```
 
-/** Minimal ISO2 → dial. Include IN, NG, TR, EG, ZA, AE, FR, US, GB. */
-export const DIAL_BY_ISO2: Record<string, string> = {
-  IN: "91",
-  NG: "234",
-  TR: "90",
-  EG: "20",
-  ZA: "27",
-  AE: "971",
-  FR: "33",
-  US: "1",
-  GB: "44",
-};
+Public nationalities list (or application payload) must include `dialCode` for the chosen nationality so the client can default.
 
-export const defaultDialForNationality = (nationalityCode: string): string =>
-  DIAL_BY_ISO2[nationalityCode.trim().toUpperCase()] ?? "";
-
+```typescript
 export const composeE164 = (dialDigits: string, nationalDigits: string): string => {
   const d = dialDigits.replace(/\D/g, "");
   const n = nationalDigits.replace(/\D/g, "");
@@ -97,10 +100,10 @@ export const composeE164 = (dialDigits: string, nationalDigits: string): string 
 
 export const splitStoredPhone = (
   stored: string,
-  nationalityCode: string,
+  defaultDial: string,
 ): { dial: string; national: string } => {
   const digits = stored.replace(/\D/g, "");
-  const fallback = defaultDialForNationality(nationalityCode);
+  const fallback = defaultDial.replace(/\D/g, "");
   if (stored.startsWith("+") && fallback && digits.startsWith(fallback)) {
     return { dial: fallback, national: digits.slice(fallback.length) };
   }
@@ -108,9 +111,15 @@ export const splitStoredPhone = (
 };
 ```
 
-Tests: India default `91`; compose `91` + `9876543210` → `+919876543210`.
+UI: select of **catalog nationalities that have `dialCode`** (name + `+dial`) + national `type="tel"`. Default = application `nationality.dialCode`. PATCH still sends one E.164 `phone`.
 
-UI: country select (name + `+dial`) + national number input `type="tel"`. PATCH still sends one `phone` string (E.164). Default dial from application `nationalityCode`.
+If the nationality has no dial and the select is empty: show “Add a dial code for this nationality in Catalog” is **admin-only**. Customer copy: “Choose a country code” and require a selection from nationalities that *do* have dials (still catalog-driven).
+
+- [ ] **Step 1:** PATCH test: `{ dialCode: "91" }` on IN persists.
+- [ ] **Step 2:** `composeE164("91", "9876543210") === "+919876543210"`.
+- [ ] **Step 3:** Browser: set IN dial in Catalog, start an India draft, phone defaults to +91.
+
+There is **no** `DIAL_BY_ISO2` constant.
 
 ---
 
@@ -122,13 +131,11 @@ UI: country select (name + `+dial`) + national number input `type="tel"`. PATCH 
 - Create: `components/apply/resume-banner.tsx`
 - Modify: `app/(client)/page.tsx` and `/apply/start`
 
-Cookie `vt_resume` is HttpOnly — the client **cannot** read it. Hint is a **GET** that reads the cookie server-side.
+Cookie `vt_resume` is HttpOnly. Hint is GET that reads the cookie server-side.
 
-`resume-hint.ts`:
-
-- Hash the plaintext cookie; find `application_party` by `resumeTokenHash` **or** any `application` with that hash and `paymentStatus` in `unpaid` | `checkout_created`.
-- If draft expired (`draftExpiresAt < now`) or paid → `{ hint: null }`.
-- Else return **no PII** except:
+- Hash cookie; find `application_party` by `resumeTokenHash` **or** any `application` with that hash and `paymentStatus` in `unpaid` | `checkout_created`.
+- Expired (`draftExpiresAt < now`, TTL already admin) or paid → `{ hint: null }`.
+- Else no PII except:
 
 ```typescript
 export type TResumeHint = {
@@ -137,208 +144,176 @@ export type TResumeHint = {
   travelerCount: number;
   nationalityName: string;
   serviceName: string;
-  href: string; // /apply/applications/:primaryId
+  href: string;
 };
 ```
 
-Route: `jsonOk({ hint })`. 200 with `hint: null` is fine (not 401).
+Banner: “Continue your application — {nationalityName} · {serviceName}” / “{N} traveler(s)” / Continue. CTA label from Settings Task 4 (`resumeBannerCta`), default `Continue`.
 
-Banner (client): fetch hint on home + start. If present:
-
-> Continue your application — {nationalityName} · {serviceName}  
-> {N} traveler(s) · **Continue**
-
-Link to `href`. No document names, no email, no passport.
-
-Tests: expired → null; paid → null; valid unpaid → hint.
+- [ ] **Step 1:** Tests: expired → null; paid → null; valid unpaid → hint.
 
 ---
 
-### Task 4: Signed email resume link
+### Task 4: Admin apply-home SEO, blog links, resume CTA
+
+**Files:**
+- Create: `lib/apply/apply-home-copy.ts` + test
+- Create: `components/admin/apply-home-seo-settings.tsx`
+- Create: `components/admin/apply-blog-link-settings.tsx`
+- Modify: `app/admin/(protected)/settings/page.tsx`
+- Modify: `app/(client)/page.tsx` metadata + hero (read via `withSystemDbActor`, not client fetch of admin APIs)
+- Modify: `lib/seo/home-page-facts.ts`, `lib/seo/home-page-json-ld.ts`
+- Create: `components/apply/apply-blog-link-row.tsx`
+
+```typescript
+export const PLATFORM_KEY_APPLY_HOME_SEO = "apply_home_seo";
+export type TApplyHomeSeo = {
+  title: string;
+  description: string;
+  h1: string;
+  sub: string;
+  timingFact: string;
+  resumeBannerCta: string;
+  howItWorksHref: string | null;
+};
+
+export const DEFAULT_APPLY_HOME_SEO: TApplyHomeSeo = {
+  title: "UAE Tourist Visa from Nigeria, Turkey, South Africa, Egypt & more | VisaTop",
+  description:
+    "Apply online for a UAE tourist or transit visa. Choose your nationality, pick your stay, pay securely. All fees included.",
+  h1: "Apply for your UAE tourist visa",
+  sub: "Start from your nationality. All fees included — no hidden charges.",
+  timingFact:
+    "We start processing after payment. Immigration decision times vary — we review your file and keep you updated.",
+  resumeBannerCta: "Continue",
+  howItWorksHref: null,
+};
+
+export const PLATFORM_KEY_APPLY_BLOG_LINKS = "apply_blog_links";
+export type TApplyBlogLink = { label: string; href: string };
+export const DEFAULT_APPLY_BLOG_LINKS: TApplyBlogLink[] = [];
+```
+
+Empty blog list → **do not render** the row. Francesco adds rows in Settings (label + href). No placeholder visatop.com URLs in source.
+
+Settings UI: same card chrome as draft TTL. `settings.write` + audit `settings.apply_home_seo.update` / `settings.apply_blog_links.update`.
+
+JSON-LD timing line **must** use `timingFact` from the setting.
+
+- [ ] **Step 1:** Parse tests: invalid JSON → defaults; empty blog array → [].
+- [ ] **Step 2:** Change H1 in Settings, reload apply home — H1 updates without a code change.
+
+---
+
+### Task 5: Signed email resume link
 
 **Files:**
 - Create: `lib/applications/resume-email-link.ts` + test
-- Create: `app/(client)/apply/resume/page.tsx` + `app/api/apply/resume/route.ts` (POST or GET handler)
+- Create: `app/(client)/apply/resume/page.tsx` + `app/api/apply/resume/route.ts`
 - Modify: `lib/email/transactional-email-kinds.ts`
-- Add send helper (follow `send-application-transactional-emails.ts` patterns)
-- Call from `POST /api/applications` after guest create (fire-and-forget, same as other emails)
+- Call from `POST /api/applications` after guest create (fire-and-forget)
 
-Reuse HMAC style from `guest-link-intent.ts`:
+Reuse HMAC style from `guest-link-intent.ts`. TTL = min(48h, remaining `draftExpiresAt` seconds from admin TTL).
 
 ```typescript
-export const RESUME_LINK_TTL_SEC = 48 * 3600; // overridden at send time by remaining draft TTL seconds if shorter
-
 type TResumePayload = { partyId: string; primaryApplicationId: string; exp: number };
-
-export const signResumeLink = (
-  partyId: string,
-  primaryApplicationId: string,
-  opts?: { secret?: string; nowSec?: number; ttlSec?: number },
-): string => { /* HMAC base64url payload.mac — same construction as signGuestLinkIntent */ };
-
-export const verifyResumeLink = (
-  token: string,
-  opts?: { secret?: string; nowSec?: number },
-): { ok: true; partyId: string; primaryApplicationId: string } | { ok: false } => { /* ... */ };
 ```
 
-Secret: `GUEST_LINK_INTENT_SECRET` (already ≥32 bytes). Do **not** put the cookie plaintext in the email.
+Secret: `GUEST_LINK_INTENT_SECRET`. Do **not** put the cookie plaintext in the email.
 
-`GET /apply/resume?t=`:
+`GET /apply/resume?t=`: verify → load party/primary → reject paid/expired → rotate resume token (new hash on party + all members) → `Set-Cookie: vt_resume` → 302 to `/apply/applications/:primaryApplicationId`.
 
-1. Verify token.
-2. Load party / primary; reject if paid or expired.
-3. Rotate or reuse existing resume token: if party has a hash, generate a **new** plaintext, store new hash on party **and all members**, `Set-Cookie: vt_resume`.
-4. 302 to `/apply/applications/:primaryApplicationId`.
+Missing secret in dev: skip send (log). Invalid page: “This resume link is invalid or expired” + link to `/apply/track`.
 
-If secret missing in dev, skip send (log); page shows “This resume link is invalid or expired” + link to `/apply/track`.
+Kind: `APPLICATION_DRAFT_STARTED`. Body: nationality name, product name, traveler count, button using `resumeBannerCta`, expires with draft TTL. No OCR, no filenames.
 
-New kind:
-
-```typescript
-APPLICATION_DRAFT_STARTED: "application_draft_started",
-```
-
-Email body (EN): nationality name, product name, traveler count, button “Continue your application”, expires with draft TTL. No OCR, no document filenames.
-
-Tests: sign/verify; expired exp fails; tampered mac fails.
+- [ ] **Step 1:** sign/verify; expired exp fails; tampered mac fails.
 
 ---
 
-### Task 5: Track Continue when cookie matches
+### Task 6: Track Continue when cookie matches
 
 **Files:**
-- Modify: `app/api/applications/track-lookup` response
+- Modify: `app/api/applications/track-lookup` + `route.test.ts`
 - Modify: `components/apply/application-track-lookup-form.tsx`
 - Modify: signed-in list if needed (already has Continue)
 
-Add `canContinue: boolean` and `continueHref: string | null` per row:
+Per row: `canContinue: boolean`, `continueHref: string | null`.
 
-- Guest: `canContinue` true when request `vt_resume` verifies against that row’s `resumeTokenHash` (or its party hash) **and** `paymentStatus` is unpaid or checkout_created.
-- Else `canContinue` false (status-only). Footer copy stays for lost-cookie guests.
-
-UI: **Continue** button → `/apply/applications/:id` (primary if party). Paid rows: **View status** → submitted URL.
+- Guest: true only when request `vt_resume` verifies against that row/party hash **and** unpaid or checkout_created.
+- Else false. Paid: **View status** → submitted URL.
 
 Do not expose `canContinue: true` without cookie match.
 
-Extend `track-lookup/route.test.ts`.
+- [ ] **Step 1:** Extend `track-lookup/route.test.ts`.
 
 ---
 
-### Task 6: visa-processing H1, meta, facts, blog row
-
-**Files:**
-- Modify: `app/(client)/page.tsx` metadata + hero H1
-- Modify: `lib/seo/home-page-facts.ts` (soften 2-working-days)
-- Create: `components/apply/apply-blog-link-row.tsx`
-
-**Meta / H1 (EN draft — Francesco can edit later):**
-
-- Title: `UAE Tourist Visa from Nigeria, Turkey, South Africa, Egypt & more | VisaTop`
-- Description: `Apply online for a UAE tourist or transit visa. Choose your nationality, pick your stay, pay securely. All fees included.`
-- H1: `Apply for your UAE tourist visa`
-- Sub: `Start from your nationality. All fees included — no hidden charges.`
-
-**Timing fact** (replace the 2-working-days promise):
-
-```typescript
-"We start processing after payment. Immigration decision times vary — we review your file and keep you updated."
-```
-
-**Blog row:** one horizontal list under the hero (not the 10-card wall). Use **placeholders Francesco can swap** — public visatop.com posts, `rel` external if they leave `/visa-processing`:
-
-| Label | Href |
-|---|---|
-| UAE tourist visa guide | `https://visatop.com/uae-tourist-visa/` |
-| Transit visa | `https://visatop.com/uae-transit-visa/` |
-| Documents checklist | `https://visatop.com/uae-visa-requirements/` |
-
-If those slugs 404, keep the component and hrefs as constants in `lib/seo/apply-blog-links.ts` so ops can edit one file. Do not invent a mass blog program.
-
-JSON-LD `HOME_SERVICE_FACTS` must match the softened timing line.
-
----
-
-### Task 7: EN apply message catalog (structure only)
-
-**Files:**
-- Create: `lib/i18n/apply-messages.ts`
-
-There is no next-intl. Do **not** add a new i18n framework. Extract **new** Phase A–C user-visible strings into one map:
-
-```typescript
-export const APPLY_MESSAGES_EN = {
-  continueWithThisVisa: "Continue with this visa",
-  allFeesIncluded: "All fees included",
-  noHiddenCharges: "No hidden charges",
-  payFirstIncomplete: "Pay now to start processing. You can add remaining documents and details after payment.",
-  bankStatement6m: "Last 6 months bank account statement",
-  resumeBannerCta: "Continue",
-  phoneLabel: "Phone",
-} as const;
-
-export type TApplyMessageKey = keyof typeof APPLY_MESSAGES_EN;
-
-export const applyMessage = (key: TApplyMessageKey): string => APPLY_MESSAGES_EN[key];
-```
-
-Wire the chooser, badges, payment copy, bank slot label, and resume banner through `applyMessage`. Extra locales = additional maps later; v1 EN only.
-
----
-
-### Task 8: Phase C verification + Grok QA handoff
+### Task 7: Phase C verification + Grok QA handoff
 
 ```bash
-pnpm exec vitest run lib/apply/phone-country.test.ts lib/applications/resume-email-link.test.ts lib/applications/resume-hint.test.ts app/api/applications/track-lookup/route.test.ts
+pnpm exec vitest run lib/apply/phone-country.test.ts lib/apply/apply-home-copy.test.ts lib/applications/resume-email-link.test.ts lib/applications/resume-hint.test.ts app/api/applications/track-lookup/route.test.ts app/api/admin/catalog/nationalities
 pnpm run lint
 pnpm run test:ci
 ```
 
-`pnpm run build` before claiming the branch ready for staging (CI rule).
+`pnpm run build` before claiming staging-ready.
 
 ---
 
 ## Manual QA plan (hand to Grok on local `pnpm dev`)
 
-Base path: `/visa-processing`. Use a real browser, not a single screenshot.
+Base path: `/visa-processing`. Real browser, not a screenshot.
 
-### Personas
+### Personas (catalog + Document rules — not ISO lists)
 
-| # | Nationality | Path | Expect |
-|---|---|---|---|
-| 1 | India | 15–30, single, adult tourist | Guided shortlist (not 10 cards). Email on step 2. Docs: passport, photo, **bank 6m**. Pay copy ≠ “complete” if empty. |
-| 2 | Nigeria | same | Bank slot present. |
-| 3 | France | same | Passport + photo only. No bank. |
-| 4 | India | Transit | No bank. Transit not mixed with tourist cards. |
-| 5 | India | Adult + child (2 travelers) | Two doc sections. Checkout **one** total = sum. Badges visible. |
-| 6 | Any | Invalid/expired passport date | Warning; Pay still enabled. |
-| 7 | Guest | New draft | Home/start **resume banner**. Track: product + country names. Continue only in same browser. |
-| 8 | Guest | Resume email link (Mailhog/log) | Sets cookie, opens primary draft. Expired token → error + track. |
-| 9 | Guest | Other browser, track only | Status, **no** Continue. |
-| 10 | Chrome | Upload | No filename, KB, `needs_manual`, retry counts. Preview + Replace OK. |
+Francesco must have, **in admin**, before QA:
+
+| Setup | Where |
+|---|---|
+| India / Nigeria / France / transit SKUs priced and eligible | Catalog + service prices |
+| Stay / entry / traveler kind set on those SKUs | Service edit |
+| Bank (or any extra) assigned only where he wants it | Document rules |
+| IN `dialCode` = 91 | Nationality page |
+| Multi-traveller on + max ≥ 2 | Settings |
+| Apply-home SEO filled; optional blog rows | Settings |
+
+| # | Path | Expect |
+|---|---|---|
+| 1 | India 15–30 single adult tourist | Guided shortlist (not 10 cards). Email on step 2. Docs = passport, photo, **plus Document rules extras**. Pay copy ≠ complete if empty. |
+| 2 | Nigeria same | Same extras Francesco assigned (not a coded Africa list). |
+| 3 | France same | Passport + photo only if no extras assigned. |
+| 4 | India transit | Transit SKU only if `stayBucket=transit`. No tourist cards mixed in. Extras only if assigned. |
+| 5 | India adult + child | Two doc sections. One checkout total = sum. Badges = Settings strings. |
+| 6 | Invalid passport date | Warning; Pay still enabled. |
+| 7 | Guest new draft | Resume banner. Track: product + country names. Continue only same browser. |
+| 8 | Resume email (Mailhog/log) | Sets cookie, opens primary. Expired token → error + track. |
+| 9 | Other browser, track only | Status, no Continue. |
+| 10 | Upload | No filename/KB/internal status. Oversized file shows “File exceeds 8MB limit.” Preview + Replace OK. |
+| 11 | Admin | Change H1 / add blog link / change IN dial / hide a SKU from chooser — apply reflects it without a deploy. |
 
 ### Chrome
 
-- No STEP n/5 overlay covering the CTA.
-- No Featured-on / Khaleej strip on apply home.
-- No autoplay video.
-- Rail: 4 pre-pay steps; Status not listed before pay.
-- Phone: country dial + number; India defaults to +91.
-- H1/meta/blog row present on apply home.
+- No STEP n/5 overlay.
+- No Featured-on / Khaleej on apply home.
+- No autoplay.
+- Rail: 4 pre-pay steps.
+- Phone: dial from Catalog; India defaults to +91 only after Francesco set it.
 
 ### Pay-first
 
-- Empty docs + blank name still reach checkout (sandbox). Duplicate-tap does not create two checkouts (existing guard).
-- After pay with empty bank (India): customer status is paid / in progress — no “automation failed”. Admin still sees OCR internals.
+- Empty docs + blank name still reach checkout. Duplicate-tap does not create two checkouts.
+- After pay with empty extra: customer status paid / in progress — no “automation failed”.
 
 ### Do not pass if
 
 - Raw `serviceId` / ISO-only nationality on track.
-- Payment says application is complete while slots empty.
-- Bank slot on transit or France tourist.
-- Missing bank slot on India/Nigeria non-transit.
-- Party checkout charges only the primary’s price.
-- Resume token or passport fields stored in localStorage.
+- Payment says complete while slots empty.
+- Extra slot appears because of a **coded** region list rather than Document rules.
+- Child SKU chosen via name regex instead of `travelerKind`.
+- Multi-traveller checkout charges only the primary.
+- Resume token or passport fields in localStorage.
+- Apply-home title/H1/blog/dial only editable in git.
 
 **Staging:** only after this list is green locally.
 
@@ -347,5 +322,5 @@ Base path: `/visa-processing`. Use a real browser, not a single screenshot.
 ## Suggested commit (only if orchestrator asks)
 
 ```
-feat(apply): tourist shell, resume banner and signed resume email
+feat(apply): tourist shell, admin SEO/dial, and signed resume email
 ```

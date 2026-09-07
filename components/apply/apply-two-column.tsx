@@ -8,6 +8,8 @@ type ApplyTwoColumnProps = {
   children: ReactNode;
   className?: string;
   contentClassName?: string;
+  hasSelectedVisa?: boolean;
+  visaSummary?: ReactNode;
 };
 
 export function ApplyTwoColumn({
@@ -16,16 +18,20 @@ export function ApplyTwoColumn({
   children,
   className,
   contentClassName,
+  hasSelectedVisa = false,
+  visaSummary,
 }: ApplyTwoColumnProps) {
+  if (!hasSelectedVisa) {
+    return <div className={cn("w-full", className)}>{children}</div>;
+  }
+
   return (
-    <div className={cn("grid gap-10 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)] lg:items-start", className)}>
-      <aside className="hidden lg:block">
-        <div className="lg:sticky lg:top-28">
-          <ApplyStepsRail currentStep={currentStep} applicationId={applicationId} />
-        </div>
-      </aside>
-      <div className={cn("min-w-0", contentClassName)}>{children}</div>
+    <div className={cn("space-y-5", className)}>
+      <ApplyStepsRail currentStep={currentStep} applicationId={applicationId} />
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div className={cn("order-2 min-w-0 lg:order-1", contentClassName)}>{children}</div>
+        {visaSummary ? <aside className="order-1 min-w-0 lg:order-2 lg:sticky lg:top-24">{visaSummary}</aside> : null}
+      </div>
     </div>
   );
 }
-

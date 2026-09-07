@@ -169,6 +169,27 @@
       "when": 1782170000000,
       "tag": "0023_catalog_document_type",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1782180000000,
+      "tag": "0024_visa_service_guided_choice",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1782190000000,
+      "tag": "0025_application_party",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1782200000000,
+      "tag": "0026_party_resume_token_unique",
+      "breakpoints": true
     }
   ]
 }

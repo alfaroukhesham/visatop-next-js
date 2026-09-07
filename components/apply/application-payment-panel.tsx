@@ -4,13 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ClientDraftPanelSkeleton } from "@/components/client/client-loading";
-import { ApplyJourneyStepBar } from "@/components/apply/apply-journey-step-bar";
 import { DraftPanelError } from "@/components/apply/draft/draft-panel-error";
 import { DraftPaymentSection } from "@/components/apply/draft/draft-payment-section";
 import { useApplicationDraft } from "@/components/apply/draft/use-application-draft";
 import { ClientButton } from "@/components/client/client-button";
-import { APPLY_STEP3_VALIDATION_DISABLED } from "@/lib/apply/apply-flow-config";
-import { paymentPanelMayShow } from "@/lib/applications/payment-panel-may-show";
 import { computeValidation, type Readiness } from "@/lib/documents/validation-readiness";
 
 export function ApplicationPaymentPanel({ applicationId }: { applicationId: string }) {
@@ -34,12 +31,17 @@ export function ApplicationPaymentPanel({ applicationId }: { applicationId: stri
   const validationEmail = app.isGuest ? app.guestEmail : "signed-in";
   const paymentReadiness: Readiness = computeValidation({
     profile: { ...app.applicant, email: validationEmail },
-    uploads: {
-      passportCopyPresent: Boolean(draft.passport),
-      personalPhotoPresent: Boolean(draft.photo),
-    },
+    uploads: draft.uploadPresence,
     now: new Date(),
   }).paymentReadiness;
+
+  const requiredSlotKeys =
+    draft.uploadPresence.memberRequiredUploads?.flatMap((m) => m.requiredSlotKeys) ?? [];
+  const uploadedTypes = [
+    ...new Set(
+      draft.uploadPresence.memberRequiredUploads?.flatMap((m) => m.uploadedDocumentTypes) ?? [],
+    ),
+  ];
 
   const checkoutHandlers = {
     onExternalRedirect: () =>
@@ -56,15 +58,6 @@ export function ApplicationPaymentPanel({ applicationId }: { applicationId: stri
     },
   };
 
-  const uploads = {
-    passportCopyPresent: Boolean(draft.passport),
-    personalPhotoPresent: Boolean(draft.photo),
-  };
-
-  if (!paymentPanelMayShow(app, uploads) && app.paymentStatus === "unpaid") {
-    return <ClientDraftPanelSkeleton />;
-  }
-
   return (
     <div className="space-y-8">
       {draft.actionMsg ? (
@@ -77,6 +70,8 @@ export function ApplicationPaymentPanel({ applicationId }: { applicationId: stri
         applicationId={applicationId}
         app={app}
         paymentReadiness={paymentReadiness}
+        requiredSlotKeys={requiredSlotKeys}
+        uploadedTypes={uploadedTypes}
         countdown={draft.countdown}
         checkoutError={checkoutError}
         onDismissCheckoutError={() => setCheckoutError(null)}
@@ -96,8 +91,7 @@ export function ApplicationPaymentPanel({ applicationId }: { applicationId: stri
         <ClientButton
           type="button"
           variant="outline"
-          brand="cta"
-          className="rounded-none"
+          brand="white"
           onClick={() => router.push(documentsPath)}
         >
           Previous
@@ -110,20 +104,10 @@ export function ApplicationPaymentPanel({ applicationId }: { applicationId: stri
         </Link>
         {" · "}
         <Link href="/portal/track" className="hover:text-foreground">
-          Portal
+          Your applications
         </Link>
       </p>
 
-      <ApplyJourneyStepBar
-        step={4}
-        totalSteps={5}
-        title="Secure payment"
-        subtitle={
-          APPLY_STEP3_VALIDATION_DISABLED
-            ? "Pay securely now — you can add documents and details anytime before submission."
-            : "Confirm your details, then pay securely to submit."
-        }
-      />
     </div>
   );
 }

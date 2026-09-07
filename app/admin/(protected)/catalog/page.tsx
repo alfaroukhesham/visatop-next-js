@@ -44,13 +44,7 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
   }
 
   const nationalities: CatalogNationality[] = view.nationalities;
-  const services: CatalogService[] = view.services.map((s) => ({
-    id: s.id,
-    name: s.name,
-    enabled: s.enabled,
-    durationDays: s.durationDays,
-    entries: s.entries,
-  }));
+  const services: CatalogService[] = view.services;
 
   return (
     <AdminShell

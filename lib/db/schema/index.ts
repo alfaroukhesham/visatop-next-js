@@ -3,6 +3,7 @@ export * from "./admin-auth";
 export * from "./rbac";
 export * from "./visa";
 export * from "./application-document";
+export * from "./application-party";
 export * from "./applications";
 export * from "./transactional-email-sent";
 export * from "./platform-setting";

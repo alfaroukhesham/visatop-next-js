@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
-import { ApplyJourneyStepBar } from "@/components/apply/apply-journey-step-bar";
 import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
 import { ClientAppHeader } from "@/components/client/client-app-header";
 import { ClientHeroPanel } from "@/components/client/client-surface";
-import { HomeDemoVideo } from "@/components/client/home-demo-video";
 import { HomeNationalityStart } from "@/components/client/home-nationality-start";
 import { JsonLdScript } from "@/components/seo/json-ld-script";
 import { appHref } from "@/lib/app-href";
@@ -65,18 +63,9 @@ export default function Home() {
 
               <HomeNationalityStart />
             </ClientHeroPanel>
-
-            <HomeDemoVideo />
           </ApplyTwoColumn>
         </div>
       </div>
-
-      <ApplyJourneyStepBar
-        step={1}
-        totalSteps={5}
-        title="Start your application"
-        subtitle="Type your country, pick from the list, then continue to currency and visa options."
-      />
 
       {/* Crawler-only facts for JSON-LD speakable + AI indexing — not shown to users. */}
       <ul

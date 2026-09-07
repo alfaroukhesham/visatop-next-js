@@ -37,11 +37,15 @@ export async function loadCatalogPage(adminUserId: string): Promise<CatalogPageV
           enabled: schema.visaService.enabled,
           durationDays: schema.visaService.durationDays,
           entries: schema.visaService.entries,
+          stayBucket: schema.visaService.stayBucket,
+          entryKind: schema.visaService.entryKind,
+          travelerKind: schema.visaService.travelerKind,
+          showInGuidedChooser: schema.visaService.showInGuidedChooser,
         })
         .from(schema.visaService)
         .orderBy(desc(schema.visaService.createdAt)),
     ]);
 
-    return { kind: "ok", nationalities, services, canWrite };
+    return { kind: "ok", nationalities, services: services as CatalogService[], canWrite };
   });
 }

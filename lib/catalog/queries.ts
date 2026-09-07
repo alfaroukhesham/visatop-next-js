@@ -6,6 +6,14 @@ import {
   resolveDisplayPrice,
 } from "@/lib/pricing/resolve-customer-catalog-price";
 import { readFxRateString, FxRateMissingError } from "@/lib/pricing/fx-usd-aed";
+import {
+  ENTRY_KINDS,
+  STAY_BUCKETS,
+  TRAVELER_KINDS,
+  type TEntryKind,
+  type TStayBucket,
+  type TTravelerKind,
+} from "@/lib/catalog/guided-choice";
 
 /** Matches `withSystemDbActor` / `withAdminDbActor` transaction handle typing. */
 type SchemaDb = DbTransaction;
@@ -58,6 +66,10 @@ export type PublicServiceRow = {
   displayPriceMinor: string | null;
   currency: string | null;
   documentTypes: Array<{ key: string; role: "required" | "additional" }>;
+  stayBucket: TStayBucket | null;
+  entryKind: TEntryKind;
+  travelerKind: TTravelerKind;
+  showInGuidedChooser: boolean;
 };
 
 /**
@@ -83,6 +95,10 @@ export async function listPublicServicesForNationality(
       name: schema.visaService.name,
       durationDays: schema.visaService.durationDays,
       entries: schema.visaService.entries,
+      stayBucket: schema.visaService.stayBucket,
+      entryKind: schema.visaService.entryKind,
+      travelerKind: schema.visaService.travelerKind,
+      showInGuidedChooser: schema.visaService.showInGuidedChooser,
     })
     .from(schema.visaService)
     .where(
@@ -157,6 +173,17 @@ export async function listPublicServicesForNationality(
     const priceEntry = priceMap.get(s.id);
     const resolved = resolveDisplayPrice(priceEntry, currency, fxRate);
 
+    const stayBucket = STAY_BUCKETS.includes(s.stayBucket as TStayBucket)
+      ? (s.stayBucket as TStayBucket)
+      : null;
+    const entryKind = ENTRY_KINDS.includes(s.entryKind as TEntryKind)
+      ? (s.entryKind as TEntryKind)
+      : "either";
+    const travelerKind = TRAVELER_KINDS.includes(s.travelerKind as TTravelerKind)
+      ? (s.travelerKind as TTravelerKind)
+      : "adult";
+    const showInGuidedChooser = s.showInGuidedChooser ?? true;
+
     return {
       id: s.id,
       name: s.name,
@@ -165,6 +192,10 @@ export async function listPublicServicesForNationality(
       displayPriceMinor: resolved ? resolved.displayMinor.toString() : null,
       currency: resolved ? resolved.currency : null,
       documentTypes: requirementsByService.get(s.id) ?? [],
+      stayBucket,
+      entryKind,
+      travelerKind,
+      showInGuidedChooser,
     };
   });
 }

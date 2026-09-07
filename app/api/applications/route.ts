@@ -1,17 +1,16 @@
 import { headers } from "next/headers";
 import { after } from "next/server";
 import { auth } from "@/lib/auth";
-import { createDraftBodySchema } from "@/lib/applications/create-draft-body";
-import { computeDraftExpiresAt, getDraftTtlHoursFromTx } from "@/lib/applications/draft-ttl";
+import { createDraftBodySchema, normalizeCreateDraftBody } from "@/lib/applications/create-draft-body";
+import { createPartyDraft, CreatePartyDraftValidationError } from "@/lib/applications/create-party-draft";
 import { toPublicApplication } from "@/lib/applications/public-application";
 import { buildResumeSetCookieValue } from "@/lib/applications/resume-cookie";
 import { generateResumeToken } from "@/lib/applications/resume-token";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { isForeignKeyViolation } from "@/lib/db/pg-errors";
-import { withClientDbActor, withSystemDbActor } from "@/lib/db/actor-context";
+import { withSystemDbActor } from "@/lib/db/actor-context";
 import { sendAdminStep2ServiceSelectedEmail } from "@/lib/email/send-admin-notification-emails";
-import { application } from "@/lib/db/schema";
 
 function queueAdminStep2Email(applicationId: string, requestId: string | null) {
   after(() => {
@@ -38,95 +37,57 @@ export async function POST(req: Request) {
   if (!parsed.ok) return parsed.response;
 
   const body = parsed.data;
-  const now = new Date();
+  const { travelers } = normalizeCreateDraftBody(body);
+  const isGuest = !session;
+  const userId = session?.user.id ?? null;
+  const guestEmail = body.guestEmail?.trim() ? body.guestEmail.trim().toLowerCase() : null;
 
-  if (session) {
-    const userId = session.user.id;
-    try {
-      const row = await withClientDbActor(userId, async (tx) => {
-        const ttlHours = await getDraftTtlHoursFromTx(tx);
-        const draftExpiresAt = computeDraftExpiresAt(now, ttlHours);
-        const inserted = await tx
-          .insert(application)
-          .values({
-            userId,
-            isGuest: false,
-            guestEmail: body.guestEmail?.trim() ? body.guestEmail.trim().toLowerCase() : null,
-            nationalityCode: body.nationalityCode,
-            serviceId: body.serviceId,
-            catalogCurrency: body.catalogCurrency,
-            applicationStatus: "draft",
-            paymentStatus: "unpaid",
-            fulfillmentStatus: "not_started",
-            draftExpiresAt,
-            resumeTokenHash: null,
-          })
-          .returning();
-        return inserted[0];
-      });
-      if (!row) {
-        return jsonError("INTERNAL_ERROR", "Failed to create application", {
-          status: 500,
-          requestId,
-        });
-      }
-      queueAdminStep2Email(row.id, requestId);
-      return jsonOk({ application: toPublicApplication(row) }, { status: 201, requestId });
-    } catch (e) {
-      if (isForeignKeyViolation(e)) {
-        return jsonError("VALIDATION_ERROR", "Invalid nationality or service.", {
-          status: 400,
-          requestId,
-        });
-      }
-      throw e;
-    }
-  }
+  const { plainToken, hash } = isGuest ? generateResumeToken() : { plainToken: null, hash: null };
 
-  const { plainToken, hash } = generateResumeToken();
   try {
-    const guest = await withSystemDbActor(async (tx) => {
-      const ttlHours = await getDraftTtlHoursFromTx(tx);
-      const draftExpiresAt = computeDraftExpiresAt(now, ttlHours);
-      const maxAge = ttlHours * 3600;
-        const inserted = await tx
-          .insert(application)
-          .values({
-            userId: null,
-            isGuest: true,
-            guestEmail: body.guestEmail?.trim() ? body.guestEmail.trim().toLowerCase() : null,
-            nationalityCode: body.nationalityCode,
-            serviceId: body.serviceId,
-            catalogCurrency: body.catalogCurrency,
-            applicationStatus: "draft",
-          paymentStatus: "unpaid",
-          fulfillmentStatus: "not_started",
-          draftExpiresAt,
-          resumeTokenHash: hash,
-        })
-        .returning();
-      return { row: inserted[0], maxAge };
-    });
-    const { row, maxAge } = guest;
-    if (!row) {
-      return jsonError("INTERNAL_ERROR", "Failed to create application", {
-        status: 500,
-        requestId,
+    const result = await withSystemDbActor(async (tx) =>
+      createPartyDraft(tx, {
+        nationalityCode: body.nationalityCode,
+        catalogCurrency: body.catalogCurrency,
+        guestEmail,
+        travelers,
+        userId,
+        isGuest,
+        resumeTokenHash: hash,
+      }),
+    );
+
+    const primaryRow = result.primaryRow;
+    queueAdminStep2Email(result.primaryApplicationId, requestId);
+
+    const applicationJson = {
+      ...toPublicApplication(primaryRow),
+      isGuest,
+    };
+
+    if (isGuest) {
+      const maxAge = result.ttlHours * 3600;
+      const setCookie = buildResumeSetCookieValue(plainToken!, maxAge, {
+        secure: process.env.NODE_ENV === "production",
       });
+      return jsonOk(
+        { application: applicationJson, partyId: result.partyId, memberIds: result.memberIds },
+        {
+          status: 201,
+          requestId,
+          headers: { "Set-Cookie": setCookie },
+        },
+      );
     }
-    const setCookie = buildResumeSetCookieValue(plainToken, maxAge, {
-      secure: process.env.NODE_ENV === "production",
-    });
-    queueAdminStep2Email(row.id, requestId);
+
     return jsonOk(
-      { application: toPublicApplication(row) },
-      {
-        status: 201,
-        requestId,
-        headers: { "Set-Cookie": setCookie },
-      },
+      { application: applicationJson, partyId: result.partyId, memberIds: result.memberIds },
+      { status: 201, requestId },
     );
   } catch (e) {
+    if (e instanceof CreatePartyDraftValidationError) {
+      return jsonError("VALIDATION_ERROR", e.message, { status: 400, requestId });
+    }
     if (isForeignKeyViolation(e)) {
       return jsonError("VALIDATION_ERROR", "Invalid nationality or service.", {
         status: 400,

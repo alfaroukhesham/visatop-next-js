@@ -1,0 +1,40 @@
+---
+description: New features must plan customer + admin; catalog and policy are admin-controlled, never hardcoded lists
+alwaysApply: true
+---
+
+# Customer + admin together
+
+Every new product feature must be planned and shipped as **two surfaces**:
+
+1. **Customer** — apply, track, email, pay
+2. **Admin** — create / edit / disable the data that drives that customer behavior
+
+Do not implement a customer-only slice and “add admin later.” If ops cannot change it without a deploy, it is not done.
+
+## What must be admin-controlled
+
+- Catalog: nationalities, services, prices, eligibility, document types, document rules
+- Policy: stay buckets, entry types, adult/child SKU flags, multi-traveller on/off and cap, draft TTL, resume copy
+- Customer-visible copy that ops will edit: SEO title/H1, blog links, badges, visa-choice labels
+- Phone dial codes (from nationality catalog, not a nine-country map in code)
+
+## Allowed to stay in code (locked floors)
+
+- Passport + personal photo are always required (never stored or toggled as extras)
+- Payment provider interface, webhook-as-truth, one customer total (no affiliate breakdown)
+- RBAC permission keys, RLS actor context, `jsonOk` / `jsonError`, `runtime = "nodejs"`
+
+## Before writing code
+
+In the plan, list: customer screens, admin screens, tables/APIs, and what happens when the admin row is missing (hide, warn, or 400 — never invent a fallback list).
+
+```text
+❌ BAD: filter visas with duration if/else + /child/i on the service name
+✅ GOOD: admin fields on the service (stayBucket, entries, travelerKind); apply only reads priced eligible rows
+
+❌ BAD: DIAL_BY_ISO2 = { IN: "91", … } or blog hrefs in a page component
+✅ GOOD: nationality.dialCode / settings or catalog rows Francesco can edit
+```
+
+If a value would be wrong when Francesco adds a country, SKU, or document, it does not belong in source.

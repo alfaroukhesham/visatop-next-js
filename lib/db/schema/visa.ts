@@ -35,6 +35,13 @@ export const visaService = pgTable(
     enabled: boolean("enabled").default(true).notNull(),
     durationDays: integer("duration_days"),
     entries: text("entries"), // single|multi (free-form for MVP)
+    // Guided chooser metadata (admin-entered). If unset: stayBucket null -> hidden
+    // from guided chooser; entryKind 'either' -> matches both Single and Multiple;
+    // travelerKind 'adult' -> only in Adult shortlist; showInGuidedChooser false -> hidden.
+    stayBucket: text("stay_bucket"),
+    entryKind: text("entry_kind").default("either").notNull(),
+    travelerKind: text("traveler_kind").default("adult").notNull(),
+    showInGuidedChooser: boolean("show_in_guided_chooser").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

@@ -1,15 +1,26 @@
-# Phase B — Guided visa choice & party (multi-applicant) checkout
+# Phase B — Guided visa choice & multi-traveller checkout
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.  
-> **Prerequisite:** Phase A complete and Cursor-reviewed.  
+> **Prerequisite:** Phase A complete (including Document rules + 2026-09-06 Catalog list-then-edit). Cursor-reviewed.  
 > **Executor:** OpenCode. **Reviewer:** Cursor.  
-> **Index:** [2026-09-05-tourist-journey-README.md](./2026-09-05-tourist-journey-README.md)
+> **Index:** [2026-09-05-tourist-journey-README.md](./2026-09-05-tourist-journey-README.md)  
+> **Rule:** `.cursor/rules/visa-admin-and-customer-together.mdc` — every task below has an admin owner or explicitly reuses a shipped admin surface.
 
-**Goal:** Replace the 10-card wall with a DubaiVisa-style question flow, collect email on this step, and create a **party of 1–8 travelers** with **one checkout** (sum of catalog prices, one customer total).
+**Goal:** Francesco configures how each visa appears in guided choice, whether **multi-traveller applications** are allowed, and the traveller cap — all in Catalog / Settings. Customers answer stay → entry → adult/child, pick from a shortlist of **priced eligible** products, optionally add travellers, and pay **one** checkout for the whole group.
 
-**Architecture:** Client-side filter of `GET /api/catalog/services` (do not invent prices). Child vs adult is a **catalog SKU**, not a free-age form. Persist `application_party` + one `application` per traveler. Checkout and `payment` stay on the **primary** application; quote total = sum of members; webhook fans out `paid` + retain to every member. Solo = party of one (same API).
+**Architecture:** Guided filter is a pure function over **admin fields on `visa_service`**, never service-name regex or ISO region lists. Apply still only sees enabled + priced pairs (`listPublicServicesForNationality`). A multi-traveller application is `application_party` + one `application` per traveller; checkout and `payment` stay on the primary; webhook fans out. Documents stay Phase A resolver + Document rules per member. A solo applicant still uses the same APIs (one traveller).
 
-**Tech Stack:** Existing start form, `createDraftBodySchema`, Drizzle migration `0023_application_party` (0022 is reserved for admin `catalog_document_requirement` on the Phase A train), checkout + webhook paths already in `app/api/checkout/route.ts` and `lib/payments/apply-payment-webhook-event.ts`.
+**Copy rule:** Admin and customer UI never say “party.” Use **multi-traveller application**, **travellers**, **Add traveller**, **primary traveller**. `party_*` / `application_party` stay as **code** names only.
+
+**Tech Stack:** Existing Catalog service form/PATCH, Settings/`platform_setting`, `createDraftBodySchema`, checkout + webhook. Next migrations: **`0024_visa_service_guided_choice`** then **`0025_application_party`**. Do not touch `0023_catalog_document_type`.
+
+**Do not:**
+
+- Rebuild Catalog as an inline-edit dump, or move Document rules onto Catalog.
+- Classify transit / 5-year / child from `name`.
+- Hardcode `MAX_PARTY_TRAVELERS = 8` as the only source of truth (Settings is).
+- Invent prices. Missing price → pair stays hidden on apply (already shipped).
+- Use `window.confirm` — use `ConfirmDialog`.
 
 ---
 
@@ -17,247 +28,341 @@
 
 | Area | Create | Modify |
 |---|---|---|
-| Guided filter | `lib/apply/guided-visa-filter.ts` | `components/apply/start-application-form.tsx` |
-| All-in badges | `components/apply/all-in-price-badges.tsx` | `checkout-order-recap.tsx`, start form |
-| Party schema | `lib/db/schema/application-party.ts`, `drizzle/0023_application_party.sql` | `lib/db/schema/applications.ts`, `lib/db/schema/index.ts` |
-| Create draft | `lib/applications/create-party-draft.ts` | `lib/applications/create-draft-body.ts`, `app/api/applications/route.ts` |
-| Public party | `lib/applications/public-party.ts` | `toPublicApplication` consumers, draft panel |
-| Checkout | `lib/payments/party-checkout-total.ts` | `app/api/checkout/route.ts`, webhook |
-| Docs UI | `components/apply/draft/party-documents-tabs.tsx` | draft panel |
-
-**Locked limits:** `MAX_PARTY_TRAVELERS = 8`. Shared `nationalityCode` from step 1. `travelerKind`: `adult` \| `child`. First traveler is `primary`.
-
-**Payment metadata** (must include): `applicationId` (primary), `partyId`, `priceQuoteId`, `userId?`, `isGuest`. Never put affiliate/cost breakdown in metadata the client can see.
+| Service chooser fields | `drizzle/0024_visa_service_guided_choice.sql` | `lib/db/schema/visa.ts`, `catalog-types.ts`, `catalog-service-form.tsx`, `get-catalog-entity.ts`, `visa-services` POST/PATCH, `catalog-service-list.tsx` |
+| Multi-traveller on/off + cap + badge copy | `lib/apply/apply-config.ts`, `components/admin/party-settings.tsx`, `components/admin/apply-price-badge-settings.tsx` | `app/admin/(protected)/settings/page.tsx`, settings API if needed |
+| Public config + catalog | `app/api/catalog/apply-config/route.ts` | `lib/catalog/queries.ts`, `app/api/catalog/services/route.ts` (+ tests) |
+| Guided filter | `lib/apply/guided-visa-filter.ts` + test | — |
+| Chooser UI | `components/apply/guided-visa-chooser.tsx`, `components/apply/all-in-price-badges.tsx` | `start-application-form.tsx` |
+| Party draft helpers | `lib/apply/party-travelers.ts` + test | start form / chooser |
+| Party schema | `lib/db/schema/application-party.ts`, `drizzle/0025_application_party.sql` | `applications.ts`, `schema/index.ts`, journal |
+| Create draft | `lib/applications/create-party-draft.ts` + test | `create-draft-body.ts`, `app/api/applications/route.ts` |
+| Public party | `lib/applications/public-party.ts`, `lib/applications/load-party-members.ts` | GET application, draft panel |
+| Checkout | `lib/payments/party-checkout-total.ts` + test | `app/api/checkout/route.ts`, webhook + test, `checkout-order-recap.tsx` |
+| Admin multi-traveller | — | applications list/detail: group travellers, member links |
 
 ---
 
-### Task 1: Guided filter (pure)
+### Task 1: Admin service fields for guided choice
 
 **Files:**
-- Create: `lib/apply/guided-visa-filter.ts`
-- Test: `lib/apply/guided-visa-filter.test.ts`
+- Create: `drizzle/0024_visa_service_guided_choice.sql`
+- Modify: `lib/db/schema/visa.ts`, `drizzle/meta/_journal.json` (idx 24)
+- Modify: `lib/admin/catalog/catalog-types.ts`, `get-catalog-entity.ts`
+- Modify: `app/api/admin/catalog/visa-services/route.ts` (POST body)
+- Modify: `app/api/admin/catalog/visa-services/[id]/route.ts` (PATCH)
+- Modify: `components/admin/catalog-service-form.tsx`, `catalog-service-list.tsx`
+- Test: `app/api/admin/catalog/visa-services/[id]/route.test.ts` (extend)
 
 ```typescript
-import { classifyServiceKind, isChildService } from "./service-kind";
+export const STAY_BUCKETS = ["1_14", "15_30", "31_60", "transit", "5_year"] as const;
+export type TStayBucket = (typeof STAY_BUCKETS)[number];
 
-export type TStayBucket = "1_14" | "15_30" | "31_60" | "transit" | "5_year";
-export type TEntryFilter = "single" | "multiple";
-export type TTravelerKind = "adult" | "child";
+export const ENTRY_KINDS = ["single", "multiple", "either"] as const;
+export type TEntryKind = (typeof ENTRY_KINDS)[number];
 
+export const TRAVELER_KINDS = ["adult", "child"] as const;
+export type TTravelerKind = (typeof TRAVELER_KINDS)[number];
+```
+
+On `visa_service` add (all nullable except defaults below):
+
+| Column | Type | Default | Apply behavior if unset |
+|---|---|---|---|
+| `stay_bucket` | text | null | Hidden from guided chooser |
+| `entry_kind` | text | `'either'` | Matches both Single and Multiple answers |
+| `traveler_kind` | text | `'adult'` | Only in Adult shortlist |
+| `show_in_guided_chooser` | boolean | true | Hidden from chooser when false |
+
+SQL check: `stay_bucket` null or in the five keys; `entry_kind` in three keys; `traveler_kind` in two.
+
+**One-time backfill (duration/entries already admin-entered — not a runtime classifier):**
+
+```sql
+UPDATE visa_service SET stay_bucket = CASE
+  WHEN duration_days IS NULL THEN NULL
+  WHEN duration_days <= 14 THEN '1_14'
+  WHEN duration_days <= 30 THEN '15_30'
+  WHEN duration_days <= 60 THEN '31_60'
+  WHEN duration_days >= 1825 THEN '5_year'
+  ELSE NULL
+END
+WHERE stay_bucket IS NULL;
+
+UPDATE visa_service SET entry_kind = CASE
+  WHEN lower(coalesce(entries, '')) LIKE '%multi%' THEN 'multiple'
+  WHEN lower(coalesce(entries, '')) LIKE '%single%' THEN 'single'
+  ELSE 'either'
+END
+WHERE entry_kind IS NULL OR entry_kind = 'either';
+```
+
+After migrate, Francesco **must** open Catalog → each transit / 5-year / child SKU and set `stay_bucket` / `traveler_kind` correctly. The service list shows a **Needs guided fields** badge when `stay_bucket` is null or `show_in_guided_chooser` is true but stay is null.
+
+**Service form** (same list-then-edit page, not a new route): four controls under duration/entries:
+
+- Stay bucket: select — empty / 1–14 / 15–30 / 31–60 / Transit / 5 years
+- Entry: Single / Multiple / Either
+- Traveler: Adult / Child
+- Show in guided chooser: checkbox
+
+PATCH/POST zod:
+
+```typescript
+stayBucket: z.enum(STAY_BUCKETS).nullable().optional(),
+entryKind: z.enum(ENTRY_KINDS).optional(),
+travelerKind: z.enum(TRAVELER_KINDS).optional(),
+showInGuidedChooser: z.boolean().optional(),
+```
+
+Audit `catalog.visa_service.update` afterJson includes the new fields.
+
+- [ ] **Step 1:** Failing PATCH test: body `{ stayBucket: "transit", travelerKind: "adult" }` persists and returns those fields.
+- [ ] **Step 2:** Migration + schema + form + list badge. `pnpm exec vitest run app/api/admin/catalog/visa-services`
+- [ ] **Step 3:** Browser: edit a service, save, reload — fields stick. Hub list shows the badge.
+
+---
+
+### Task 2: Settings — multi-traveller on/off, max, and price badge copy
+
+**Files:**
+- Create: `lib/apply/apply-config.ts` + `lib/apply/apply-config.test.ts`
+- Create: `components/admin/party-settings.tsx`
+- Create: `components/admin/apply-price-badge-settings.tsx`
+- Modify: `app/admin/(protected)/settings/page.tsx`
+- Reuse: existing settings GET/PATCH pattern from `draft-ttl-settings.tsx` / `app/api/admin/settings/draft-ttl/route.ts` (`settings.read` / `settings.write`, audit)
+
+```typescript
+export const PLATFORM_KEY_PARTY_ENABLED = "party_enabled";
+export const DEFAULT_PARTY_ENABLED = true;
+
+export const PLATFORM_KEY_PARTY_MAX_TRAVELERS = "party_max_travelers";
+export const DEFAULT_PARTY_MAX_TRAVELERS = 8;
+
+export const PLATFORM_KEY_APPLY_PRICE_BADGES = "apply_price_badges";
+export type TApplyPriceBadges = {
+  allFeesIncluded: string;
+  noHiddenCharges: string;
+};
+export const DEFAULT_APPLY_PRICE_BADGES: TApplyPriceBadges = {
+  allFeesIncluded: "All fees included",
+  noHiddenCharges: "No hidden charges",
+};
+
+export const parsePartyEnabled = (value: string | null | undefined): boolean => {
+  if (value === undefined || value === null || value === "") return DEFAULT_PARTY_ENABLED;
+  return value === "true" || value === "1";
+};
+
+export const parsePartyMaxTravelers = (value: string | null | undefined): number => {
+  const n = Number.parseInt(value ?? "", 10);
+  if (!Number.isFinite(n) || n < 1 || n > 20) return DEFAULT_PARTY_MAX_TRAVELERS;
+  return n;
+};
+```
+
+Settings page: **Multi-traveller applications** section (toggle + max) and **Price badges** section, under Draft expiry (same card chrome). Missing keys → defaults; first save upserts `platform_setting`.
+
+Settings copy (exact):
+
+- Section title: **Multi-traveller applications**
+- Toggle label: **Allow more than one traveller on a checkout**
+- Help: **When off, customers can only apply for one traveller. Existing multi-traveller applications stay in Applications.**
+- Number field: **Maximum travellers per checkout**
+
+When the toggle is **off**:
+
+- Apply hides **Add traveller**. Create is still one traveller (same APIs).
+- `POST /api/applications` rejects `travelers.length > 1` with 400 (do not trust the client).
+- Admin Applications still shows existing multi-traveller groups; this switch does not delete them.
+
+When **on**: cap is `party_max_travelers` (default 8).
+
+- [ ] **Step 1:** Tests for parse + JSON badge parse (invalid JSON → defaults). `parsePartyEnabled("false") === false`.
+- [ ] **Step 2:** Admin UI + persist. Do not use `useEffect` to copy props into state (React Doctor).
+
+---
+
+### Task 3: Public apply-config + catalog rows include chooser fields
+
+**Files:**
+- Create: `app/api/catalog/apply-config/route.ts` (`export const runtime = "nodejs"`)
+- Modify: `lib/catalog/queries.ts` `PublicServiceRow`
+- Modify: `app/api/catalog/services/route.test.ts`
+
+`GET /api/catalog/apply-config` via `withSystemDbActor`:
+
+```typescript
+jsonOk({
+  partyEnabled: boolean,
+  partyMaxTravelers: number,
+  badges: TApplyPriceBadges,
+});
+```
+
+No admin-only keys (no FX, no draft TTL hours unless already public).
+
+`PublicServiceRow` add:
+
+```typescript
+stayBucket: TStayBucket | null;
+entryKind: TEntryKind;
+travelerKind: TTravelerKind;
+showInGuidedChooser: boolean;
+```
+
+- [ ] **Step 1:** Extend services route test: fixture service with `stayBucket: "15_30"` appears on the payload.
+- [ ] **Step 2:** Implement select columns. Unset stay → `null` on the public row.
+
+---
+
+### Task 4: Guided filter (pure, catalog fields only)
+
+**Files:**
+- Create: `lib/apply/guided-visa-filter.ts` + `lib/apply/guided-visa-filter.test.ts`
+
+```typescript
 export type TGuidedService = {
   id: string;
-  name: string;
-  durationDays: number | null;
-  entries: string | null;
-};
-
-export const stayBucketOf = (s: TGuidedService): TStayBucket | null => {
-  if (classifyServiceKind({ name: s.name, durationDays: s.durationDays }) === "transit") {
-    return "transit";
-  }
-  if (/\b5\s*year/.test(s.name.toLowerCase()) || (s.durationDays !== null && s.durationDays >= 365 * 5)) {
-    return "5_year";
-  }
-  const d = s.durationDays;
-  if (d === null) return null;
-  if (d <= 14) return "1_14";
-  if (d <= 30) return "15_30";
-  if (d <= 60) return "31_60";
-  return null;
-};
-
-export const matchesEntry = (entries: string | null, want: TEntryFilter): boolean => {
-  if (!entries) return true;
-  const e = entries.toLowerCase();
-  if (want === "multiple") return e.includes("multi");
-  return e.includes("single") && !e.includes("multi");
+  stayBucket: TStayBucket | null;
+  entryKind: TEntryKind;
+  travelerKind: TTravelerKind;
+  showInGuidedChooser: boolean;
 };
 
 export const filterGuidedServices = (
   services: TGuidedService[],
-  answers: { stay: TStayBucket; entry: TEntryFilter; kind: TTravelerKind },
-): TGuidedService[] => {
-  return services.filter((s) => {
-    if (stayBucketOf(s) !== answers.stay) return false;
-    if (answers.stay !== "transit" && !matchesEntry(s.entries, answers.entry)) return false;
-    const child = isChildService(s.name);
-    if (answers.kind === "child") return child;
-    return !child;
+  answers: { stay: TStayBucket; entry: "single" | "multiple"; kind: TTravelerKind },
+): TGuidedService[] =>
+  services.filter((s) => {
+    if (!s.showInGuidedChooser || s.stayBucket === null) return false;
+    if (s.stayBucket !== answers.stay) return false;
+    if (s.travelerKind !== answers.kind) return false;
+    if (answers.stay === "transit") return true;
+    if (s.entryKind === "either") return true;
+    return s.entryKind === answers.entry;
   });
+
+export const visibleStayBuckets = (services: TGuidedService[]): TStayBucket[] => {
+  const have = new Set(
+    services.filter((s) => s.showInGuidedChooser && s.stayBucket).map((s) => s.stayBucket!),
+  );
+  return STAY_BUCKETS.filter((b) => have.has(b));
 };
 ```
 
 - [ ] **Step 1: Tests**
 
 ```typescript
-import { describe, expect, it } from "vitest";
-import { filterGuidedServices, stayBucketOf } from "./guided-visa-filter";
-
 const catalog = [
-  { id: "a", name: "14 Days Tourist", durationDays: 14, entries: "single" },
-  { id: "b", name: "30 Days Tourist", durationDays: 30, entries: "single" },
-  { id: "c", name: "30 Days Tourist Multiple", durationDays: 30, entries: "multi" },
-  { id: "d", name: "30 Days Tourist Child", durationDays: 30, entries: "single" },
-  { id: "e", name: "48 Hours Transit Visa", durationDays: 2, entries: "single" },
-  { id: "f", name: "5 Years Multiple Entry", durationDays: 1825, entries: "multi" },
+  { id: "b", stayBucket: "15_30", entryKind: "single", travelerKind: "adult", showInGuidedChooser: true },
+  { id: "c", stayBucket: "15_30", entryKind: "multiple", travelerKind: "adult", showInGuidedChooser: true },
+  { id: "d", stayBucket: "15_30", entryKind: "single", travelerKind: "child", showInGuidedChooser: true },
+  { id: "e", stayBucket: "transit", entryKind: "either", travelerKind: "adult", showInGuidedChooser: true },
+  { id: "hidden", stayBucket: "15_30", entryKind: "single", travelerKind: "adult", showInGuidedChooser: false },
+  { id: "incomplete", stayBucket: null, entryKind: "either", travelerKind: "adult", showInGuidedChooser: true },
 ];
 
-describe("filterGuidedServices", () => {
-  it("returns 30-day single adult only", () => {
-    const ids = filterGuidedServices(catalog, {
-      stay: "15_30",
-      entry: "single",
-      kind: "adult",
-    }).map((s) => s.id);
-    expect(ids).toEqual(["b"]);
-  });
-
-  it("returns child SKU when traveler is child", () => {
-    const ids = filterGuidedServices(catalog, {
-      stay: "15_30",
-      entry: "single",
-      kind: "child",
-    }).map((s) => s.id);
-    expect(ids).toEqual(["d"]);
-  });
-
-  it("isolates transit from tourist cards", () => {
-    const ids = filterGuidedServices(catalog, {
-      stay: "transit",
-      entry: "single",
-      kind: "adult",
-    }).map((s) => s.id);
-    expect(ids).toEqual(["e"]);
-  });
+it("returns 30-day single adult only", () => {
+  expect(
+    filterGuidedServices(catalog, { stay: "15_30", entry: "single", kind: "adult" }).map((s) => s.id),
+  ).toEqual(["b"]);
 });
 
-describe("stayBucketOf", () => {
-  it("maps 5-year products", () => {
-    expect(stayBucketOf(catalog[5]!)).toBe("5_year");
-  });
+it("hides incomplete and opted-out rows", () => {
+  expect(
+    filterGuidedServices(catalog, { stay: "15_30", entry: "single", kind: "adult" }).map((s) => s.id),
+  ).not.toContain("hidden");
+  expect(
+    filterGuidedServices(catalog, { stay: "15_30", entry: "single", kind: "adult" }).map((s) => s.id),
+  ).not.toContain("incomplete");
 });
 ```
 
-- [ ] **Step 2–4:** FAIL → implement → `pnpm exec vitest run lib/apply/guided-visa-filter.test.ts` PASS
+- [ ] **Step 2:** FAIL → implement → `pnpm exec vitest run lib/apply/guided-visa-filter.test.ts` PASS
+
+There is **no** `stayBucketOf(durationDays)` and **no** `isChildService(name)` in apply code.
 
 ---
 
-### Task 2: Replace the card wall with the question flow
+### Task 5: Replace the card wall with the question flow
 
 **Files:**
-- Modify: `components/apply/start-application-form.tsx`
 - Create: `components/apply/guided-visa-chooser.tsx`
+- Create: `components/apply/all-in-price-badges.tsx`
+- Modify: `components/apply/start-application-form.tsx`
 
-After nationality is known (already on this page):
+After nationality is known:
 
-1. **Stay:** buttons `1–14 days` / `15–30 days` / `31–60 days` / `Transit` / `5 years` (hide a bucket if `filter` of catalog for that stay is empty).
-2. **Entry:** Single / Multiple — **skip** when stay is `transit` (or only one entry exists).
-3. **Primary traveler:** Adult / Child (child uses child SKUs).
-4. Show **matching** rows only (1–3 typical). Selected card + primary CTA **Continue with this visa** (not “Next” on a 10-grid).
-5. **Email** field stays on this step (required).
-6. Currency toggle: labels **USD** and **AED** only (remove “United States (US) dollar” / long dirham name).
+1. Stay buttons = `visibleStayBuckets` only (labels from apply-config later; v1 English: `1–14 days` / `15–30 days` / `31–60 days` / `Transit` / `5 years` — these five labels may live in `APPLY_STAY_LABELS` keyed by `TStayBucket`, not by inventing extra buckets).
+2. Entry: Single / Multiple — skip when stay is `transit` or every remaining row is `entryKind === "either"` or only one entry kind exists.
+3. Primary traveler: Adult / Child — hide Child if no child SKU in the current stay filter.
+4. Matching priced rows only. CTA **Continue with this visa**.
+5. Email required on this step.
+6. Currency toggle: **USD** / **AED** only.
 
-Do not add a travel-date question.
+`AllInPriceBadges` reads strings from apply-config (Task 2), not hardcoded JSX.
 
-Extract a presentational `GuidedVisaChooser` so the form stays readable. Types: `IGuidedVisaChooserProps` + `FC`.
+Empty shortlist: “No visa matches these answers. Change your answers or contact us.” — do not invent a product.
 
-- [ ] **Step 1:** Implement chooser using `filterGuidedServices`.
+- [ ] **Step 1:** Implement chooser with `filterGuidedServices`.
 - [ ] **Step 2:** `pnpm exec vitest run lib/apply/guided-visa-filter.test.ts`
 
 ---
 
-### Task 3: Additional travelers (UI state only)
+### Task 6: Additional travelers (UI + validation)
 
 **Files:**
 - Create: `lib/apply/party-travelers.ts` + test
 - Modify: start form / chooser
 
 ```typescript
-import type { TTravelerKind } from "./guided-visa-filter";
-
-export const MAX_PARTY_TRAVELERS = 8;
-
 export type TPartyTravelerDraft = {
   key: string;
   kind: TTravelerKind;
   serviceId: string;
 };
 
-export const canAddTraveler = (count: number): boolean => count < MAX_PARTY_TRAVELERS;
-
-export const nextTravelerKindDefault = (kind: TTravelerKind): TTravelerKind => kind;
+export const canAddTraveler = (count: number, max: number): boolean => count < max;
 ```
 
-UI under the shortlist:
+`max` comes from apply-config (`partyMaxTravelers`), not a file-level `8`. `partyEnabled` comes from the same config.
 
-- Default: one primary traveler (kind + selected `serviceId`).
-- **Add traveler** → Adult or Child. Each additional picks from the **same stay/entry filter** but kind-specific shortlist (must select a service before submit).
-- Disable add at 8.
-- Show running **party total** (sum of `displayPriceMinor` for selected services) + Task 4 badges.
-
-Submit body (next task): `travelers: [{ serviceId, kind }]`.
-
-Tests: cannot add 9th; empty additional without `serviceId` is invalid.
+- Default: one primary traveller (kind + selected `serviceId`).
+- **Add traveller** is hidden when `partyEnabled` is false. When on: Adult or Child. Additional picks from the **same stay/entry** and that kind’s shortlist.
+- Disable add at `max`.
+- Running **checkout total** = sum of `displayPriceMinor` + badges from config.
 
 ```typescript
 export const assertTravelersReady = (
   travelers: TPartyTravelerDraft[],
+  max: number,
 ): { ok: true } | { ok: false; message: string } => {
-  if (travelers.length < 1) return { ok: false, message: "Add at least one traveler." };
-  if (travelers.length > MAX_PARTY_TRAVELERS) {
-    return { ok: false, message: "Maximum 8 travelers per checkout." };
+  if (travelers.length < 1) return { ok: false, message: "Add at least one traveller." };
+  if (travelers.length > max) {
+    return { ok: false, message: `Maximum ${max} travellers per checkout.` };
   }
   if (travelers.some((t) => !t.serviceId)) {
-    return { ok: false, message: "Choose a visa for every traveler." };
+    return { ok: false, message: "Choose a visa for every traveller." };
   }
   return { ok: true };
 };
 ```
 
----
+Submit: `travelers: [{ serviceId, kind }]`.
 
-### Task 4: All-in badges (choice → pay)
-
-**Files:**
-- Create: `components/apply/all-in-price-badges.tsx`
-- Modify: start form, `components/apply/checkout-order-recap.tsx`
-
-```tsx
-import type { FC } from "react";
-
-export interface IAllInPriceBadgesProps {
-  className?: string;
-}
-
-export const AllInPriceBadges: FC<IAllInPriceBadgesProps> = ({ className }) => (
-  <p className={className}>
-    <span className="font-semibold">All fees included</span>
-    <span aria-hidden> · </span>
-    <span className="font-semibold">No hidden charges</span>
-  </p>
-);
-```
-
-Show compact total + badges from visa choice through `CheckoutOrderRecap`. Recap may list **traveler product names** (Phase B Task 8). Never list government vs service fee lines.
+- [ ] **Step 1:** Tests: cannot add past `max`; empty `serviceId` invalid; `max` of 2 rejects 3.
 
 ---
 
-### Task 5: Party schema + migration
+### Task 7: Multi-traveller schema + migration `0025`
 
 **Files:**
 - Create: `lib/db/schema/application-party.ts`
-- Modify: `lib/db/schema/applications.ts`, `lib/db/schema/index.ts`
-- Create: `drizzle/0023_application_party.sql`
-- Update: `drizzle/meta/_journal.json` (next idx after 0022 catalog document requirement, tag `0023_application_party`)
+- Create: `drizzle/0025_application_party.sql`
+- Modify: `lib/db/schema/applications.ts`, `lib/db/schema/index.ts`, `drizzle/meta/_journal.json` (idx 25)
 
 ```typescript
-import { relations, sql } from "drizzle-orm";
-import { index, pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
-import { user } from "./auth";
-import { nationality } from "./visa";
-
 export const TRAVELER_ROLE = { PRIMARY: "primary", ADDITIONAL: "additional" } as const;
-export const TRAVELER_KIND = { ADULT: "adult", CHILD: "child" } as const;
 
 export const applicationParty = pgTable(
   "application_party",
@@ -283,58 +388,46 @@ export const applicationParty = pgTable(
 );
 ```
 
-On `application` add nullable:
+On `application`: nullable `partyId` → `application_party.id` ON DELETE CASCADE; `travelerRole` default `primary`; `travelerKind` default `adult`; `travelerIndex` default `0`.
 
-- `partyId` → `application_party.id` on delete cascade
-- `travelerRole` text default `'primary'`
-- `travelerKind` text default `'adult'`
-- `travelerIndex` integer default `0`
+Copy `resumeTokenHash` onto **every** member (same hash). Also store it on `application_party` (Phase C hint).
 
-Copy `resumeTokenHash` onto **every** member (same hash) so existing `vt_resume` + `loadGuestApplicationRowByResumeCookie(applicationId)` keeps working for any member URL. Also store the hash on the party for resume-hint (Phase C).
-
-SQL:
+RLS on `application_party` in **this** migration (do not wait for Task 11):
 
 ```sql
-CREATE TABLE "application_party" (
-  "id" text PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-  "user_id" text,
-  "is_guest" boolean DEFAULT true NOT NULL,
-  "guest_email" text,
-  "nationality_code" text NOT NULL,
-  "catalog_currency" text DEFAULT 'USD' NOT NULL,
-  "resume_token_hash" text,
-  "draft_expires_at" timestamp,
-  "payment_status" text NOT NULL,
-  "created_at" timestamp DEFAULT now() NOT NULL,
-  "updated_at" timestamp DEFAULT now() NOT NULL
-);
--- FKs + indexes matching schema
-ALTER TABLE "application" ADD COLUMN "party_id" text;
-ALTER TABLE "application" ADD COLUMN "traveler_role" text DEFAULT 'primary' NOT NULL;
-ALTER TABLE "application" ADD COLUMN "traveler_kind" text DEFAULT 'adult' NOT NULL;
-ALTER TABLE "application" ADD COLUMN "traveler_index" integer DEFAULT 0 NOT NULL;
--- FK application.party_id → application_party.id ON DELETE CASCADE
+ALTER TABLE "application_party" ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY application_party_system_all ON "application_party"
+  USING (app_actor_type() = 'system')
+  WITH CHECK (app_actor_type() = 'system');
+
+CREATE POLICY application_party_admin_select ON "application_party"
+  FOR SELECT
+  USING (app_actor_type() = 'admin' AND app_has_permission('applications.read'));
+
+CREATE POLICY application_party_admin_update ON "application_party"
+  FOR UPDATE
+  USING (app_actor_type() = 'admin' AND app_has_permission('applications.write'))
+  WITH CHECK (app_actor_type() = 'admin' AND app_has_permission('applications.write'));
 ```
 
-Backfill is not required for new drafts. Existing rows: `party_id` null is OK until first new create; create path always inserts a party (including solo).
+Create/checkout/webhook stay on `withSystemDbActor`. Task 11 reads the group with `withAdminDbActor` and `applications.read` — **not** `catalog.read`. No client policies.
 
-RLS: party table is not client-selected directly. Guest routes keep using `withSystemDbActor` after cookie verify. Add a restrictive RLS policy (deny client/admin default; system only) consistent with other sensitive tables — follow `docs/IMPLEMENTATION_REFERENCE.md` RLS patterns. If you add admin select later, use `withAdminDbActor`.
+Existing rows: `party_id` null OK. New creates always insert an `application_party` row (including a single traveller).
 
-- [ ] **Step 1:** Schema + SQL + journal.
-- [ ] **Step 2:** `pnpm exec tsc --noEmit` or project’s usual typecheck if `tsc` is not wired — at minimum `pnpm exec vitest run` still compiles imports.
+- [ ] **Step 1:** Schema + SQL + journal idx 25.
+- [ ] **Step 2:** Typecheck imports.
 
 ---
 
-### Task 6: Create draft accepts `travelers[]`
+### Task 8: Create draft accepts `travelers[]`
 
 **Files:**
 - Modify: `lib/applications/create-draft-body.ts`
 - Create: `lib/applications/create-party-draft.ts` + test
-- Modify: `app/api/applications/route.ts`
+- Modify: `app/api/applications/route.ts` + existing route test
 
 ```typescript
-import { z } from "zod";
-
 const travelerSchema = z.object({
   serviceId: z.string().min(1),
   kind: z.enum(["adult", "child"]).default("adult"),
@@ -347,7 +440,7 @@ export const createDraftBodySchema = z.object({
     .regex(/^[A-Za-z]{2}$/, "Nationality code must be two letters")
     .transform((s) => s.toUpperCase()),
   serviceId: z.string().min(1).optional(),
-  travelers: z.array(travelerSchema).min(1).max(8).optional(),
+  travelers: z.array(travelerSchema).min(1).optional(),
   guestEmail: z.email().max(320).optional(),
   catalogCurrency: z.enum(["USD", "AED"]).default("USD"),
 }).refine((b) => Boolean(b.travelers?.length || b.serviceId), {
@@ -355,48 +448,25 @@ export const createDraftBodySchema = z.object({
 });
 ```
 
-Normalize:
+Server must re-read `party_enabled` and `party_max_travelers`. If multi-traveller is off and `travelers.length > 1` → 400. If on and `travelers.length > max` → 400. Do not trust the client. Each `serviceId` must be enabled, priced for that nationality, and `travelerKind` must match the catalog field (or 400).
 
-```typescript
-export const normalizeCreateTravelers = (body: CreateDraftBody): Array<{ serviceId: string; kind: "adult" | "child" }> => {
-  if (body.travelers?.length) return body.travelers;
-  return [{ serviceId: body.serviceId!, kind: "adult" }];
-};
-```
+`createPartyDraft` in one transaction: insert `application_party` (email, nationality, currency, resume hash, TTL from `getDraftTtlHoursFromTx`, `paymentStatus: unpaid`); insert N applications; return `{ partyId, primaryApplicationId, memberIds }`.
 
-`createPartyDraft(tx, …)` in one transaction:
+Route: set `vt_resume` once. JSON `{ application: { id: primary, isGuest }, partyId, memberIds }`. Redirect target stays `/apply/applications/:primaryId`.
 
-1. Insert `application_party` (email, nationality, currency, resume hash, TTL, `paymentStatus: unpaid`).
-2. Insert N `application` rows (same hash, `partyId`, role/kind/index, same statuses as today).
-3. Return `{ partyId, primaryApplicationId, memberIds }`.
-
-Route: set `vt_resume` once. JSON:
-
-```json
-{ "application": { "id": "<primary>", "isGuest": true }, "partyId": "<id>", "memberIds": ["..."] }
-```
-
-`toPublicApplication` of primary stays the redirect target: `/apply/applications/:primaryId`.
-
-Tests: `create-draft-body` refine; `normalizeCreateTravelers`; mock tx insert count 1 party + N apps (`lib/applications/create-party-draft.test.ts`). Extend `app/api/applications/route.test.ts` if it posts `{ serviceId }` — that path must still work.
-
-Start form POST uses `travelers` from Task 3.
+- [ ] **Step 1:** Tests: `{ serviceId }` still works (normalize to one adult); 9 travelers rejected when max is 8; two travelers rejected when `party_enabled` is false; child `serviceId` with adult kind → 400.
 
 ---
 
-### Task 7: Load party on the documents page
+### Task 9: Load travellers on the documents page
 
 **Files:**
 - Create: `lib/applications/load-party-members.ts` + test
 - Modify: `GET /api/applications/[id]` (or add `GET /api/applications/[id]/party`)
-- Modify: draft hook + panel
+- Modify: draft hook + `application-draft-panel.tsx`
+- Create: `components/apply/draft/party-documents-tabs.tsx`
 
-`loadPartyMembers(tx, applicationId)`:
-
-- If `partyId` set, return all members ordered by `travelerIndex`.
-- If null, return `[that application]` (legacy).
-
-Public payload (no PII docs bytes):
+`loadPartyMembers`: if `partyId` set, all members by `travelerIndex`; else `[that application]` (legacy).
 
 ```typescript
 export type TPublicPartyMember = {
@@ -409,15 +479,15 @@ export type TPublicPartyMember = {
 };
 ```
 
-UI: tabs or stacked sections — **one `DraftDocumentsSection` + `ApplicantReview` per member** (Phase A resolver per member `serviceId` + shared nationality). Upload/extract APIs already take `applicationId` — call them with the **member** id.
+UI: one `DraftDocumentsSection` + `ApplicantReview` per member. Slots from Phase A resolver + Document rules for **that member’s** `serviceId` + shared nationality. Upload/extract already take `applicationId`.
 
-Pay CTA lives once (primary), using party-aware payment copy (any member missing slots → incomplete copy).
+Pay CTA once (primary). Cookie hash matches any member.
 
-Access: cookie hash matches **any** member; signed-in owner of party/`userId`.
+- [ ] **Step 1:** Legacy null `partyId` returns one member. Two travellers return both ordered.
 
 ---
 
-### Task 8: Party checkout total + webhook fan-out
+### Task 10: Multi-traveller checkout total + webhook fan-out
 
 **Files:**
 - Create: `lib/payments/party-checkout-total.ts` + test
@@ -437,55 +507,82 @@ export const sumPartyLines = (lines: TPartyLine[]): bigint =>
   lines.reduce((acc, l) => acc + l.amountMinor, 0n);
 ```
 
-Checkout (same transaction as today):
+Checkout: resolve members; `resolveCheckoutTotal` per member; any missing price → 400 `pricing_unavailable`; one `price_quote` on primary; one `payment` on primary; freeze `checkoutState` on all members.
 
-1. Resolve members via `loadPartyMembers`.
-2. For **each** member `resolveCheckoutTotal(tx, { nationalityCode, serviceId, catalogCurrency })`. If any missing → 400 `pricing_unavailable`.
-3. `total = sumPartyLines`. Lock **one** `price_quote` on the **primary** id. `breakdownJson` may list per-traveler `applicationId` + `serviceId` + `amountMinor` for **ops** — do not send that breakdown to the client recap as a fee split. Client recap: product names + **one** total + badges.
-4. One `payment` row on primary. Freeze `checkoutState` on **all** members.
-5. Metadata:
+Metadata: `applicationId` (primary), `partyId`, `priceQuoteId`, `userId?`, `isGuest`, `serviceId` (primary). Never affiliate breakdown.
 
-```typescript
-metadata: {
-  applicationId: primaryId,
-  partyId: party.id,
-  priceQuoteId: quoteId,
-  isGuest: String(lockedApp.isGuest),
-  serviceId: lockedApp.serviceId,
-  catalogCurrency,
-}
-```
+Webhook `payment_completed`: all members `paid` / `in_progress`; `retainRequiredDocuments` per member (Document rules extras included); `application_party.paymentStatus = paid`; skip already paid.
 
-Webhook `payment_completed` after primary transitions to paid:
+Recap: N>1 lists “Traveller 1 — {serviceName}” + **one** total + badges from apply-config.
 
-- Update **all** party members: `paymentStatus: paid`, `applicationStatus: in_progress`, `fulfillmentStatus: automation_running`, `checkoutState: none`.
-- `retainRequiredDocuments` **per member**.
-- Set `application_party.paymentStatus = paid`.
-- Idempotent: skip members already `paid`.
-
-Failed checkout: clear `checkoutState` on all members.
-
-`apply-payment-webhook-event.test.ts`: add a case with two members (primary + additional) — both become paid; retain called twice (mock).
-
-Recap: if party has N>1, list “Traveler 1 — {serviceName}” etc. and a single total. Still **All fees included**.
+- [ ] **Step 1:** Webhook test: two members both paid; retain called twice.
 
 ---
 
-### Task 9: Phase B verification
+### Task 11: Admin — list travellers and set each outcome on this page
+
+**Files:**
+- Create: `lib/admin/load-application-travellers.ts` + test (wraps `loadPartyMembers` + per-member statuses)
+- Create: `components/admin/admin-application-travellers.tsx`
+- Modify: `app/admin/(protected)/applications/[id]/page.tsx` — load **all** members when `partyId` is set
+- Modify: `components/admin/admin-application-detail-view.tsx`
+- Modify: `components/admin/admin-applications-list-client.tsx` (and list query)
+- Reuse: `AdminApplicationOpsPanel` / `useAdminApplicationOps` (already keyed by `applicationId`)
+
+Admin already has Applications. Extend this page. Do not invent a second inbox. Do not add/remove travellers after create.
+
+**List**
+
+- If `partyId` is set and member count > 1: badge **Multi-traveller · {n} travellers** plus adult/child for that row.
+- Solo (one member): normal row, no multi-traveller badge.
+
+**Detail — Travellers on this application**
+
+Load every sibling `application` (and that row’s documents) in the same `withAdminDbActor` transaction. If `partyId` is null, the card is omitted (legacy solo).
+
+Card copy:
+
+- Title: **Travellers on this application**
+- Each row: **Primary traveller** or **Traveller {n}**, adult/child, product name, application / payment / fulfillment badges.
+- Selecting a row (tabs or a list) shows **that traveller’s** existing **Fulfillment & outcomes** (`AdminApplicationOpsPanel` with **that** `applicationId` and **that** traveller’s documents).
+- Ops can mark traveller A completed (approval pack) and traveller B rejected on **this same page** without opening a second URL. Status writes stay per `application` (already the model). One checkout still lives on the primary; do not invent a group-level approve-all.
+- Optional deep link: `/admin/applications/[id]?traveller={memberId}` selects that row after load.
+
+`useAdminApplicationOps` already takes `applicationId`. Remount the panel when the selected traveller changes (`key={selectedApplicationId}`) so file/status state does not leak across travellers.
+
+**RLS**
+
+Policies are in Task 7’s `0025`. Task 11 only **uses** them: `withAdminDbActor` + `applications.read`. If the travellers card is empty for a write-capable admin, the Task 7 policies were skipped — fix the migration, do not query `db` without actor context.
+
+- [ ] **Step 1:** Loader test: two members → both statuses returned; legacy null `partyId` → no extra rows.
+- [ ] **Step 2:** UI: select traveller 2, apply rejection + outcome doc; traveller 1 stays `in_progress`. Refresh: both statuses persist. No “party” in the UI.
+
+---
+
+### Task 12: Phase B verification
 
 ```bash
-pnpm exec vitest run lib/apply/guided-visa-filter.test.ts lib/apply/party-travelers.test.ts lib/applications/create-draft-body.ts lib/applications/create-party-draft.test.ts lib/payments/party-checkout-total.test.ts lib/payments/apply-payment-webhook-event.test.ts app/api/applications/route.test.ts
+pnpm exec vitest run lib/apply/guided-visa-filter.test.ts lib/apply/party-travelers.test.ts lib/apply/apply-config.test.ts lib/applications/create-party-draft.test.ts lib/payments/party-checkout-total.test.ts lib/payments/apply-payment-webhook-event.test.ts app/api/applications/route.test.ts app/api/catalog/services/route.test.ts
 pnpm run lint
 ```
 
-Apply migration on the Neon branch used by local/dev before QA (`pnpm run db:migrate`).
+Migrate **0024 then 0025** on the Neon branch used by local/dev (`pnpm run db:migrate`).
 
-**Phase B done when:** guided shortlist works; email on step 2; party of 2 creates 2 apps; checkout amount is the sum; webhook pays both; customer sees one total.
+**Phase B done when:**
+
+- [ ] Catalog service edit persists stay / entry / traveler / show-in-chooser.
+- [ ] A service with null `stayBucket` never appears in the chooser.
+- [ ] Child shortlist only contains `travelerKind = child` SKUs (no `/child/i` on the name).
+- [ ] Settings: multi-traveller off hides Add traveller and the API rejects `travelers.length > 1`. On + max 2 disables a third traveller and the API rejects 3.
+- [ ] Badge strings change when Settings values change (no deploy).
+- [ ] Two travellers create 2 apps; checkout sum; webhook pays both.
+- [ ] Admin application detail lists both travellers; ops can approve one and reject the other on that same page; copy never says “party”.
+- [ ] Document slots still come from Document rules + passport/photo floor (India tourist extra vs France tourist vs transit — whatever Francesco assigned).
 
 ---
 
 ## Suggested commit (only if orchestrator asks)
 
 ```
-feat(apply): guided visa chooser and multi-traveler party checkout
+feat(apply): admin-driven guided chooser and multi-traveler party checkout
 ```

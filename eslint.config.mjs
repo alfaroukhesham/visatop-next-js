@@ -15,6 +15,7 @@ const eslintConfig = defineConfig([
     // Local git worktrees / agent assets are not part of the shipped app graph.
     ".worktrees/**",
     ".agents/**",
+    ".cursor/**",
   ]),
 ]);
 

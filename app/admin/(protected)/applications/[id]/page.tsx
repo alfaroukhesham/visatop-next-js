@@ -3,20 +3,27 @@ import { eq, desc } from "drizzle-orm";
 import { formatServiceTypeForExport } from "@/lib/applications/customer-export";
 import { getAdminUserId } from "@/lib/admin/get-admin-session";
 import { withAdminDbActor } from "@/lib/db/actor-context";
+import { loadApplicationTravellers } from "@/lib/admin/load-application-travellers";
 import { AdminApplicationDetailView } from "@/components/admin/admin-application-detail-view";
 import type { AdminApplicationAuditRow } from "@/lib/admin/application-audit-format";
 import * as schema from "@/lib/db/schema";
 
 export default async function AdminApplicationDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ traveller?: string | string[] }>;
 }) {
-  const [{ id: applicationId }, adminUserId] = await Promise.all([params, getAdminUserId()]);
+  const [{ id: applicationId }, adminUserId, sp] = await Promise.all([
+    params,
+    getAdminUserId(),
+    searchParams,
+  ]);
+  const travellerParam = Array.isArray(sp.traveller) ? sp.traveller[0] : sp.traveller;
 
-  const { app, serviceLabel, payments, auditLogs, adminDocuments } = await withAdminDbActor(
-    adminUserId,
-    async ({ tx }) => {
+  const { app, serviceLabel, payments, auditLogs, adminDocuments, travellers } =
+    await withAdminDbActor(adminUserId, async ({ tx }) => {
       const [joined] = await tx
         .select({
           app: schema.application,
@@ -31,7 +38,14 @@ export default async function AdminApplicationDetailPage({
 
       const app = joined?.app;
       if (!app) {
-        return { app: null, serviceLabel: null, payments: [], auditLogs: [], adminDocuments: [] };
+        return {
+          app: null,
+          serviceLabel: null,
+          payments: [],
+          auditLogs: [],
+          adminDocuments: [],
+          travellers: [],
+        };
       }
 
       const serviceLabel = joined.serviceName
@@ -42,7 +56,7 @@ export default async function AdminApplicationDetailPage({
           })
         : null;
 
-      const [payments, auditLogs, adminDocuments] = await Promise.all([
+      const [payments, auditLogs, adminDocuments, travellers] = await Promise.all([
         tx
           .select()
           .from(schema.payment)
@@ -67,11 +81,11 @@ export default async function AdminApplicationDetailPage({
           .where(eq(schema.applicationDocument.applicationId, applicationId))
           .orderBy(desc(schema.applicationDocument.createdAt))
           .limit(40),
+        loadApplicationTravellers(tx, app),
       ]);
 
-      return { app, serviceLabel, payments, auditLogs, adminDocuments };
-    }
-  );
+      return { app, serviceLabel, payments, auditLogs, adminDocuments, travellers };
+    });
 
   if (!app) notFound();
 
@@ -120,6 +134,8 @@ export default async function AdminApplicationDetailPage({
       payments={payments}
       shownAuditLogs={shownAuditLogs}
       adminDocuments={adminDocuments}
+      travellers={travellers}
+      selectedTravellerId={travellerParam ?? app.id}
     />
   );
 }

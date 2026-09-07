@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
+import { CheckoutOrderRecap } from "@/components/apply/checkout-order-recap";
 import { ApplicationPaymentPanel } from "@/components/apply/application-payment-panel";
 import { loadApplicationRowForRequest } from "@/lib/applications/load-application-row-for-request";
-import { loadPaymentUploadFlags } from "@/lib/applications/load-payment-upload-flags";
+import { loadPaymentUploadPresence } from "@/lib/applications/load-payment-upload-presence";
+import { loadPartyMembers } from "@/lib/applications/load-party-members";
 import { paymentPanelMayShow } from "@/lib/applications/payment-panel-may-show";
 import { toPublicApplication } from "@/lib/applications/public-application";
 import { withSystemDbActor } from "@/lib/db/actor-context";
@@ -12,7 +14,7 @@ import { withSystemDbActor } from "@/lib/db/actor-context";
 type Props = { params: Promise<{ id: string }> };
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: "Secure payment | Visatop" };
+  return { title: "Payment | Visatop" };
 }
 
 export default async function ApplyApplicationPaymentPage({ params }: Props) {
@@ -25,7 +27,8 @@ export default async function ApplyApplicationPaymentPage({ params }: Props) {
     redirect(`/apply/applications/${encodeURIComponent(id)}/submitted`);
   }
 
-  const uploads = await withSystemDbActor((tx) => loadPaymentUploadFlags(tx, id));
+  const uploads = await withSystemDbActor((tx) => loadPaymentUploadPresence(tx, id));
+  const members = await withSystemDbActor((tx) => loadPartyMembers(tx, row));
   const publicApp = toPublicApplication(row);
   if (!paymentPanelMayShow(publicApp, uploads)) {
     redirect(`/apply/applications/${encodeURIComponent(id)}`);
@@ -36,14 +39,16 @@ export default async function ApplyApplicationPaymentPage({ params }: Props) {
       <ApplyTwoColumn
         currentStep={4}
         applicationId={id}
-        contentClassName="theme-client-rise mx-auto w-full max-w-4xl space-y-10"
+        hasSelectedVisa
+        visaSummary={<CheckoutOrderRecap application={publicApp} members={members} />}
+        contentClassName="theme-client-rise mx-auto w-full max-w-4xl space-y-8"
       >
-        <header className="space-y-4">
-          <h1 className="font-heading text-foreground text-[clamp(1.85rem,3.8vw,2.55rem)] font-semibold leading-tight tracking-tight">
-            Secure payment
+        <header className="space-y-1.5">
+          <h1 className="font-heading text-foreground text-xl! font-semibold leading-snug tracking-tight md:text-[1.75rem]!">
+            Payment
           </h1>
-          <p className="text-muted-foreground max-w-[62ch] text-base leading-relaxed">
-            Review your order and pay securely to begin processing. Your price is confirmed at checkout.
+          <p className="text-muted-foreground max-w-[62ch] text-sm leading-relaxed">
+            Review the total, then pay.
           </p>
         </header>
         <ApplicationPaymentPanel applicationId={id} />

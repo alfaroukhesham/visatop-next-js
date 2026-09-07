@@ -233,8 +233,8 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
           </div>
           <p className="text-muted-foreground text-sm leading-relaxed">
             {signedIn
-              ? "You are signed in. Attach this paid application to your profile on this device so it appears in your portal alongside anything else you start later."
-              : "You paid as a guest—great. Creating a free account (or signing in) on this same device lets us attach this paid application to your profile so you can open it from the portal, get updates on any device after linking, and start the next visa without hunting through email."}
+              ? "You are signed in. Attach this paid application to your profile on this device so it appears in your applications alongside anything else you start later."
+              : "You paid as a guest—great. Creating a free account (or signing in) on this same device lets us attach this paid application to your profile so you can open it from your applications, get updates on any device after linking, and start the next visa without hunting through email."}
           </p>
           {!signedIn ? (
             <ul className="text-muted-foreground list-inside list-disc space-y-1.5 border-y border-border py-4 text-sm leading-relaxed">
