@@ -92,6 +92,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
         paymentApplicationId={payApplicationId}
         nationalityCode={selectedApp.nationalityCode}
         nationalityName={draft.selected.nationalityName}
+        nationalities={draft.nationalities}
         applicant={selectedApp.applicant}
         guestEmail={selectedApp.guestEmail}
         extraction={draft.selected.extractResult?.extraction ?? null}

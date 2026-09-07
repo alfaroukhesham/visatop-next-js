@@ -17,6 +17,8 @@ const postBody = z.object({
     .transform((s) => s.toUpperCase()),
   name: z.string().min(1).max(256),
   enabled: z.boolean().optional(),
+  dialCode: z
+    .preprocess((val) => (val === "" ? null : val), z.string().regex(/^\d{1,6}$/).nullable().optional()),
 });
 
 export async function GET() {
@@ -44,10 +46,15 @@ export async function POST(req: Request) {
           code: parsed.data.code,
           name: parsed.data.name,
           enabled: parsed.data.enabled ?? true,
+          ...(parsed.data.dialCode !== undefined ? { dialCode: parsed.data.dialCode } : {}),
         })
         .onConflictDoUpdate({
           target: schema.nationality.code,
-          set: { name: parsed.data.name, enabled: parsed.data.enabled ?? true },
+          set: {
+            name: parsed.data.name,
+            enabled: parsed.data.enabled ?? true,
+            ...(parsed.data.dialCode !== undefined ? { dialCode: parsed.data.dialCode } : {}),
+          },
         })
         .returning();
       const row = inserted[0];
@@ -63,6 +70,7 @@ export async function POST(req: Request) {
           code: row.code,
           name: row.name,
           enabled: row.enabled,
+          dialCode: row.dialCode,
         }),
       });
       return jsonOk({ nationality: row }, { status: 201, requestId });

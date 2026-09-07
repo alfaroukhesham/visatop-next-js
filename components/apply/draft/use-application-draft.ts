@@ -25,6 +25,7 @@ import { latestByType } from "./utils";
 type CatalogNationality = {
   code: string;
   name: string;
+  dialCode: string | null;
 };
 
 type TMemberState = {
@@ -64,6 +65,7 @@ export function useApplicationDraft(applicationId: string) {
   const [error, setError] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [nationalities, setNationalities] = useState<CatalogNationality[]>([]);
 
   const memberStatesRef = useRef<Record<string, TMemberState>>({});
   const nationalitiesRef = useRef<CatalogNationality[]>([]);
@@ -139,6 +141,7 @@ export function useApplicationDraft(applicationId: string) {
         );
         if (natRes.ok) {
           nationalitiesRef.current = natRes.data.nationalities;
+          setNationalities(natRes.data.nationalities);
         }
       }
       await Promise.all(nextMembers.map((m) => loadMemberData(m.applicationId)));
@@ -297,6 +300,7 @@ export function useApplicationDraft(applicationId: string) {
     passport: primaryState?.passport ?? null,
     photo: primaryState?.photo ?? null,
     nationalityName: primaryState?.nationalityName ?? "",
+    nationalities,
     uploadPresence,
   };
 }

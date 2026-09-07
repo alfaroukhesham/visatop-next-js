@@ -59,9 +59,11 @@ EOF
 | Guided choice | Filter a shortlist from **admin service fields** (`stayBucket`, `entryKind`, `travelerKind`, `showInGuidedChooser`). Do not auto-pick. No travel-date step in v1. No name-regex / ISO-region classifiers. |
 | Documents | Passport + photo stay a **code floor**. Extra slots come from **Document rules** (`catalog_document_type` + `catalog_document_requirement`). Apply never invents a bank/Africa/Asia list. |
 | Nationalities | Apply lists enabled + priced catalog nationalities only. Adding a country is Catalog → Nationalities, not a deploy. |
-| Video | No in-flow autoplay. Remove `HomeDemoVideo` from the apply home hero. |
-| Status step | Not counted as pre-pay. Rail is Nationality → Visa → Documents → Payment. Status after pay only. |
-| Coach overlay | Remove `ApplyJourneyStepBar` “STEP n/5” from tourist apply (home, start, docs, pay). |
+| Video | No in-flow autoplay. `HomeDemoVideo` already removed from apply home. Optional “How it works” URL from Settings (Phase C Task 4). |
+| Status step | Status is after pay. Guided choice absorbs nationality (step 1). Do not reopen the rail unless asked. |
+| Coach overlay | `ApplyJourneyStepBar` unused — do not resurrect. |
+| WP chrome (C) | Hide Featured / Khaleej time. WP header owns Apply + Track. Next bar keeps Login/Account only. Iframe links same-tab (no `target="_blank"`). |
+| i18n (C) | Locales = live Polylang (11 as of 2026-09-07, including `ar` RTL). Do not hardcode a 10-language list. Design (Task 7) before implementation. |
 | Multi-traveller | One `application_party` (code name only), **one application row per traveller**, **one checkout** on the **primary**. Shared nationality from step 1. Adult vs child = `visa_service.travelerKind`. Settings copy: **Multi-traveller applications** / **Allow more than one traveller on a checkout**. Keys: `party_enabled`, `party_max_travelers` (default 8). Off still creates a single-traveller application. UI never says “party.” |
 | Resume | Same-browser `vt_resume` banner. Track shows product + country names. Guest Continue when cookie matches. Signed email resume link (HMAC, remaining draft TTL). No fingerprint. No Better Auth magic-link. Token never in localStorage or JSON. Draft TTL already admin (`draft_ttl_hours`). |
 | SEO / blog / dial | Apply-home title, H1, timing line, blog row, and phone dial codes are **admin-editable** (Settings + nationality `dialCode`). Not TS constants Francesco cannot change. |

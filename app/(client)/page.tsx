@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
+import { ResumeDraftModal } from "@/components/apply/resume-draft-modal";
 import { ClientAppHeader } from "@/components/client/client-app-header";
 import { ClientHeroPanel } from "@/components/client/client-surface";
 import { HomeNationalityStart } from "@/components/client/home-nationality-start";
@@ -29,6 +30,7 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <div className="text-foreground flex min-h-0 flex-1 flex-col">
+      <ResumeDraftModal />
       <JsonLdScript id="visatop-home-jsonld" data={buildHomePageJsonLd()} />
       <ClientAppHeader />
 
@@ -45,7 +47,7 @@ export default function Home() {
               )}
             >
               <p className="text-secondary text-[11px] text-center font-bold uppercase tracking-[0.28em]">
-              UAE Tourist Visa
+                UAE Tourist Visa
               </p>
               <h1 className="font-heading text-foreground mt-6 text-center text-[2.25rem]! leading-[1.2]! font-semibold md:text-[2.25rem]!">
                 <span className="block">Traveling to Dubai? </span>

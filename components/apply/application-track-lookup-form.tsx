@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { ClientButton } from "@/components/client/client-button";
+import { ClientButton, ClientButtonLink } from "@/components/client/client-button";
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
 import { nationalityLabelWithFlag } from "@/lib/apply/display-names";
@@ -19,7 +19,10 @@ type TrackApplicationRow = {
   serviceId: string;
   serviceName: string;
   nationalityName: string;
+  paymentStatus: string;
   clientTracking: ClientApplicationTracking;
+  canContinue: boolean;
+  continueHref: string | null;
 };
 
 type TrackOk = {
@@ -141,12 +144,35 @@ export function ApplicationTrackLookupForm() {
                   key={row.applicationId}
                   className="space-y-6 rounded-[12px] border border-border border-l-[3px] border-l-primary bg-card p-6 shadow-[0_4px_24px_rgba(0,0,0,0.07)] sm:p-8"
                 >
-                  <div className="space-y-1">
-                    <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Reference</p>
-                    <p className="font-mono text-sm text-foreground">{row.referenceDisplay}</p>
-                    <p className="text-muted-foreground text-xs">
-                      {row.serviceName} · {nationalityLabelWithFlag(row.nationalityCode, row.nationalityName)}
-                    </p>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-1">
+                      <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Reference</p>
+                      <p className="font-mono text-sm text-foreground">{row.referenceDisplay}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {row.serviceName} · {nationalityLabelWithFlag(row.nationalityCode, row.nationalityName)}
+                      </p>
+                    </div>
+                    <div className="shrink-0">
+                      {row.canContinue && row.continueHref ? (
+                        <ClientButtonLink
+                          href={row.continueHref}
+                          brand="cta"
+                          size="sm"
+                          className="h-9 px-4 text-xs font-bold"
+                        >
+                          Continue
+                        </ClientButtonLink>
+                      ) : row.paymentStatus === "paid" ? (
+                        <ClientButtonLink
+                          href={`/apply/applications/${encodeURIComponent(row.applicationId)}/submitted`}
+                          variant="outline"
+                          size="sm"
+                          className="h-9 px-4 text-xs font-semibold"
+                        >
+                          View status
+                        </ClientButtonLink>
+                      ) : null}
+                    </div>
                   </div>
                   <ApplicationClientTracking tracking={row.clientTracking} />
                 </li>

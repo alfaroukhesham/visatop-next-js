@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
 vi.mock("next/headers", () => ({
   headers: async () => new Headers({ "x-request-id": "del-nat" }),
@@ -12,7 +12,7 @@ vi.mock("@/lib/db/actor-context", () => ({
 
 import { adminAuth } from "@/lib/admin-auth";
 import * as actorContext from "@/lib/db/actor-context";
-import { DELETE } from "./route";
+import { DELETE, PATCH } from "./route";
 import {
   CatalogDeleteBlockedError,
   CatalogEntityNotFoundError,
@@ -32,12 +32,65 @@ vi.mock("@/lib/admin-api/write-admin-audit", () => ({
 import { deleteCatalogNationality } from "@/lib/admin/catalog/delete-catalog-entity";
 import { writeAdminAudit } from "@/lib/admin-api/write-admin-audit";
 
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
 const authed = () => {
   vi.mocked(adminAuth.api.getSession).mockResolvedValue({ user: { id: "admin-1" } } as never);
   vi.mocked(actorContext.withAdminDbActor).mockImplementation(async (_id, fn) =>
     fn({ tx: {} as never, permissions: ["catalog.read", "catalog.write", "audit.write"] }),
   );
 };
+
+describe("PATCH /api/admin/catalog/nationalities/[code]", () => {
+  it("persists dialCode on IN", async () => {
+    const setMock = vi.fn().mockReturnThis();
+    const whereMock = vi.fn().mockReturnThis();
+    const returningMock = vi.fn().mockResolvedValue([
+      {
+        code: "IN",
+        name: "India",
+        enabled: true,
+        dialCode: "91",
+      },
+    ]);
+    const updateMock = vi.fn().mockReturnValue({
+      set: setMock,
+      where: whereMock,
+      returning: returningMock,
+    });
+    const tx = { update: updateMock } as never;
+
+    vi.mocked(adminAuth.api.getSession).mockResolvedValue({ user: { id: "admin-1" } } as never);
+    vi.mocked(actorContext.withAdminDbActor).mockImplementation(async (_id, fn) =>
+      fn({
+        tx,
+        permissions: ["catalog.read", "catalog.write", "audit.write"],
+      }),
+    );
+
+    const res = await PATCH(
+      new Request("http://localhost/api/admin/catalog/nationalities/IN", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dialCode: "91" }),
+      }),
+      { params: Promise.resolve({ code: "IN" }) },
+    );
+
+    expect(setMock).toHaveBeenCalledWith(expect.objectContaining({ dialCode: "91" }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.nationality.dialCode).toBe("91");
+    expect(writeAdminAudit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        afterJson: expect.stringContaining('"dialCode":"91"'),
+      }),
+    );
+  });
+});
 
 describe("DELETE /api/admin/catalog/nationalities/[code]", () => {
   it("returns 401 without a session", async () => {

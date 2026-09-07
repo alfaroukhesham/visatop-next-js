@@ -17,9 +17,6 @@ export function ClientShellFooter() {
           <Link href="/" className="text-link font-medium transition-colors duration-200 hover:underline">
             Home
           </Link>
-          <Link href="/" className="text-link font-medium transition-colors duration-200 hover:underline">
-            Apply
-          </Link>
           <Link href={SUPPORT_WHATSAPP_URL} className="text-link font-medium transition-colors duration-200 hover:underline">
             Help
           </Link>

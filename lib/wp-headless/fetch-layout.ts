@@ -4,7 +4,9 @@ import { sanitizeWpShellHtml } from "./sanitize-wp-html";
 import type {
   NormalizedWpMenuItem,
   WpHeadlessLayoutResponse,
+  WpLanguageOptionRaw,
   WpMenuItemRaw,
+  WpShellLanguageOption,
   WpShellModel,
 } from "./types";
 
@@ -49,6 +51,35 @@ function parseAllowedHostsFromEnv(): string[] {
     .map((s) => s.trim())
     .filter(Boolean);
 }
+
+const normalizeLayoutLanguageOption = (
+  raw: WpLanguageOptionRaw,
+  currentSlug: string,
+): WpShellLanguageOption | null => {
+  const slug = (raw.slug ?? "").trim().toLowerCase();
+  if (!slug) return null;
+  const name = (raw.name ?? slug).trim() || slug;
+  return {
+    slug,
+    name,
+    isRtl: raw.is_rtl === true || slug === "ar",
+    isCurrent: raw.current === true || slug === currentSlug,
+  };
+};
+
+const parseLayoutLanguage = (
+  json: WpHeadlessLayoutResponse,
+  requestedLang?: string,
+): WpShellModel["language"] => {
+  const block = json.language;
+  const current = (block?.current ?? requestedLang ?? "en").trim().toLowerCase() || "en";
+  const availableRaw = block?.available ?? [];
+  const available = availableRaw
+    .map((item) => normalizeLayoutLanguageOption(item, current))
+    .filter((item): item is WpShellLanguageOption => item !== null);
+  if (available.length === 0) return null;
+  return { current, available };
+};
 
 function resolveAllowedCssHosts(input: { wpOrigin: string }): string[] {
   const explicit = parseAllowedHostsFromEnv();
@@ -117,6 +148,7 @@ export async function fetchWpShellModel(input: {
     cssUrls,
     headerHtml,
     footerHtml,
+    language: parseLayoutLanguage(json, input.lang),
   };
 }
 

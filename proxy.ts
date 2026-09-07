@@ -1,4 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  CUSTOMER_LOCALE_COOKIE,
+  customerLocaleCookieOptions,
+  isValidCustomerLocaleParam,
+  parseCustomerLocale,
+} from "@/lib/i18n/customer-locale";
 
 export function proxy(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -31,11 +37,20 @@ export function proxy(request: NextRequest) {
   });
 
   response.headers.set("x-request-id", requestId);
+
+  const localeParam = requestUrl.searchParams.get("locale");
+  if (localeParam !== null && isValidCustomerLocaleParam(localeParam)) {
+    const slug = parseCustomerLocale(localeParam);
+    response.cookies.set(CUSTOMER_LOCALE_COOKIE, slug, customerLocaleCookieOptions());
+  }
+
   return response;
 }
 
 export const config = {
   matcher: [
+    "/visa-processing",
+    "/visa-processing/:path*",
     "/visa-processing/:path*/",
     "/api/:path*",
     "/portal",

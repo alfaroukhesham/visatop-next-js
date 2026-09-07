@@ -11,6 +11,7 @@ import { jsonError, jsonOk } from "@/lib/api/response";
 import { isForeignKeyViolation } from "@/lib/db/pg-errors";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { sendAdminStep2ServiceSelectedEmail } from "@/lib/email/send-admin-notification-emails";
+import { sendApplicationDraftStartedEmail } from "@/lib/email/send-application-transactional-emails";
 
 function queueAdminStep2Email(applicationId: string, requestId: string | null) {
   after(() => {
@@ -18,6 +19,24 @@ function queueAdminStep2Email(applicationId: string, requestId: string | null) {
       console.error("[api/applications] admin_step2_service_selected email failed", {
         applicationId,
         requestId,
+        err: err instanceof Error ? err.message : err,
+      });
+    });
+  });
+}
+
+function queueApplicationDraftStartedEmail(input: {
+  primaryApplicationId: string;
+  partyId: string;
+  guestEmail: string;
+  requestId: string | null;
+}) {
+  after(() => {
+    void sendApplicationDraftStartedEmail(input).catch((err) => {
+      console.error("[api/applications] application_draft_started email failed", {
+        primaryApplicationId: input.primaryApplicationId,
+        partyId: input.partyId,
+        requestId: input.requestId,
         err: err instanceof Error ? err.message : err,
       });
     });
@@ -59,6 +78,14 @@ export async function POST(req: Request) {
 
     const primaryRow = result.primaryRow;
     queueAdminStep2Email(result.primaryApplicationId, requestId);
+    if (isGuest && guestEmail) {
+      queueApplicationDraftStartedEmail({
+        primaryApplicationId: result.primaryApplicationId,
+        partyId: result.partyId,
+        guestEmail,
+        requestId,
+      });
+    }
 
     const applicationJson = {
       ...toPublicApplication(primaryRow),

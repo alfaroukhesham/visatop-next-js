@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { isValidTrackContact, mapTrackLookupRow, parseTrackContact } from "./track-lookup";
+import { generateResumeToken } from "./resume-token";
+import {
+  canContinueTrackRow,
+  isValidTrackContact,
+  mapTrackLookupRow,
+  parseTrackContact,
+} from "./track-lookup";
 
 describe("parseTrackContact", () => {
   it("parses email", () => {
@@ -26,7 +32,59 @@ describe("isValidTrackContact", () => {
   });
 });
 
+describe("canContinueTrackRow", () => {
+  const { plainToken, hash } = generateResumeToken();
+
+  it("returns true when cookie verifies and payment is unpaid", () => {
+    expect(
+      canContinueTrackRow({ cookiePlain: plainToken, rowHash: hash, paymentStatus: "unpaid" }),
+    ).toBe(true);
+  });
+
+  it("returns true when cookie verifies and payment is checkout_created", () => {
+    expect(
+      canContinueTrackRow({
+        cookiePlain: plainToken,
+        rowHash: hash,
+        paymentStatus: "checkout_created",
+      }),
+    ).toBe(true);
+  });
+
+  it("returns false when cookie is missing", () => {
+    expect(
+      canContinueTrackRow({ cookiePlain: null, rowHash: hash, paymentStatus: "unpaid" }),
+    ).toBe(false);
+  });
+
+  it("returns false when row hash is missing", () => {
+    expect(
+      canContinueTrackRow({ cookiePlain: plainToken, rowHash: null, paymentStatus: "unpaid" }),
+    ).toBe(false);
+  });
+
+  it("returns false when cookie does not verify", () => {
+    expect(
+      canContinueTrackRow({ cookiePlain: "wrong", rowHash: hash, paymentStatus: "unpaid" }),
+    ).toBe(false);
+  });
+
+  it("returns false when payment is paid even with matching cookie", () => {
+    expect(
+      canContinueTrackRow({ cookiePlain: plainToken, rowHash: hash, paymentStatus: "paid" }),
+    ).toBe(false);
+  });
+
+  it("returns false when payment is failed", () => {
+    expect(
+      canContinueTrackRow({ cookiePlain: plainToken, rowHash: hash, paymentStatus: "failed" }),
+    ).toBe(false);
+  });
+});
+
 describe("mapTrackLookupRow", () => {
+  const { plainToken, hash } = generateResumeToken();
+
   const row = {
     id: "aaaaaaaa-bbbb-5ccc-dddd-eeeeeeeeeeee",
     referenceNumber: "REF-1",
@@ -36,6 +94,7 @@ describe("mapTrackLookupRow", () => {
     paymentStatus: "paid",
     fulfillmentStatus: "submitted",
     adminAttentionRequired: false,
+    resumeTokenHash: hash,
   };
 
   it("resolves service and nationality names", () => {
@@ -54,5 +113,46 @@ describe("mapTrackLookupRow", () => {
     expect(mapped.serviceName).toBe("Visa");
     expect(mapped.serviceName).not.toBe("svc-1");
     expect(mapped.serviceName).not.toContain("aaaaaaaa");
+  });
+
+  it("sets canContinue and continueHref when cookie matches an unpaid draft", () => {
+    const mapped = mapTrackLookupRow(
+      { ...row, paymentStatus: "unpaid" },
+      { serviceName: "Tourist Visa", nationalityName: "United States" },
+      { cookiePlain: plainToken },
+    );
+    expect(mapped.canContinue).toBe(true);
+    expect(mapped.continueHref).toBe(`/apply/applications/${row.id}`);
+  });
+
+  it("sets canContinue false without a matching cookie", () => {
+    const mapped = mapTrackLookupRow(
+      { ...row, paymentStatus: "unpaid" },
+      { serviceName: "Tourist Visa", nationalityName: "United States" },
+      { cookiePlain: null },
+    );
+    expect(mapped.canContinue).toBe(false);
+    expect(mapped.continueHref).toBeNull();
+  });
+
+  it("prefers party resume hash over the row hash", () => {
+    const partyToken = generateResumeToken();
+    const mapped = mapTrackLookupRow(
+      { ...row, paymentStatus: "unpaid", resumeTokenHash: hash },
+      { serviceName: "Tourist Visa", nationalityName: "United States" },
+      { cookiePlain: partyToken.plainToken, partyResumeTokenHash: partyToken.hash },
+    );
+    expect(mapped.canContinue).toBe(true);
+    expect(mapped.continueHref).toBe(`/apply/applications/${row.id}`);
+  });
+
+  it("does not set canContinue for paid rows even with a matching cookie", () => {
+    const mapped = mapTrackLookupRow(
+      row,
+      { serviceName: "Tourist Visa", nationalityName: "United States" },
+      { cookiePlain: plainToken },
+    );
+    expect(mapped.canContinue).toBe(false);
+    expect(mapped.continueHref).toBeNull();
   });
 });

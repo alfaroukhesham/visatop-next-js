@@ -8,6 +8,7 @@ export const getCatalogNationality = async (tx: DbTransaction, code: string) => 
     .select({
       code: schema.nationality.code,
       name: schema.nationality.name,
+      dialCode: schema.nationality.dialCode,
       enabled: schema.nationality.enabled,
     })
     .from(schema.nationality)

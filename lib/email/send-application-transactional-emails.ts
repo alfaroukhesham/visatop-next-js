@@ -1,12 +1,19 @@
 import { randomBytes } from "node:crypto";
 import { and, desc, eq } from "drizzle-orm";
+import {
+  isResumeEmailLinkSecretConfigured,
+  signResumeEmailLink,
+} from "@/lib/applications/resume-email-link";
+import { appHref } from "@/lib/app-href";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import {
   application,
   applicationDocument,
   applicationDocumentBlob,
+  applicationParty,
   DOCUMENT_STATUS,
   DOCUMENT_TYPE,
+  nationality,
   payment,
   priceQuote,
   visaService,
@@ -447,5 +454,172 @@ export async function sendOutcomeUaeAuthorityRejectionEmail(
   });
   if (!sent.ok) {
     console.error("[email] Mailgun send failed", { applicationId, requestId, error: sent.error });
+  }
+}
+
+const formatDraftExpiryLine = (draftExpiresAt: Date): string => {
+  return draftExpiresAt.toLocaleString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+    timeZoneName: "short",
+  });
+};
+
+const formatTravelerCountLine = (count: number): string => {
+  if (count === 1) return "1 traveler";
+  return `${count} travelers`;
+};
+
+const buildApplicationDraftStartedBodies = (input: {
+  nationalityName: string;
+  serviceName: string;
+  travelerCount: number;
+  resumeUrl: string;
+  ctaLabel: string;
+  draftExpiresAt: Date;
+}): { text: string; html: string } => {
+  const travelersLine = formatTravelerCountLine(input.travelerCount);
+  const expiresLine = formatDraftExpiryLine(input.draftExpiresAt);
+  const contactText = supportContactPlainText();
+  const text = [
+    "Hello,",
+    "",
+    "You started a visa application with VisaTop.",
+    "",
+    `Nationality: ${input.nationalityName}`,
+    `Visa product: ${input.serviceName}`,
+    `Travelers: ${travelersLine}`,
+    "",
+    `Continue your application before ${expiresLine}:`,
+    input.resumeUrl,
+    "",
+    contactText,
+  ].join("\n");
+
+  const headerDetailsHtml = `<div><strong>Visa product</strong> ${escapeHtml(input.serviceName)}</div>
+          <div><strong>Nationality</strong> ${escapeHtml(input.nationalityName)}</div>
+          <div><strong>Travelers</strong> ${escapeHtml(travelersLine)}</div>`;
+
+  const bodyRowsHtml = `<tr>
+      <td style="padding:16px 18px;">
+        <p style="margin:0;">You started a visa application with VisaTop. Use the button below to continue where you left off.</p>
+        <p style="margin:12px 0 0;font-size:13px;color:#6b7280;">This link expires on ${escapeHtml(expiresLine)}.</p>
+        <p style="margin:20px 0 0;text-align:center;">
+          <a href="${escapeHtml(input.resumeUrl)}" style="display:inline-block;padding:12px 24px;background:#111827;color:#ffffff;text-decoration:none;font-weight:600;border-radius:4px;">${escapeHtml(input.ctaLabel)}</a>
+        </p>
+        ${supportContactParagraphHtml()}
+      </td>
+    </tr>`;
+
+  const html = buildTransactionalEmailHtml({
+    eyebrow: "Continue your application",
+    headerDetailsHtml,
+    bodyRowsHtml,
+  });
+
+  return { text, html };
+};
+
+export async function sendApplicationDraftStartedEmail(input: {
+  primaryApplicationId: string;
+  partyId: string;
+  guestEmail: string;
+  requestId: string | null;
+}): Promise<void> {
+  const { primaryApplicationId, partyId, guestEmail, requestId } = input;
+
+  if (!isResumeEmailLinkSecretConfigured()) {
+    console.warn("[email] GUEST_LINK_INTENT_SECRET not configured; skipping application_draft_started", {
+      primaryApplicationId,
+      partyId,
+      requestId,
+    });
+    return;
+  }
+
+  if (!isMailgunConfigured()) {
+    console.warn("[email] Mailgun not configured; skipping application_draft_started", {
+      primaryApplicationId,
+      partyId,
+      requestId,
+    });
+    return;
+  }
+
+  const payload = await withSystemDbActor(async (tx) => {
+    const [party] = await tx
+      .select()
+      .from(applicationParty)
+      .where(eq(applicationParty.id, partyId))
+      .limit(1);
+    if (!party?.draftExpiresAt) return null;
+
+    const members = await tx
+      .select({ id: application.id, serviceId: application.serviceId })
+      .from(application)
+      .where(eq(application.partyId, partyId));
+    const primary = members.find((m) => m.id === primaryApplicationId) ?? members[0];
+    if (!primary) return null;
+
+    const [[nat], [svc]] = await Promise.all([
+      tx
+        .select({ name: nationality.name })
+        .from(nationality)
+        .where(eq(nationality.code, party.nationalityCode))
+        .limit(1),
+      tx
+        .select({ name: visaService.name })
+        .from(visaService)
+        .where(eq(visaService.id, primary.serviceId))
+        .limit(1),
+    ]);
+
+    const signed = signResumeEmailLink(partyId, primaryApplicationId, party.draftExpiresAt);
+    const resumeUrl = appHref(`/apply/resume?t=${encodeURIComponent(signed)}`);
+
+    return {
+      nationalityName: nat?.name ?? party.nationalityCode,
+      serviceName: svc?.name ?? "",
+      travelerCount: members.length > 0 ? members.length : 1,
+      resumeUrl,
+      ctaLabel: "Continue",
+      draftExpiresAt: party.draftExpiresAt,
+      to: guestEmail.trim().toLowerCase(),
+    };
+  });
+
+  if (!payload?.to) {
+    console.warn("[email] Missing payload for application_draft_started", {
+      primaryApplicationId,
+      partyId,
+      requestId,
+    });
+    return;
+  }
+
+  const claimed = await tryClaimTransactionalEmail(
+    primaryApplicationId,
+    TRANSACTIONAL_EMAIL_KINDS.APPLICATION_DRAFT_STARTED,
+  );
+  if (!claimed) {
+    console.info("[email] application_draft_started already recorded (skip duplicate)", {
+      primaryApplicationId,
+      requestId,
+    });
+    return;
+  }
+
+  const subject = `${transactionalSubjectPrefix()}Continue your visa application`;
+  const { text: bodyText, html: bodyHtml } = buildApplicationDraftStartedBodies(payload);
+  const text = withTransactionalFooter(bodyText);
+  const html = appendTransactionalHtmlFooter(bodyHtml);
+
+  const sent = await mailgunSendText({ to: payload.to, subject, text, html });
+  if (!sent.ok) {
+    console.error("[email] Mailgun send failed", { primaryApplicationId, requestId, error: sent.error });
   }
 }

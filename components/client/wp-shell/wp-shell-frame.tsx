@@ -1,17 +1,35 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
+import {
+  buildCustomerLocaleSetCookieValue,
+} from "@/lib/i18n/customer-locale";
+import { classifyWpShellNavigateUrl } from "@/lib/wp-headless/classify-shell-navigate-url";
+import type { WpShellLanguageOption } from "@/lib/wp-headless/types";
+
+const APP_BASE_PATH = "/visa-processing";
+
+interface ILanguageSwitcherConfig {
+  current: string;
+  available: WpShellLanguageOption[];
+}
 
 function stableShellToken(input: {
   kind: "header" | "footer";
   html: string;
   cssUrls: string[];
   hideLangSwitcher: boolean;
+  languageSwitcher: ILanguageSwitcherConfig | null;
 }): string {
+  const switcherKey = input.languageSwitcher
+    ? `${input.languageSwitcher.current}|${input.languageSwitcher.available.map((l) => l.slug).join(",")}`
+    : "";
   const payload = [
     input.kind,
     input.hideLangSwitcher ? "1" : "0",
+    switcherKey,
     input.cssUrls.join("|"),
     input.html,
   ].join("\0");
@@ -27,6 +45,118 @@ function escapeAttr(value: string): string {
   return value.replace(/"/g, "&quot;");
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+const LANG_SWITCHER_STYLES = `
+      header#header nav.menu ul li.lang-switcher-item > a.lang-switcher-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 20px;
+        white-space: nowrap;
+        transition: border-color 0.2s linear, color 0.2s linear;
+      }
+      header#header nav.menu ul li.lang-switcher-item > a.lang-switcher-trigger:hover {
+        border-color: #FCCD64;
+        color: #FCCD64;
+      }
+      header#header nav.menu ul li.lang-switcher-item > a.lang-switcher-trigger:before,
+      header#header nav.menu ul li.lang-switcher-item > a.lang-switcher-trigger:after {
+        display: none !important;
+        content: none !important;
+      }
+      header#header nav.menu .lang-globe {
+        flex-shrink: 0;
+        vertical-align: middle;
+      }
+      header#header nav.menu .lang-switcher-label {
+        font-size: 14px;
+        font-family: "Inter", sans-serif;
+        font-weight: 400;
+        line-height: 1;
+      }
+      header#header nav.menu ul li.lang-switcher-item .lang-sub-menu {
+        width: 160px;
+        min-width: 160px;
+        columns: 1;
+        column-gap: 0;
+        padding: 16px 20px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      header#header nav.menu ul li.lang-switcher-item .lang-sub-menu li {
+        margin-bottom: 10px;
+        break-inside: avoid;
+      }
+      header#header nav.menu ul li.lang-switcher-item .lang-sub-menu li:last-child {
+        margin-bottom: 0;
+      }
+      header#header nav.menu ul li.lang-switcher-item .lang-sub-menu a {
+        font-size: 14px;
+        font-weight: 400;
+        color: #224D64;
+        padding: 0;
+        display: block;
+      }
+      header#header nav.menu ul li.lang-switcher-item .lang-sub-menu a:hover {
+        color: #CE8E00;
+      }
+      header#header nav.menu ul li.lang-switcher-item .lang-sub-menu a:after {
+        display: none;
+      }
+      header#header nav.menu ul li.lang-switcher-item .lang-sub-menu .current-lang a {
+        color: #CE8E00;
+        font-weight: 600;
+      }
+      header#header nav.menu ul li.lang-switcher-item.open .lang-sub-menu {
+        display: block;
+        opacity: 1;
+        visibility: visible;
+      }
+      @media screen and (max-width: 767px) {
+        header#header nav.menu ul li.lang-switcher-item .lang-sub-menu {
+          width: calc(100% + 40px);
+          transform: unset;
+          left: -20px;
+        }
+        header#header nav.menu ul li.lang-switcher-item > a.lang-switcher-trigger {
+          border-color: rgba(255, 255, 255, 0.25);
+        }
+      }
+`;
+
+function buildInjectedLanguageSwitcherHtml(config: ILanguageSwitcherConfig): string {
+  const current =
+    config.available.find((item) => item.slug === config.current) ??
+    config.available.find((item) => item.isCurrent) ??
+    config.available[0];
+  const currentLabel = escapeHtml(current?.name ?? config.current.toUpperCase());
+  const items = config.available
+    .map((item) => {
+      const currentClass = item.slug === config.current ? " current-lang" : "";
+      return `<li class="lang-item${currentClass}"><a href="#" data-vt-locale="${escapeHtml(item.slug)}">${escapeHtml(item.name)}</a></li>`;
+    })
+    .join("");
+  return `<li class="lang-switcher-item menu-item menu-item-has-children" data-vt-injected-lang-switcher="1">
+    <a href="#" class="lang-switcher-trigger" aria-haspopup="true" aria-expanded="false">
+      <svg class="lang-globe" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"></circle>
+        <path d="M3 12h18M12 3c2.5 2.8 2.5 14.2 0 18M12 3c-2.5 2.8-2.5 14.2 0 18" stroke="currentColor" stroke-width="1.5"></path>
+      </svg>
+      <span class="lang-switcher-label">${currentLabel}</span>
+    </a>
+    <ul class="lang-sub-menu sub-menu">${items}</ul>
+  </li>`;
+}
+
 function buildSrcDoc(input: {
   html: string;
   cssUrls: string[];
@@ -34,6 +164,7 @@ function buildSrcDoc(input: {
   baseHref: string | null;
   postMessageToken: string;
   hideLangSwitcher?: boolean;
+  languageSwitcher?: ILanguageSwitcherConfig | null;
 }): string {
   const links = input.cssUrls
     .filter(Boolean)
@@ -48,6 +179,12 @@ function buildSrcDoc(input: {
 
   // Force WP page-like selectors to apply.
   const bodyClass = "page";
+  const injectLangSwitcher =
+    input.kind === "header" &&
+    Boolean(input.languageSwitcher && input.languageSwitcher.available.length > 0);
+  const injectedSwitcherHtml = injectLangSwitcher
+    ? buildInjectedLanguageSwitcherHtml(input.languageSwitcher!)
+    : "";
 
   // Ensure the iframe document has no default margins and doesn't scroll.
   // WP header is often position:fixed; we still measure its height explicitly from parent.
@@ -56,16 +193,17 @@ function buildSrcDoc(input: {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <base ${baseHref ? `href="${escapeAttr(baseHref)}"` : ""} target="_blank" />
+    <base ${baseHref ? `href="${escapeAttr(baseHref)}"` : ""} />
     ${links}
     <style>
       html, body { margin: 0; padding: 0; background: transparent !important; }
       body { overflow: hidden; }
 
-      /* Fallback alignment: in WP this is handled by theme/plugin CSS, but our headless CSS
-         bundle may omit those rules. This keeps "Time in UAE" pinned to the right. */
-      header#header .featured_on .inner { display: flex; align-items: center; }
-      header#header .featured_on .uae-time { margin-left: auto; }
+      header#header .featured_on,
+      header#header .time_in_uae,
+      header#header .uae-time {
+        display: none !important;
+      }
 
       /* Polylang language switcher (headless markup differs on prod: href="#pll_switcher" with no class). */
       header#header nav.menu a[href="#pll_switcher"] {
@@ -88,19 +226,11 @@ function buildSrcDoc(input: {
         content: none !important;
       }
 
-      /* "Featured on" logos: WP theme constrains these; headless CSS path misses it. */
-      header#header .featured_on .inner a img {
-        height: 16px;
-        width: auto;
-        max-width: 100%;
-        object-fit: contain;
-        filter: brightness(0) invert(1);
-      }
       ${
         input.hideLangSwitcher
           ? `
-      /* DISABLE_WP_LANG_SWITCHER: hide Polylang / theme language UI in the embedded shell */
-      header#header nav.menu ul li.lang-switcher-item {
+      /* Hide native Polylang / theme language UI; keep the injected Next switcher visible. */
+      header#header nav.menu ul li.lang-switcher-item:not([data-vt-injected-lang-switcher]) {
         display: none !important;
       }
       @supports selector(header#header nav.menu li:has(a[href="#pll_switcher"])) {
@@ -114,6 +244,8 @@ function buildSrcDoc(input: {
       `
           : ""
       }
+
+      ${injectLangSwitcher ? LANG_SWITCHER_STYLES : ""}
 
       /* Mobile drawer: theme JS is not bundled in headless shell — replicate drawer + hamburger up to tablet width */
       @media screen and (max-width: 991px) {
@@ -199,6 +331,8 @@ function buildSrcDoc(input: {
     <script>
       var WP_SHELL_TOKEN = ${JSON.stringify(input.postMessageToken)};
       var KIND = ${JSON.stringify(input.kind)};
+      var INJECT_LANG_SWITCHER = ${injectLangSwitcher ? "true" : "false"};
+      var INJECTED_LANG_SWITCHER_HTML = ${JSON.stringify(injectedSwitcherHtml)};
 
       function post(type, payload) {
         try {
@@ -224,15 +358,10 @@ function buildSrcDoc(input: {
         if (height > 0) return height;
         if (KIND !== "header") return height;
         var container = document.querySelector("header#header > .container");
-        var featured = document.querySelector("header#header .featured_on");
-        var maxBottom = 0;
         if (container && container.getBoundingClientRect) {
-          maxBottom = Math.max(maxBottom, Math.ceil(container.getBoundingClientRect().bottom));
+          return Math.max(0, Math.ceil(container.getBoundingClientRect().bottom));
         }
-        if (featured && featured.getBoundingClientRect) {
-          maxBottom = Math.max(maxBottom, Math.ceil(featured.getBoundingClientRect().bottom));
-        }
-        return maxBottom;
+        return height;
       }
 
       function measureAndPost() {
@@ -287,6 +416,30 @@ function buildSrcDoc(input: {
         document.addEventListener("DOMContentLoaded", function () { measureAndPost(); });
       } catch (e) {}
 
+      function injectLanguageSwitcher() {
+        if (!INJECT_LANG_SWITCHER || !INJECTED_LANG_SWITCHER_HTML) return;
+        try {
+          var nav = document.querySelector("header#header nav.menu ul");
+          if (!nav || nav.querySelector("[data-vt-injected-lang-switcher]")) return;
+          nav.insertAdjacentHTML("beforeend", INJECTED_LANG_SWITCHER_HTML);
+        } catch (e) {}
+      }
+
+      function closeLangMenus(exceptLi) {
+        try {
+          var items = document.querySelectorAll("[data-vt-injected-lang-switcher]");
+          for (var i = 0; i < items.length; i++) {
+            if (exceptLi && items[i] === exceptLi) continue;
+            items[i].classList.remove("open");
+            var trigger = items[i].querySelector(".lang-switcher-trigger");
+            if (trigger) trigger.setAttribute("aria-expanded", "false");
+          }
+        } catch (e) {}
+      }
+
+      injectLanguageSwitcher();
+      document.addEventListener("DOMContentLoaded", injectLanguageSwitcher);
+
       document.addEventListener("keydown", function (e) {
         if (e.key === "Escape" && document.body.classList.contains("show-menu")) {
           document.body.classList.remove("show-menu");
@@ -295,6 +448,42 @@ function buildSrcDoc(input: {
       });
 
       document.addEventListener("click", (e) => {
+        const langTrigger =
+          e.target && e.target.closest
+            ? e.target.closest("[data-vt-injected-lang-switcher] > a.lang-switcher-trigger")
+            : null;
+        if (langTrigger) {
+          e.preventDefault();
+          e.stopPropagation();
+          const li = langTrigger.closest("[data-vt-injected-lang-switcher]");
+          if (!li) return;
+          const willOpen = !li.classList.contains("open");
+          closeLangMenus(willOpen ? li : null);
+          li.classList.toggle("open", willOpen);
+          langTrigger.setAttribute("aria-expanded", willOpen ? "true" : "false");
+          notifyParentLayout();
+          return;
+        }
+
+        const langChoice =
+          e.target && e.target.closest
+            ? e.target.closest("[data-vt-injected-lang-switcher] a[data-vt-locale]")
+            : null;
+        if (langChoice) {
+          e.preventDefault();
+          e.stopPropagation();
+          const slug = langChoice.getAttribute("data-vt-locale");
+          if (slug) {
+            post("wp-shell:locale", { slug: slug });
+          }
+          closeLangMenus(null);
+          if (document.body.classList.contains("show-menu")) {
+            document.body.classList.remove("show-menu");
+            notifyParentLayout();
+          }
+          return;
+        }
+
         const mobileBtn =
           e.target && e.target.closest
             ? e.target.closest("header#header .mobile_menu, header#header button.mobile_menu")
@@ -357,14 +546,18 @@ function buildSrcDoc(input: {
           }
         }
 
-        // Normal links: do not intercept. The injected <base target="_blank"> makes the browser open
-        // the same way as right-click Open link in new tab (avoids sandboxed window.open).
         if (!href || href.startsWith("#")) return;
+        if (href === "#pll_switcher" || href.endsWith("#pll_switcher")) return;
+
+        e.preventDefault();
+        e.stopPropagation();
 
         if (document.body.classList.contains("show-menu")) {
           document.body.classList.remove("show-menu");
           notifyParentLayout();
         }
+
+        post("wp-shell:navigate", { href: href });
       }, true);
     </script>
   </body>
@@ -378,11 +571,16 @@ export function WpShellFrame(props: {
   baseHref?: string;
   /** When true, hides WP header/footer language controls (see DISABLE_WP_LANG_SWITCHER). */
   hideLangSwitcher?: boolean;
+  /** Injected lookalike switcher for Next locale (header only). */
+  languageSwitcher?: ILanguageSwitcherConfig;
 }) {
+  const router = useRouter();
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const menuOpenRef = useRef(false);
   const lastGoodHeightRef = useRef<number>(props.kind === "header" ? 120 : 400);
   const [heightPx, setHeightPx] = useState<number>(props.kind === "header" ? 120 : 400);
+  const languageSwitcher =
+    props.kind === "header" && props.languageSwitcher ? props.languageSwitcher : null;
   const postMessageToken = useMemo(
     () =>
       stableShellToken({
@@ -390,8 +588,9 @@ export function WpShellFrame(props: {
         html: props.html,
         cssUrls: props.cssUrls,
         hideLangSwitcher: props.hideLangSwitcher === true,
+        languageSwitcher,
       }),
-    [props.html, props.cssUrls, props.kind, props.hideLangSwitcher],
+    [props.html, props.cssUrls, props.kind, props.hideLangSwitcher, languageSwitcher],
   );
 
   const srcDoc = useMemo(
@@ -403,8 +602,17 @@ export function WpShellFrame(props: {
         baseHref: props.baseHref ?? null,
         postMessageToken,
         hideLangSwitcher: props.hideLangSwitcher === true,
+        languageSwitcher,
       }),
-    [props.html, props.cssUrls, props.kind, props.baseHref, postMessageToken, props.hideLangSwitcher]
+    [
+      props.html,
+      props.cssUrls,
+      props.kind,
+      props.baseHref,
+      postMessageToken,
+      props.hideLangSwitcher,
+      languageSwitcher,
+    ],
   );
 
   const assignIframeSrcDoc = useCallback(() => {
@@ -429,8 +637,33 @@ export function WpShellFrame(props: {
         height?: unknown;
         baseHeight?: unknown;
         menuOpen?: unknown;
+        href?: unknown;
+        slug?: unknown;
       };
       if (msg.token !== postMessageToken) return;
+      if (msg.type === "wp-shell:locale" && typeof msg.slug === "string" && msg.slug.trim()) {
+        const slug = msg.slug.trim().toLowerCase();
+        document.cookie = buildCustomerLocaleSetCookieValue(slug);
+        router.refresh();
+        return;
+      }
+      if (msg.type === "wp-shell:navigate" && typeof msg.href === "string") {
+        const { href } = msg;
+        const appOrigin =
+          typeof window !== "undefined" ? window.location.origin : "https://visatop.com";
+        const target = classifyWpShellNavigateUrl({
+          href,
+          wpBaseHref: props.baseHref ?? null,
+          appBasePath: APP_BASE_PATH,
+          appOrigin,
+        });
+        if (target.mode === "internal") {
+          router.push(target.path);
+        } else {
+          window.location.assign(target.url);
+        }
+        return;
+      }
       if (msg.type === "wp-shell:height" && msg.kind === props.kind) {
         const h = Number(msg.height);
         const baseH = Number(msg.baseHeight);
@@ -464,7 +697,7 @@ export function WpShellFrame(props: {
     return () => {
       window.removeEventListener("message", onMessage);
     };
-  }, [props.kind, postMessageToken]);
+  }, [props.baseHref, props.kind, postMessageToken, router]);
 
   useEffect(() => {
     if (props.kind !== "header") return;

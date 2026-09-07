@@ -19,8 +19,10 @@ const patchBody = z
   .object({
     name: z.string().min(1).max(256).optional(),
     enabled: z.boolean().optional(),
+    dialCode: z
+      .preprocess((val) => (val === "" ? null : val), z.string().regex(/^\d{1,6}$/).nullable().optional()),
   })
-  .refine((v) => v.name !== undefined || v.enabled !== undefined, {
+  .refine((v) => v.name !== undefined || v.enabled !== undefined || v.dialCode !== undefined, {
     message: "At least one field is required",
   });
 
@@ -45,6 +47,7 @@ export async function PATCH(
         .set({
           ...(parsed.data.name !== undefined ? { name: parsed.data.name } : {}),
           ...(parsed.data.enabled !== undefined ? { enabled: parsed.data.enabled } : {}),
+          ...(parsed.data.dialCode !== undefined ? { dialCode: parsed.data.dialCode } : {}),
         })
         .where(eq(schema.nationality.code, codeUpper))
         .returning();
@@ -61,6 +64,7 @@ export async function PATCH(
           code: row.code,
           name: row.name,
           enabled: row.enabled,
+          dialCode: row.dialCode,
         }),
       });
       return jsonOk({ nationality: row }, { requestId });

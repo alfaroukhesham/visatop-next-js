@@ -190,6 +190,20 @@
       "when": 1782200000000,
       "tag": "0026_party_resume_token_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1782210000000,
+      "tag": "0027_nationality_dial_code",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1782220000000,
+      "tag": "0028_nationality_dial_code_seed",
+      "breakpoints": true
     }
   ]
 }
