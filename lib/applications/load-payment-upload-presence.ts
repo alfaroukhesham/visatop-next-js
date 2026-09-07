@@ -1,12 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
-import {
-  application,
-  applicationDocument,
-  catalogDocumentRequirement,
-  DOCUMENT_STATUS,
-} from "@/lib/db/schema";
-import { resolveDocumentRequirements } from "@/lib/apply/document-requirements";
+import { application, applicationDocument, DOCUMENT_STATUS } from "@/lib/db/schema";
+import { loadMemberDocumentSlots } from "@/lib/applications/load-document-requirement-rows";
 import { buildUploadPresence, type TMemberUploadState } from "@/lib/apply/payment-upload-presence";
 import type { UploadPresence } from "@/lib/documents/validation-readiness";
 
@@ -14,19 +9,11 @@ const loadMemberUploadState = async (
   tx: DbTransaction,
   member: { id: string; serviceId: string; nationalityCode: string },
 ): Promise<TMemberUploadState> => {
-  const [requirementRows, uploads] = await Promise.all([
-    tx
-      .select({
-        documentType: catalogDocumentRequirement.documentType,
-        role: catalogDocumentRequirement.role,
-      })
-      .from(catalogDocumentRequirement)
-      .where(
-        and(
-          eq(catalogDocumentRequirement.serviceId, member.serviceId),
-          eq(catalogDocumentRequirement.nationalityCode, member.nationalityCode),
-        ),
-      ),
+  const [slots, uploads] = await Promise.all([
+    loadMemberDocumentSlots(tx, {
+      serviceId: member.serviceId,
+      nationalityCode: member.nationalityCode,
+    }),
     tx
       .select({ documentType: applicationDocument.documentType })
       .from(applicationDocument)
@@ -37,13 +24,6 @@ const loadMemberUploadState = async (
         ),
       ),
   ]);
-
-  const slots = resolveDocumentRequirements(
-    requirementRows.map((r) => ({
-      documentType: r.documentType,
-      role: r.role as "required" | "additional",
-    })),
-  );
   const uploadedTypes = uploads
     .map((u) => u.documentType)
     .filter((t): t is string => t != null);
