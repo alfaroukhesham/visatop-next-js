@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { convertMinorBetweenUsdAed, parsePublicDisplayFxAedPerUsd } from "@/lib/catalog/display-price";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
@@ -21,7 +22,6 @@ import { nationalityDisplayName } from "@/lib/apply/display-names";
 import { DEFAULT_APPLY_PRICE_BADGES, DEFAULT_PARTY_ENABLED, DEFAULT_PARTY_MAX_TRAVELERS, type TApplyPriceBadges } from "@/lib/apply/apply-config";
 import { assertTravelersReady, canAddTraveler, type TPartyTravelerDraft } from "@/lib/apply/party-travelers";
 import { filterGuidedServices, type TChooserPhase } from "@/lib/apply/guided-visa-filter";
-import { APPLY_STAY_LABELS } from "@/lib/apply/apply-stay-labels";
 import type { TStayBucket, TTravelerKind } from "@/lib/catalog/guided-choice";
 import { AllInPriceBadges } from "@/components/apply/all-in-price-badges";
 import { ApplyStepsRail } from "@/components/apply/apply-steps-rail";
@@ -93,43 +93,76 @@ interface ISelectedVisaSummaryProps {
   badges: TApplyPriceBadges;
 }
 
-function SelectedVisaSummary({ service, answers, totalText, price, badges }: ISelectedVisaSummaryProps) {
+const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
+  service,
+  answers,
+  totalText,
+  price,
+  badges,
+}) => {
+  const t = useCustomerT();
+  const stayLabel = answers.stay ? t(`chooser.stayLabels.${answers.stay}`) : null;
   return (
     <aside className="border-secondary/25 bg-card h-fit space-y-4 rounded-2xl border p-4 shadow-[0_12px_30px_rgba(1,32,49,0.08)] lg:sticky lg:top-24">
       <div>
-        <p className="text-secondary text-[10px] font-bold uppercase tracking-[0.2em]">Your visa</p>
+        <p className="text-secondary text-[10px] font-bold uppercase tracking-[0.2em]">{t("start.yourVisaEyebrow")}</p>
         <h2 className="font-heading text-foreground mt-1 text-lg font-bold leading-snug">{service.name}</h2>
       </div>
       <dl className="text-muted-foreground space-y-1.5 text-xs">
-        {service.durationDays != null ? <div className="flex justify-between gap-3"><dt>Stay</dt><dd className="text-foreground font-semibold">{service.durationDays} days</dd></div> : null}
-        {answers.stay ? <div className="flex justify-between gap-3"><dt>Trip</dt><dd className="text-foreground font-semibold">{APPLY_STAY_LABELS[answers.stay]}</dd></div> : null}
-        <div className="flex justify-between gap-3"><dt>Entry</dt><dd className="text-foreground font-semibold">{answers.entry === "multiple" ? "Multiple" : "Single"}</dd></div>
-        {answers.kind === "child" ? <div className="flex justify-between gap-3"><dt>Traveller</dt><dd className="text-foreground font-semibold">Child</dd></div> : null}
+        {service.durationDays != null ? (
+          <div className="flex justify-between gap-3">
+            <dt>{t("start.stayLabel")}</dt>
+            <dd className="text-foreground font-semibold">{t("start.stayDays", { count: service.durationDays })}</dd>
+          </div>
+        ) : null}
+        {stayLabel ? (
+          <div className="flex justify-between gap-3">
+            <dt>{t("start.tripLabel")}</dt>
+            <dd className="text-foreground font-semibold">{stayLabel}</dd>
+          </div>
+        ) : null}
+        <div className="flex justify-between gap-3">
+          <dt>{t("start.entryLabel")}</dt>
+          <dd className="text-foreground font-semibold">
+            {answers.entry === "multiple" ? t("start.entryMultiple") : t("start.entrySingle")}
+          </dd>
+        </div>
+        {answers.kind === "child" ? (
+          <div className="flex justify-between gap-3">
+            <dt>{t("start.travellerLabel")}</dt>
+            <dd className="text-foreground font-semibold">{t("start.travellerChild")}</dd>
+          </div>
+        ) : null}
       </dl>
       <div className="border-border border-t pt-3">
-        <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">Total</p>
-        <p className="font-heading text-foreground mt-0.5 text-xl font-bold tabular-nums">{totalText ?? price?.text ?? "At checkout"}</p>
-        {price?.isEstimate ? <p className="text-muted-foreground mt-1 text-[10px]">Estimated total</p> : null}
+        <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">{t("start.totalLabel")}</p>
+        <p className="font-heading text-foreground mt-0.5 text-xl font-bold tabular-nums">
+          {totalText ?? price?.text ?? t("start.atCheckout")}
+        </p>
+        {price?.isEstimate ? <p className="text-muted-foreground mt-1 text-[10px]">{t("start.estimatedTotal")}</p> : null}
       </div>
       <AllInPriceBadges badges={badges} />
     </aside>
   );
-}
+};
 
 interface IChooserCardHeaderProps {
   nationalityName: string;
 }
 
-const ChooserCardHeader: FC<IChooserCardHeaderProps> = ({ nationalityName }) => (
-  <header className="min-w-0 space-y-1">
-    <h1 className="font-heading text-foreground text-xl! font-semibold leading-snug tracking-tight md:text-[1.75rem]!">
-      Choose your visa
-    </h1>
-    <p className="text-muted-foreground text-sm leading-relaxed">
-      Passport: <span className="text-foreground font-semibold">{nationalityName}</span>
-    </p>
-  </header>
-);
+const ChooserCardHeader: FC<IChooserCardHeaderProps> = ({ nationalityName }) => {
+  const t = useCustomerT();
+  return (
+    <header className="min-w-0 space-y-1">
+      <h1 className="font-heading text-foreground text-xl! font-semibold leading-snug tracking-tight md:text-[1.75rem]!">
+        {t("start.chooseVisaTitle")}
+      </h1>
+      <p className="text-muted-foreground text-sm leading-relaxed">
+        {t("start.passportLabel")} <span className="text-foreground font-semibold">{nationalityName}</span>
+      </p>
+    </header>
+  );
+};
 
 interface IStartApplicationFormProps {
   /** Set on home; this page is only reachable as `/apply/start?nationality=XX`. */
@@ -141,6 +174,7 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
   initialNationalityCode,
   nationalityName,
 }) => {
+  const t = useCustomerT();
   const router = useRouter();
   const sessionEmail = useClientAuthStore((s) => s.session?.user?.email);
   const [nationalities, setNationalities] = useState<Nationality[]>([]);
@@ -287,7 +321,7 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
     setError(null);
     const trimmedEmail = email.trim();
     if (!nationality) {
-      setError("Choose a service.");
+      setError(t("start.chooseServiceError"));
       return;
     }
     const travelers: TPartyTravelerDraft[] = [
@@ -296,15 +330,19 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
     ];
     const ready = assertTravelersReady(travelers, partyMaxTravelers);
     if (!ready.ok) {
-      setError(ready.message);
+      setError(
+        ready.code === "maxTravelers"
+          ? t("start.party.maxTravelers", { count: partyMaxTravelers })
+          : t(`start.party.${ready.code}`),
+      );
       return;
     }
     if (!trimmedEmail) {
-      setError("Enter your email address.");
+      setError(t("start.enterEmailError"));
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setError("Enter a valid email address.");
+      setError(t("start.enterValidEmailError"));
       return;
     }
     setSubmitting(true);
@@ -384,14 +422,12 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
       <div className="space-y-4 pb-24">
         <ChooserCardHeader nationalityName={nationalityName} />
         <p className="text-muted-foreground text-sm leading-relaxed" role="alert">
-          We could not load visa options for{" "}
-          <span className="text-foreground font-semibold">
-            {nationalityDisplayName(nationalityCode, nationalities)}
-          </span>
-          . Return to the home page and choose your nationality again.
+          {t("start.nationalityUnavailable", {
+            nationality: nationalityDisplayName(nationalityCode, nationalities),
+          })}
         </p>
         <ClientButton type="button" brand="cta" onClick={() => router.push("/")}>
-          Back to home
+          {t("start.backToHome")}
         </ClientButton>
       </div>
     );
@@ -413,7 +449,7 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
         <section className="space-y-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <ChooserCardHeader nationalityName={nationalityName} />
-            <div className="flex items-center gap-1 sm:pt-1" role="group" aria-label="Show prices in">
+            <div className="flex items-center gap-1 sm:pt-1" role="group" aria-label={t("start.showPricesIn")}>
               {(["USD", "AED"] as const).map((c) => {
                 const active = displayCurrency === c;
                 return (
@@ -452,14 +488,14 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
 
           {serviceId && partyEnabled && additionalTravelers.length > 0 ? (
             <div className="space-y-4">
-              {additionalTravelers.map((t, idx) => {
+              {additionalTravelers.map((traveler, idx) => {
                 const shortlist = answers.stay
                   ? (() => {
                       const ids = new Set(
                         filterGuidedServices(services, {
                           stay: answers.stay,
                           entry: answers.entry,
-                          kind: t.kind,
+                          kind: traveler.kind,
                         }).map((s) => s.id),
                       );
                       return services.filter((s) => ids.has(s.id));
@@ -467,19 +503,19 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
                   : [];
                 return (
                   <div
-                    key={t.key}
+                    key={traveler.key}
                     className="border-border bg-muted/30 space-y-4 rounded-2xl border-2 p-5"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-foreground text-sm font-semibold">
-                        Traveller {idx + 2}
+                        {t("start.party.travellerNumber", { number: idx + 2 })}
                       </p>
                       <button
                         type="button"
-                        onClick={() => removeTraveler(t.key)}
+                        onClick={() => removeTraveler(traveler.key)}
                         className="text-muted-foreground hover:text-error text-xs font-semibold uppercase tracking-widest"
                       >
-                        Remove
+                        {t("start.party.remove")}
                       </button>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -487,22 +523,22 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
                         <button
                           key={k}
                           type="button"
-                          onClick={() => updateTraveler(t.key, { kind: k, serviceId: "" })}
+                          onClick={() => updateTraveler(traveler.key, { kind: k, serviceId: "" })}
                           className={cn(
                             "border-border bg-card text-foreground rounded-xl border-2 px-4 py-2 text-sm font-semibold transition-colors",
-                            t.kind === k ? "border-primary bg-accent/25" : "hover:border-secondary",
+                            traveler.kind === k ? "border-primary bg-accent/25" : "hover:border-secondary",
                           )}
                         >
-                          {k === "adult" ? "Adult" : "Child"}
+                          {k === "adult" ? t("start.party.adult") : t("start.party.child")}
                         </button>
                       ))}
                     </div>
                     <select
-                      value={t.serviceId}
-                      onChange={(e) => updateTraveler(t.key, { serviceId: e.target.value })}
+                      value={traveler.serviceId}
+                      onChange={(e) => updateTraveler(traveler.key, { serviceId: e.target.value })}
                       className="border-border bg-card text-foreground w-full rounded-xl border-2 px-3 py-3 text-sm"
                     >
-                      <option value="">Choose a visa</option>
+                      <option value="">{t("start.party.chooseVisaOption")}</option>
                       {shortlist.map((s) => {
                         const price = formatPriceForDisplay(s, displayCurrency);
                         return (
@@ -522,11 +558,11 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
           {serviceId ? (
             <>
               <p className="text-muted-foreground text-xs leading-relaxed">
-                Price includes the visa service. Travel insurance is separate if your destination requires it.
+                {t("start.priceIncludesNote")}
               </p>
 
               <div className="border-t border-border/80 pt-6">
-                <ClientField id="apply-email" label="Email *">
+                <ClientField id="apply-email" label={t("start.emailLabel")}>
                   <ClientInput
                     id="apply-email"
                     type="email"
@@ -534,11 +570,11 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
+                    placeholder={t("start.emailPlaceholder")}
                     className="rounded-xl"
                   />
                   <p className="text-muted-foreground mt-1.5 text-xs leading-relaxed">
-                    We’ll send application updates and your receipt to this address.
+                    {t("start.emailHelper")}
                   </p>
                 </ClientField>
               </div>
@@ -549,7 +585,7 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
 
       {serviceId && totalText ? (
         <div className="border-secondary/20 bg-secondary/5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 px-5 py-4">
-          <p className="text-foreground text-sm font-semibold">Checkout total</p>
+          <p className="text-foreground text-sm font-semibold">{t("start.checkoutTotal")}</p>
           <p className="font-heading text-foreground text-xl font-bold tabular-nums">{totalText}</p>
         </div>
       ) : null}
@@ -565,7 +601,7 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
             onClick={() => router.push("/")}
             className="w-full justify-center rounded-xl font-semibold sm:w-auto"
           >
-            Previous
+            {t("start.previousButton")}
           </ClientButton>
         ) : null}
         {serviceId ? (
@@ -578,10 +614,10 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
             {submitting ? (
               <>
                 <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
-                Loading…
+                {t("start.loading")}
               </>
             ) : (
-              "Continue with this visa"
+              t("start.continueWithVisa")
             )}
           </ClientButton>
         ) : null}

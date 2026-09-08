@@ -15,14 +15,14 @@ describe("assertTravelersReady", () => {
   it("rejects empty travelers", () => {
     expect(assertTravelersReady([], 2)).toEqual({
       ok: false,
-      message: "Add at least one traveller.",
+      code: "addAtLeastOne",
     });
   });
 
   it("rejects empty serviceId", () => {
     expect(
       assertTravelersReady([{ key: "a", kind: "adult" as const, serviceId: "" }], 2),
-    ).toEqual({ ok: false, message: "Choose a visa for every traveller." });
+    ).toEqual({ ok: false, code: "chooseVisaForAll" });
   });
 
   it("rejects more than max", () => {
@@ -33,7 +33,7 @@ describe("assertTravelersReady", () => {
     ];
     expect(assertTravelersReady(travelers, 2)).toEqual({
       ok: false,
-      message: "Maximum 2 travellers per checkout.",
+      code: "maxTravelers",
     });
   });
 

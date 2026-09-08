@@ -15,6 +15,7 @@ export const nationality = pgTable(
   {
     code: text("code").primaryKey(), // e.g. ISO 3166-1 alpha-2
     name: text("name").notNull(),
+    dialCode: text("dial_code"),
     enabled: boolean("enabled").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")

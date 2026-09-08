@@ -4,10 +4,25 @@ import { application, user } from "@/lib/db/schema";
 import type { InferSelectModel } from "drizzle-orm";
 import type { Cursor } from "@/lib/api/cursor";
 import { computeClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
+import { verifyResumeToken } from "@/lib/applications/resume-token";
 
 type ApplicationRow = InferSelectModel<typeof application>;
 
 const TRACK_LOOKUP_LIMIT = 50;
+
+const RESUMABLE_TRACK_PAYMENT_STATUSES = new Set(["unpaid", "checkout_created"]);
+
+export type TCanContinueTrackRowInput = {
+  cookiePlain: string | null;
+  rowHash: string | null;
+  paymentStatus: string;
+};
+
+export const canContinueTrackRow = (input: TCanContinueTrackRowInput): boolean => {
+  if (!input.cookiePlain || !input.rowHash) return false;
+  if (!RESUMABLE_TRACK_PAYMENT_STATUSES.has(input.paymentStatus)) return false;
+  return verifyResumeToken(input.cookiePlain, input.rowHash);
+};
 
 export function normalizeEmailInput(raw: string): string | null {
   const s = raw.trim().toLowerCase();
@@ -116,7 +131,10 @@ export type TrackLookupDisplayRow = {
   serviceId: string;
   serviceName: string;
   nationalityName: string;
+  paymentStatus: string;
   clientTracking: ReturnType<typeof computeClientApplicationTracking>;
+  canContinue: boolean;
+  continueHref: string | null;
 };
 
 /**
@@ -134,9 +152,18 @@ export function mapTrackLookupRow(
     paymentStatus: string;
     fulfillmentStatus: string;
     adminAttentionRequired: boolean;
+    resumeTokenHash?: string | null;
   },
   names: { serviceName: string | null; nationalityName: string },
+  opts: { cookiePlain?: string | null; partyResumeTokenHash?: string | null } = {},
 ): TrackLookupDisplayRow {
+  const rowHash = opts.partyResumeTokenHash ?? row.resumeTokenHash ?? null;
+  const canContinue = canContinueTrackRow({
+    cookiePlain: opts.cookiePlain ?? null,
+    rowHash,
+    paymentStatus: row.paymentStatus,
+  });
+
   return {
     applicationId: row.id,
     referenceDisplay: row.referenceNumber ?? row.id.slice(0, 8),
@@ -144,11 +171,14 @@ export function mapTrackLookupRow(
     serviceId: row.serviceId,
     serviceName: names.serviceName ?? "Visa",
     nationalityName: names.nationalityName,
+    paymentStatus: row.paymentStatus,
     clientTracking: computeClientApplicationTracking({
       applicationStatus: row.applicationStatus,
       paymentStatus: row.paymentStatus,
       fulfillmentStatus: row.fulfillmentStatus,
       adminAttentionRequired: row.adminAttentionRequired,
     }),
+    canContinue,
+    continueHref: canContinue ? `/apply/applications/${row.id}` : null,
   };
 }

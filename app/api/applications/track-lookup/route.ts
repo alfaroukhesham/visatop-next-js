@@ -4,8 +4,9 @@ import { inArray } from "drizzle-orm";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { decodeCursor, encodeCursor, parseLimit } from "@/lib/api/cursor";
 import { jsonError, jsonOk } from "@/lib/api/response";
+import { readResumeTokenFromRequestCookies } from "@/lib/applications/resume-cookie";
 import { withSystemDbActor } from "@/lib/db/actor-context";
-import { nationality, visaService } from "@/lib/db/schema";
+import { applicationParty, nationality, visaService } from "@/lib/db/schema";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
 import {
   findApplicationsForContactTrackLookupPaginated,
@@ -43,11 +44,13 @@ export async function POST(req: Request) {
     max: 50,
   });
   const cursor = decodeCursor(parsed.data.cursor ?? null);
+  const cookiePlain = readResumeTokenFromRequestCookies(req.headers.get("cookie"));
 
-  const { items: rows, hasMore, services, nationalities } = await withSystemDbActor(async (tx) => {
+  const { items: rows, hasMore, services, nationalities, partyHashes } = await withSystemDbActor(async (tx) => {
     const result = await findApplicationsForContactTrackLookupPaginated(tx, contact, { limit, cursor });
     const serviceIds = [...new Set(result.items.map((r) => r.serviceId))];
     const nationalityCodes = [...new Set(result.items.map((r) => r.nationalityCode))];
+    const partyIds = [...new Set(result.items.map((r) => r.partyId).filter(Boolean))] as string[];
     const services = serviceIds.length
       ? await tx
           .select({ id: visaService.id, name: visaService.name })
@@ -60,14 +63,29 @@ export async function POST(req: Request) {
           .from(nationality)
           .where(inArray(nationality.code, nationalityCodes))
       : [];
-    return { items: result.items, hasMore: result.hasMore, services, nationalities };
+    const partyHashes = partyIds.length
+      ? await tx
+          .select({ id: applicationParty.id, resumeTokenHash: applicationParty.resumeTokenHash })
+          .from(applicationParty)
+          .where(inArray(applicationParty.id, partyIds))
+      : [];
+    return { items: result.items, hasMore: result.hasMore, services, nationalities, partyHashes };
   });
 
+  const partyHashById = new Map(partyHashes.map((p) => [p.id, p.resumeTokenHash]));
+
   const applications = rows.map((row) =>
-    mapTrackLookupRow(row, {
-      serviceName: services.find((s) => s.id === row.serviceId)?.name ?? null,
-      nationalityName: nationalityDisplayName(row.nationalityCode, nationalities),
-    }),
+    mapTrackLookupRow(
+      row,
+      {
+        serviceName: services.find((s) => s.id === row.serviceId)?.name ?? null,
+        nationalityName: nationalityDisplayName(row.nationalityCode, nationalities),
+      },
+      {
+        cookiePlain,
+        partyResumeTokenHash: row.partyId ? (partyHashById.get(row.partyId) ?? null) : null,
+      },
+    ),
   );
 
   const last = rows[rows.length - 1];

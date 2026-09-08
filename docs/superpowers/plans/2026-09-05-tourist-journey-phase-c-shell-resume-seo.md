@@ -6,11 +6,11 @@
 > **Index:** [2026-09-05-tourist-journey-README.md](./2026-09-05-tourist-journey-README.md)  
 > **Rule:** `.cursor/rules/visa-admin-and-customer-together.mdc`
 
-**Goal:** Tourist chrome (no coach overlay, no Featured bar, no autoplay, 4 pre-pay steps), phone country-code from **nationality.dialCode**, resume banner + signed email link + track Continue, apply-home H1/meta/blog row from **Settings**.
+**Goal:** Finish tourist chrome (hide Featured/Khaleej, one Apply/Track CTA from WP, same-tab iframe links), locale plumbing (`?locale=` + cookie + lookalike switcher; **string catalogs last**), phone country-code from **nationality.dialCode**, guest resume **modal** via `vt_resume` (no fingerprint) + signed email link + track Continue, apply-home H1/meta/blog from **Settings**. Admin UI stays English.
 
-**Architecture:** Reuse `vt_resume` and HMAC from `lib/applications/guest-link-intent.ts`. Email token is `{ partyId, primaryApplicationId, exp }` signed with `GUEST_LINK_INTENT_SECRET` — not the cookie plaintext. GET `/apply/resume?t=` sets `vt_resume` and redirects. Draft TTL already admin (`draft_ttl_hours`). Track names already shipped in Phase A.
+**Architecture:** Reuse `vt_resume` and HMAC from `lib/applications/guest-link-intent.ts`. Email token is `{ partyId, primaryApplicationId, exp }` signed with `GUEST_LINK_INTENT_SECRET` — not the cookie plaintext. GET `/apply/resume?t=` sets `vt_resume` and redirects. Draft TTL already admin (`draft_ttl_hours`). Track names already shipped in Phase A. WP header/footer stay the global chrome (`GET /wp-json/headless/v1/layout`); Next `ClientAppHeader` is auth-only. Locale list is **live Polylang**, not a hardcoded 10-language map.
 
-**Tech Stack:** Existing apply layout, `WpShellFrame`, Settings/`platform_setting` (same pattern as draft TTL), Catalog nationality form/PATCH, Mailgun transactional kinds.
+**Tech Stack:** Existing apply layout, `WpShellFrame`, Settings/`platform_setting` (same pattern as draft TTL), Catalog nationality form/PATCH, Mailgun transactional kinds. i18n library TBD in Task 7 (must follow Polylang slugs from `pll/v1/languages` / layout `language.available`).
 
 **Do not:**
 
@@ -18,8 +18,13 @@
 - Hardcode apply-home title / H1 / blog hrefs in `page.tsx`.
 - Put resume tokens or PII in localStorage.
 - Regress Catalog list-then-edit or Document rules.
+- Duplicate Apply / Track in the Next.js bar when the WP header already has those items.
+- Invent a locale list in TS. Read Polylang (`GET https://visatop.com/wp-json/pll/v1/languages` or layout `language.available`).
+- Re-open the 4-step rail / coach overlay / `HomeDemoVideo` work unless the user asks.
 
-**Allowed in code (product chrome, not catalog):** removing `ApplyJourneyStepBar`, 4-step rail, hiding WP Featured strip, not mounting `HomeDemoVideo`.
+**Already shipped (do not redo):** `ApplyJourneyStepBar` is unused. `HomeDemoVideo` is gone. Guided visa choice is multi-question and absorbs nationality as step 1. Rail is four items (Visa → Documents → Payment → Status). Pay is gated on email + required uploads (Phase B) — not “empty docs still reach checkout.”
+
+**Allowed in code (product chrome, not catalog):** hiding WP Featured / Khaleej time, removing iframe `target="_blank"`, dropping Next Apply/Track nav items.
 
 ---
 
@@ -27,46 +32,55 @@
 
 | Area | Create | Modify |
 |---|---|---|
-| Chrome | — | `ApplyJourneyStepBar` call sites, `apply-steps-rail.tsx`, `wp-shell-frame.tsx`, `app/(client)/page.tsx` |
-| Dial (admin + apply) | `drizzle/0026_nationality_dial_code.sql` | `visa.ts` nationality, `catalog-types.ts`, nationality form + PATCH, `get-catalog-entity.ts`, `applicant-review.tsx`, `phone-country-field.tsx` |
+| Chrome | — | `wp-shell-frame.tsx` (hide Featured/Khaleej; same-tab links), `client-app-header.tsx` (drop Apply/Track; keep Login/Account), `client-shell-footer.tsx` if it still duplicates Apply |
+| Dial (admin + apply) | `drizzle/0027_nationality_dial_code.sql` | `visa.ts` nationality, `catalog-types.ts`, nationality form + PATCH, `get-catalog-entity.ts`, `applicant-review.tsx`, `phone-country-field.tsx` |
 | Apply-home copy (admin) | `lib/apply/apply-home-copy.ts`, `components/admin/apply-home-seo-settings.tsx`, `components/admin/apply-blog-link-settings.tsx` | Settings page, `app/(client)/page.tsx`, `lib/seo/home-page-facts.ts`, `lib/seo/home-page-json-ld.ts` |
 | Resume | `lib/applications/resume-email-link.ts`, `lib/applications/resume-hint.ts`, `app/api/applications/resume-hint/route.ts`, `app/(client)/apply/resume/page.tsx`, `components/apply/resume-banner.tsx` | create-draft route, track form, transactional email kinds |
 | Track Continue | — | track-lookup API + form, signed-in list if needed |
+| i18n | `lib/i18n/*` (TBD after Task 7 design) | `(client)/layout.tsx` pass `lang` into `fetchWpShellModel`; WP switcher; apply/track/auth copy |
 
 ---
 
-### Task 1: Kill coach overlay + Status-as-pre-pay + autoplay + Featured bar
+### Task 1: Remaining chrome — Featured/Khaleej, one Apply/Track, same-tab WP links
+
+Coach overlay, autoplay video, and the 4-step guided-choice flow are **already done**. Do not rewrite the rail.
 
 **Files:**
-- Modify: `app/(client)/page.tsx`, start, draft, payment — **stop rendering** `ApplyJourneyStepBar`.
-- Modify: `components/apply/apply-steps-rail.tsx`
 - Modify: `components/client/wp-shell/wp-shell-frame.tsx`
-- Modify: home page — remove `<HomeDemoVideo />`
+- Modify: `components/client/client-app-header.tsx`
+- Modify: `components/client/client-shell-footer.tsx` if it still links Apply
+- Leave: `WpShellFallbackHeader` Apply/Portal links (WP-down only)
 
-**Rail:** four pre-pay steps only: Nationality → Visa → Documents → Payment. `currentStep`: `1 | 2 | 3 | 4`. Submitted page has no pre-pay rail.
-
-**Featured / Khaleej:** tourist CSS on apply routes:
+**1a — Hide Featured on / Khaleej time** in the injected WP header (`buildSrcDoc` styles). Match selectors already used in `WpShellFrame`:
 
 ```css
 header#header .featured_on,
-header#header .time_in_uae {
+header#header .time_in_uae,
+header#header .uae-time {
   display: none !important;
 }
 ```
 
-Match selectors already used in `WpShellFrame`.
+After hide, header height measurement must not still add `.featured_on` bottom (see `measureTargetHeight`).
 
-**Video:** no autoplay. Optional text link “How it works” to an existing WP URL **from Settings** (Task 4), not a new player.
+**1b — One Apply / Track CTA (WP wins).** Live WP header menu already has those items (`/visa-processing` and `/visa-processing/apply/track`, translated per Polylang). Remove the Next.js duplicates:
 
-- [ ] **Step 1:** Grep `ApplyJourneyStepBar` and `HomeDemoVideo`; remove from tourist apply surfaces.
-- [ ] **Step 2:** Rail is 4 steps.
+- `ClientAppHeader` `NAV_BASE`: delete Apply and Track.
+- Keep **Login / Register**, **Account**, **Sign out**, welcome name.
+- Do not add a second language selector in this task (Task 7).
+
+**1c — Same tab for iframe links.** Today `<base target="_blank">` plus a comment in `wp-shell-frame.tsx` (~L360) opens every WP header/footer link in a new tab. Remove `target="_blank"`. Do **not** leave clicks trapped inside the sandboxed iframe: intercept `<a href>` (non-hash) and navigate the **parent** (`postMessage` → `window.top.location` / Next router for `/visa-processing/*`). Hash / `#pll_switcher` / menu toggles stay in-iframe.
+
+- [ ] **Step 1:** Featured/Khaleej hidden; header height shrinks (no empty strip).
+- [ ] **Step 2:** Apply/Track appear once (WP). Next bar is auth only.
+- [ ] **Step 3:** WP menu click stays in the same tab; apply/track land on the Next app.
 
 ---
 
 ### Task 2: Nationality dial code (admin) + phone field (apply)
 
 **Files:**
-- Create: `drizzle/0026_nationality_dial_code.sql` (journal idx 26)
+- Create: `drizzle/0027_nationality_dial_code.sql` (journal idx 26)
 - Modify: `lib/db/schema/visa.ts` — `nationality.dialCode` text null
 - Modify: `lib/admin/catalog/catalog-types.ts`, `get-catalog-entity.ts`
 - Modify: `components/admin/catalog-nationality-form.tsx`
@@ -249,7 +263,53 @@ Do not expose `canContinue: true` without cookie match.
 
 ---
 
-### Task 7: Phase C verification + Grok QA handoff
+### Task 7: i18n — Polylang locales on the Next.js client (design, then implement)
+
+**Do not implement until the user signs off the design in this task.** Dynamic = locale list and WP chrome come from WordPress at request time; Next copy is keyed to those slugs. Do not hardcode “ten languages.”
+
+**Live inventory** (2026-09-07, `GET https://visatop.com/wp-json/pll/v1/languages` and `GET /wp-json/headless/v1/layout?include=menus&lang=ar`):
+
+| Slug | Locale | Name | RTL | Home |
+|---|---|---|---|---|
+| `en` | `en_GB` | English (**default**) | no | `https://visatop.com/` |
+| `fr` | `fr_FR` | Français | no | `/fr/` |
+| `es` | `es_ES` | Español | no | `/es/` |
+| `it` | `it_IT` | Italiano | no | `/it/` |
+| `tr` | `tr_TR` | Türkçe | no | `/tr/` |
+| `ar` | `ar` | العربية | **yes** | `/ar/` |
+| `de` | `de_DE` | Deutsch | no | `/de/` |
+| `hi` | `hi_IN` | हिन्दी | no | `/hi/` |
+| `tl` | `tl` | Tagalog | no | `/tl/` |
+| `ru` | `ru_RU` | Русский | no | `/ru/` |
+| `ha` | `ha_NG` | Hausa | no | `/ha/` |
+
+That is **11** active languages (not 10). Layout payload already includes `language.requested`, `language.current`, `language.available[]`. `fetchWpShellModel` already accepts `lang` but `(client)/layout.tsx` does **not** pass it. `DISABLE_WP_LANG_SWITCHER` currently hides the Polylang control.
+
+**Already true:** WP Apply/Track labels translate when `?lang=` is set (Arabic example: تقديم على التأشيرة / تتبع التأشيرة).
+
+**Locked UX (2026-09-07):**
+
+- **WP is the entry source of truth.** Non-English WP menus/CTAs will be updated in the WP dashboard to land on the Next app with a locale query, e.g. `/visa-processing?locale=ar` and `/visa-processing/apply/track?locale=ar`. English may omit the param or use `locale=en`.
+- Next **reads `locale`** (Polylang slug: `en|fr|es|it|tr|ar|de|hi|tl|ru|ha`). Unknown/missing → `en`. Persist in a cookie so later `/apply/...` hops keep the language without repeating the query.
+- One language control that **looks like the WP header pill** and sits **in the WP navbar we embed**. It switches **Next.js** (cookie + optional URL rewrite). Do **not** send the user to `visatop.com/{lang}/`.
+- Native Polylang in the headless iframe is **broken** — keep it hidden. Inject the lookalike; clicks `postMessage` the slug to the parent.
+- After locale is known, pass it into `fetchWpShellModel({ lang })` so embedded Apply/Track labels match (still no navigation to the WP site).
+
+**WP dashboard checklist (ops, not a deploy):** for each Polylang menu, set Apply / Apply Now / Track to the Next paths **plus** `?locale={slug}`. Same-tab. Do not point those items at `visatop.com/{slug}/` if the user is starting an application.
+
+**Open decisions (resolve with the user before code):**
+
+1. **Scope** — customer apply/track/auth in v1, vs also admin.
+2. **Who edits Next strings** — repo message files vs Francesco-editable Settings.
+3. **RTL** — `ar` must flip the Next apply canvas (recommended yes).
+
+- [ ] **Step 1:** User approves v1 scope and who edits strings.
+- [ ] **Step 2:** Spec `docs/superpowers/specs/YYYY-MM-DD-apply-i18n-design.md` (do not commit until approved).
+- [ ] **Step 3:** Implement only what that spec locks. Tests: `?locale=ar` sets `ar` + `dir=rtl`; unknown slug → `en`; cookie survives a hop to `/apply/start`; layout fetch includes `lang`.
+
+---
+
+### Task 8: Phase C verification + Grok QA handoff
 
 ```bash
 pnpm exec vitest run lib/apply/phone-country.test.ts lib/apply/apply-home-copy.test.ts lib/applications/resume-email-link.test.ts lib/applications/resume-hint.test.ts app/api/applications/track-lookup/route.test.ts app/api/admin/catalog/nationalities
@@ -257,7 +317,7 @@ pnpm run lint
 pnpm run test:ci
 ```
 
-`pnpm run build` before claiming staging-ready.
+`pnpm run build` before claiming staging-ready. Include i18n tests from Task 7 once that spec is implemented.
 
 ---
 
@@ -294,16 +354,24 @@ Francesco must have, **in admin**, before QA:
 
 ### Chrome
 
-- No STEP n/5 overlay.
-- No Featured-on / Khaleej on apply home.
-- No autoplay.
-- Rail: 4 pre-pay steps.
+- No STEP n/5 overlay (already shipped).
+- No Featured-on / Khaleej time strip on the WP header.
+- Apply and Track appear **once** (WP header). Next bar is Login / Account only.
+- WP header/footer links open in the **same** tab (not `target="_blank"`).
+- No autoplay (already shipped).
 - Phone: dial from Catalog; India defaults to +91 only after Francesco set it.
 
-### Pay-first
+### Pay-first (Phase B — do not regress)
 
-- Empty docs + blank name still reach checkout. Duplicate-tap does not create two checkouts.
-- After pay with empty extra: customer status paid / in progress — no “automation failed”.
+- Pay requires **email + every required document slot**. Missing name/DOB/phone warn only.
+- Duplicate-tap does not create two checkouts.
+- After pay: customer status paid / in progress — no “automation failed”.
+
+### i18n (after Task 7 sign-off)
+
+- Switching language updates WP chrome **and** Next apply/track copy for that Polylang slug.
+- Arabic is RTL on the apply canvas.
+- Unknown/new slug falls back to English until catalogs exist.
 
 ### Do not pass if
 

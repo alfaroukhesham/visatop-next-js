@@ -6,18 +6,20 @@ export type TPartyTravelerDraft = {
   serviceId: string;
 };
 
+export type TTravelersReadyErrorCode = "addAtLeastOne" | "maxTravelers" | "chooseVisaForAll";
+
 export const canAddTraveler = (count: number, max: number): boolean => count < max;
 
 export const assertTravelersReady = (
   travelers: TPartyTravelerDraft[],
   max: number,
-): { ok: true } | { ok: false; message: string } => {
-  if (travelers.length < 1) return { ok: false, message: "Add at least one traveller." };
+): { ok: true } | { ok: false; code: TTravelersReadyErrorCode } => {
+  if (travelers.length < 1) return { ok: false, code: "addAtLeastOne" };
   if (travelers.length > max) {
-    return { ok: false, message: `Maximum ${max} travellers per checkout.` };
+    return { ok: false, code: "maxTravelers" };
   }
   if (travelers.some((t) => !t.serviceId)) {
-    return { ok: false, message: "Choose a visa for every traveller." };
+    return { ok: false, code: "chooseVisaForAll" };
   }
   return { ok: true };
 };

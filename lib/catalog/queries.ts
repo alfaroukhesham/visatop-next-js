@@ -21,6 +21,7 @@ type SchemaDb = DbTransaction;
 export type PublicNationalityRow = {
   code: string;
   name: string;
+  dialCode: string | null;
 };
 
 export async function listPublicNationalities(
@@ -30,6 +31,7 @@ export async function listPublicNationalities(
     .select({
       code: schema.nationality.code,
       name: schema.nationality.name,
+      dialCode: schema.nationality.dialCode,
     })
     .from(schema.nationality)
     .where(

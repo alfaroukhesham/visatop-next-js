@@ -2,8 +2,8 @@
 
 import { useState, type FC } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ChevronDown, Loader2 } from "lucide-react";
-import { ClientButton } from "@/components/client/client-button";
+import { AlertTriangle, ChevronDown } from "lucide-react";
+import { DoubleDecision } from "@/components/client/double-decision";
 import { ClientInput } from "@/components/client/client-input";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
@@ -13,9 +13,11 @@ import { PAY_BLOCKED_MISSING_DOCS_COPY } from "@/lib/apply/payment-copy";
 import { parseDobInputToIsoUtc, type Readiness } from "@/lib/documents/validation-readiness";
 import { cn } from "@/lib/utils";
 import { DATE_API_KEYS, type ApplicantProfile, type ApplicantProfileFieldKey, type ExtractResponse } from "./types";
+import { PhoneCountryField, type TPhoneNationalityOption } from "./phone-country-field";
+
 import { applicantFieldValue, applyDateMask } from "./utils";
 
-const APPLICANT_ROWS: Array<{
+const APPLICANT_ROWS_WITHOUT_PHONE: Array<{
   label: string;
   key: ApplicantProfileFieldKey;
   apiKey: string;
@@ -29,7 +31,11 @@ const APPLICANT_ROWS: Array<{
   { label: "Place of birth", key: "placeOfBirth", apiKey: "placeOfBirth", placeholder: "e.g. Cairo" },
   { label: "Profession", key: "profession", apiKey: "profession", placeholder: "e.g. Engineer" },
   { label: "Address", key: "address", apiKey: "address", placeholder: "Full home address" },
-  { label: "Phone", key: "phone", apiKey: "phone", placeholder: "+1 555 000 0000" },
+];
+
+const APPLICANT_ROWS = [
+  ...APPLICANT_ROWS_WITHOUT_PHONE,
+  { label: "Phone", key: "phone" as const, apiKey: "phone", placeholder: "+1 555 000 0000" },
 ];
 
 const buildReadinessLabel = (
@@ -62,6 +68,7 @@ export interface IApplicantReviewProps {
   paymentApplicationId?: string;
   nationalityCode: string;
   nationalityName: string;
+  nationalities: TPhoneNationalityOption[];
   applicant: ApplicantProfile;
   guestEmail: string | null;
   extraction: ExtractResponse["extraction"] | null;
@@ -80,6 +87,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
   paymentApplicationId,
   nationalityCode,
   nationalityName,
+  nationalities,
   applicant,
   guestEmail,
   extraction,
@@ -257,7 +265,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
       )}
 
       <dl className="grid gap-3 sm:grid-cols-2">
-        {APPLICANT_ROWS.map((r) => {
+        {APPLICANT_ROWS_WITHOUT_PHONE.map((r) => {
           const isMissing = !APPLY_STEP3_VALIDATION_DISABLED && missing.includes(r.key);
           const wasOcr = prefilled.has(r.key);
           return (
@@ -291,42 +299,55 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
             </div>
           );
         })}
+        <div key="phone">
+          <dt className="text-foreground flex flex-col gap-0.5 text-[11px] font-bold uppercase tracking-wide">
+            <span>Phone</span>
+          </dt>
+          <dd className="mt-1">
+            <PhoneCountryField
+              nationalities={nationalities}
+              applicationNationalityCode={nationalityCode}
+              storedPhone={values.phone ?? ""}
+              disabled={locked}
+              invalid={!APPLY_STEP3_VALIDATION_DISABLED && missing.includes("phone") && !values.phone}
+              onChange={(e164) => setValues((prev) => ({ ...prev, phone: e164 }))}
+            />
+          </dd>
+        </div>
       </dl>
 
-      <div className="flex flex-wrap items-center gap-3 pt-2">
-        <ClientButton
-          type="button"
-          variant="outline"
-          brand="white"
-          className="rounded-xl"
-          onClick={() =>
+      <div className="space-y-2 pt-2">
+        <DoubleDecision
+          className="max-w-md"
+          dismissLabel="Previous"
+          onDismiss={() =>
             router.push(`/apply/start?nationality=${encodeURIComponent(nationalityCode)}`)
           }
-        >
-          Previous
-        </ClientButton>
-        {!locked ? (
-          <>
-            <ClientButton
-              type="button"
-              brand="cta"
-              disabled={saving || (!dirty && !canContinueToPayment)}
-              onClick={() => {
-                if (!dirty && canContinueToPayment) {
-                  goToPayment();
-                  return;
+          confirmLabel={
+            locked
+              ? undefined
+              : saving
+                ? "Saving…"
+                : !dirty && canContinueToPayment
+                  ? "Continue to payment"
+                  : "Next"
+          }
+          onConfirm={
+            locked
+              ? undefined
+              : () => {
+                  if (!dirty && canContinueToPayment) {
+                    goToPayment();
+                    return;
+                  }
+                  void handleSave();
                 }
-                void handleSave();
-              }}
-              className="rounded-xl"
-            >
-              {saving ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
-              {saving ? "Saving…" : !dirty && canContinueToPayment ? "Continue to payment" : "Next"}
-            </ClientButton>
-            {saveMsg ? <p className="text-success text-xs">{saveMsg}</p> : null}
-            {saveError ? <p className="text-error text-xs">{saveError}</p> : null}
-          </>
-        ) : null}
+          }
+          confirmDisabled={saving || (!dirty && !canContinueToPayment)}
+          confirmPending={saving}
+        />
+        {!locked && saveMsg ? <p className="text-success text-xs">{saveMsg}</p> : null}
+        {!locked && saveError ? <p className="text-error text-xs">{saveError}</p> : null}
       </div>
       </div>
     </details>

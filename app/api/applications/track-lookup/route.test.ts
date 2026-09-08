@@ -1,4 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { generateResumeToken } from "@/lib/applications/resume-token";
+import { RESUME_COOKIE_NAME } from "@/lib/applications/resume-cookie";
 
 vi.mock("next/headers", () => ({
   headers: async () => new Headers({ "x-request-id": "track-lookup-test" }),
@@ -34,17 +36,22 @@ const txMock = {
   }),
 };
 
+const { plainToken, hash } = generateResumeToken();
+
 const row = {
   id: "aaaaaaaa-bbbb-5ccc-dddd-eeeeeeeeeeee",
   referenceNumber: "REF-1",
   applicationStatus: "in_progress",
-  paymentStatus: "paid",
-  fulfillmentStatus: "submitted",
+  paymentStatus: "unpaid",
+  fulfillmentStatus: "not_started",
   adminAttentionRequired: false,
   nationalityCode: "US",
   serviceId: "svc-1",
   guestEmail: "guest@example.com",
   phone: null,
+  partyId: null,
+  resumeTokenHash: hash,
+  createdAt: new Date("2026-09-01T00:00:00.000Z"),
 };
 
 describe("POST /api/applications/track-lookup", () => {
@@ -76,8 +83,58 @@ describe("POST /api/applications/track-lookup", () => {
     expect(body.data.applications[0].nationalityName).toBe("United States");
     expect(body.data.applications[0].serviceName).not.toBe("svc-1");
     expect(body.data.applications[0].clientTracking.headline).toBeTruthy();
+    expect(body.data.applications[0].canContinue).toBe(false);
+    expect(body.data.applications[0].continueHref).toBeNull();
     expect(body.data.nextCursor).toBeNull();
     expect(actor.withSystemDbActor).toHaveBeenCalledTimes(1);
+  });
+
+  it("sets canContinue when vt_resume cookie matches an unpaid draft", async () => {
+    vi.mocked(trackLookup.isValidTrackContact).mockReturnValue(true);
+    vi.mocked(trackLookup.findApplicationsForContactTrackLookupPaginated).mockResolvedValue({
+      items: [row as never],
+      hasMore: false,
+    } as never);
+
+    const res = await POST(
+      new Request("http://localhost/api/applications/track-lookup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: `${RESUME_COOKIE_NAME}=${encodeURIComponent(plainToken)}`,
+        },
+        body: JSON.stringify({ contact: "guest@example.com" }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.applications[0].canContinue).toBe(true);
+    expect(body.data.applications[0].continueHref).toBe(
+      `/apply/applications/${row.id}`,
+    );
+  });
+
+  it("does not set canContinue for paid rows even with a matching cookie", async () => {
+    vi.mocked(trackLookup.isValidTrackContact).mockReturnValue(true);
+    vi.mocked(trackLookup.findApplicationsForContactTrackLookupPaginated).mockResolvedValue({
+      items: [{ ...row, paymentStatus: "paid", fulfillmentStatus: "submitted" } as never],
+      hasMore: false,
+    } as never);
+
+    const res = await POST(
+      new Request("http://localhost/api/applications/track-lookup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: `${RESUME_COOKIE_NAME}=${encodeURIComponent(plainToken)}`,
+        },
+        body: JSON.stringify({ contact: "guest@example.com" }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data.applications[0].canContinue).toBe(false);
+    expect(body.data.applications[0].continueHref).toBeNull();
   });
 
   it("returns empty list when none match", async () => {

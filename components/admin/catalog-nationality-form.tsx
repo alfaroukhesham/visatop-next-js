@@ -32,6 +32,7 @@ export const CatalogNationalityForm: FC<ICatalogNationalityFormProps> = ({
   const router = useRouter();
   const [code, setCode] = useState(nationality?.code ?? "");
   const [name, setName] = useState(nationality?.name ?? "");
+  const [dialCode, setDialCode] = useState(nationality?.dialCode ?? "");
   const [enabled, setEnabled] = useState(nationality?.enabled ?? true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +56,12 @@ export const CatalogNationalityForm: FC<ICatalogNationalityFormProps> = ({
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code: code.trim().toUpperCase(), name: name.trim(), enabled }),
+            body: JSON.stringify({
+              code: code.trim().toUpperCase(),
+              name: name.trim(),
+              enabled,
+              dialCode: dialCode.trim() === "" ? "" : dialCode.trim(),
+            }),
           },
         );
         if (!res.ok) {
@@ -71,7 +77,11 @@ export const CatalogNationalityForm: FC<ICatalogNationalityFormProps> = ({
           {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: name.trim(), enabled }),
+            body: JSON.stringify({
+              name: name.trim(),
+              enabled,
+              dialCode: dialCode.trim() === "" ? "" : dialCode.trim(),
+            }),
           },
         );
         if (!res.ok) {
@@ -150,6 +160,23 @@ export const CatalogNationalityForm: FC<ICatalogNationalityFormProps> = ({
               placeholder="United States"
               disabled={!canWrite || busy}
             />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="nat-dial">Dial code</Label>
+            <Input
+              id="nat-dial"
+              className="font-mono"
+              inputMode="numeric"
+              pattern="\d*"
+              maxLength={6}
+              value={dialCode}
+              onChange={(e) => setDialCode(e.target.value.replace(/\D/g, ""))}
+              placeholder="e.g. 91 (digits only, no +)"
+              disabled={!canWrite || busy}
+            />
+            <p className="text-muted-foreground text-xs">
+              Optional. Leave empty if this nationality has no default country code.
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <input

@@ -4,6 +4,7 @@ export const TRANSACTIONAL_EMAIL_KINDS = {
   OUTCOME_UAE_AUTHORITY_REJECTION: "outcome_uae_authority_rejection",
   ADMIN_STEP2_SERVICE_SELECTED: "admin_step2_service_selected",
   ADMIN_PAYMENT_COMPLETED: "admin_payment_completed",
+  APPLICATION_DRAFT_STARTED: "application_draft_started",
 } as const;
 
 export type TransactionalEmailKind =

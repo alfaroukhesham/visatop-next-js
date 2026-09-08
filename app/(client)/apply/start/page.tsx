@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
 import { StartApplicationForm } from "@/components/apply/start-application-form";
@@ -6,24 +7,30 @@ import { ClientSurface } from "@/components/client/client-surface";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
 import { listPublicNationalities } from "@/lib/catalog/queries";
 import { withSystemDbActor } from "@/lib/db/actor-context";
+import { CUSTOMER_LOCALE_COOKIE, parseCustomerLocale } from "@/lib/i18n/customer-locale";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 
-export const metadata: Metadata = {
-  title: "Start application",
+export const generateMetadata = async (): Promise<Metadata> => {
+  const cookieStore = await cookies();
+  const t = createCustomerT(parseCustomerLocale(cookieStore.get(CUSTOMER_LOCALE_COOKIE)?.value));
+  return {
+    title: t("start.pageTitle"),
+  };
 };
 
-function normalizeNationalityParam(value: string | string[] | undefined): string | undefined {
+const normalizeNationalityParam = (value: string | string[] | undefined): string | undefined => {
   const raw = Array.isArray(value) ? value[0] : value;
   if (typeof raw !== "string") return undefined;
-  const t = raw.trim().toUpperCase();
-  if (t.length !== 2 || !/^[A-Z]{2}$/.test(t)) return undefined;
-  return t;
-}
-
-type PageProps = {
-  searchParams?: Promise<{ nationality?: string | string[] }>;
+  const code = raw.trim().toUpperCase();
+  if (code.length !== 2 || !/^[A-Z]{2}$/.test(code)) return undefined;
+  return code;
 };
 
-export default async function ApplyStartPage({ searchParams }: PageProps) {
+interface IApplyStartPageProps {
+  searchParams?: Promise<{ nationality?: string | string[] }>;
+}
+
+const ApplyStartPage = async ({ searchParams }: IApplyStartPageProps) => {
   const sp = searchParams ? await searchParams : {};
   const initialNationalityCode = normalizeNationalityParam(sp.nationality);
   if (!initialNationalityCode) {
@@ -49,4 +56,6 @@ export default async function ApplyStartPage({ searchParams }: PageProps) {
       </ApplyTwoColumn>
     </div>
   );
-}
+};
+
+export default ApplyStartPage;

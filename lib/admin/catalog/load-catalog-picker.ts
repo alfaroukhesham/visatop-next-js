@@ -21,6 +21,7 @@ export async function loadCatalogPickerCandidates(
       .select({
         code: schema.nationality.code,
         name: schema.nationality.name,
+        dialCode: schema.nationality.dialCode,
         enabled: schema.nationality.enabled,
       })
       .from(schema.nationality)
@@ -80,6 +81,7 @@ export async function loadCatalogPickerCandidates(
         .select({
           code: schema.nationality.code,
           name: schema.nationality.name,
+          dialCode: schema.nationality.dialCode,
           enabled: schema.nationality.enabled,
         })
         .from(schema.nationality)

@@ -11,8 +11,10 @@ import { jsonError, jsonOk } from "@/lib/api/response";
 import { isForeignKeyViolation } from "@/lib/db/pg-errors";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { sendAdminStep2ServiceSelectedEmail } from "@/lib/email/send-admin-notification-emails";
+import { sendApplicationDraftStartedEmail } from "@/lib/email/send-application-transactional-emails";
+import { readCustomerLocaleFromCookieHeader } from "@/lib/i18n/customer-locale";
 
-function queueAdminStep2Email(applicationId: string, requestId: string | null) {
+const queueAdminStep2Email = (applicationId: string, requestId: string | null) => {
   after(() => {
     void sendAdminStep2ServiceSelectedEmail(applicationId, requestId).catch((err) => {
       console.error("[api/applications] admin_step2_service_selected email failed", {
@@ -22,7 +24,26 @@ function queueAdminStep2Email(applicationId: string, requestId: string | null) {
       });
     });
   });
-}
+};
+
+const queueApplicationDraftStartedEmail = (input: {
+  primaryApplicationId: string;
+  partyId: string;
+  guestEmail: string;
+  requestId: string | null;
+  locale: string;
+}) => {
+  after(() => {
+    void sendApplicationDraftStartedEmail(input).catch((err) => {
+      console.error("[api/applications] application_draft_started email failed", {
+        primaryApplicationId: input.primaryApplicationId,
+        partyId: input.partyId,
+        requestId: input.requestId,
+        err: err instanceof Error ? err.message : err,
+      });
+    });
+  });
+};
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -59,6 +80,15 @@ export async function POST(req: Request) {
 
     const primaryRow = result.primaryRow;
     queueAdminStep2Email(result.primaryApplicationId, requestId);
+    if (isGuest && guestEmail) {
+      queueApplicationDraftStartedEmail({
+        primaryApplicationId: result.primaryApplicationId,
+        partyId: result.partyId,
+        guestEmail,
+        requestId,
+        locale: readCustomerLocaleFromCookieHeader(hdrs.get("cookie")),
+      });
+    }
 
     const applicationJson = {
       ...toPublicApplication(primaryRow),

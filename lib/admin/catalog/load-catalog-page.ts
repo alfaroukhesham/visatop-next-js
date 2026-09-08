@@ -26,6 +26,7 @@ export async function loadCatalogPage(adminUserId: string): Promise<CatalogPageV
         .select({
           code: schema.nationality.code,
           name: schema.nationality.name,
+          dialCode: schema.nationality.dialCode,
           enabled: schema.nationality.enabled,
         })
         .from(schema.nationality)

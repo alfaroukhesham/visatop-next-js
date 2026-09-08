@@ -33,6 +33,7 @@ describe("buildHomePageJsonLd", () => {
     expect(webPage.breadcrumb).toEqual({
       "@id": "https://visatop.com/visa-processing#breadcrumb",
     });
+    expect(webPage.inLanguage).toBe("en-GB");
     expect(webPage.speakable).toEqual({
       "@type": "SpeakableSpecification",
       cssSelector: ["#service-facts"],
@@ -69,5 +70,13 @@ describe("buildHomePageJsonLd", () => {
 
     expect(json["@graph"].some((n) => n["@type"] === "Organization")).toBe(false);
     expect(json["@graph"].some((n) => n["@type"] === "WebSite")).toBe(false);
+  });
+
+  it("uses the catalog language tag for non-English locales", () => {
+    const json = buildHomePageJsonLd({ locale: "ar" }) as {
+      "@graph": Array<Record<string, unknown>>;
+    };
+    expect(json["@graph"][0].inLanguage).toBe("ar");
+    expect(json["@graph"][0].name).not.toBe("Apply for UAE Tourist Visa Online");
   });
 });

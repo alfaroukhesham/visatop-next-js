@@ -3,6 +3,7 @@ import type { TEntryKind, TStayBucket, TTravelerKind } from "@/lib/catalog/guide
 export type CatalogNationality = {
   code: string;
   name: string;
+  dialCode: string | null;
   enabled: boolean;
 };
 
