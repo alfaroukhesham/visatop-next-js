@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ClientDraftPanelSkeleton } from "@/components/client/client-loading";
 import { AppShimmer } from "@/components/ui/app-loading";
-import { computeValidation, allRequiredDocumentsPresent } from "@/lib/documents/validation-readiness";
+import { computeValidation } from "@/lib/documents/validation-readiness";
 import { ApplicantReview } from "./draft/applicant-review";
 import { DraftDocumentsSection } from "./draft/draft-documents-section";
 import { DraftPanelError } from "./draft/draft-panel-error";
@@ -35,8 +35,6 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
     uploads: draft.uploadPresence,
     now: new Date(),
   });
-
-  const requiredDocsPresent = allRequiredDocumentsPresent(draft.uploadPresence);
 
   const primaryMember =
     draft.members.find((m) => m.travelerRole === "primary") ?? draft.members[0];
@@ -98,10 +96,11 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
         extraction={draft.selected.extractResult?.extraction ?? null}
         readiness={readiness}
         paymentReadiness={paymentReadiness}
-        requiredDocsPresent={requiredDocsPresent}
         missing={missing}
-        documentsReady={allRequiredUploaded}
+        documentsReady={passportUploaded}
         passportUploaded={passportUploaded}
+        extractPending={draft.selected.extracting}
+        waitForPassportExtract={draft.waitForPassportExtract}
         locked={selectedApp.checkoutState === "pending" || selectedApp.paymentStatus === "paid"}
         onSaved={() => void draft.load({ silent: true })}
       />

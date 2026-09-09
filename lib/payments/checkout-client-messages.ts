@@ -4,6 +4,7 @@ export type CheckoutBlockReason =
   | "not_ready_for_payment"
   | "payments_origin_blocked"
   | "missing_guest_email"
+  | "missing_passport"
   | "pricing_unavailable"
   | "provider_unavailable"
   | "unknown";
@@ -40,6 +41,8 @@ export function checkoutErrorToUserMessage(err: CheckoutApiErrorShape | null | u
       );
     case "missing_guest_email":
       return "Add your email on the visa selection step before paying.";
+    case "missing_passport":
+      return "Upload a passport copy to start payment. Other documents can be added now or after.";
     case "pricing_unavailable":
       return "We couldn't load a price for this visa right now. Refresh the page or contact support if it continues.";
     case "provider_unavailable":

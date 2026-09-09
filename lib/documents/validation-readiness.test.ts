@@ -5,10 +5,12 @@ vi.mock("@/lib/apply/apply-flow-config", () => ({
 }));
 
 import {
+  allRequiredDocumentsPresent,
   computeValidation,
   formatIsoDateAsDdMmYyyy,
   parseDobInputToIsoUtc,
   parseIsoDateUtc,
+  passportsPresentForPayment,
   SUBMISSION_REQUIRED_FIELDS,
   toUtcDateString,
 } from "./validation-readiness";
@@ -204,6 +206,79 @@ describe("computeValidation", () => {
   });
 });
 
+describe("passportsPresentForPayment", () => {
+  it("is true with a passport even when photo and extras are missing", () => {
+    expect(
+      passportsPresentForPayment({
+        passportCopyPresent: true,
+        personalPhotoPresent: false,
+        requiredSlotKeys: ["passport_copy", "personal_photo", "bank_statement_6m"],
+        uploadedDocumentTypes: ["passport_copy"],
+      }),
+    ).toBe(true);
+  });
+
+  it("is false without a passport", () => {
+    expect(
+      passportsPresentForPayment({
+        passportCopyPresent: false,
+        personalPhotoPresent: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("requires a passport on every party member", () => {
+    expect(
+      passportsPresentForPayment({
+        passportCopyPresent: true,
+        personalPhotoPresent: false,
+        memberRequiredUploads: [
+          {
+            requiredSlotKeys: ["passport_copy", "personal_photo"],
+            uploadedDocumentTypes: ["passport_copy"],
+          },
+          {
+            requiredSlotKeys: ["passport_copy", "personal_photo"],
+            uploadedDocumentTypes: [],
+          },
+        ],
+      }),
+    ).toBe(false);
+  });
+
+  it("is true when every party member has a passport without other required files", () => {
+    expect(
+      passportsPresentForPayment({
+        passportCopyPresent: true,
+        personalPhotoPresent: false,
+        memberRequiredUploads: [
+          {
+            requiredSlotKeys: ["passport_copy", "personal_photo", "bank_statement_6m"],
+            uploadedDocumentTypes: ["passport_copy"],
+          },
+          {
+            requiredSlotKeys: ["passport_copy", "personal_photo"],
+            uploadedDocumentTypes: ["passport_copy"],
+          },
+        ],
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("allRequiredDocumentsPresent", () => {
+  it("still requires photo and extras for case completeness", () => {
+    expect(
+      allRequiredDocumentsPresent({
+        passportCopyPresent: true,
+        personalPhotoPresent: false,
+        requiredSlotKeys: ["passport_copy", "personal_photo"],
+        uploadedDocumentTypes: ["passport_copy"],
+      }),
+    ).toBe(false);
+  });
+});
+
 describe("computeValidation when APPLY_STEP3_VALIDATION_DISABLED", () => {
   const NOW = new Date(Date.UTC(2026, 3, 16));
 
@@ -221,6 +296,25 @@ describe("computeValidation when APPLY_STEP3_VALIDATION_DISABLED", () => {
     expect(v.paymentReadiness).toBe("ready");
     expect(v.requiredFieldsMissing).toEqual([]);
     expect(v.validationFailures).toEqual([]);
+  });
+
+  it("returns payment ready when email and passport are present without photo or extras", async () => {
+    vi.resetModules();
+    vi.doMock("@/lib/apply/apply-flow-config", () => ({
+      APPLY_STEP3_VALIDATION_DISABLED: true,
+    }));
+    const { computeValidation: computeWithFlag } = await import("./validation-readiness");
+    const v = computeWithFlag({
+      profile: { email: "guest@example.com" },
+      uploads: {
+        passportCopyPresent: true,
+        personalPhotoPresent: false,
+        requiredSlotKeys: ["passport_copy", "personal_photo", "bank_statement_6m"],
+        uploadedDocumentTypes: ["passport_copy"],
+      },
+      now: NOW,
+    });
+    expect(v.paymentReadiness).toBe("ready");
   });
 
   it("blocks payment when email is present but required uploads are missing", async () => {

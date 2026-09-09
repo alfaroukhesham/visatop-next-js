@@ -11,7 +11,7 @@ import { loadPaymentUploadPresence } from "@/lib/applications/load-payment-uploa
 /**
  * Re-evaluates application readiness and auto-advances the applicationStatus.
  *
- * When **`paymentReadiness` is `ready`** (email + required uploads when pay-first;
+ * When **`paymentReadiness` is `ready`** (email + passport when pay-first;
  * full profile + validation when validation enabled):
  * - From `needs_review`, or from early lifecycle (`draft`, `needs_docs`, `extracting`),
  *   move to `ready_for_payment` so `/api/checkout` can take the lock (it requires that status).

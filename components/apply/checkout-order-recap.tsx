@@ -90,6 +90,13 @@ function serviceTitle(s: CatalogService): string {
 
 const NotAddedYet = () => <span className="text-muted-foreground">Not added yet</span>;
 
+const RecapPending = () => <span className="text-muted-foreground">Reading passport…</span>;
+
+export const applicantForPaymentRecap = (
+  ssr: PublicApplication["applicant"],
+  live: PublicApplication["applicant"] | null,
+): PublicApplication["applicant"] => live ?? ssr;
+
 function contactEmailContent(app: PublicApplication) {
   const em = app.guestEmail?.trim();
   if (em) return em;
@@ -107,8 +114,28 @@ export function CheckoutOrderRecap({
   const [services, setServices] = useState<CatalogService[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [badges, setBadges] = useState<TApplyPriceBadges>(DEFAULT_APPLY_PRICE_BADGES);
+  const [liveApplicant, setLiveApplicant] = useState<PublicApplication["applicant"] | null>(null);
+  const [liveApplicantResolved, setLiveApplicantResolved] = useState(false);
 
   const currency = (application.catalogCurrency?.toUpperCase() === "AED" ? "AED" : "USD") as DisplayCurrency;
+
+  useEffect(() => {
+    let cancelled = false;
+    queueMicrotask(() => {
+      void (async () => {
+        const res = await fetchApiEnvelope<{ application: PublicApplication }>(
+          apiHref(`/applications/${application.id}`),
+          { cache: "no-store" },
+        );
+        if (cancelled) return;
+        if (res.ok) setLiveApplicant(res.data.application.applicant);
+        setLiveApplicantResolved(true);
+      })();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [application.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -178,9 +205,17 @@ export function CheckoutOrderRecap({
 
   const totalText = totalMinor === null ? null : formatDisplayMinor(totalMinor.toString(), currency);
 
-  const fullName = application.applicant.fullName?.trim() ?? "";
-  const passportNo = application.applicant.passportNumber?.trim() ?? "";
-  const dob = formatIsoDateAsDdMmYyyy(application.applicant.dateOfBirth ?? null) ?? "";
+  const recapApplicant = applicantForPaymentRecap(application.applicant, liveApplicant);
+  const fullName = recapApplicant.fullName?.trim() ?? "";
+  const passportNo = recapApplicant.passportNumber?.trim() ?? "";
+  const dob = formatIsoDateAsDdMmYyyy(recapApplicant.dateOfBirth ?? null) ?? "";
+  const recapFieldsPending =
+    !liveApplicantResolved && !fullName && !passportNo && !dob;
+  const recapValue = (value: string) => {
+    if (value) return value;
+    if (recapFieldsPending) return <RecapPending />;
+    return <NotAddedYet />;
+  };
 
   const subtotalText = price?.text ?? null;
 
@@ -241,7 +276,7 @@ export function CheckoutOrderRecap({
                   <dt className="sr-only">Name</dt>
                   <dd>
                     <span className="font-medium text-foreground/80">Name</span>{" "}
-                    {fullName ? fullName : <NotAddedYet />}
+                    {recapValue(fullName)}
                   </dd>
                 </div>
                 <div className="flex flex-wrap gap-x-2 gap-y-0.5">
@@ -254,7 +289,7 @@ export function CheckoutOrderRecap({
                   <dt className="sr-only">Date of birth</dt>
                   <dd>
                     <span className="font-medium text-foreground/80">Date of birth</span>{" "}
-                    {dob ? dob : <NotAddedYet />}
+                    {recapValue(dob)}
                   </dd>
                 </div>
                 <div className="flex flex-wrap gap-x-2 gap-y-0.5">
@@ -263,6 +298,8 @@ export function CheckoutOrderRecap({
                     <span className="font-medium text-foreground/80">Passport</span>{" "}
                     {passportNo ? (
                       <span className="font-mono tabular-nums">{passportNo}</span>
+                    ) : recapFieldsPending ? (
+                      <RecapPending />
                     ) : (
                       <NotAddedYet />
                     )}

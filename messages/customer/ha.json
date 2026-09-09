@@ -124,7 +124,7 @@
     "documentsPageTitle": "Takardu da cikakkun bayanai",
     "documentsPageSubtitle": "Duba fasfo, hoto, sannan duba filayen.",
     "applicantDetailsTitle": "Cikakkun bayanan mai nema",
-    "applicantSecondaryPassportUploaded": "Duba cikakkun bayanan da aka cika ta atomatik daga fasfon ku, sannan kammala lodawa.",
+    "applicantSecondaryPassportUploaded": "Duba cikakkun bayanan da aka cika ta atomatik daga fasfon ku, sannan ci gaba zuwa biya.",
     "applicantSecondaryOptional": "Ba dole ba a yanzu — ƙara cikakkun bayanai bayan lodawa",
     "requiredFieldsMissing": "Filayen da ake buƙata sun bace:",
     "fieldsLockedPayment": "An kulle filayen yayin da biyan kuɗi ke ci gaba.",
@@ -190,7 +190,7 @@
   "documents": {
     "title": "Takardu",
     "uploadedBadge": "An loda takardu",
-    "uploadRequiredToPay": "Loda fayilolin da ake buƙata don biya. Ana iya duba cikakkun bayanai a gaba. Tsarinmu zai karanta su ya cika su a gare ku.",
+    "uploadRequiredToPay": "Loda kwafin fasfo don biya. Ana iya duba cikakkun bayanai a gaba. Tsarinmu zai karanta su ya cika su a gare ku.",
     "additionalDocuments": "Ƙarin takardu",
     "readingPassport": "Ana karanta fasfo…",
     "additionalMayBeRequired": "VisaTop na iya buƙatar ƙarin takardu don kammala nema (misali bayanan banki, inshora). Ƙungiyar VisaTop za ta tuntube ku bayan an gabatar da fasfo.",

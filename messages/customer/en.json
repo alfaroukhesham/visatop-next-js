@@ -124,7 +124,7 @@
     "documentsPageTitle": "Documents & details",
     "documentsPageSubtitle": "Passport scan, photo, then check the fields.",
     "applicantDetailsTitle": "Applicant details",
-    "applicantSecondaryPassportUploaded": "Review auto-filled details from your passport, then finish uploading.",
+    "applicantSecondaryPassportUploaded": "Review auto-filled details from your passport, then continue to payment.",
     "applicantSecondaryOptional": "Optional for now — add details after upload",
     "requiredFieldsMissing": "Required fields missing:",
     "fieldsLockedPayment": "Fields are locked while payment is in progress.",
@@ -190,7 +190,7 @@
   "documents": {
     "title": "Documents",
     "uploadedBadge": "Documents uploaded",
-    "uploadRequiredToPay": "Upload required files to pay. Details can be reviewed next. Our system will read and prefill the details for you.",
+    "uploadRequiredToPay": "Upload a passport copy to pay. Details can be reviewed next. Our system will read and prefill the details for you.",
     "additionalDocuments": "Additional documents",
     "readingPassport": "Reading passport…",
     "additionalMayBeRequired": "Additional documents may be required by VisaTop to finalize the application (e.g. bank statements, insurance). The VisaTop team will contact you once the passport has been submitted.",

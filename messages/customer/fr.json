@@ -124,7 +124,7 @@
     "documentsPageTitle": "Documents et informations",
     "documentsPageSubtitle": "Scan du passeport, photo, puis vérification des champs.",
     "applicantDetailsTitle": "Informations du demandeur",
-    "applicantSecondaryPassportUploaded": "Vérifiez les informations préremplies à partir de votre passeport, puis terminez le téléversement.",
+    "applicantSecondaryPassportUploaded": "Vérifiez les informations préremplies à partir de votre passeport, puis continuez vers le paiement.",
     "applicantSecondaryOptional": "Facultatif pour l'instant — ajoutez les informations après le téléversement",
     "requiredFieldsMissing": "Champs obligatoires manquants :",
     "fieldsLockedPayment": "Les champs sont verrouillés pendant le paiement.",
@@ -190,7 +190,7 @@
   "documents": {
     "title": "Documents",
     "uploadedBadge": "Documents téléversés",
-    "uploadRequiredToPay": "Téléversez les fichiers requis pour payer. Les informations pourront être vérifiées ensuite. Notre système les lira et les préremplira pour vous.",
+    "uploadRequiredToPay": "Téléversez une copie de passeport pour payer. Les informations pourront être vérifiées ensuite. Notre système les lira et les préremplira pour vous.",
     "additionalDocuments": "Documents supplémentaires",
     "readingPassport": "Lecture du passeport…",
     "additionalMayBeRequired": "VisaTop peut exiger des documents supplémentaires pour finaliser la demande (p. ex. relevés bancaires, assurance). L'équipe VisaTop vous contactera une fois le passeport soumis.",

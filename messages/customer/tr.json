@@ -124,7 +124,7 @@
     "documentsPageTitle": "Belgeler ve bilgiler",
     "documentsPageSubtitle": "Pasaport taraması, fotoğraf, ardından alanları kontrol edin.",
     "applicantDetailsTitle": "Başvuran bilgileri",
-    "applicantSecondaryPassportUploaded": "Pasaportunuzdan otomatik doldurulan bilgileri gözden geçirin, ardından yüklemeyi tamamlayın.",
+    "applicantSecondaryPassportUploaded": "Pasaportunuzdan otomatik doldurulan bilgileri gözden geçirin, ardından ödemeye geçin.",
     "applicantSecondaryOptional": "Şimdilik isteğe bağlı — yüklemeden sonra bilgileri ekleyin",
     "requiredFieldsMissing": "Zorunlu alanlar eksik:",
     "fieldsLockedPayment": "Ödeme devam ederken alanlar kilitlidir.",
@@ -190,7 +190,7 @@
   "documents": {
     "title": "Belgeler",
     "uploadedBadge": "Belgeler yüklendi",
-    "uploadRequiredToPay": "Ödeme için gerekli dosyaları yükleyin. Bilgiler bir sonraki adımda incelenebilir. Sistemimiz bunları okuyup sizin için doldurur.",
+    "uploadRequiredToPay": "Ödeme için bir pasaport kopyası yükleyin. Bilgiler bir sonraki adımda incelenebilir. Sistemimiz bunları okuyup sizin için doldurur.",
     "additionalDocuments": "Ek belgeler",
     "readingPassport": "Pasaport okunuyor…",
     "additionalMayBeRequired": "Başvuruyu tamamlamak için VisaTop ek belgeler isteyebilir (ör. banka ekstreleri, sigorta). Pasaport gönderildikten sonra VisaTop ekibi sizinle iletişime geçecektir.",

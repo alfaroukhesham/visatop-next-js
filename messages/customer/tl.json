@@ -124,7 +124,7 @@
     "documentsPageTitle": "Mga dokumento at detalye",
     "documentsPageSubtitle": "Passport scan, photo, tapos suriin ang mga field.",
     "applicantDetailsTitle": "Detalye ng aplikante",
-    "applicantSecondaryPassportUploaded": "Suriin ang auto-filled na detalye mula sa pasaporte mo, tapos tapusin ang pag-upload.",
+    "applicantSecondaryPassportUploaded": "Suriin ang auto-filled na detalye mula sa pasaporte mo, tapos magpatuloy sa bayad.",
     "applicantSecondaryOptional": "Opsiyonal muna — magdagdag ng detalye pagkatapos mag-upload",
     "requiredFieldsMissing": "May kulang na required field:",
     "fieldsLockedPayment": "Naka-lock ang mga field habang may payment na ginagawa.",
@@ -190,7 +190,7 @@
   "documents": {
     "title": "Mga dokumento",
     "uploadedBadge": "Na-upload na ang mga dokumento",
-    "uploadRequiredToPay": "I-upload ang required na file para makapagbayad. Maaaring i-review ang detalye sa susunod. Babasahin at pupunuin agad ng system namin ang detalye para sa iyo.",
+    "uploadRequiredToPay": "I-upload ang kopya ng pasaporte para makapagbayad. Maaaring i-review ang detalye sa susunod. Babasahin at pupunuin agad ng system namin ang detalye para sa iyo.",
     "additionalDocuments": "Karagdagang dokumento",
     "readingPassport": "Binabasa ang pasaporte…",
     "additionalMayBeRequired": "Maaaring kailanganin ng VisaTop ang karagdagang dokumento para matapos ang application (hal. bank statement, insurance). Makikipag-ugnayan ang VisaTop team sa iyo kapag naisumite na ang pasaporte.",

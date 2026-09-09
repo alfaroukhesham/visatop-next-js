@@ -124,7 +124,7 @@
     "documentsPageTitle": "Documentos y datos",
     "documentsPageSubtitle": "Escaneo del pasaporte, foto y revisión de los campos.",
     "applicantDetailsTitle": "Datos del solicitante",
-    "applicantSecondaryPassportUploaded": "Revise los datos completados automáticamente desde su pasaporte y termine de subir los archivos.",
+    "applicantSecondaryPassportUploaded": "Revise los datos completados automáticamente desde su pasaporte y continúe al pago.",
     "applicantSecondaryOptional": "Opcional por ahora — añada los datos después de subir",
     "requiredFieldsMissing": "Faltan campos obligatorios:",
     "fieldsLockedPayment": "Los campos están bloqueados mientras el pago está en curso.",
@@ -190,7 +190,7 @@
   "documents": {
     "title": "Documentos",
     "uploadedBadge": "Documentos subidos",
-    "uploadRequiredToPay": "Suba los archivos obligatorios para pagar. Los datos se podrán revisar a continuación. Nuestro sistema los leerá y los rellenará por usted.",
+    "uploadRequiredToPay": "Suba una copia del pasaporte para pagar. Los datos se podrán revisar a continuación. Nuestro sistema los leerá y los rellenará por usted.",
     "additionalDocuments": "Documentos adicionales",
     "readingPassport": "Leyendo pasaporte…",
     "additionalMayBeRequired": "VisaTop puede requerir documentos adicionales para finalizar la solicitud (p. ej. extractos bancarios, seguro). El equipo de VisaTop se pondrá en contacto con usted una vez enviado el pasaporte.",

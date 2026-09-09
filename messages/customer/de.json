@@ -124,7 +124,7 @@
     "documentsPageTitle": "Dokumente & Angaben",
     "documentsPageSubtitle": "Reisepass-Scan, Foto, dann Felder prüfen.",
     "applicantDetailsTitle": "Angaben zum Antragsteller",
-    "applicantSecondaryPassportUploaded": "Prüfen Sie die automatisch ausgefüllten Angaben aus Ihrem Reisepass und schließen Sie den Upload ab.",
+    "applicantSecondaryPassportUploaded": "Prüfen Sie die automatisch ausgefüllten Angaben aus Ihrem Reisepass und gehen Sie weiter zur Zahlung.",
     "applicantSecondaryOptional": "Vorerst optional — Angaben nach dem Upload ergänzen",
     "requiredFieldsMissing": "Pflichtfelder fehlen:",
     "fieldsLockedPayment": "Felder sind gesperrt, während die Zahlung läuft.",
@@ -190,7 +190,7 @@
   "documents": {
     "title": "Dokumente",
     "uploadedBadge": "Dokumente hochgeladen",
-    "uploadRequiredToPay": "Laden Sie die erforderlichen Dateien hoch, um zu bezahlen. Angaben können als Nächstes geprüft werden. Unser System liest sie und füllt sie für Sie vor.",
+    "uploadRequiredToPay": "Laden Sie eine Passkopie hoch, um zu bezahlen. Angaben können als Nächstes geprüft werden. Unser System liest sie und füllt sie für Sie vor.",
     "additionalDocuments": "Zusätzliche Dokumente",
     "readingPassport": "Reisepass wird gelesen…",
     "additionalMayBeRequired": "VisaTop kann zusätzliche Dokumente zur Finalisierung des Antrags verlangen (z. B. Kontoauszüge, Versicherung). Das VisaTop-Team kontaktiert Sie, sobald der Reisepass eingereicht wurde.",
