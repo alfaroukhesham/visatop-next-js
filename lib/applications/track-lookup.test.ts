@@ -15,6 +15,14 @@ describe("parseTrackContact", () => {
   it("parses phone digits", () => {
     expect(parseTrackContact("+971 50 123 4567")).toEqual({ kind: "phone", digits: "971501234567" });
   });
+
+  it("parses tracking IDs", () => {
+    expect(parseTrackContact("REF-1234")).toEqual({ kind: "trackingId", value: "REF-1234" });
+    expect(parseTrackContact("aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee")).toEqual({
+      kind: "trackingId",
+      value: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+    });
+  });
 });
 
 describe("isValidTrackContact", () => {
@@ -27,8 +35,13 @@ describe("isValidTrackContact", () => {
   });
 
   it("rejects garbage", () => {
-    expect(isValidTrackContact("nodigits")).toBe(false);
+    expect(isValidTrackContact("abc")).toBe(false);
     expect(isValidTrackContact("123")).toBe(false);
+    expect(isValidTrackContact("!!!")).toBe(false);
+  });
+
+  it("accepts a tracking ID", () => {
+    expect(isValidTrackContact("REF-1234")).toBe(true);
   });
 });
 

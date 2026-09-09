@@ -2,9 +2,10 @@
 
 import { useState, type FC } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ChevronDown } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { DoubleDecision } from "@/components/client/double-decision";
 import { ClientInput } from "@/components/client/client-input";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 import { APPLY_STEP3_VALIDATION_DISABLED } from "@/lib/apply/apply-flow-config";
@@ -100,10 +101,9 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
   locked,
   onSaved,
 }) => {
+  const t = useCustomerT();
   const router = useRouter();
   const prefilled = new Set<string>(Object.keys(extraction?.prefill ?? {}));
-  const shouldAutoExpand = passportUploaded || documentsReady || Boolean(extraction);
-  const [expanded, setExpanded] = useState(shouldAutoExpand);
 
   const initial: Record<string, string> = {};
   for (const r of APPLICANT_ROWS) initial[r.apiKey] = applicantFieldValue(applicant, r.key, guestEmail);
@@ -183,7 +183,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
     }
     setSaveMsg("Changes saved.");
     onSaved();
-    if (canContinueToPayment) {
+    if (canContinueToPayment && passportUploaded) {
       goToPayment();
     }
   }
@@ -193,16 +193,32 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
     : null;
   const isSecondary = !documentsReady;
 
+  function onNext() {
+    if (locked) return;
+    setSaveError(null);
+    if (!passportUploaded) {
+      setSaveError(t("draft.passportRequiredToPay"));
+      return;
+    }
+    if (!dirty && canContinueToPayment) {
+      goToPayment();
+      return;
+    }
+    if (!dirty && !canContinueToPayment) {
+      setSaveError(PAY_BLOCKED_MISSING_DOCS_COPY);
+      return;
+    }
+    void handleSave();
+  }
+
   return (
-    <details
-      open={expanded}
-      onToggle={(e) => setExpanded((e.currentTarget as HTMLDetailsElement).open)}
+    <section
       className={cn(
-        "group space-y-4 rounded-3xl border bg-card p-5 shadow-[0_18px_48px_rgba(1,32,49,0.07)] sm:p-6 md:p-8",
+        "space-y-4 rounded-3xl border bg-card p-5 shadow-[0_18px_48px_rgba(1,32,49,0.07)] sm:p-6 md:p-8",
         isSecondary ? "border-border/60 bg-muted/15" : "border-border",
       )}
     >
-      <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="space-y-1">
           <h2
             className={cn(
@@ -210,13 +226,13 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
               isSecondary && "text-muted-foreground",
             )}
           >
-            Applicant details
+            {t("draft.applicantDetailsTitle")}
           </h2>
           {isSecondary ? (
             <p className="text-muted-foreground text-sm font-normal">
               {passportUploaded
-                ? "Review auto-filled details from your passport, then finish uploading."
-                : "Optional for now — add details after upload"}
+                ? t("draft.applicantSecondaryPassportUploaded")
+                : t("draft.applicantSecondaryOptional")}
             </p>
           ) : null}
         </div>
@@ -234,15 +250,8 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
               {readinessLabel.text}
             </span>
           ) : null}
-          <ChevronDown
-            className={cn(
-              "text-muted-foreground size-5 shrink-0 transition-transform",
-              expanded && "rotate-180",
-            )}
-            aria-hidden
-          />
         </div>
-      </summary>
+      </div>
 
       <div className="space-y-4 pt-2">
       {!APPLY_STEP3_VALIDATION_DISABLED && missing.length > 0 && (
@@ -327,29 +336,19 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
             locked
               ? undefined
               : saving
-                ? "Saving…"
+                ? t("draft.saving")
                 : !dirty && canContinueToPayment
-                  ? "Continue to payment"
-                  : "Next"
+                  ? t("draft.continueToPayment")
+                  : t("draft.next")
           }
-          onConfirm={
-            locked
-              ? undefined
-              : () => {
-                  if (!dirty && canContinueToPayment) {
-                    goToPayment();
-                    return;
-                  }
-                  void handleSave();
-                }
-          }
-          confirmDisabled={saving || (!dirty && !canContinueToPayment)}
+          onConfirm={locked ? undefined : onNext}
+          confirmDisabled={saving}
           confirmPending={saving}
         />
         {!locked && saveMsg ? <p className="text-success text-xs">{saveMsg}</p> : null}
-        {!locked && saveError ? <p className="text-error text-xs">{saveError}</p> : null}
+        {!locked && saveError ? <p className="text-error text-xs" role="alert">{saveError}</p> : null}
       </div>
       </div>
-    </details>
+    </section>
   );
 };

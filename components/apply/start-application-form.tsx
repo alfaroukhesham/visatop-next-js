@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FC, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FC, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   ClientServiceCardsSkeleton,
@@ -21,11 +21,12 @@ import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
 import { DEFAULT_APPLY_PRICE_BADGES, DEFAULT_PARTY_ENABLED, DEFAULT_PARTY_MAX_TRAVELERS, type TApplyPriceBadges } from "@/lib/apply/apply-config";
 import { assertTravelersReady, canAddTraveler, type TPartyTravelerDraft } from "@/lib/apply/party-travelers";
-import { filterGuidedServices, type TChooserPhase } from "@/lib/apply/guided-visa-filter";
+import { filterPartyVisaOptions, stayOptionsForChooser, needsEntryQuestion, needsKindQuestion, type TChooserPhase } from "@/lib/apply/guided-visa-filter";
 import type { TStayBucket, TTravelerKind } from "@/lib/catalog/guided-choice";
 import { AllInPriceBadges } from "@/components/apply/all-in-price-badges";
 import { ApplyStepsRail } from "@/components/apply/apply-steps-rail";
 import { GuidedVisaChooser, type IService } from "@/components/apply/guided-visa-chooser";
+import { readChooserDraft, writeChooserDraft } from "@/lib/apply/chooser-draft-storage";
 import { cn } from "@/lib/utils";
 
 type Nationality = { code: string; name: string };
@@ -88,6 +89,7 @@ const toDisplayMinor = (s: Service, tab: DisplayCurrency): number | null => {
 interface ISelectedVisaSummaryProps {
   service: Service;
   answers: { stay: TStayBucket | null; entry: "single" | "multiple"; kind: TTravelerKind };
+  travelerCount: number;
   totalText: string | null;
   price: { text: string; isEstimate: boolean } | null;
   badges: TApplyPriceBadges;
@@ -96,12 +98,12 @@ interface ISelectedVisaSummaryProps {
 const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
   service,
   answers,
+  travelerCount,
   totalText,
   price,
   badges,
 }) => {
   const t = useCustomerT();
-  const stayLabel = answers.stay ? t(`chooser.stayLabels.${answers.stay}`) : null;
   return (
     <aside className="border-secondary/25 bg-card h-fit space-y-4 rounded-2xl border p-4 shadow-[0_12px_30px_rgba(1,32,49,0.08)] lg:sticky lg:top-24">
       <div>
@@ -115,12 +117,10 @@ const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
             <dd className="text-foreground font-semibold">{t("start.stayDays", { count: service.durationDays })}</dd>
           </div>
         ) : null}
-        {stayLabel ? (
-          <div className="flex justify-between gap-3">
-            <dt>{t("start.tripLabel")}</dt>
-            <dd className="text-foreground font-semibold">{stayLabel}</dd>
-          </div>
-        ) : null}
+        <div className="flex justify-between gap-3">
+          <dt>{t("start.travelersLabel")}</dt>
+          <dd className="text-foreground font-semibold">{travelerCount}</dd>
+        </div>
         <div className="flex justify-between gap-3">
           <dt>{t("start.entryLabel")}</dt>
           <dd className="text-foreground font-semibold">
@@ -198,6 +198,22 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
   }>({ stay: null, entry: "single", kind: "adult" });
   const [additionalTravelers, setAdditionalTravelers] = useState<TPartyTravelerDraft[]>([]);
   const [chooserPhase, setChooserPhase] = useState<TChooserPhase>("stay");
+  const [draftRestored, setDraftRestored] = useState(false);
+  const servicesRef = useRef<Service[]>([]);
+  servicesRef.current = services;
+
+  useEffect(() => {
+    const restored = readChooserDraft(initialNationalityCode);
+    if (restored) {
+      setDisplayCurrency(restored.displayCurrency);
+      setServiceId(restored.serviceId);
+      setEmail(restored.email);
+      setAnswers({ stay: restored.stay, entry: restored.entry, kind: restored.kind });
+      setAdditionalTravelers(restored.additionalTravelers);
+      setChooserPhase(restored.phase);
+    }
+    setDraftRestored(true);
+  }, [initialNationalityCode]);
 
   const reloadCatalog = useCallback(() => {
     setCatalogReloadEpoch((n) => n + 1);
@@ -289,7 +305,8 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
         return;
       }
       void (async () => {
-        setLoadingServices(true);
+        const hadServices = servicesRef.current.length > 0;
+        if (!hadServices) setLoadingServices(true);
         try {
           const res = await fetchApiEnvelope<{ services: Service[] }>(
             apiHref(
@@ -302,7 +319,6 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
             setServices([]);
           } else {
             setServices(res.data.services);
-            setServiceId("");
             setError(null);
           }
         } finally {
@@ -312,9 +328,23 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
     });
     return () => {
       cancelled = true;
-      setLoadingServices(false);
+      if (servicesRef.current.length === 0) setLoadingServices(false);
     };
   }, [nationality, displayCurrency, catalogReloadEpoch]);
+
+  useEffect(() => {
+    if (!draftRestored || !nationality) return;
+    writeChooserDraft(nationality, {
+      displayCurrency,
+      serviceId,
+      stay: answers.stay,
+      entry: answers.entry,
+      kind: answers.kind,
+      phase: chooserPhase,
+      additionalTravelers,
+      email,
+    });
+  }, [draftRestored, nationality, displayCurrency, serviceId, answers, chooserPhase, additionalTravelers, email]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -390,6 +420,39 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
   const updateTraveler = (key: string, patch: Partial<TPartyTravelerDraft>) => {
     setAdditionalTravelers((prev) => prev.map((t) => (t.key === key ? { ...t, ...patch } : t)));
   }
+
+  const stayCount = stayOptionsForChooser(services).length;
+  const chooserHasBack =
+    chooserPhase === "kind" ||
+    (chooserPhase === "entry" && stayCount > 1) ||
+    (chooserPhase === "results" &&
+      (stayCount > 1 ||
+        Boolean(answers.stay && needsEntryQuestion(services, answers.stay)) ||
+        Boolean(answers.stay && needsKindQuestion(services, answers.stay, answers.entry))));
+  const showHomePrevious = !chooserHasBack;
+
+  useEffect(() => {
+    if (!answers.stay) return;
+    setAdditionalTravelers((prev) => {
+      let changed = false;
+      const next = prev.map((traveler) => {
+        const shortlist = filterPartyVisaOptions(services, {
+          stay: answers.stay!,
+          kind: traveler.kind,
+        });
+        if (shortlist.length === 1 && traveler.serviceId !== shortlist[0].id) {
+          changed = true;
+          return { ...traveler, serviceId: shortlist[0].id };
+        }
+        if (traveler.serviceId && !shortlist.some((s) => s.id === traveler.serviceId)) {
+          changed = true;
+          return { ...traveler, serviceId: shortlist.length === 1 ? shortlist[0].id : "" };
+        }
+        return traveler;
+      });
+      return changed ? next : prev;
+    });
+  }, [services, answers.stay, additionalTravelers]);
 
   const primaryService = services.find((s) => s.id === serviceId) ?? null;
   const selectedServices = [
@@ -470,7 +533,7 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
             </div>
           </div>
 
-          {!nationality ? null : loadingServices ? (
+          {!nationality ? null : !draftRestored || (loadingServices && services.length === 0) ? (
             <ClientServiceCardsSkeleton />
           ) : (
             <GuidedVisaChooser
@@ -483,6 +546,10 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
               onAddTraveler={addTraveler}
               onAnswersChange={setAnswers}
               onPhaseChange={setChooserPhase}
+              initialPhase={chooserPhase}
+              initialStay={answers.stay}
+              initialEntry={answers.entry}
+              initialKind={answers.kind}
             />
           )}
 
@@ -490,16 +557,10 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
             <div className="space-y-4">
               {additionalTravelers.map((traveler, idx) => {
                 const shortlist = answers.stay
-                  ? (() => {
-                      const ids = new Set(
-                        filterGuidedServices(services, {
-                          stay: answers.stay,
-                          entry: answers.entry,
-                          kind: traveler.kind,
-                        }).map((s) => s.id),
-                      );
-                      return services.filter((s) => ids.has(s.id));
-                    })()
+                  ? filterPartyVisaOptions(services, {
+                      stay: answers.stay,
+                      kind: traveler.kind,
+                    }).flatMap((opt) => services.filter((s) => s.id === opt.id))
                   : [];
                 return (
                   <div
@@ -533,22 +594,32 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
                         </button>
                       ))}
                     </div>
-                    <select
-                      value={traveler.serviceId}
-                      onChange={(e) => updateTraveler(traveler.key, { serviceId: e.target.value })}
-                      className="border-border bg-card text-foreground w-full rounded-xl border-2 px-3 py-3 text-sm"
-                    >
-                      <option value="">{t("start.party.chooseVisaOption")}</option>
-                      {shortlist.map((s) => {
-                        const price = formatPriceForDisplay(s, displayCurrency);
-                        return (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                            {price ? ` — ${price.text}` : ""}
-                          </option>
-                        );
-                      })}
-                    </select>
+                    {shortlist.length === 1 ? (
+                      <p className="border-secondary/30 bg-card text-foreground rounded-xl border-2 px-3 py-3 text-sm font-semibold">
+                        {shortlist[0].name}
+                        {(() => {
+                          const price = formatPriceForDisplay(shortlist[0], displayCurrency);
+                          return price ? ` — ${price.text}` : "";
+                        })()}
+                      </p>
+                    ) : (
+                      <select
+                        value={traveler.serviceId}
+                        onChange={(e) => updateTraveler(traveler.key, { serviceId: e.target.value })}
+                        className="border-border bg-card text-foreground w-full rounded-xl border-2 px-3 py-3 text-sm"
+                      >
+                        <option value="">{t("start.party.chooseVisaOption")}</option>
+                        {shortlist.map((s) => {
+                          const price = formatPriceForDisplay(s, displayCurrency);
+                          return (
+                            <option key={s.id} value={s.id}>
+                              {s.name}
+                              {price ? ` — ${price.text}` : ""}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    )}
                   </div>
                 );
               })}
@@ -590,11 +661,11 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
         </div>
       ) : null}
         </div>
-        {serviceId && primaryService ? <div className="order-1 lg:order-2"><SelectedVisaSummary service={primaryService} answers={answers} totalText={totalText} price={formatPriceForDisplay(primaryService, displayCurrency)} badges={badges} /></div> : null}
+        {serviceId && primaryService ? <div className="order-1 lg:order-2"><SelectedVisaSummary service={primaryService} answers={answers} travelerCount={1 + additionalTravelers.length} totalText={totalText} price={formatPriceForDisplay(primaryService, displayCurrency)} badges={badges} /></div> : null}
       </div>
 
       <div className="flex flex-col-reverse items-stretch gap-3 pt-1 sm:flex-row sm:items-center sm:justify-end">
-        {chooserPhase === "stay" ? (
+        {showHomePrevious ? (
           <ClientButton
             type="button"
             brand="white"

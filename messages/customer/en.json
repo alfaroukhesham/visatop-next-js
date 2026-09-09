@@ -2,12 +2,12 @@
   "home": {
     "eyebrow": "UAE Tourist Visa",
     "headlineLine1": "Traveling to Dubai?",
-    "headlineLine2": "Apply online for your Dubai visa & UAE",
-    "subheadline": "Get your visa in 2 working days",
+    "headlineLine2": "Apply online for your UAE visa",
+    "subheadline": "Get your visa in 3 working days",
     "body": "Select the passport you travel on. We show only what you can apply for, then keep your file in one workspace until you pay and submit.",
-    "nationalityLabelSrOnly": "Nationality",
-    "nationalityPlaceholder": "Type your country and select to begin",
-    "nationalityHelper": "Next you choose your visa and currency. An account is optional.",
+    "nationalityLabelSrOnly": "Select your Passport nationality",
+    "nationalityPlaceholder": "Select your Passport nationality",
+    "nationalityHelper": "Next you choose your visa and currency.",
     "nextButton": "Next",
     "guestTrackLink": "Track application",
     "signedInApplicationsLink": "My applications",
@@ -71,7 +71,8 @@
       "addAtLeastOne": "Add at least one traveller.",
       "maxTravelers": "Maximum {count} travellers per checkout.",
       "chooseVisaForAll": "Choose a visa for every traveller."
-    }
+    },
+    "travelersLabel": "Travelers"
   },
   "chooser": {
     "back": "Back",
@@ -183,7 +184,8 @@
       "checkoutCancelled": "Checkout cancelled.",
       "redirectingPaymentPartner": "Redirecting to our payment partner to complete checkout securely…",
       "paymentSubmittedConfirming": "Payment submitted. Confirming with our systems…"
-    }
+    },
+    "passportRequiredToPay": "Upload a passport copy to continue to payment."
   },
   "documents": {
     "title": "Documents",
@@ -245,13 +247,13 @@
     "eyebrow": "Status lookup",
     "title": "Track your application",
     "signedInSubtitle": "Drafts, in-progress files, and completed cases on this account (expired drafts are hidden).",
-    "guestSubtitle": "Use the email or phone from your application.",
-    "contactLabel": "Email or phone",
-    "contactHint": "We list every application where this guest email, your account email (if linked), or this phone number on the application profile matches.",
-    "contactPlaceholder": "you@example.com or +971…",
+    "guestSubtitle": "Look up applications with the email, phone, or Tracking ID from your application — or continue with Google.",
+    "contactLabel": "Email, phone, or Tracking ID",
+    "contactHint": "We list every application that matches this guest email, account email, phone number, or Tracking ID.",
+    "contactPlaceholder": "you@example.com, +971…, or Tracking ID",
     "showApplications": "Show applications",
     "lookingUp": "Looking up…",
-    "noResultsGuest": "No applications found for that email or phone. Check for typos, or use the same email you entered when you started as a guest.",
+    "noResultsGuest": "No applications found for that email, phone, or Tracking ID. Check for typos, or use the same email you entered when you started as a guest.",
     "referenceLabel": "Reference",
     "continue": "Continue",
     "viewStatus": "View status",
@@ -311,7 +313,8 @@
         "decision": "Decision",
         "closed": "Closed"
       }
-    }
+    },
+    "signInHelper": "Continue with Google, or sign in with email and password."
   },
   "submitted": {
     "pageTitle": "Thank you | Visatop",
@@ -499,7 +502,7 @@
     "applyIndexDescription": "Start or continue your visa application with Visatop.",
     "applicationPageTitle": "Your application | Visatop",
     "serviceFacts": {
-      "processingTime": "Typical processing in 2 working days when documents are complete",
+      "processingTime": "Typical processing in 3 working days when documents are complete",
       "pricing": "All-inclusive fees vary by passport nationality and visa duration — exact price shown before payment",
       "visaTypes": "14-, 30-, and 60-day tourist and visit visas for 95+ passport countries",
       "portal": "Upload passport copy and photo; track status in your client portal"

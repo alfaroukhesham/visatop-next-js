@@ -37,18 +37,37 @@ export function normalizePhoneDigits(raw: string): string | null {
   return digits;
 }
 
-export function parseTrackContact(raw: string): { kind: "email"; email: string } | { kind: "phone"; digits: string } {
+export type TTrackLookup =
+  | { kind: "email"; email: string }
+  | { kind: "phone"; digits: string }
+  | { kind: "trackingId"; value: string };
+
+/** Guest tracking IDs: full application UUID, 8-char id prefix, or reference number. */
+export function normalizeTrackingId(raw: string): string | null {
+  const s = raw.trim();
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{3,63}$/.test(s)) return null;
+  if (/^\d+$/.test(s)) return null;
+  return s;
+}
+
+export function parseTrackContact(raw: string): TTrackLookup {
   const trimmed = raw.trim();
   const email = normalizeEmailInput(trimmed);
   if (email) return { kind: "email", email };
   const digits = normalizePhoneDigits(trimmed);
   if (digits) return { kind: "phone", digits };
+  const trackingId = normalizeTrackingId(trimmed);
+  if (trackingId) return { kind: "trackingId", value: trackingId };
   return { kind: "phone", digits: "" };
 }
 
 export function isValidTrackContact(raw: string): boolean {
   const c = parseTrackContact(raw);
-  return (c.kind === "email" && Boolean(c.email)) || (c.kind === "phone" && Boolean(c.digits));
+  return (
+    (c.kind === "email" && Boolean(c.email)) ||
+    (c.kind === "phone" && Boolean(c.digits)) ||
+    c.kind === "trackingId"
+  );
 }
 
 /**
@@ -79,6 +98,7 @@ export async function findApplicationsForContactTrackLookupPaginated(
   const contact = parseTrackContact(contactRaw);
   if (contact.kind === "email" && !contact.email) return { items: [], hasMore: false };
   if (contact.kind === "phone" && !contact.digits) return { items: [], hasMore: false };
+  if (contact.kind === "trackingId" && !contact.value) return { items: [], hasMore: false };
 
   const limit = Math.max(1, Math.min(TRACK_LOOKUP_LIMIT, Math.floor(opts.limit)));
 
@@ -88,6 +108,35 @@ export async function findApplicationsForContactTrackLookupPaginated(
         and(eq(application.createdAt, new Date(opts.cursor.createdAt)), lt(application.id, opts.cursor.id)),
       )
     : undefined;
+
+  if (contact.kind === "trackingId") {
+    const value = contact.value;
+    const lower = value.toLowerCase();
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+    const isIdPrefix = /^[0-9a-f]{8}$/i.test(value);
+    const baseWhere = isUuid
+      ? eq(application.id, value)
+      : isIdPrefix
+        ? or(
+            sql`lower(${application.id}) like ${`${lower}%`}`,
+            sql`lower(trim(coalesce(${application.referenceNumber}, ''))) = ${lower}`,
+          )
+        : or(
+            eq(application.id, value),
+            sql`lower(trim(coalesce(${application.referenceNumber}, ''))) = ${lower}`,
+          );
+    const where = cursorWhere ? and(baseWhere, cursorWhere) : baseWhere;
+    const rows = await tx
+      .select({ app: application })
+      .from(application)
+      .where(where)
+      .orderBy(desc(application.createdAt), desc(application.id))
+      .limit(limit + 1);
+    const apps = rows.map((r) => r.app);
+    const hasMore = apps.length > limit;
+    return { items: hasMore ? apps.slice(0, limit) : apps, hasMore };
+  }
 
   if (contact.kind === "email") {
     const baseWhere = or(

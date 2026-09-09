@@ -2,12 +2,12 @@
   "home": {
     "eyebrow": "Visa touristique UAE",
     "headlineLine1": "Vous voyagez à Dubaï ?",
-    "headlineLine2": "Demandez en ligne votre visa pour Dubaï et les Émirats arabes unis",
-    "subheadline": "Obtenez votre visa en 2 jours ouvrables",
+    "headlineLine2": "Demandez en ligne votre visa pour les Émirats arabes unis",
+    "subheadline": "Obtenez votre visa en 3 jours ouvrables",
     "body": "Indiquez le passeport avec lequel vous voyagez. Nous n'affichons que les options auxquelles vous pouvez prétendre, puis conservons votre dossier dans un même espace jusqu'au paiement et à la soumission.",
-    "nationalityLabelSrOnly": "Nationalité",
-    "nationalityPlaceholder": "Saisissez votre pays et sélectionnez-le pour commencer",
-    "nationalityHelper": "Ensuite, vous choisissez votre visa et votre devise. Un compte est facultatif.",
+    "nationalityLabelSrOnly": "Sélectionnez la nationalité de votre passeport",
+    "nationalityPlaceholder": "Sélectionnez la nationalité de votre passeport",
+    "nationalityHelper": "Ensuite, vous choisissez votre visa et votre devise.",
     "nextButton": "Suivant",
     "guestTrackLink": "Suivre ma demande",
     "signedInApplicationsLink": "Mes demandes",
@@ -71,7 +71,8 @@
       "addAtLeastOne": "Ajoutez au moins un voyageur.",
       "maxTravelers": "Maximum {count} voyageurs par paiement.",
       "chooseVisaForAll": "Choisissez un visa pour chaque voyageur."
-    }
+    },
+    "travelersLabel": "Voyageurs"
   },
   "chooser": {
     "back": "Retour",
@@ -183,7 +184,8 @@
       "checkoutCancelled": "Paiement annulé.",
       "redirectingPaymentPartner": "Redirection vers notre partenaire de paiement pour finaliser le paiement en toute sécurité…",
       "paymentSubmittedConfirming": "Paiement soumis. Confirmation en cours avec nos systèmes…"
-    }
+    },
+    "passportRequiredToPay": "Téléchargez une copie de passeport pour continuer vers le paiement."
   },
   "documents": {
     "title": "Documents",
@@ -245,13 +247,13 @@
     "eyebrow": "Consultation du statut",
     "title": "Suivre ma demande",
     "signedInSubtitle": "Brouillons, dossiers en cours et demandes finalisées sur ce compte (les brouillons expirés sont masqués).",
-    "guestSubtitle": "Utilisez l'e-mail ou le téléphone indiqués dans votre demande.",
-    "contactLabel": "E-mail ou téléphone",
-    "contactHint": "Nous listons toutes les demandes dont l'e-mail invité, l'e-mail de votre compte (s'il est associé) ou le numéro de téléphone du profil de la demande correspond.",
-    "contactPlaceholder": "vous@exemple.com ou +971…",
+    "guestSubtitle": "Recherchez des dossiers avec l’e-mail, le téléphone ou l’ID de suivi — ou continuez avec Google.",
+    "contactLabel": "E-mail, téléphone ou ID de suivi",
+    "contactHint": "Nous listons chaque dossier correspondant à cet e-mail, téléphone ou ID de suivi.",
+    "contactPlaceholder": "you@example.com, +971… ou ID de suivi",
     "showApplications": "Afficher les demandes",
     "lookingUp": "Recherche en cours…",
-    "noResultsGuest": "Aucune demande trouvée pour cet e-mail ou ce numéro. Vérifiez les fautes de frappe, ou utilisez le même e-mail que lors de votre démarrage en tant qu'invité.",
+    "noResultsGuest": "Aucun dossier trouvé pour cet e-mail, téléphone ou ID de suivi. Vérifiez les fautes, ou utilisez l’e-mail saisi lorsque vous avez commencé en tant qu’invité.",
     "referenceLabel": "Référence",
     "continue": "Continuer",
     "viewStatus": "Voir le statut",
@@ -311,7 +313,8 @@
         "decision": "Décision",
         "closed": "Clôturé"
       }
-    }
+    },
+    "signInHelper": "Continuez avec Google, ou connectez-vous avec e-mail et mot de passe."
   },
   "submitted": {
     "pageTitle": "Merci | Visatop",
@@ -499,7 +502,7 @@
     "applyIndexDescription": "Démarrez ou poursuivez votre demande de visa avec Visatop.",
     "applicationPageTitle": "Votre demande | Visatop",
     "serviceFacts": {
-      "processingTime": "Traitement habituel en 2 jours ouvrables lorsque les documents sont complets",
+      "processingTime": "Traitement typique en 3 jours ouvrables lorsque les documents sont complets",
       "pricing": "Frais tout compris variables selon la nationalité du passeport et la durée du visa — prix exact affiché avant le paiement",
       "visaTypes": "Visas touristiques et de visite de 14, 30 et 60 jours pour plus de 95 nationalités",
       "portal": "Téléversez la copie du passeport et la photo ; suivez le statut dans votre portail client"

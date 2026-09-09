@@ -16,9 +16,9 @@ import {
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import {
   defaultEntryForStay,
+  defaultKindForStay,
   filterGuidedServices,
   needsEntryQuestion,
-  needsKindQuestion,
   nextPhaseAfterEntry,
   nextPhaseAfterStay,
   stayOptionsForChooser,
@@ -50,6 +50,10 @@ export interface IGuidedVisaChooserProps {
   onAddTraveler?: () => void;
   onAnswersChange?: (answers: { stay: TStayBucket | null; entry: "single" | "multiple"; kind: TTravelerKind }) => void;
   onPhaseChange?: (phase: TChooserPhase) => void;
+  initialPhase?: TChooserPhase;
+  initialStay?: TStayBucket | null;
+  initialEntry?: "single" | "multiple";
+  initialKind?: TTravelerKind;
 }
 
 const EMPTY_SHORTLIST_KEY = "chooser.noMatches";
@@ -210,52 +214,70 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
   onAddTraveler,
   onAnswersChange,
   onPhaseChange,
+  initialPhase = "stay",
+  initialStay = null,
+  initialEntry = "single",
+  initialKind = "adult",
 }) => {
   const t = useCustomerT();
   const stayBuckets = useMemo(() => stayOptionsForChooser(services), [services]);
-  const [phase, setPhase] = useState<TChooserPhase>("stay");
-  const [stay, setStay] = useState<TStayBucket | null>(null);
-  const [entry, setEntry] = useState<"single" | "multiple">("single");
-  const [kind, setKind] = useState<TTravelerKind>("adult");
+  const [phase, setPhase] = useState<TChooserPhase>(initialPhase);
+  const [stay, setStay] = useState<TStayBucket | null>(initialStay);
+  const [entry, setEntry] = useState<"single" | "multiple">(initialEntry);
+  const [kind, setKind] = useState<TTravelerKind>(initialKind);
+
+  const view = useMemo(() => {
+    if (phase === "stay" && stayBuckets.length === 1 && stayBuckets[0]) {
+      const next = stayBuckets[0];
+      const nextEntry = defaultEntryForStay(services, next);
+      const nextKind = defaultKindForStay(services, next, nextEntry);
+      return {
+        phase: nextPhaseAfterStay(services, next),
+        stay: next,
+        entry: nextEntry,
+        kind: nextKind,
+      };
+    }
+    if (phase === "stay" && stayBuckets.length === 0) {
+      return { phase: "results" as const, stay: null, entry, kind };
+    }
+    return { phase, stay, entry, kind };
+  }, [phase, stay, entry, kind, stayBuckets, services]);
 
   useEffect(() => {
-    onAnswersChange?.({ stay, entry, kind });
-  }, [stay, entry, kind, onAnswersChange]);
+    onAnswersChange?.({ stay: view.stay, entry: view.entry, kind: view.kind });
+  }, [view.stay, view.entry, view.kind, onAnswersChange]);
 
   useEffect(() => {
-    onPhaseChange?.(phase);
-  }, [phase, onPhaseChange]);
+    onPhaseChange?.(view.phase);
+  }, [view.phase, onPhaseChange]);
 
   const matches = useMemo(() => {
-    if (!stay) return [];
-    const ids = new Set(filterGuidedServices(services, { stay, entry, kind }).map((s) => s.id));
+    if (!view.stay) return services.filter((s) => s.showInGuidedChooser);
+    const ids = new Set(
+      filterGuidedServices(services, { stay: view.stay, entry: view.entry, kind: view.kind }).map((s) => s.id),
+    );
     return services.filter((s) => ids.has(s.id));
-  }, [services, stay, entry, kind]);
-
-  const questionSteps = useMemo((): TChooserPhase[] => {
-    const steps: TChooserPhase[] = ["stay"];
-    if (!stay) return steps;
-    if (needsEntryQuestion(services, stay)) steps.push("entry");
-    if (needsKindQuestion(services, stay)) steps.push("kind");
-    return steps;
-  }, [services, stay]);
-
-  const questionIndex = Math.max(1, questionSteps.indexOf(phase) + 1);
-  const totalQuestions = questionSteps.length;
+  }, [services, view.stay, view.entry, view.kind]);
 
   const goStay = (next: TStayBucket) => {
+    const nextEntry = defaultEntryForStay(services, next);
+    const nextKind = defaultKindForStay(services, next, nextEntry);
     setStay(next);
-    setEntry(defaultEntryForStay(services, next));
-    setKind("adult");
+    setEntry(nextEntry);
+    setKind(nextKind);
     onSelectService("");
     setPhase(nextPhaseAfterStay(services, next));
   };
 
   const goEntry = (next: "single" | "multiple") => {
+    const stayForEntry = view.stay ?? "1_14";
+    const nextKind = defaultKindForStay(services, stayForEntry, next);
+    setStay(stayForEntry);
     setEntry(next);
-    setKind("adult");
+    setKind(nextKind);
     onSelectService("");
-    setPhase(nextPhaseAfterEntry(services, stay ?? "1_14"));
+    setPhase(nextPhaseAfterEntry(services, stayForEntry, next));
   };
 
   const goKind = (next: TTravelerKind) => {
@@ -266,28 +288,30 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
 
   const goBack = () => {
     onSelectService("");
-    if (phase === "results") {
-      if (stay && nextPhaseAfterEntry(services, stay) === "kind") return void setPhase("kind");
-      if (stay && needsEntryQuestion(services, stay)) return void setPhase("entry");
-      return void setPhase("stay");
+    if (view.phase === "results") {
+      if (view.stay && nextPhaseAfterEntry(services, view.stay, view.entry) === "kind") {
+        return void setPhase("kind");
+      }
+      if (view.stay && needsEntryQuestion(services, view.stay)) return void setPhase("entry");
+      if (stayBuckets.length > 1) return void setPhase("stay");
+      return;
     }
-    if (phase === "kind") return void setPhase(stay && needsEntryQuestion(services, stay) ? "entry" : "stay");
-    if (phase === "entry") setPhase("stay");
+    if (view.phase === "kind") {
+      if (view.stay && needsEntryQuestion(services, view.stay)) return void setPhase("entry");
+      if (stayBuckets.length > 1) return void setPhase("stay");
+      return;
+    }
+    if (view.phase === "entry" && stayBuckets.length > 1) setPhase("stay");
   };
 
-  const phaseLabel =
-    phase === "results"
-      ? t("chooser.phaseShortlist")
-      : phase === "stay"
-        ? t("chooser.phaseYourTrip")
-        : phase === "entry"
-          ? t("chooser.phaseEntryPreference")
-          : t("chooser.phaseTravellerType");
-  const progress = phase === "results" ? 100 : Math.round((questionIndex / totalQuestions) * 100);
+  const showChooserBack =
+    view.phase === "results" ||
+    view.phase === "kind" ||
+    (view.phase === "entry" && stayBuckets.length > 1);
 
   return (
     <div className="space-y-4 rounded-2xl border border-border/80 bg-muted/35 p-3 sm:p-5">
-      {phase !== "stay" ? (
+      {showChooserBack ? (
         <button
           type="button"
           onClick={goBack}
@@ -296,25 +320,11 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
           <ChevronLeft className="size-4" aria-hidden /> {t("chooser.back")}
         </button>
       ) : null}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-secondary text-[11px] font-bold uppercase tracking-[0.2em]">
-            {phase === "results" ? t("chooser.readyToApply") : t("chooser.stepOf", { current: questionIndex, total: totalQuestions })}
-          </p>
-          <p className="text-muted-foreground text-xs font-medium">{phaseLabel}</p>
-        </div>
-        <div className="bg-border h-1 overflow-hidden rounded-full" aria-hidden>
-          <div
-            className="bg-secondary h-full rounded-full transition-[width] duration-500"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
-      <div key={phase} className="theme-client-rise space-y-4">
-        {phase === "stay" ? (
+      <div key={view.phase} className="theme-client-rise space-y-4">
+        {view.phase === "stay" ? (
           <div className="space-y-4">
             <div className="mx-auto max-w-2xl">
-              <h3 className="font-heading text-foreground text-2xl font-semibold tracking-tight sm:text-3xl">
+              <h3 className="font-heading text-foreground text-center text-2xl font-semibold tracking-tight sm:text-3xl">
                 {t("chooser.howLongStay")}
               </h3>
             </div>
@@ -325,7 +335,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                 return (
                   <StayChoiceTile
                     key={b}
-                    selected={stay === b}
+                    selected={view.stay === b}
                     label={t(`chooser.stayLabels.${b}`)}
                     hint={t(meta.hintKey)}
                     icon={<Icon className="size-3.5" />}
@@ -336,23 +346,23 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
             </div>
           </div>
         ) : null}
-        {phase === "entry" ? (
+        {view.phase === "entry" ? (
           <div className="space-y-4">
             <div className="mx-auto max-w-2xl">
-              <h3 className="font-heading text-foreground text-2xl font-semibold tracking-tight sm:text-3xl">
+              <h3 className="font-heading text-foreground text-center text-2xl font-semibold tracking-tight sm:text-3xl">
                 {t("chooser.singleOrMultiple")}
               </h3>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <ChoiceButton
-                selected={entry === "single"}
+                selected={view.entry === "single"}
                 label={t("chooser.singleEntry")}
                 hint={t("chooser.singleEntryHint")}
                 icon={<Plane className="size-6" />}
                 onClick={() => goEntry("single")}
               />
               <ChoiceButton
-                selected={entry === "multiple"}
+                selected={view.entry === "multiple"}
                 label={t("chooser.multipleEntry")}
                 hint={t("chooser.multipleEntryHint")}
                 icon={<Repeat2 className="size-6" />}
@@ -361,22 +371,22 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
             </div>
           </div>
         ) : null}
-        {phase === "kind" ? (
+        {view.phase === "kind" ? (
           <div className="space-y-4">
             <div className="mx-auto max-w-2xl">
-              <h3 className="font-heading text-foreground text-2xl font-semibold tracking-tight sm:text-3xl">
+              <h3 className="font-heading text-foreground text-center text-2xl font-semibold tracking-tight sm:text-3xl">
                 {t("chooser.whoIsVisaFor")}
               </h3>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <ChoiceButton
-                selected={kind === "adult"}
+                selected={view.kind === "adult"}
                 label={t("chooser.adult")}
                 icon={<UserRound className="size-6" />}
                 onClick={() => goKind("adult")}
               />
               <ChoiceButton
-                selected={kind === "child"}
+                selected={view.kind === "child"}
                 label={t("chooser.child")}
                 icon={<Baby className="size-6" />}
                 onClick={() => goKind("child")}
@@ -384,7 +394,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
             </div>
           </div>
         ) : null}
-        {phase === "results" ? (
+        {view.phase === "results" ? (
           matches.length === 0 ? (
             <p className="text-muted-foreground text-sm leading-relaxed" role="status">
               {t(EMPTY_SHORTLIST_KEY)}
@@ -393,9 +403,9 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
             <div className="space-y-4">
               <div className="rounded-2xl border border-secondary/20 bg-secondary/5 px-4 py-3 text-sm text-secondary">
                 {t("chooser.matchingVisasBanner", {
-                  stay: stay ? t(`chooser.stayLabels.${stay}`) : "",
+                  stay: view.stay ? t(`chooser.stayLabels.${view.stay}`) : "",
                   travellerKind:
-                    kind === "child" ? t("chooser.travellerKindChild") : t("chooser.travellerKindAdult"),
+                    view.kind === "child" ? t("chooser.travellerKindChild") : t("chooser.travellerKindAdult"),
                 })}
               </div>
               <ul className="space-y-3">
@@ -461,7 +471,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
             </div>
           )
         ) : null}
-        {phase === "results" && matches.length > 0 && partyEnabled && selectedServiceId ? (
+        {view.phase === "results" && matches.length > 0 && partyEnabled && selectedServiceId ? (
           <div className="border-border bg-card space-y-3 rounded-2xl border-2 px-5 py-5 shadow-[0_10px_28px_rgba(1,32,49,0.05)]">
             <p className="text-foreground text-sm font-semibold">{t("chooser.travellingWithOthersTitle")}</p>
             <p className="text-muted-foreground text-sm leading-relaxed">

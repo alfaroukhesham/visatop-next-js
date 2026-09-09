@@ -45,7 +45,7 @@ const Home = async () => {
     <div className="text-foreground flex min-h-0 flex-1 flex-col">
       <ResumeDraftModal />
       <JsonLdScript id="visatop-home-jsonld" data={buildHomePageJsonLd({ locale })} />
-      <ClientAppHeader />
+      <ClientAppHeader hideWhenSignedOut />
 
       <div className="relative flex-1 overflow-hidden">
         <div
@@ -71,9 +71,6 @@ const Home = async () => {
               <h2 className="font-heading text-foreground mt-6 text-center text-[1.25rem]! leading-[1.35]! font-semibold">
                 {t("home.subheadline")}
               </h2>
-              <p className="text-muted-foreground mt-7  text-base text-center leading-relaxed md:text-lg">
-                {t("home.body")}
-              </p>
 
               <HomeNationalityStart />
             </ClientHeroPanel>

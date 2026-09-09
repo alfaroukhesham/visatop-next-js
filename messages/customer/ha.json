@@ -2,12 +2,12 @@
   "home": {
     "eyebrow": "Visa ta Ziyara ta UAE",
     "headlineLine1": "Kuna tafiya zuwa Dubai?",
-    "headlineLine2": "Nemi visa ɗin Dubai da UAE ɗinku akan layi",
-    "subheadline": "Samu visa ɗinku cikin kwanaki 2 na aiki",
+    "headlineLine2": "Nemi visa ɗin UAE ɗinku akan layi",
+    "subheadline": "Samu visa ɗinku cikin kwanaki 3 na aiki",
     "body": "Zaɓi fasfon da kuke tafiya da shi. Muna nuna abin da za ku iya nema kawai, sannan mu riƙe fayil ɗinku a wuri guda har sai kun biya kuma ku gabatar.",
-    "nationalityLabelSrOnly": "Asalin ƙasa",
-    "nationalityPlaceholder": "Rubuta ƙasarku kuma zaɓi don farawa",
-    "nationalityHelper": "A gaba za ku zaɓi visa da kuɗi. Asusu ba dole ba ne.",
+    "nationalityLabelSrOnly": "Zaɓi ƙasar fasfo ɗinku",
+    "nationalityPlaceholder": "Zaɓi ƙasar fasfo ɗinku",
+    "nationalityHelper": "A gaba za ku zaɓi visa da kuɗi.",
     "nextButton": "Gaba",
     "guestTrackLink": "Bibiyi nema",
     "signedInApplicationsLink": "Neman da nayi",
@@ -71,7 +71,8 @@
       "addAtLeastOne": "Ƙara aƙalla mafiya tafiya ɗaya.",
       "maxTravelers": "Mafiya tafiya {count} a mafi yawa a kowace biya.",
       "chooseVisaForAll": "Zaɓi visa ga kowane mafiya tafiya."
-    }
+    },
+    "travelersLabel": "Matafiya"
   },
   "chooser": {
     "back": "Baya",
@@ -183,7 +184,8 @@
       "checkoutCancelled": "An soke biya.",
       "redirectingPaymentPartner": "Ana tura ku zuwa abokin biyan kuɗi don kammala biya cikin aminci…",
       "paymentSubmittedConfirming": "An gabatar da biya. Ana tabbatarwa da tsarinmu…"
-    }
+    },
+    "passportRequiredToPay": "Loda kwafin fasfo don ci gaba zuwa biyan kuɗi."
   },
   "documents": {
     "title": "Takardu",
@@ -245,13 +247,13 @@
     "eyebrow": "Neman matsayi",
     "title": "Bibiyi neman ku",
     "signedInSubtitle": "Daftari, fayiloli masu ci gaba, da kuma kaddamar da aka kammala a wannan asusu (daftarin da ya ƙare ba a nuna su ba).",
-    "guestSubtitle": "Yi amfani da imel ko wayar da ke cikin neman ku.",
-    "contactLabel": "Imel ko waya",
-    "contactHint": "Muna jerawa duk neman da wannan imel ɗin baƙo, imel ɗin asusun ku (idan an haɗa), ko wannan lambar waya a cikin bayanan nema ta dace.",
-    "contactPlaceholder": "you@example.com ko +971…",
+    "guestSubtitle": "Nemo aikace-aikace da imel, waya, ko Tracking ID — ko ci gaba da Google.",
+    "contactLabel": "Imel, waya, ko Tracking ID",
+    "contactHint": "Muna nuna kowace aikace da ta dace da wannan imel, waya, ko Tracking ID.",
+    "contactPlaceholder": "you@example.com, +971…, ko Tracking ID",
     "showApplications": "Nuna nema",
     "lookingUp": "Ana nema…",
-    "noResultsGuest": "Ba a sami nema ba don wannan imel ko waya. Duba kuskure rubutu, ko yi amfani da imel ɗin da kuka shigar lokacin da kuka fara a matsayin baƙo.",
+    "noResultsGuest": "Babu aikace-aikace da aka samu ga wannan imel, waya, ko Tracking ID. Duba kuskure, ko yi amfani da imel ɗin da kuka fara da shi a matsayin baƙo.",
     "referenceLabel": "Lambar nema",
     "continue": "Ci gaba",
     "viewStatus": "Duba matsayi",
@@ -311,7 +313,8 @@
         "decision": "Shawara",
         "closed": "An rufe"
       }
-    }
+    },
+    "signInHelper": "Ci gaba da Google, ko shiga da imel da kalmar sirri."
   },
   "submitted": {
     "pageTitle": "Na gode | Visatop",
@@ -499,7 +502,7 @@
     "applyIndexDescription": "Fara ko ci gaba da neman visa tare da Visatop.",
     "applicationPageTitle": "Neman ku | Visatop",
     "serviceFacts": {
-      "processingTime": "Sarrafawa yawanci cikin kwanaki 2 na aiki lokacin da takardu sun cika",
+      "processingTime": "Aikace-aikace na yau da kullum cikin kwanaki 3 na aiki idan takardu sun cika",
       "pricing": "Kuɗaɗen da suka haɗa komai sun bambanta bisa asalin fasfo da tsawon visa — cikakken farashi ana nuna shi kafin biya",
       "visaTypes": "Visa ta ziyara da ziyara na kwanaki 14, 30, da 60 ga fasfo fiye da ƙasashe 95",
       "portal": "Loda kwafin fasfo da hoto; bibiyi matsayi a portal ɗin abokin ciniki"

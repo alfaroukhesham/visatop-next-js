@@ -2,12 +2,12 @@
   "home": {
     "eyebrow": "UAE Tourist Visa",
     "headlineLine1": "Pupunta sa Dubai?",
-    "headlineLine2": "Mag-apply online para sa Dubai visa at UAE",
-    "subheadline": "Makukuha ang visa mo sa loob ng 2 araw ng trabaho",
+    "headlineLine2": "Mag-apply online para sa iyong UAE visa",
+    "subheadline": "Makukuha ang visa mo sa loob ng 3 araw ng trabaho",
     "body": "Piliin ang pasaporte na gagamitin mo sa paglalakbay. Ipapakita lang namin ang mga maaari mong i-apply, at iisa lang ang workspace mo hanggang magbayad at magsumite ka.",
-    "nationalityLabelSrOnly": "Nasyonalidad",
-    "nationalityPlaceholder": "I-type ang bansa mo at piliin para magsimula",
-    "nationalityHelper": "Susunod ay pipili ka ng visa at currency. Opsiyonal lang ang account.",
+    "nationalityLabelSrOnly": "Piliin ang nasyonalidad ng iyong pasaporte",
+    "nationalityPlaceholder": "Piliin ang nasyonalidad ng iyong pasaporte",
+    "nationalityHelper": "Susunod ay pipili ka ng visa at currency.",
     "nextButton": "Susunod",
     "guestTrackLink": "I-track ang application",
     "signedInApplicationsLink": "Mga application ko",
@@ -71,7 +71,8 @@
       "addAtLeastOne": "Magdagdag ng kahit isang traveler.",
       "maxTravelers": "Maximum na {count} traveler bawat checkout.",
       "chooseVisaForAll": "Pumili ng visa para sa bawat traveler."
-    }
+    },
+    "travelersLabel": "Mga manlalakbay"
   },
   "chooser": {
     "back": "Bumalik",
@@ -183,7 +184,8 @@
       "checkoutCancelled": "Kinansela ang checkout.",
       "redirectingPaymentPartner": "Inire-redirect sa payment partner namin para kumpletuhin ang checkout nang secure…",
       "paymentSubmittedConfirming": "Naisumite na ang payment. Kinukumpirma sa aming mga system…"
-    }
+    },
+    "passportRequiredToPay": "Mag-upload ng kopya ng pasaporte para magpatuloy sa bayad."
   },
   "documents": {
     "title": "Mga dokumento",
@@ -245,13 +247,13 @@
     "eyebrow": "Status lookup",
     "title": "I-track ang application mo",
     "signedInSubtitle": "Mga draft, in-progress na file, at natapos na case sa account na ito (nakatago ang expired na draft).",
-    "guestSubtitle": "Gamitin ang email o telepono mula sa application mo.",
-    "contactLabel": "Email o telepono",
-    "contactHint": "Ililista namin ang bawat application kung saan tumutugma ang guest email na ito, account email mo (kung naka-link), o phone number na ito sa application profile.",
-    "contactPlaceholder": "you@example.com o +971…",
+    "guestSubtitle": "Hanapin ang mga application gamit ang email, telepono, o Tracking ID — o magpatuloy sa Google.",
+    "contactLabel": "Email, telepono, o Tracking ID",
+    "contactHint": "Ipinapakita namin ang bawat application na tumutugma sa email, telepono, o Tracking ID na ito.",
+    "contactPlaceholder": "you@example.com, +971…, o Tracking ID",
     "showApplications": "Ipakita ang mga application",
     "lookingUp": "Hinahanap…",
-    "noResultsGuest": "Walang nahanap na application para sa email o telepono na iyon. Suriin kung may typo, o gamitin ang parehong email na ginamit mo nang magsimula bilang guest.",
+    "noResultsGuest": "Walang nahanap na application para sa email, telepono, o Tracking ID na iyon. Tingnan ang typo, o gamitin ang email na ginamit mo noong nagsimula ka bilang guest.",
     "referenceLabel": "Reference",
     "continue": "Ituloy",
     "viewStatus": "Tingnan ang status",
@@ -311,7 +313,8 @@
         "decision": "Desisyon",
         "closed": "Sarado"
       }
-    }
+    },
+    "signInHelper": "Magpatuloy sa Google, o mag-sign in gamit ang email at password."
   },
   "submitted": {
     "pageTitle": "Salamat | Visatop",
@@ -499,7 +502,7 @@
     "applyIndexDescription": "Simulan o ituloy ang visa application mo sa Visatop.",
     "applicationPageTitle": "Ang application mo | Visatop",
     "serviceFacts": {
-      "processingTime": "Karaniwang processing sa loob ng 2 araw ng trabaho kapag kumpleto ang mga dokumento",
+      "processingTime": "Karaniwang processing sa loob ng 3 araw ng trabaho kapag kompleto ang mga dokumento",
       "pricing": "Nag-iiba ang all-inclusive fees ayon sa passport nationality at visa duration — eksaktong presyo ipapakita bago magbayad",
       "visaTypes": "14-, 30-, at 60-araw na tourist at visit visa para sa 95+ passport country",
       "portal": "Mag-upload ng passport copy at photo; i-track ang status sa client portal mo"

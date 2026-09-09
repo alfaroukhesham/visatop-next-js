@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { TGuidedService } from "./guided-visa-filter";
 import {
   defaultEntryForStay,
+  defaultKindForStay,
   filterGuidedServices,
+  filterPartyVisaOptions,
   needsEntryQuestion,
   needsKindQuestion,
   nextPhaseAfterEntry,
@@ -60,12 +62,12 @@ describe("stayOptionsForChooser", () => {
     expect(stayOptionsForChooser(catalog)).toEqual(["15_30", "transit"]);
   });
 
-  it("falls back to every stay bucket so the first question stays answerable", () => {
+  it("does not invent stay buckets when none are configured", () => {
     expect(
       stayOptionsForChooser([
         { id: "x", stayBucket: null, entryKind: "either", travelerKind: "adult", showInGuidedChooser: true },
       ]),
-    ).toEqual(["1_14", "15_30", "31_60", "transit", "5_year"]);
+    ).toEqual([]);
   });
 });
 
@@ -74,13 +76,28 @@ describe("chooser phase", () => {
     expect(needsEntryQuestion(catalog, "15_30")).toBe(true);
     expect(needsKindQuestion(catalog, "15_30")).toBe(true);
     expect(nextPhaseAfterStay(catalog, "15_30")).toBe("entry");
-    expect(nextPhaseAfterEntry(catalog, "15_30")).toBe("kind");
+    expect(nextPhaseAfterEntry(catalog, "15_30", "single")).toBe("kind");
   });
 
   it("skips entry and kind for transit", () => {
     expect(needsEntryQuestion(catalog, "transit")).toBe(false);
     expect(needsKindQuestion(catalog, "transit")).toBe(false);
     expect(nextPhaseAfterStay(catalog, "transit")).toBe("results");
+  });
+
+  it("skips kind when only child visas exist so the shortlist is not empty", () => {
+    const childOnly: TGuidedService[] = [
+      {
+        id: "kid",
+        stayBucket: "1_14",
+        entryKind: "single",
+        travelerKind: "child",
+        showInGuidedChooser: true,
+      },
+    ];
+    expect(needsKindQuestion(childOnly, "1_14")).toBe(false);
+    expect(defaultKindForStay(childOnly, "1_14")).toBe("child");
+    expect(nextPhaseAfterStay(childOnly, "1_14")).toBe("results");
   });
 
   it("defaults entry to multiple when that is the only stay option", () => {
@@ -102,5 +119,13 @@ describe("chooser phase", () => {
         kind: "adult",
       }).map((s) => s.id),
     ).toEqual(["five"]);
+  });
+});
+
+describe("filterPartyVisaOptions", () => {
+  it("keeps both single and multiple entry visas for the stay and traveller kind", () => {
+    expect(
+      filterPartyVisaOptions(catalog, { stay: "15_30", kind: "adult" }).map((s) => s.id),
+    ).toEqual(["b", "c"]);
   });
 });

@@ -2,12 +2,12 @@
   "home": {
     "eyebrow": "Visado turístico para los EAU",
     "headlineLine1": "¿Viaja a Dubái?",
-    "headlineLine2": "Solicite en línea su visado para Dubái y los EAU",
-    "subheadline": "Obtenga su visado en 2 días hábiles",
+    "headlineLine2": "Solicite en línea su visado de los EAU",
+    "subheadline": "Obtenga su visado en 3 días hábiles",
     "body": "Seleccione el pasaporte con el que viaja. Le mostramos solo lo que puede solicitar y mantenemos su expediente en un solo espacio hasta que pague y envíe.",
-    "nationalityLabelSrOnly": "Nacionalidad",
-    "nationalityPlaceholder": "Escriba su país y selecciónelo para comenzar",
-    "nationalityHelper": "A continuación elige su visado y la moneda. Crear una cuenta es opcional.",
+    "nationalityLabelSrOnly": "Seleccione la nacionalidad de su pasaporte",
+    "nationalityPlaceholder": "Seleccione la nacionalidad de su pasaporte",
+    "nationalityHelper": "A continuación elige su visado y la moneda.",
     "nextButton": "Siguiente",
     "guestTrackLink": "Consultar solicitud",
     "signedInApplicationsLink": "Mis solicitudes",
@@ -71,7 +71,8 @@
       "addAtLeastOne": "Añada al menos un viajero.",
       "maxTravelers": "Máximo {count} viajeros por pago.",
       "chooseVisaForAll": "Elija un visado para cada viajero."
-    }
+    },
+    "travelersLabel": "Viajeros"
   },
   "chooser": {
     "back": "Atrás",
@@ -183,7 +184,8 @@
       "checkoutCancelled": "Pago cancelado.",
       "redirectingPaymentPartner": "Redirigiendo a nuestro socio de pago para completar el pago de forma segura…",
       "paymentSubmittedConfirming": "Pago enviado. Confirmando con nuestros sistemas…"
-    }
+    },
+    "passportRequiredToPay": "Suba una copia del pasaporte para continuar al pago."
   },
   "documents": {
     "title": "Documentos",
@@ -245,13 +247,13 @@
     "eyebrow": "Consulta de estado",
     "title": "Consulte su solicitud",
     "signedInSubtitle": "Borradores, expedientes en curso y casos completados en esta cuenta (los borradores caducados no se muestran).",
-    "guestSubtitle": "Use el correo o teléfono de su solicitud.",
-    "contactLabel": "Correo o teléfono",
-    "contactHint": "Mostramos todas las solicitudes en las que coincida este correo de invitado, el correo de su cuenta (si está vinculado) o este número de teléfono en el perfil de la solicitud.",
-    "contactPlaceholder": "usted@ejemplo.com o +971…",
+    "guestSubtitle": "Busque solicitudes con el correo, teléfono o ID de seguimiento — o continúe con Google.",
+    "contactLabel": "Correo, teléfono o ID de seguimiento",
+    "contactHint": "Mostramos cada solicitud que coincida con este correo, teléfono o ID de seguimiento.",
+    "contactPlaceholder": "you@example.com, +971… o ID de seguimiento",
     "showApplications": "Mostrar solicitudes",
     "lookingUp": "Consultando…",
-    "noResultsGuest": "No se encontraron solicitudes con ese correo o teléfono. Compruebe si hay errores tipográficos o use el mismo correo que indicó al comenzar como invitado.",
+    "noResultsGuest": "No se encontraron solicitudes para ese correo, teléfono o ID de seguimiento. Revise errores o use el mismo correo con el que empezó como invitado.",
     "referenceLabel": "Referencia",
     "continue": "Continuar",
     "viewStatus": "Ver estado",
@@ -311,7 +313,8 @@
         "decision": "Decisión",
         "closed": "Cerrado"
       }
-    }
+    },
+    "signInHelper": "Continúe con Google o inicie sesión con correo y contraseña."
   },
   "submitted": {
     "pageTitle": "Gracias | Visatop",
@@ -499,7 +502,7 @@
     "applyIndexDescription": "Inicie o continúe su solicitud de visado con Visatop.",
     "applicationPageTitle": "Su solicitud | Visatop",
     "serviceFacts": {
-      "processingTime": "Procesamiento habitual en 2 días hábiles cuando los documentos están completos",
+      "processingTime": "Tramitación habitual en 3 días hábiles cuando los documentos están completos",
       "pricing": "Las tarifas todo incluido varían según la nacionalidad del pasaporte y la duración del visado — precio exacto mostrado antes del pago",
       "visaTypes": "Visados turísticos y de visita de 14, 30 y 60 días para más de 95 países emisores de pasaporte",
       "portal": "Suba copia del pasaporte y foto; consulte el estado en su portal de cliente"

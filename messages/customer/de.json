@@ -2,12 +2,12 @@
   "home": {
     "eyebrow": "Touristenvisum VAE",
     "headlineLine1": "Reisen Sie nach Dubai?",
-    "headlineLine2": "Beantragen Sie online Ihr Dubai-Visum & VAE-Visum",
-    "subheadline": "Erhalten Sie Ihr Visum in 2 Werktagen",
+    "headlineLine2": "Beantragen Sie online Ihr VAE-Visum",
+    "subheadline": "Erhalten Sie Ihr Visum in 3 Werktagen",
     "body": "Wählen Sie den Reisepass, mit dem Sie reisen. Wir zeigen nur, wofür Sie sich bewerben können, und behalten Ihre Unterlagen in einem Arbeitsbereich, bis Sie bezahlen und einreichen.",
-    "nationalityLabelSrOnly": "Staatsangehörigkeit",
-    "nationalityPlaceholder": "Geben Sie Ihr Land ein und wählen Sie es aus, um zu beginnen",
-    "nationalityHelper": "Als Nächstes wählen Sie Ihr Visum und Ihre Währung. Ein Konto ist optional.",
+    "nationalityLabelSrOnly": "Wählen Sie die Staatsangehörigkeit Ihres Passes",
+    "nationalityPlaceholder": "Wählen Sie die Staatsangehörigkeit Ihres Passes",
+    "nationalityHelper": "Als Nächstes wählen Sie Ihr Visum und Ihre Währung.",
     "nextButton": "Weiter",
     "guestTrackLink": "Antrag verfolgen",
     "signedInApplicationsLink": "Meine Anträge",
@@ -71,7 +71,8 @@
       "addAtLeastOne": "Fügen Sie mindestens eine/n Reisende/n hinzu.",
       "maxTravelers": "Maximal {count} Reisende pro Checkout.",
       "chooseVisaForAll": "Wählen Sie für jede/n Reisende/n ein Visum."
-    }
+    },
+    "travelersLabel": "Reisende"
   },
   "chooser": {
     "back": "Zurück",
@@ -183,7 +184,8 @@
       "checkoutCancelled": "Checkout abgebrochen.",
       "redirectingPaymentPartner": "Weiterleitung zu unserem Zahlungspartner, um den Checkout sicher abzuschließen…",
       "paymentSubmittedConfirming": "Zahlung übermittelt. Bestätigung mit unseren Systemen…"
-    }
+    },
+    "passportRequiredToPay": "Laden Sie eine Passkopie hoch, um zur Zahlung zu gelangen."
   },
   "documents": {
     "title": "Dokumente",
@@ -245,13 +247,13 @@
     "eyebrow": "Statusabfrage",
     "title": "Antrag verfolgen",
     "signedInSubtitle": "Entwürfe, laufende Anträge und abgeschlossene Fälle in diesem Konto (abgelaufene Entwürfe ausgeblendet).",
-    "guestSubtitle": "Verwenden Sie die E-Mail oder Telefonnummer aus Ihrem Antrag.",
-    "contactLabel": "E-Mail oder Telefon",
-    "contactHint": "Wir listen jeden Antrag, bei dem diese Gast-E-Mail, Ihre Kontoe-Mail (falls verknüpft) oder diese Telefonnummer im Antragsprofil übereinstimmt.",
-    "contactPlaceholder": "sie@beispiel.de oder +971…",
+    "guestSubtitle": "Suchen Sie Anträge per E-Mail, Telefon oder Tracking-ID — oder fahren Sie mit Google fort.",
+    "contactLabel": "E-Mail, Telefon oder Tracking-ID",
+    "contactHint": "Wir listen jeden Antrag, der zu dieser E-Mail, Telefonnummer oder Tracking-ID passt.",
+    "contactPlaceholder": "you@example.com, +971… oder Tracking-ID",
     "showApplications": "Anträge anzeigen",
     "lookingUp": "Wird gesucht…",
-    "noResultsGuest": "Keine Anträge für diese E-Mail oder Telefonnummer gefunden. Prüfen Sie auf Tippfehler oder verwenden Sie dieselbe E-Mail, die Sie als Gast eingegeben haben.",
+    "noResultsGuest": "Keine Anträge für diese E-Mail, Telefonnummer oder Tracking-ID gefunden. Prüfen Sie Tippfehler oder verwenden Sie die E-Mail, mit der Sie als Gast gestartet haben.",
     "referenceLabel": "Referenz",
     "continue": "Weiter",
     "viewStatus": "Status anzeigen",
@@ -311,7 +313,8 @@
         "decision": "Entscheidung",
         "closed": "Geschlossen"
       }
-    }
+    },
+    "signInHelper": "Mit Google fortfahren oder mit E-Mail und Passwort anmelden."
   },
   "submitted": {
     "pageTitle": "Vielen Dank | Visatop",
@@ -499,7 +502,7 @@
     "applyIndexDescription": "Starten oder setzen Sie Ihren Visumantrag mit Visatop fort.",
     "applicationPageTitle": "Ihr Antrag | Visatop",
     "serviceFacts": {
-      "processingTime": "Typische Bearbeitung in 2 Werktagen, wenn Dokumente vollständig sind",
+      "processingTime": "Typische Bearbeitung in 3 Werktagen, wenn die Unterlagen vollständig sind",
       "pricing": "All-inclusive-Gebühren variieren nach Reisepass-Staatsangehörigkeit und Visumdauer — genauer Preis vor der Zahlung angezeigt",
       "visaTypes": "14-, 30- und 60-Tage-Touristen- und Besuchsvisa für über 95 Reisepass-Länder",
       "portal": "Reisepasskopie und Foto hochladen; Status in Ihrem Kundenportal verfolgen"

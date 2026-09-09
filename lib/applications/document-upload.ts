@@ -9,6 +9,10 @@ import {
   EXTRACTION_STATUS,
 } from "@/lib/db/schema";
 import { evaluateApplicationReadiness } from "@/lib/applications/evaluate-readiness";
+import {
+  clearOcrSourcedProfileFields,
+  type ApplicantProfileProvenance,
+} from "@/lib/ocr/extract-orchestrator";
 
 export const UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
 
@@ -59,9 +63,10 @@ export type PersistDocumentResult =
  *   is refreshed if the draft window changed.
  * - Replace: if an existing non-deleted row's sha256 differs, it is marked
  *   `deleted` (blob row removed via FK cascade) and a new row + blob inserted.
- *   When replacing `passport_copy`, the application's passport-extraction
- *   summary fields are reset and `passportExtractionRunId` is bumped to
- *   invalidate any in-flight lease (spec §9.4).
+   *   When replacing `passport_copy`, the application's passport-extraction
+   *   summary fields are reset, OCR-sourced profile fields are cleared so a
+   *   re-upload can refresh applicant details, and `passportExtractionRunId`
+   *   is bumped to invalidate any in-flight lease (spec §9.4).
  */
 export async function persistUploadedDocument(
   tx: DbTransaction,
@@ -74,6 +79,7 @@ export async function persistUploadedDocument(
       paymentStatus: application.paymentStatus,
       checkoutState: application.checkoutState,
       passportExtractionRunId: application.passportExtractionRunId,
+      applicantProfileProvenanceJson: application.applicantProfileProvenanceJson,
     })
     .from(application)
     .where(eq(application.id, input.applicationId))
@@ -157,9 +163,13 @@ export async function persistUploadedDocument(
   });
 
   if (input.documentType === "passport_copy") {
+    const provenance = (app.applicantProfileProvenanceJson ?? {}) as ApplicantProfileProvenance;
+    const cleared = clearOcrSourcedProfileFields(provenance);
     await tx
       .update(application)
       .set({
+        ...cleared.updates,
+        applicantProfileProvenanceJson: cleared.provenance as never,
         passportExtractionStatus: EXTRACTION_STATUS.NOT_STARTED,
         passportExtractionUpdatedAt: null,
         passportExtractionStartedAt: null,
