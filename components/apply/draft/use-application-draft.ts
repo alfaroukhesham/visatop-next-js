@@ -209,6 +209,9 @@ export function useApplicationDraft(applicationId: string) {
       }
       const slot = memberStatesRef.current[memberId]?.slots.find((s) => s.key === type);
       setActionMsg(slot ? `${slot.label} uploaded.` : "Document uploaded.");
+      if (type === "passport_copy") {
+        updateMemberState(memberId, { extractResult: null });
+      }
       await load({ silent: true });
       if (
         type === "passport_copy" &&

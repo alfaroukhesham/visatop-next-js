@@ -87,7 +87,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
       )}
 
       <ApplicantReview
-        key={`${applicantFormResetKey(selectedApp.applicant, draft.selected.extractResult?.extraction ?? null, selectedApp.guestEmail)}\u001e${draft.selected.nationalityName}\u001e${passportUploaded ? "p" : "n"}\u001e${allRequiredUploaded ? "d" : "u"}`}
+        key={`${applicantFormResetKey(selectedApp.applicant, draft.selected.extractResult?.extraction ?? null, selectedApp.guestEmail, draft.selected.passport?.id)}\u001e${draft.selected.nationalityName}\u001e${passportUploaded ? "p" : "n"}\u001e${allRequiredUploaded ? "d" : "u"}`}
         applicationId={selectedApp.id}
         paymentApplicationId={payApplicationId}
         nationalityCode={selectedApp.nationalityCode}

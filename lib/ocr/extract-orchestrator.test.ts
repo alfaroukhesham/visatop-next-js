@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  clearOcrSourcedProfileFields,
   mergeOcrIntoProfile,
   type ApplicantProfileSnapshot,
   type ApplicantProfileProvenance,
@@ -103,5 +104,18 @@ describe("mergeOcrIntoProfile", () => {
     const delta = mergeOcrIntoProfile(EMPTY_PROFILE, { fullName: { source: "manual" } }, null);
     expect(delta.updates).toEqual({});
     expect(delta.provenance.fullName).toEqual({ source: "manual" });
+  });
+});
+
+describe("clearOcrSourcedProfileFields", () => {
+  it("clears OCR-sourced fields and keeps manual ones", () => {
+    const delta = clearOcrSourcedProfileFields({
+      fullName: { source: "ocr" },
+      passportNumber: { source: "manual" },
+    });
+    expect(delta.updates.fullName).toBeNull();
+    expect(delta.updates.passportNumber).toBeUndefined();
+    expect(delta.provenance.fullName).toBeUndefined();
+    expect(delta.provenance.passportNumber).toEqual({ source: "manual" });
   });
 });

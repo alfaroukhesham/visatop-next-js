@@ -11,12 +11,14 @@ import { cn } from "@/lib/utils";
 
 interface IClientAppHeaderProps {
   className?: string;
+  /** Hide the guest LOGIN/REGISTER strip; signed-in Account/Sign out still shows. */
+  hideWhenSignedOut?: boolean;
 }
 
 /**
  * Auth-only bar below the WP header (Apply / Track live in WP chrome).
  */
-export const ClientAppHeader: FC<IClientAppHeaderProps> = ({ className }) => {
+export const ClientAppHeader: FC<IClientAppHeaderProps> = ({ className, hideWhenSignedOut = false }) => {
   const t = useCustomerT();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -41,6 +43,10 @@ export const ClientAppHeader: FC<IClientAppHeaderProps> = ({ className }) => {
     storeSession?.user.name?.trim() ||
     storeSession?.user.email?.split("@")[0] ||
     t("header.welcomeFallback");
+
+  if (hideWhenSignedOut && (!mounted || storePending || !storeSession)) {
+    return null;
+  }
 
   return (
     <header

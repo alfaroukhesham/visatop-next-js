@@ -199,10 +199,18 @@ function buildSrcDoc(input: {
       html, body { margin: 0; padding: 0; background: transparent !important; }
       body { overflow: hidden; }
 
-      header#header .featured_on,
-      header#header .time_in_uae,
-      header#header .uae-time {
-        display: none !important;
+      /* Fallback alignment: in WP this is handled by theme/plugin CSS, but our headless CSS
+         bundle may omit those rules. This keeps "Time in UAE" pinned to the right. */
+      header#header .featured_on .inner { display: flex; align-items: center; }
+      header#header .featured_on .uae-time { margin-left: auto; }
+
+      /* "Featured on" logos: WP theme constrains these; headless CSS path misses it. */
+      header#header .featured_on .inner a img {
+        height: 16px;
+        width: auto;
+        max-width: 100%;
+        object-fit: contain;
+        filter: brightness(0) invert(1);
       }
 
       /* Polylang language switcher (headless markup differs on prod: href="#pll_switcher" with no class). */
@@ -358,10 +366,15 @@ function buildSrcDoc(input: {
         if (height > 0) return height;
         if (KIND !== "header") return height;
         var container = document.querySelector("header#header > .container");
+        var featured = document.querySelector("header#header .featured_on");
+        var maxBottom = 0;
         if (container && container.getBoundingClientRect) {
-          return Math.max(0, Math.ceil(container.getBoundingClientRect().bottom));
+          maxBottom = Math.max(maxBottom, Math.ceil(container.getBoundingClientRect().bottom));
         }
-        return height;
+        if (featured && featured.getBoundingClientRect) {
+          maxBottom = Math.max(maxBottom, Math.ceil(featured.getBoundingClientRect().bottom));
+        }
+        return maxBottom;
       }
 
       function measureAndPost() {

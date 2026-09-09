@@ -62,7 +62,10 @@ export const DraftDocumentsSection: FC<IDraftDocumentsSectionProps> = ({
         {allRequiredUploaded ? null : (
           <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
             <AlertTriangle className="text-error size-3.5 shrink-0" aria-hidden />
-            <span>Upload required files to pay. Details can wait.</span>
+            <span>
+              Upload required files to pay. Details can be reviewed next. Our system will
+              read and prefill the details for you.
+            </span>
           </p>
         )}
       </div>

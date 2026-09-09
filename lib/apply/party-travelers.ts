@@ -10,6 +10,18 @@ export type TTravelersReadyErrorCode = "addAtLeastOne" | "maxTravelers" | "choos
 
 export const canAddTraveler = (count: number, max: number): boolean => count < max;
 
+/** When the party shortlist has one visa, select it so checkout totals include that traveller. */
+export const resolvePartyTravelerServiceId = (
+  shortlist: ReadonlyArray<{ id: string }>,
+  currentServiceId: string,
+): string => {
+  if (shortlist.length === 1) return shortlist[0].id;
+  if (currentServiceId && shortlist.some((s) => s.id === currentServiceId)) {
+    return currentServiceId;
+  }
+  return "";
+};
+
 export const assertTravelersReady = (
   travelers: TPartyTravelerDraft[],
   max: number,

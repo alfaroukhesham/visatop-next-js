@@ -62,7 +62,15 @@ export function NationalityCombobox({
   const portalRef = useRef<HTMLDivElement>(null);
   const [listPos, setListPos] = useState<ListPosition | null>(null);
 
-  const inputValue = open ? draftQuery : closedLabel;
+  const selectedIndex = useMemo(() => {
+    if (!valueCode) return 0;
+    const idx = nationalities.findIndex((n) => n.code === valueCode);
+    return idx >= 0 ? idx : 0;
+  }, [nationalities, valueCode]);
+
+  // While the list is open with no typed query, keep showing the selected label
+  // but do not use it as a filter — otherwise changing country requires deleting the name.
+  const inputValue = open ? (draftQuery || closedLabel) : closedLabel;
 
   const filtered = useMemo(() => {
     const q = (open ? draftQuery : "").trim().toLowerCase();
@@ -98,6 +106,14 @@ export function NationalityCombobox({
     };
   }, [showPortal, syncListPosition, draftQuery, filtered.length]);
 
+  useLayoutEffect(() => {
+    if (!showPortal) return;
+    const selectedEl = portalRef.current?.querySelector('[aria-selected="true"]');
+    if (selectedEl && typeof selectedEl.scrollIntoView === "function") {
+      selectedEl.scrollIntoView({ block: "nearest" });
+    }
+  }, [showPortal, activeIndex, listPos]);
+
   useEffect(() => {
     if (!open) return;
     function onDoc(e: MouseEvent) {
@@ -111,6 +127,15 @@ export function NationalityCombobox({
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
+  const openList = useCallback(
+    (query = "") => {
+      setOpen(true);
+      setDraftQuery(query);
+      setHighlight(query.trim() ? 0 : selectedIndex);
+    },
+    [selectedIndex],
+  );
+
   const pick = useCallback(
     (code: string) => {
       setOpen(false);
@@ -121,10 +146,9 @@ export function NationalityCombobox({
   );
 
   function onKeyDown(e: React.KeyboardEvent) {
-    if (!open && (e.key === "ArrowDown" || e.key === "Enter")) {
-      setOpen(true);
-      setDraftQuery(closedLabel);
-      setHighlight(0);
+    if (!open && (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      openList();
       return;
     }
     if (!open) return;
@@ -232,14 +256,17 @@ export function NationalityCombobox({
           placeholder={placeholder}
           value={inputValue}
           onChange={(e) => {
-            setDraftQuery(e.target.value);
-            setOpen(true);
-            setHighlight(0);
+            openList(e.target.value);
           }}
-          onFocus={() => {
-            setOpen(true);
-            setDraftQuery(closedLabel);
-            setHighlight(0);
+          onFocus={(e) => {
+            openList();
+            e.currentTarget.select();
+          }}
+          onClick={(e) => {
+            if (!open) {
+              openList();
+              e.currentTarget.select();
+            }
           }}
           onKeyDown={onKeyDown}
           className={cn(

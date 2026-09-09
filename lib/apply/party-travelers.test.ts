@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertTravelersReady, canAddTraveler } from "./party-travelers";
+import { assertTravelersReady, canAddTraveler, resolvePartyTravelerServiceId } from "./party-travelers";
 
 describe("canAddTraveler", () => {
   it("returns false at max", () => {
@@ -41,5 +41,21 @@ describe("assertTravelersReady", () => {
     expect(
       assertTravelersReady([{ key: "a", kind: "adult" as const, serviceId: "s1" }], 2),
     ).toEqual({ ok: true });
+  });
+});
+
+describe("resolvePartyTravelerServiceId", () => {
+  it("auto-selects the only visa so checkout can include that traveller", () => {
+    expect(resolvePartyTravelerServiceId([{ id: "only" }], "")).toBe("only");
+  });
+
+  it("keeps a valid choice when several visas exist", () => {
+    expect(
+      resolvePartyTravelerServiceId([{ id: "a" }, { id: "b" }], "b"),
+    ).toBe("b");
+  });
+
+  it("does not invent a visa when several exist and none is chosen", () => {
+    expect(resolvePartyTravelerServiceId([{ id: "a" }, { id: "b" }], "")).toBe("");
   });
 });
