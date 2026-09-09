@@ -28,8 +28,8 @@ import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
 import { DEFAULT_APPLY_PRICE_BADGES, DEFAULT_PARTY_ENABLED, DEFAULT_PARTY_MAX_TRAVELERS, type TApplyPriceBadges } from "@/lib/apply/apply-config";
-import { assertTravelersReady, canAddTraveler, type TPartyTravelerDraft } from "@/lib/apply/party-travelers";
-import { filterPartyVisaOptions, stayOptionsForChooser, needsEntryQuestion, needsKindQuestion, type TChooserPhase } from "@/lib/apply/guided-visa-filter";
+import { assertTravelersReady, canAddTraveler, resolvePartyTravelerServiceId, type TPartyTravelerDraft } from "@/lib/apply/party-travelers";
+import { filterPartyVisaOptions, stayOptionsForChooser, needsEntryQuestion, needsKindQuestion, kindOptionsForStay, type TChooserPhase } from "@/lib/apply/guided-visa-filter";
 import type { TStayBucket, TTravelerKind } from "@/lib/catalog/guided-choice";
 import { AllInPriceBadges } from "@/components/apply/all-in-price-badges";
 import { ApplyStepsRail } from "@/components/apply/apply-steps-rail";
@@ -439,9 +439,19 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   }
 
   const addTraveler = () => {
+    const kind: TTravelerKind = answers.stay
+      ? (kindOptionsForStay(services, answers.stay)[0] ?? "adult")
+      : "adult";
+    const shortlist = answers.stay
+      ? filterPartyVisaOptions(services, { stay: answers.stay, kind })
+      : [];
     setAdditionalTravelers((prev) => [
       ...prev,
-      { key: crypto.randomUUID(), kind: "adult", serviceId: "" },
+      {
+        key: crypto.randomUUID(),
+        kind,
+        serviceId: resolvePartyTravelerServiceId(shortlist, ""),
+      },
     ]);
   }
 
@@ -456,9 +466,9 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   const stayCount = stayOptionsForChooser(services).length;
   const chooserHasBack =
     chooserPhase === "kind" ||
-    (chooserPhase === "entry" && stayCount > 1) ||
+    (chooserPhase === "entry" && stayCount > 0) ||
     (chooserPhase === "results" &&
-      (stayCount > 1 ||
+      (stayCount > 0 ||
         Boolean(answers.stay && needsEntryQuestion(services, answers.stay)) ||
         Boolean(answers.stay && needsKindQuestion(services, answers.stay, answers.entry))));
   const showHomePrevious = !chooserHasBack;
@@ -472,13 +482,10 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
           stay: answers.stay!,
           kind: traveler.kind,
         });
-        if (shortlist.length === 1 && traveler.serviceId !== shortlist[0].id) {
+        const serviceId = resolvePartyTravelerServiceId(shortlist, traveler.serviceId);
+        if (serviceId !== traveler.serviceId) {
           changed = true;
-          return { ...traveler, serviceId: shortlist[0].id };
-        }
-        if (traveler.serviceId && !shortlist.some((s) => s.id === traveler.serviceId)) {
-          changed = true;
-          return { ...traveler, serviceId: shortlist.length === 1 ? shortlist[0].id : "" };
+          return { ...traveler, serviceId };
         }
         return traveler;
       });
@@ -612,11 +619,27 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                       </button>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {(["adult", "child"] as const).map((k) => (
+                      {(answers.stay
+                        ? kindOptionsForStay(services, answers.stay)
+                        : (["adult", "child"] as const)
+                      ).map((k) => (
                         <button
                           key={k}
                           type="button"
-                          onClick={() => updateTraveler(traveler.key, { kind: k, serviceId: "" })}
+                          onClick={() =>
+                            updateTraveler(traveler.key, {
+                              kind: k,
+                              serviceId: resolvePartyTravelerServiceId(
+                                answers.stay
+                                  ? filterPartyVisaOptions(services, {
+                                      stay: answers.stay,
+                                      kind: k,
+                                    })
+                                  : [],
+                                "",
+                              ),
+                            })
+                          }
                           className={cn(
                             "border-border bg-card text-foreground rounded-xl border-2 px-4 py-2 text-sm font-semibold transition-colors",
                             traveler.kind === k ? "border-primary bg-accent/25" : "hover:border-secondary",

@@ -3,8 +3,10 @@ import type { TGuidedService } from "./guided-visa-filter";
 import {
   defaultEntryForStay,
   defaultKindForStay,
+  entryOptionsForStay,
   filterGuidedServices,
   filterPartyVisaOptions,
+  kindOptionsForStay,
   needsEntryQuestion,
   needsKindQuestion,
   nextPhaseAfterEntry,
@@ -79,13 +81,15 @@ describe("chooser phase", () => {
     expect(nextPhaseAfterEntry(catalog, "15_30", "single")).toBe("kind");
   });
 
-  it("skips entry and kind for transit", () => {
+  it("skips entry for transit (no single/multiple SKU) but still asks adult vs child", () => {
+    expect(entryOptionsForStay(catalog, "transit")).toEqual([]);
     expect(needsEntryQuestion(catalog, "transit")).toBe(false);
-    expect(needsKindQuestion(catalog, "transit")).toBe(false);
-    expect(nextPhaseAfterStay(catalog, "transit")).toBe("results");
+    expect(kindOptionsForStay(catalog, "transit")).toEqual(["adult"]);
+    expect(needsKindQuestion(catalog, "transit")).toBe(true);
+    expect(nextPhaseAfterStay(catalog, "transit")).toBe("kind");
   });
 
-  it("skips kind when only child visas exist so the shortlist is not empty", () => {
+  it("still asks entry then kind when only a child SKU exists", () => {
     const childOnly: TGuidedService[] = [
       {
         id: "kid",
@@ -95,12 +99,15 @@ describe("chooser phase", () => {
         showInGuidedChooser: true,
       },
     ];
-    expect(needsKindQuestion(childOnly, "1_14")).toBe(false);
+    expect(entryOptionsForStay(childOnly, "1_14")).toEqual(["single"]);
+    expect(kindOptionsForStay(childOnly, "1_14", "single")).toEqual(["child"]);
+    expect(needsKindQuestion(childOnly, "1_14", "single")).toBe(true);
     expect(defaultKindForStay(childOnly, "1_14")).toBe("child");
-    expect(nextPhaseAfterStay(childOnly, "1_14")).toBe("results");
+    expect(nextPhaseAfterStay(childOnly, "1_14")).toBe("entry");
+    expect(nextPhaseAfterEntry(childOnly, "1_14", "single")).toBe("kind");
   });
 
-  it("defaults entry to multiple when that is the only stay option", () => {
+  it("asks the entry question when multiple is the only frequency", () => {
     const fiveYear: TGuidedService[] = [
       {
         id: "five",
@@ -110,8 +117,11 @@ describe("chooser phase", () => {
         showInGuidedChooser: true,
       },
     ];
-    expect(needsEntryQuestion(fiveYear, "5_year")).toBe(false);
+    expect(entryOptionsForStay(fiveYear, "5_year")).toEqual(["multiple"]);
+    expect(kindOptionsForStay(fiveYear, "5_year", "multiple")).toEqual(["adult"]);
+    expect(needsEntryQuestion(fiveYear, "5_year")).toBe(true);
     expect(defaultEntryForStay(fiveYear, "5_year")).toBe("multiple");
+    expect(nextPhaseAfterStay(fiveYear, "5_year")).toBe("entry");
     expect(
       filterGuidedServices(fiveYear, {
         stay: "5_year",
@@ -119,6 +129,23 @@ describe("chooser phase", () => {
         kind: "adult",
       }).map((s) => s.id),
     ).toEqual(["five"]);
+  });
+
+  it("walks stay then entry then kind for a single 30-day single-entry adult SKU", () => {
+    const oneVisa: TGuidedService[] = [
+      {
+        id: "only",
+        stayBucket: "15_30",
+        entryKind: "single",
+        travelerKind: "adult",
+        showInGuidedChooser: true,
+      },
+    ];
+    expect(stayOptionsForChooser(oneVisa)).toEqual(["15_30"]);
+    expect(entryOptionsForStay(oneVisa, "15_30")).toEqual(["single"]);
+    expect(kindOptionsForStay(oneVisa, "15_30", "single")).toEqual(["adult"]);
+    expect(nextPhaseAfterStay(oneVisa, "15_30")).toBe("entry");
+    expect(nextPhaseAfterEntry(oneVisa, "15_30", "single")).toBe("kind");
   });
 });
 

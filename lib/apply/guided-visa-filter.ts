@@ -1,4 +1,10 @@
-import { STAY_BUCKETS, type TEntryKind, type TStayBucket, type TTravelerKind } from "@/lib/catalog/guided-choice";
+import {
+  STAY_BUCKETS,
+  TRAVELER_KINDS,
+  type TEntryKind,
+  type TStayBucket,
+  type TTravelerKind,
+} from "@/lib/catalog/guided-choice";
 
 export type TGuidedService = {
   id: string;
@@ -59,42 +65,53 @@ const rowsForStayAndEntry = (
     return s.entryKind === entry;
   });
 
-export const needsEntryQuestion = (services: TGuidedService[], stay: TStayBucket): boolean => {
-  if (stay === "transit") return false;
-  const kinds = new Set(
-    rowsForStay(services, stay)
-      .map((s) => s.entryKind)
-      .filter((k) => k !== "either"),
-  );
-  return kinds.has("single") && kinds.has("multiple");
+const ENTRY_CHOICES = ["single", "multiple"] as const;
+
+/** Frequency buttons that exist for this stay. Transit / entryKind "either" have none. */
+export const entryOptionsForStay = (
+  services: TGuidedService[],
+  stay: TStayBucket,
+): Array<"single" | "multiple"> => {
+  if (stay === "transit") return [];
+  const kinds = new Set(rowsForStay(services, stay).map((s) => s.entryKind));
+  return ENTRY_CHOICES.filter((k) => kinds.has(k));
 };
+
+export const needsEntryQuestion = (services: TGuidedService[], stay: TStayBucket): boolean =>
+  entryOptionsForStay(services, stay).length > 0;
 
 /** When the entry question is skipped, use the only remaining entry kind so the shortlist is not empty. */
 export const defaultEntryForStay = (
   services: TGuidedService[],
   stay: TStayBucket,
 ): "single" | "multiple" => {
-  const kinds = new Set(rowsForStay(services, stay).map((s) => s.entryKind));
-  if (kinds.has("multiple") && !kinds.has("single")) return "multiple";
+  const options = entryOptionsForStay(services, stay);
+  if (options.includes("multiple") && !options.includes("single")) return "multiple";
   return "single";
+};
+
+export const kindOptionsForStay = (
+  services: TGuidedService[],
+  stay: TStayBucket,
+  entry: "single" | "multiple" | null = null,
+): TTravelerKind[] => {
+  const kinds = new Set(rowsForStayAndEntry(services, stay, entry).map((s) => s.travelerKind));
+  return TRAVELER_KINDS.filter((k) => kinds.has(k));
 };
 
 export const needsKindQuestion = (
   services: TGuidedService[],
   stay: TStayBucket,
   entry: "single" | "multiple" | null = null,
-): boolean => {
-  const kinds = new Set(rowsForStayAndEntry(services, stay, entry).map((s) => s.travelerKind));
-  return kinds.has("adult") && kinds.has("child");
-};
+): boolean => kindOptionsForStay(services, stay, entry).length > 0;
 
 export const defaultKindForStay = (
   services: TGuidedService[],
   stay: TStayBucket,
   entry: "single" | "multiple" | null = null,
 ): TTravelerKind => {
-  const kinds = new Set(rowsForStayAndEntry(services, stay, entry).map((s) => s.travelerKind));
-  if (kinds.has("child") && !kinds.has("adult")) return "child";
+  const options = kindOptionsForStay(services, stay, entry);
+  if (options.includes("child") && !options.includes("adult")) return "child";
   return "adult";
 };
 

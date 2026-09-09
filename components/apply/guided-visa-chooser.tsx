@@ -17,7 +17,9 @@ import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import {
   defaultEntryForStay,
   defaultKindForStay,
+  entryOptionsForStay,
   filterGuidedServices,
+  kindOptionsForStay,
   needsEntryQuestion,
   nextPhaseAfterEntry,
   nextPhaseAfterStay,
@@ -227,17 +229,6 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
   const [kind, setKind] = useState<TTravelerKind>(initialKind);
 
   const view = useMemo(() => {
-    if (phase === "stay" && stayBuckets.length === 1 && stayBuckets[0]) {
-      const next = stayBuckets[0];
-      const nextEntry = defaultEntryForStay(services, next);
-      const nextKind = defaultKindForStay(services, next, nextEntry);
-      return {
-        phase: nextPhaseAfterStay(services, next),
-        stay: next,
-        entry: nextEntry,
-        kind: nextKind,
-      };
-    }
     if (phase === "stay" && stayBuckets.length === 0) {
       return { phase: "results" as const, stay: null, entry, kind };
     }
@@ -293,21 +284,24 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
         return void setPhase("kind");
       }
       if (view.stay && needsEntryQuestion(services, view.stay)) return void setPhase("entry");
-      if (stayBuckets.length > 1) return void setPhase("stay");
+      if (stayBuckets.length > 0) return void setPhase("stay");
       return;
     }
     if (view.phase === "kind") {
       if (view.stay && needsEntryQuestion(services, view.stay)) return void setPhase("entry");
-      if (stayBuckets.length > 1) return void setPhase("stay");
+      if (stayBuckets.length > 0) return void setPhase("stay");
       return;
     }
-    if (view.phase === "entry" && stayBuckets.length > 1) setPhase("stay");
+    if (view.phase === "entry" && stayBuckets.length > 0) setPhase("stay");
   };
 
   const showChooserBack =
     view.phase === "results" ||
     view.phase === "kind" ||
-    (view.phase === "entry" && stayBuckets.length > 1);
+    (view.phase === "entry" && stayBuckets.length > 0);
+
+  const entryChoices = view.stay ? entryOptionsForStay(services, view.stay) : [];
+  const kindChoices = view.stay ? kindOptionsForStay(services, view.stay, view.entry) : [];
 
   return (
     <div className="space-y-4 rounded-2xl border border-border/80 bg-muted/35 p-3 sm:p-5">
@@ -354,20 +348,27 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
               </h3>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <ChoiceButton
-                selected={view.entry === "single"}
-                label={t("chooser.singleEntry")}
-                hint={t("chooser.singleEntryHint")}
-                icon={<Plane className="size-6" />}
-                onClick={() => goEntry("single")}
-              />
-              <ChoiceButton
-                selected={view.entry === "multiple"}
-                label={t("chooser.multipleEntry")}
-                hint={t("chooser.multipleEntryHint")}
-                icon={<Repeat2 className="size-6" />}
-                onClick={() => goEntry("multiple")}
-              />
+              {entryChoices.map((choice) =>
+                choice === "single" ? (
+                  <ChoiceButton
+                    key="single"
+                    selected={view.entry === "single"}
+                    label={t("chooser.singleEntry")}
+                    hint={t("chooser.singleEntryHint")}
+                    icon={<Plane className="size-6" />}
+                    onClick={() => goEntry("single")}
+                  />
+                ) : (
+                  <ChoiceButton
+                    key="multiple"
+                    selected={view.entry === "multiple"}
+                    label={t("chooser.multipleEntry")}
+                    hint={t("chooser.multipleEntryHint")}
+                    icon={<Repeat2 className="size-6" />}
+                    onClick={() => goEntry("multiple")}
+                  />
+                ),
+              )}
             </div>
           </div>
         ) : null}
@@ -379,18 +380,25 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
               </h3>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <ChoiceButton
-                selected={view.kind === "adult"}
-                label={t("chooser.adult")}
-                icon={<UserRound className="size-6" />}
-                onClick={() => goKind("adult")}
-              />
-              <ChoiceButton
-                selected={view.kind === "child"}
-                label={t("chooser.child")}
-                icon={<Baby className="size-6" />}
-                onClick={() => goKind("child")}
-              />
+              {kindChoices.map((choice) =>
+                choice === "adult" ? (
+                  <ChoiceButton
+                    key="adult"
+                    selected={view.kind === "adult"}
+                    label={t("chooser.adult")}
+                    icon={<UserRound className="size-6" />}
+                    onClick={() => goKind("adult")}
+                  />
+                ) : (
+                  <ChoiceButton
+                    key="child"
+                    selected={view.kind === "child"}
+                    label={t("chooser.child")}
+                    icon={<Baby className="size-6" />}
+                    onClick={() => goKind("child")}
+                  />
+                ),
+              )}
             </div>
           </div>
         ) : null}
