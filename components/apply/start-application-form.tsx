@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FC, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type FC,
+  type FormEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   ClientServiceCardsSkeleton,
@@ -170,19 +178,60 @@ interface IStartApplicationFormProps {
   nationalityName: string;
 }
 
-export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
+const EMPTY_ANSWERS = {
+  stay: null,
+  entry: "single" as const,
+  kind: "adult" as const,
+};
+
+const bootChooserForm = (nationalityCode: string) => {
+  const restored = readChooserDraft(nationalityCode);
+  const code = nationalityCode.trim().toUpperCase();
+  return {
+    nationality: code.length === 2 ? code : "",
+    displayCurrency: restored?.displayCurrency ?? ("USD" as DisplayCurrency),
+    serviceId: restored?.serviceId ?? "",
+    email: restored?.email ?? "",
+    answers: restored
+      ? { stay: restored.stay, entry: restored.entry, kind: restored.kind }
+      : EMPTY_ANSWERS,
+    additionalTravelers: restored?.additionalTravelers ?? [],
+    chooserPhase: restored?.phase ?? ("stay" as TChooserPhase),
+  };
+};
+
+const subscribeNoop = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
+
+/** Avoid SSR/client mismatch: sessionStorage is only read after hydrate, as useState initializers. */
+export const StartApplicationForm: FC<IStartApplicationFormProps> = (props) => {
+  const isClient = useSyncExternalStore(subscribeNoop, clientSnapshot, serverSnapshot);
+  if (!isClient) {
+    return (
+      <div className="space-y-6 pb-24" aria-busy="true">
+        <ChooserCardHeader nationalityName={props.nationalityName} />
+        <ClientStartStepSkeleton />
+      </div>
+    );
+  }
+  return <StartApplicationFormClient {...props} />;
+};
+
+const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   initialNationalityCode,
   nationalityName,
 }) => {
   const t = useCustomerT();
   const router = useRouter();
   const sessionEmail = useClientAuthStore((s) => s.session?.user?.email);
+  const [boot] = useState(() => bootChooserForm(initialNationalityCode));
   const [nationalities, setNationalities] = useState<Nationality[]>([]);
-  const [nationality, setNationality] = useState("");
+  const [nationality, setNationality] = useState(boot.nationality);
   const [services, setServices] = useState<Service[]>([]);
-  const [serviceId, setServiceId] = useState("");
-  const [email, setEmail] = useState("");
-  const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>("USD");
+  const [serviceId, setServiceId] = useState(boot.serviceId);
+  const [email, setEmail] = useState(boot.email);
+  const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>(boot.displayCurrency);
   const [loadingList, setLoadingList] = useState(true);
   const [loadingServices, setLoadingServices] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -191,29 +240,13 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
   const [badges, setBadges] = useState<TApplyPriceBadges>(DEFAULT_APPLY_PRICE_BADGES);
   const [partyEnabled, setPartyEnabled] = useState(DEFAULT_PARTY_ENABLED);
   const [partyMaxTravelers, setPartyMaxTravelers] = useState(DEFAULT_PARTY_MAX_TRAVELERS);
-  const [answers, setAnswers] = useState<{
-    stay: TStayBucket | null;
-    entry: "single" | "multiple";
-    kind: TTravelerKind;
-  }>({ stay: null, entry: "single", kind: "adult" });
-  const [additionalTravelers, setAdditionalTravelers] = useState<TPartyTravelerDraft[]>([]);
-  const [chooserPhase, setChooserPhase] = useState<TChooserPhase>("stay");
-  const [draftRestored, setDraftRestored] = useState(false);
+  const [answers, setAnswers] = useState(boot.answers);
+  const [additionalTravelers, setAdditionalTravelers] = useState<TPartyTravelerDraft[]>(
+    boot.additionalTravelers,
+  );
+  const [chooserPhase, setChooserPhase] = useState<TChooserPhase>(boot.chooserPhase);
   const servicesRef = useRef<Service[]>([]);
   servicesRef.current = services;
-
-  useEffect(() => {
-    const restored = readChooserDraft(initialNationalityCode);
-    if (restored) {
-      setDisplayCurrency(restored.displayCurrency);
-      setServiceId(restored.serviceId);
-      setEmail(restored.email);
-      setAnswers({ stay: restored.stay, entry: restored.entry, kind: restored.kind });
-      setAdditionalTravelers(restored.additionalTravelers);
-      setChooserPhase(restored.phase);
-    }
-    setDraftRestored(true);
-  }, [initialNationalityCode]);
 
   const reloadCatalog = useCallback(() => {
     setCatalogReloadEpoch((n) => n + 1);
@@ -301,7 +334,6 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
     queueMicrotask(() => {
       if (!nationality || nationality.length !== 2) {
         setServices([]);
-        setServiceId("");
         return;
       }
       void (async () => {
@@ -333,7 +365,7 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
   }, [nationality, displayCurrency, catalogReloadEpoch]);
 
   useEffect(() => {
-    if (!draftRestored || !nationality) return;
+    if (!nationality) return;
     writeChooserDraft(nationality, {
       displayCurrency,
       serviceId,
@@ -344,7 +376,7 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
       additionalTravelers,
       email,
     });
-  }, [draftRestored, nationality, displayCurrency, serviceId, answers, chooserPhase, additionalTravelers, email]);
+  }, [nationality, displayCurrency, serviceId, answers, chooserPhase, additionalTravelers, email]);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -452,7 +484,7 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
       });
       return changed ? next : prev;
     });
-  }, [services, answers.stay, additionalTravelers]);
+  }, [services, answers.stay]);
 
   const primaryService = services.find((s) => s.id === serviceId) ?? null;
   const selectedServices = [
@@ -533,7 +565,7 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = ({
             </div>
           </div>
 
-          {!nationality ? null : !draftRestored || (loadingServices && services.length === 0) ? (
+          {!nationality ? null : loadingServices && services.length === 0 ? (
             <ClientServiceCardsSkeleton />
           ) : (
             <GuidedVisaChooser
