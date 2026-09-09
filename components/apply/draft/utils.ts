@@ -27,6 +27,7 @@ export function applicantFormResetKey(
   applicant: ApplicantProfile,
   extraction: ExtractResponse["extraction"] | null,
   guestEmail: string | null,
+  passportDocumentId?: string | null,
 ): string {
   const stable = [
     applicant.fullName ?? "",
@@ -39,6 +40,7 @@ export function applicantFormResetKey(
     applicant.address ?? "",
     applicant.phone ?? "",
     guestEmail ?? "",
+    passportDocumentId ?? "",
   ].join("\u001e");
   const ex = extraction
     ? `${extraction.documentId ?? ""}\u001e${extraction.attemptsUsed}\u001e${extraction.status}`

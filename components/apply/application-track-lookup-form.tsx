@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { ClientButton, ClientButtonLink } from "@/components/client/client-button";
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { nationalityLabelWithFlag } from "@/lib/apply/display-names";
 import { apiHref } from "@/lib/app-href";
 import type { ClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
@@ -36,6 +37,7 @@ type TrackErr = {
 };
 
 export function ApplicationTrackLookupForm() {
+  const t = useCustomerT();
   const [contact, setContact] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,8 +62,8 @@ export function ApplicationTrackLookupForm() {
       if (!res.ok || !json.ok) {
         const msg =
           json.ok === false
-            ? (json.error?.message ?? "Something went wrong. Try again later.")
-            : "Something went wrong. Try again later.";
+            ? (json.error?.message ?? t("track.genericError"))
+            : t("track.genericError");
         setError(msg);
         return;
       }
@@ -71,7 +73,7 @@ export function ApplicationTrackLookupForm() {
       );
       hadResultsRef.current = true;
     } catch {
-      setError("Network error. Check your connection and try again.");
+      setError(t("track.networkError"));
     } finally {
       setLoading(false);
     }
@@ -97,8 +99,8 @@ export function ApplicationTrackLookupForm() {
       >
         <ClientField
           id="contact"
-          label="Email or phone"
-          hint="We list every application where this guest email, your account email (if linked), or this phone number on the application profile matches."
+          label={t("track.contactLabel")}
+          hint={t("track.contactHint")}
         >
           <ClientInput
             id="contact"
@@ -108,7 +110,7 @@ export function ApplicationTrackLookupForm() {
             value={contact}
             onChange={(e) => setContact(e.target.value)}
             className="rounded-[5px] border-border"
-            placeholder="you@example.com or +971…"
+            placeholder={t("track.contactPlaceholder")}
           />
         </ClientField>
         {error ? (
@@ -117,13 +119,13 @@ export function ApplicationTrackLookupForm() {
           </p>
         ) : null}
         <ClientButton type="submit" brand="cta" disabled={loading} className="font-semibold">
-          {loading ? (
+            {loading ? (
             <>
               <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
-              Looking up…
+              {t("track.lookingUp")}
             </>
           ) : (
-            "Show applications"
+            t("track.showApplications")
           )}
         </ClientButton>
       </form>
@@ -134,8 +136,7 @@ export function ApplicationTrackLookupForm() {
         <section className="space-y-8" aria-live="polite">
           {results.length === 0 ? (
             <p className="text-muted-foreground rounded-[12px] border border-border bg-card p-6 text-center text-sm leading-relaxed shadow-sm">
-              No applications found for that email or phone. Check for typos, or use the same email you entered when
-              you started as a guest.
+              {t("track.noResultsGuest")}
             </p>
           ) : (
             <ul className="space-y-8">

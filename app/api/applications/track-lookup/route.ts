@@ -34,7 +34,7 @@ export async function POST(req: Request) {
   if (!isValidTrackContact(contact)) {
     return jsonError(
       "VALIDATION_ERROR",
-      "Enter a valid email address, or a phone number with at least 8 digits.",
+      "Enter a valid email address, a phone number with at least 8 digits, or a Tracking ID.",
       { status: 400, requestId },
     );
   }

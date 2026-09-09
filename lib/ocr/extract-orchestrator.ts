@@ -241,6 +241,29 @@ export type ProfileUpdateDelta = {
   provenance: ApplicantProfileProvenance;
 };
 
+export function clearOcrSourcedProfileFields(
+  provenance: ApplicantProfileProvenance,
+): { updates: Partial<ApplicantProfileSnapshot>; provenance: ApplicantProfileProvenance } {
+  const updates: Partial<ApplicantProfileSnapshot> = {};
+  const next: ApplicantProfileProvenance = { ...provenance };
+  const cols: (keyof ApplicantProfileSnapshot)[] = [
+    "fullName",
+    "dateOfBirth",
+    "placeOfBirth",
+    "applicantNationality",
+    "passportNumber",
+    "passportExpiryDate",
+    "profession",
+    "address",
+  ];
+  for (const col of cols) {
+    if (provenance[col]?.source === "manual") continue;
+    updates[col] = null;
+    delete next[col];
+  }
+  return { updates, provenance: next };
+}
+
 /**
  * Apply OCR → profile with manual-precedence rules (spec §6.4). Fields marked
  * `source = 'manual'` are never overwritten. Null/empty OCR values are

@@ -2,12 +2,12 @@
   "home": {
     "eyebrow": "Visto turistico per gli Emirati Arabi Uniti",
     "headlineLine1": "Viaggia verso Dubai?",
-    "headlineLine2": "Richieda online il visto per Dubai e gli Emirati Arabi Uniti",
-    "subheadline": "Ottenga il visto in 2 giorni lavorativi",
+    "headlineLine2": "Richieda online il visto per gli Emirati Arabi Uniti",
+    "subheadline": "Ottenga il visto in 3 giorni lavorativi",
     "body": "Selezioni il passaporto con cui viaggia. Le mostriamo solo ciò che può richiedere, poi conserviamo il suo fascicolo in un unico spazio fino al pagamento e all'invio.",
-    "nationalityLabelSrOnly": "Nazionalità",
-    "nationalityPlaceholder": "Digiti il suo paese e selezioni per iniziare",
-    "nationalityHelper": "Poi sceglie il visto e la valuta. L'account è facoltativo.",
+    "nationalityLabelSrOnly": "Selezioni la nazionalità del suo passaporto",
+    "nationalityPlaceholder": "Selezioni la nazionalità del suo passaporto",
+    "nationalityHelper": "Poi sceglie il visto e la valuta.",
     "nextButton": "Avanti",
     "guestTrackLink": "Monitora la domanda",
     "signedInApplicationsLink": "Le mie domande",
@@ -71,7 +71,8 @@
       "addAtLeastOne": "Aggiunga almeno un viaggiatore.",
       "maxTravelers": "Massimo {count} viaggiatori per checkout.",
       "chooseVisaForAll": "Scelga un visto per ogni viaggiatore."
-    }
+    },
+    "travelersLabel": "Viaggiatori"
   },
   "chooser": {
     "back": "Indietro",
@@ -183,7 +184,8 @@
       "checkoutCancelled": "Checkout annullato.",
       "redirectingPaymentPartner": "Reindirizzamento al nostro partner di pagamento per completare il checkout in modo sicuro…",
       "paymentSubmittedConfirming": "Pagamento inviato. Conferma con i nostri sistemi…"
-    }
+    },
+    "passportRequiredToPay": "Carichi una copia del passaporto per continuare al pagamento."
   },
   "documents": {
     "title": "Documenti",
@@ -245,13 +247,13 @@
     "eyebrow": "Verifica stato",
     "title": "Monitori la sua domanda",
     "signedInSubtitle": "Bozze, domande in corso e pratiche completate su questo account (le bozze scadute sono nascoste).",
-    "guestSubtitle": "Utilizzi l'e-mail o il telefono indicati nella domanda.",
-    "contactLabel": "E-mail o telefono",
-    "contactHint": "Elenciamo ogni domanda in cui corrisponde questa e-mail ospite, l'e-mail del suo account (se collegato) o questo numero di telefono nel profilo della domanda.",
-    "contactPlaceholder": "you@example.com o +971…",
+    "guestSubtitle": "Cerchi le domande con e-mail, telefono o ID di tracciamento — oppure continui con Google.",
+    "contactLabel": "E-mail, telefono o ID di tracciamento",
+    "contactHint": "Elenciamo ogni domanda che corrisponde a questa e-mail, telefono o ID di tracciamento.",
+    "contactPlaceholder": "you@example.com, +971… o ID di tracciamento",
     "showApplications": "Mostra domande",
     "lookingUp": "Ricerca in corso…",
-    "noResultsGuest": "Nessuna domanda trovata per quella e-mail o telefono. Verifichi eventuali errori di digitazione o utilizzi la stessa e-mail inserita all'avvio come ospite.",
+    "noResultsGuest": "Nessuna domanda trovata per quell’e-mail, telefono o ID di tracciamento. Controlli gli errori di battitura o usi l’e-mail con cui ha iniziato come ospite.",
     "referenceLabel": "Riferimento",
     "continue": "Continua",
     "viewStatus": "Visualizza stato",
@@ -311,7 +313,8 @@
         "decision": "Decisione",
         "closed": "Chiuso"
       }
-    }
+    },
+    "signInHelper": "Continui con Google oppure acceda con e-mail e password."
   },
   "submitted": {
     "pageTitle": "Grazie | Visatop",
@@ -499,7 +502,7 @@
     "applyIndexDescription": "Avvii o continui la domanda di visto con Visatop.",
     "applicationPageTitle": "La sua domanda | Visatop",
     "serviceFacts": {
-      "processingTime": "Elaborazione tipica in 2 giorni lavorativi quando i documenti sono completi",
+      "processingTime": "Elaborazione tipica in 3 giorni lavorativi quando i documenti sono completi",
       "pricing": "Commissioni tutto incluso variabili in base alla nazionalità del passaporto e alla durata del visto — prezzo esatto mostrato prima del pagamento",
       "visaTypes": "Visti turistici e visita da 14, 30 e 60 giorni per oltre 95 paesi di passaporto",
       "portal": "Carichi copia passaporto e foto; monitori lo stato nel portale cliente"

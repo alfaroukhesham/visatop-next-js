@@ -199,12 +199,6 @@ function buildSrcDoc(input: {
       html, body { margin: 0; padding: 0; background: transparent !important; }
       body { overflow: hidden; }
 
-      header#header .featured_on,
-      header#header .time_in_uae,
-      header#header .uae-time {
-        display: none !important;
-      }
-
       /* Polylang language switcher (headless markup differs on prod: href="#pll_switcher" with no class). */
       header#header nav.menu a[href="#pll_switcher"] {
         display: inline-flex;
