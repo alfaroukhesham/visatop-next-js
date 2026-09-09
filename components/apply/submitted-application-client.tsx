@@ -166,7 +166,7 @@ export function SubmittedApplicationClient({ applicationId, initialApplication }
       setLinkActionError(prep.message);
       return;
     }
-    const cb = encodeURIComponent(safeCallbackUrl(appHref(linkAfterPath)));
+    const cb = encodeURIComponent(safeCallbackUrl(linkAfterPath));
     const authPath = target === "sign-up" ? "/sign-up" : "/sign-in";
     window.location.assign(`${appHref(authPath)}?callbackUrl=${cb}`);
   }
