@@ -68,6 +68,7 @@
       "adult": "Yetişkin",
       "child": "Çocuk",
       "chooseVisaOption": "Vize seçin",
+      "chooseVisaForThis": "Bu yolcu için bir vize seçin.",
       "addAtLeastOne": "En az bir yolcu ekleyin.",
       "maxTravelers": "Ödeme başına en fazla {count} yolcu.",
       "chooseVisaForAll": "Her yolcu için bir vize seçin."

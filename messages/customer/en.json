@@ -68,6 +68,7 @@
       "adult": "Adult",
       "child": "Child",
       "chooseVisaOption": "Choose a visa",
+      "chooseVisaForThis": "Choose a visa for this traveller.",
       "addAtLeastOne": "Add at least one traveller.",
       "maxTravelers": "Maximum {count} travellers per checkout.",
       "chooseVisaForAll": "Choose a visa for every traveller."

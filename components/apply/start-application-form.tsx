@@ -244,6 +244,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   const [additionalTravelers, setAdditionalTravelers] = useState<TPartyTravelerDraft[]>(
     boot.additionalTravelers,
   );
+  const [missingVisaKeys, setMissingVisaKeys] = useState<string[]>([]);
   const [chooserPhase, setChooserPhase] = useState<TChooserPhase>(boot.chooserPhase);
   const servicesRef = useRef<Service[]>([]);
   servicesRef.current = services;
@@ -392,13 +393,27 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     ];
     const ready = assertTravelersReady(travelers, partyMaxTravelers);
     if (!ready.ok) {
+      const missing = ready.missingKeys ?? [];
+      setMissingVisaKeys(missing);
       setError(
         ready.code === "maxTravelers"
           ? t("start.party.maxTravelers", { count: partyMaxTravelers })
           : t(`start.party.${ready.code}`),
       );
+      if (missing.length > 0) {
+        queueMicrotask(() => {
+          const first = missing[0];
+          document.getElementById(`party-traveler-${first}`)?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+          const visa = document.getElementById(`party-traveler-visa-${first}`);
+          if (visa instanceof HTMLSelectElement) visa.focus();
+        });
+      }
       return;
     }
+    setMissingVisaKeys([]);
     if (!trimmedEmail) {
       setError(t("start.enterEmailError"));
       return;
@@ -457,10 +472,14 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
 
   const removeTraveler = (key: string) => {
     setAdditionalTravelers((prev) => prev.filter((t) => t.key !== key));
+    setMissingVisaKeys((prev) => prev.filter((k) => k !== key));
   }
 
   const updateTraveler = (key: string, patch: Partial<TPartyTravelerDraft>) => {
     setAdditionalTravelers((prev) => prev.map((t) => (t.key === key ? { ...t, ...patch } : t)));
+    if (patch.serviceId) {
+      setMissingVisaKeys((prev) => prev.filter((k) => k !== key));
+    }
   }
 
   const stayCount = stayOptionsForChooser(services).length;
@@ -601,10 +620,18 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                       kind: traveler.kind,
                     }).flatMap((opt) => services.filter((s) => s.id === opt.id))
                   : [];
+                const visaMissing = missingVisaKeys.includes(traveler.key);
+                const visaFieldId = `party-traveler-visa-${traveler.key}`;
                 return (
                   <div
+                    id={`party-traveler-${traveler.key}`}
                     key={traveler.key}
-                    className="border-border bg-muted/30 space-y-4 rounded-2xl border-2 p-5"
+                    className={cn(
+                      "space-y-4 rounded-2xl border-2 p-5",
+                      visaMissing
+                        ? "border-error bg-error/5"
+                        : "border-border bg-muted/30",
+                    )}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-foreground text-sm font-semibold">
@@ -650,30 +677,54 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                       ))}
                     </div>
                     {shortlist.length === 1 ? (
-                      <p className="border-secondary/30 bg-card text-foreground rounded-xl border-2 px-3 py-3 text-sm font-semibold">
-                        {shortlist[0].name}
-                        {(() => {
-                          const price = formatPriceForDisplay(shortlist[0], displayCurrency);
-                          return price ? ` — ${price.text}` : "";
-                        })()}
-                      </p>
+                      <div className="space-y-1.5">
+                        <p className="border-secondary/30 bg-card text-foreground rounded-xl border-2 px-3 py-3 text-sm font-semibold">
+                          {shortlist[0].name}
+                          {(() => {
+                            const price = formatPriceForDisplay(shortlist[0], displayCurrency);
+                            return price ? ` — ${price.text}` : "";
+                          })()}
+                        </p>
+                        {visaMissing ? (
+                          <p className="text-error text-xs font-medium" role="alert">
+                            {t("start.party.chooseVisaForThis")}
+                          </p>
+                        ) : null}
+                      </div>
                     ) : (
-                      <select
-                        value={traveler.serviceId}
-                        onChange={(e) => updateTraveler(traveler.key, { serviceId: e.target.value })}
-                        className="border-border bg-card text-foreground w-full rounded-xl border-2 px-3 py-3 text-sm"
-                      >
-                        <option value="">{t("start.party.chooseVisaOption")}</option>
-                        {shortlist.map((s) => {
-                          const price = formatPriceForDisplay(s, displayCurrency);
-                          return (
-                            <option key={s.id} value={s.id}>
-                              {s.name}
-                              {price ? ` — ${price.text}` : ""}
-                            </option>
-                          );
-                        })}
-                      </select>
+                      <div className="space-y-1.5">
+                        <select
+                          id={visaFieldId}
+                          value={traveler.serviceId}
+                          aria-invalid={visaMissing || undefined}
+                          aria-describedby={visaMissing ? `${visaFieldId}-error` : undefined}
+                          onChange={(e) => updateTraveler(traveler.key, { serviceId: e.target.value })}
+                          className={cn(
+                            "bg-card text-foreground w-full rounded-xl border-2 px-3 py-3 text-sm",
+                            visaMissing ? "border-error" : "border-border",
+                          )}
+                        >
+                          <option value="">{t("start.party.chooseVisaOption")}</option>
+                          {shortlist.map((s) => {
+                            const price = formatPriceForDisplay(s, displayCurrency);
+                            return (
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                                {price ? ` — ${price.text}` : ""}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        {visaMissing ? (
+                          <p
+                            id={`${visaFieldId}-error`}
+                            className="text-error text-xs font-medium"
+                            role="alert"
+                          >
+                            {t("start.party.chooseVisaForThis")}
+                          </p>
+                        ) : null}
+                      </div>
                     )}
                   </div>
                 );

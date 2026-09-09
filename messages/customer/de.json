@@ -68,6 +68,7 @@
       "adult": "Erwachsene/r",
       "child": "Kind",
       "chooseVisaOption": "Visum wählen",
+      "chooseVisaForThis": "Wählen Sie ein Visum für diese/n Reisende/n.",
       "addAtLeastOne": "Fügen Sie mindestens eine/n Reisende/n hinzu.",
       "maxTravelers": "Maximal {count} Reisende pro Checkout.",
       "chooseVisaForAll": "Wählen Sie für jede/n Reisende/n ein Visum."

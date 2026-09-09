@@ -68,6 +68,7 @@
       "adult": "بالغ",
       "child": "طفل",
       "chooseVisaOption": "اختر تأشيرة",
+      "chooseVisaForThis": "اختر تأشيرة لهذا المسافر.",
       "addAtLeastOne": "أضف مسافرًا واحدًا على الأقل.",
       "maxTravelers": "الحد الأقصى {count} مسافرين لكل عملية دفع.",
       "chooseVisaForAll": "اختر تأشيرة لكل مسافر."

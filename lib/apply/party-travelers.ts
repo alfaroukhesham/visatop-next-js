@@ -8,6 +8,13 @@ export type TPartyTravelerDraft = {
 
 export type TTravelersReadyErrorCode = "addAtLeastOne" | "maxTravelers" | "chooseVisaForAll";
 
+export type TTravelersReadyResult =
+  | { ok: true }
+  | { ok: false; code: TTravelersReadyErrorCode; missingKeys?: string[] };
+
+export const missingTravelerVisaKeys = (travelers: TPartyTravelerDraft[]): string[] =>
+  travelers.filter((t) => !t.serviceId.trim()).map((t) => t.key);
+
 export const canAddTraveler = (count: number, max: number): boolean => count < max;
 
 /** When the party shortlist has one visa, select it so checkout totals include that traveller. */
@@ -25,13 +32,14 @@ export const resolvePartyTravelerServiceId = (
 export const assertTravelersReady = (
   travelers: TPartyTravelerDraft[],
   max: number,
-): { ok: true } | { ok: false; code: TTravelersReadyErrorCode } => {
+): TTravelersReadyResult => {
   if (travelers.length < 1) return { ok: false, code: "addAtLeastOne" };
   if (travelers.length > max) {
     return { ok: false, code: "maxTravelers" };
   }
-  if (travelers.some((t) => !t.serviceId)) {
-    return { ok: false, code: "chooseVisaForAll" };
+  const missingKeys = missingTravelerVisaKeys(travelers);
+  if (missingKeys.length > 0) {
+    return { ok: false, code: "chooseVisaForAll", missingKeys };
   }
   return { ok: true };
 };

@@ -68,6 +68,7 @@
       "adult": "Adult",
       "child": "Bata",
       "chooseVisaOption": "Pumili ng visa",
+      "chooseVisaForThis": "Pumili ng visa para sa traveler na ito.",
       "addAtLeastOne": "Magdagdag ng kahit isang traveler.",
       "maxTravelers": "Maximum na {count} traveler bawat checkout.",
       "chooseVisaForAll": "Pumili ng visa para sa bawat traveler."

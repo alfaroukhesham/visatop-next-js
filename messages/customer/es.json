@@ -68,6 +68,7 @@
       "adult": "Adulto",
       "child": "Menor",
       "chooseVisaOption": "Elija un visado",
+      "chooseVisaForThis": "Elija un visado para este viajero.",
       "addAtLeastOne": "Añada al menos un viajero.",
       "maxTravelers": "Máximo {count} viajeros por pago.",
       "chooseVisaForAll": "Elija un visado para cada viajero."

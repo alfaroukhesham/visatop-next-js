@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertTravelersReady, canAddTraveler, resolvePartyTravelerServiceId } from "./party-travelers";
+import { assertTravelersReady, canAddTraveler, missingTravelerVisaKeys, resolvePartyTravelerServiceId } from "./party-travelers";
 
 describe("canAddTraveler", () => {
   it("returns false at max", () => {
@@ -21,8 +21,29 @@ describe("assertTravelersReady", () => {
 
   it("rejects empty serviceId", () => {
     expect(
-      assertTravelersReady([{ key: "a", kind: "adult" as const, serviceId: "" }], 2),
-    ).toEqual({ ok: false, code: "chooseVisaForAll" });
+      assertTravelersReady(
+        [
+          { key: "primary", kind: "adult" as const, serviceId: "s1" },
+          { key: "extra-1", kind: "adult" as const, serviceId: "" },
+        ],
+        2,
+      ),
+    ).toEqual({
+      ok: false,
+      code: "chooseVisaForAll",
+      missingKeys: ["extra-1"],
+    });
+  });
+
+  it("lists every traveller still missing a visa", () => {
+    expect(
+      missingTravelerVisaKeys([
+        { key: "primary", kind: "adult" as const, serviceId: "s1" },
+        { key: "a", kind: "adult" as const, serviceId: "" },
+        { key: "b", kind: "child" as const, serviceId: "s2" },
+        { key: "c", kind: "adult" as const, serviceId: "" },
+      ]),
+    ).toEqual(["a", "c"]);
   });
 
   it("rejects more than max", () => {
