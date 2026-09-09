@@ -27,6 +27,14 @@ describe("checkoutErrorToUserMessage", () => {
     expect(msg).toMatch(/localhost|https/i);
   });
 
+  it("maps missing_passport", () => {
+    const msg = checkoutErrorToUserMessage({
+      code: "VALIDATION_ERROR",
+      details: { reason: "missing_passport" },
+    });
+    expect(msg).toMatch(/passport copy/i);
+  });
+
   it("ignores generic conflict server message", () => {
     const msg = checkoutErrorToUserMessage({
       code: "CONFLICT",

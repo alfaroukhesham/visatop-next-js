@@ -11,6 +11,7 @@ import { apiHref } from "@/lib/app-href";
 import { APPLY_STEP3_VALIDATION_DISABLED } from "@/lib/apply/apply-flow-config";
 import { customerFacingOcrMessage } from "@/lib/apply/ocr-customer-copy";
 import { PAY_BLOCKED_MISSING_DOCS_COPY } from "@/lib/apply/payment-copy";
+import { paymentReviewNavState } from "@/lib/apply/payment-review-nav";
 import { parseDobInputToIsoUtc, type Readiness } from "@/lib/documents/validation-readiness";
 import { cn } from "@/lib/utils";
 import { DATE_API_KEYS, type ApplicantProfile, type ApplicantProfileFieldKey, type ExtractResponse } from "./types";
@@ -42,12 +43,11 @@ const APPLICANT_ROWS = [
 const buildReadinessLabel = (
   readiness: string | null,
   paymentReadiness: Readiness,
-  requiredDocsPresent: boolean,
 ) => {
-  if (!requiredDocsPresent) {
+  if (paymentReadiness !== "ready") {
     return { text: PAY_BLOCKED_MISSING_DOCS_COPY, tone: "warn" as const };
   }
-  if (APPLY_STEP3_VALIDATION_DISABLED && paymentReadiness === "ready") {
+  if (APPLY_STEP3_VALIDATION_DISABLED) {
     return { text: "Continue to payment", tone: "neutral" as const };
   }
   switch (readiness) {
@@ -75,10 +75,11 @@ export interface IApplicantReviewProps {
   extraction: ExtractResponse["extraction"] | null;
   readiness: string | null;
   paymentReadiness: Readiness;
-  requiredDocsPresent: boolean;
   missing: string[];
   documentsReady: boolean;
   passportUploaded: boolean;
+  extractPending: boolean;
+  waitForPassportExtract: () => Promise<void>;
   locked: boolean;
   onSaved: () => void;
 }
@@ -94,10 +95,11 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
   extraction,
   readiness,
   paymentReadiness,
-  requiredDocsPresent,
   missing,
   documentsReady,
   passportUploaded,
+  extractPending,
+  waitForPassportExtract,
   locked,
   onSaved,
 }) => {
@@ -119,9 +121,10 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
   const paymentPath = `/apply/applications/${encodeURIComponent(paymentApplicationId ?? applicationId)}/payment`;
   const canContinueToPayment = !locked && paymentReadiness === "ready";
 
-  function goToPayment() {
+  const goToPayment = async () => {
+    await waitForPassportExtract();
     router.push(paymentPath);
-  }
+  };
 
   async function handleSave() {
     setSaving(true);
@@ -184,28 +187,35 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
     setSaveMsg("Changes saved.");
     onSaved();
     if (canContinueToPayment && passportUploaded) {
-      goToPayment();
+      void goToPayment();
     }
   }
 
-  const readinessLabel = requiredDocsPresent
-    ? buildReadinessLabel(readiness, paymentReadiness, requiredDocsPresent)
-    : null;
+  const readinessLabel = buildReadinessLabel(readiness, paymentReadiness);
   const isSecondary = !documentsReady;
 
-  function onNext() {
+  async function onNext() {
     if (locked) return;
     setSaveError(null);
-    if (!passportUploaded) {
+    const nav = paymentReviewNavState({
+      passportUploaded,
+      extractPending,
+      paymentReady: canContinueToPayment,
+    });
+    if (nav === "need_passport") {
       setSaveError(t("draft.passportRequiredToPay"));
       return;
     }
-    if (!dirty && canContinueToPayment) {
-      goToPayment();
+    if (nav === "wait_extract") {
+      await goToPayment();
       return;
     }
-    if (!dirty && !canContinueToPayment) {
+    if (nav === "blocked") {
       setSaveError(PAY_BLOCKED_MISSING_DOCS_COPY);
+      return;
+    }
+    if (!dirty) {
+      await goToPayment();
       return;
     }
     void handleSave();
@@ -335,15 +345,17 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
           confirmLabel={
             locked
               ? undefined
-              : saving
-                ? t("draft.saving")
+              : saving || extractPending
+                ? extractPending
+                  ? t("documents.readingPassport")
+                  : t("draft.saving")
                 : !dirty && canContinueToPayment
                   ? t("draft.continueToPayment")
                   : t("draft.next")
           }
-          onConfirm={locked ? undefined : onNext}
+          onConfirm={locked ? undefined : () => void onNext()}
           confirmDisabled={saving}
-          confirmPending={saving}
+          confirmPending={saving || extractPending}
         />
         {!locked && saveMsg ? <p className="text-success text-xs">{saveMsg}</p> : null}
         {!locked && saveError ? <p className="text-error text-xs" role="alert">{saveError}</p> : null}

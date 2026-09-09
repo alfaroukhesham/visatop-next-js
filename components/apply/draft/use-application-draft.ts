@@ -154,31 +154,41 @@ export function useApplicationDraft(applicationId: string) {
     [applicationId, loadMemberData],
   );
 
+  const extractPromiseRef = useRef(Promise.resolve());
+
   const runExtract = useCallback(async () => {
     const memberId = selectedMemberId;
-    updateMemberState(memberId, { extracting: true });
-    setActionMsg(null);
-    const res = await fetchApiEnvelope<ExtractResponse>(
-      apiHref(`/applications/${memberId}/extract`),
-      { method: "POST" },
-    );
-    updateMemberState(memberId, { extracting: false });
-    if (!res.ok) {
-      setActionMsg(res.error.message);
+    const work = (async () => {
+      updateMemberState(memberId, { extracting: true });
+      setActionMsg(null);
+      const res = await fetchApiEnvelope<ExtractResponse>(
+        apiHref(`/applications/${memberId}/extract`),
+        { method: "POST" },
+      );
+      updateMemberState(memberId, { extracting: false });
+      if (!res.ok) {
+        setActionMsg(res.error.message);
+        await load({ silent: true });
+        return;
+      }
+      updateMemberState(memberId, { extractResult: res.data });
+      const s = res.data.extraction.status;
+      if (s === "succeeded") {
+        setActionMsg("We filled in what we could. Review your details below.");
+      } else if (s === "needs_manual") {
+        setActionMsg("We couldn’t read everything. Please enter the remaining details manually.");
+      } else {
+        setActionMsg("We couldn’t read your passport. Please enter the details manually.");
+      }
       await load({ silent: true });
-      return;
-    }
-    updateMemberState(memberId, { extractResult: res.data });
-    const s = res.data.extraction.status;
-    if (s === "succeeded") {
-      setActionMsg("We filled in what we could. Review your details below.");
-    } else if (s === "needs_manual") {
-      setActionMsg("We couldn’t read everything. Please enter the remaining details manually.");
-    } else {
-      setActionMsg("We couldn’t read your passport. Please enter the details manually.");
-    }
-    await load({ silent: true });
+    })();
+    extractPromiseRef.current = work;
+    await work;
   }, [selectedMemberId, load, updateMemberState]);
+
+  const waitForPassportExtract = useCallback(async () => {
+    await extractPromiseRef.current;
+  }, []);
 
   const onUpload = useCallback(
     async (type: DocType, file: File) => {
@@ -210,15 +220,20 @@ export function useApplicationDraft(applicationId: string) {
       const slot = memberStatesRef.current[memberId]?.slots.find((s) => s.key === type);
       setActionMsg(slot ? `${slot.label} uploaded.` : "Document uploaded.");
       if (type === "passport_copy") {
-        updateMemberState(memberId, { extractResult: null });
+        updateMemberState(memberId, { extractResult: null, extracting: true });
+        const pipeline = (async () => {
+          await load({ silent: true });
+          if (latestByType(memberStatesRef.current[memberId]?.docs ?? [], "passport_copy")) {
+            await runExtract();
+            return;
+          }
+          updateMemberState(memberId, { extracting: false });
+        })();
+        extractPromiseRef.current = pipeline;
+        await pipeline;
+        return;
       }
       await load({ silent: true });
-      if (
-        type === "passport_copy" &&
-        latestByType(memberStatesRef.current[memberId]?.docs ?? [], "passport_copy")
-      ) {
-        void runExtract();
-      }
     },
     [selectedMemberId, load, runExtract, updateMemberState],
   );
@@ -300,6 +315,7 @@ export function useApplicationDraft(applicationId: string) {
     selected,
     onUpload,
     runExtract,
+    waitForPassportExtract,
     passport: primaryState?.passport ?? null,
     photo: primaryState?.photo ?? null,
     nationalityName: primaryState?.nationalityName ?? "",

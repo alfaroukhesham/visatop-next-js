@@ -9,9 +9,10 @@ import { APPLY_STEP3_VALIDATION_DISABLED } from "@/lib/apply/apply-flow-config";
  * - Readiness precedence: `validationFailures` dominates `requiredFieldsMissing`
  *   (spec §6.5); missing uploads contribute to **case** `readiness` only.
  * - **`paymentReadiness`:** when `APPLY_STEP3_VALIDATION_DISABLED`, email plus
- *   all required document slots (floor + catalog extras) gate checkout; profile
- *   fields warn only. When validation is enabled, profile + validation gate
- *   payment; uploads gate full `readiness` only.
+ *   a passport copy (per traveller) gate checkout; photo and catalog extras
+ *   stay on the file for ops to chase. Profile fields warn only. When
+ *   validation is enabled, profile + validation gate payment; uploads gate
+ *   full `readiness` only.
  */
 
 export const VALIDATION_SCHEMA_VERSION = 1 as const;
@@ -50,7 +51,7 @@ export type ValidationResult = {
   nowUtcDate: string;
   /** Profile + validation + both uploads; submission / case-complete gate. */
   readiness: Readiness;
-  /** Checkout gate: email + required uploads when pay-first; otherwise profile + validation. */
+  /** Checkout gate: email + passport when pay-first; otherwise profile + validation. */
   paymentReadiness: Readiness;
   requiredFieldsMissing: SubmissionRequiredField[];
   validationFailures: ValidationFailure[];
@@ -85,6 +86,20 @@ export type UploadPresence = {
 };
 
 const FLOOR_SLOT_KEYS = ["passport_copy", "personal_photo"] as const;
+const PASSPORT_SLOT_KEY = "passport_copy";
+
+/** Checkout / Next: passport only. Photo and extras are ops follow-up, not a pay wall. */
+export const passportsPresentForPayment = (uploads: UploadPresence): boolean => {
+  if (uploads.memberRequiredUploads?.length) {
+    return uploads.memberRequiredUploads.every(({ uploadedDocumentTypes }) =>
+      uploadedDocumentTypes.includes(PASSPORT_SLOT_KEY),
+    );
+  }
+  if (uploads.uploadedDocumentTypes) {
+    return uploads.uploadedDocumentTypes.includes(PASSPORT_SLOT_KEY);
+  }
+  return uploads.passportCopyPresent;
+};
 
 export const allRequiredDocumentsPresent = (uploads: UploadPresence): boolean => {
   if (uploads.memberRequiredUploads?.length) {
@@ -189,8 +204,7 @@ export function computeValidation(input: ComputeValidationInput): ValidationResu
 
   if (APPLY_STEP3_VALIDATION_DISABLED) {
     const hasEmail = isPresent(input.profile.email);
-    const docsReady = allRequiredDocumentsPresent(input.uploads);
-    const paymentReady = hasEmail && docsReady;
+    const paymentReady = hasEmail && passportsPresentForPayment(input.uploads);
     return {
       schemaVersion: VALIDATION_SCHEMA_VERSION,
       nowUtcDate,

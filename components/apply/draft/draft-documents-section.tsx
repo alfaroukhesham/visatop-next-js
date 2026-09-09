@@ -26,6 +26,7 @@ export const DraftDocumentsSection: FC<IDraftDocumentsSectionProps> = ({
   const required = slots.filter((s) => s.role === "required");
   const additional = slots.filter((s) => s.role === "additional");
   const allRequiredUploaded = required.every((s) => docsByType[s.key as DocType]);
+  const passportUploaded = Boolean(docsByType.passport_copy);
   const hasBank = slots.some((s) => s.key === "bank_statement_6m");
 
   const renderSlot = (slot: TDocumentSlot) => {
@@ -59,12 +60,17 @@ export const DraftDocumentsSection: FC<IDraftDocumentsSectionProps> = ({
             </span>
           ) : null}
         </div>
-        {allRequiredUploaded ? null : (
+        {allRequiredUploaded ? null : passportUploaded ? (
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            You can continue to payment. Remaining files can be added now or after — we will follow
+            up if anything is missing.
+          </p>
+        ) : (
           <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
             <AlertTriangle className="text-error size-3.5 shrink-0" aria-hidden />
             <span>
-              Upload required files to pay. Details can be reviewed next. Our system will
-              read and prefill the details for you.
+              Upload a passport copy to pay. Details can be reviewed next. Our system will read
+              and prefill the details for you.
             </span>
           </p>
         )}

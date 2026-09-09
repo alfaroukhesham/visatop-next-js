@@ -19,7 +19,7 @@ import { createZiinaPaymentIntent, ZiinaProviderError } from "@/lib/payments/zii
 import type { CheckoutSessionData } from "@/lib/payments/checkout-types";
 import { diagnoseCheckoutBlock } from "@/lib/payments/diagnose-checkout-block";
 import { loadPaymentUploadPresence } from "@/lib/applications/load-payment-upload-presence";
-import { allRequiredDocumentsPresent } from "@/lib/documents/validation-readiness";
+import { passportsPresentForPayment } from "@/lib/documents/validation-readiness";
 import { sumCheckoutTotals, sumPartyLines, type TPartyLine } from "@/lib/payments/party-checkout-total";
 import * as schema from "@/lib/db/schema";
 import { asc, eq, and, or, inArray, isNull } from "drizzle-orm";
@@ -120,12 +120,12 @@ export async function POST(req: Request) {
       }
 
       const uploadPresence = await loadPaymentUploadPresence(tx, primary.id);
-      if (!allRequiredDocumentsPresent(uploadPresence)) {
+      if (!passportsPresentForPayment(uploadPresence)) {
         await tx.update(schema.application).set({ checkoutState: "none" }).where(inArray(schema.application.id, memberIds));
         return jsonError(
           "VALIDATION_ERROR",
-          "Upload all required documents before checkout.",
-          { status: 400, requestId, details: { reason: "missing_required_documents" } },
+          "Upload a passport copy before checkout.",
+          { status: 400, requestId, details: { reason: "missing_passport" } },
         );
       }
 

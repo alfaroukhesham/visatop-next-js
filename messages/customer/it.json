@@ -124,7 +124,7 @@
     "documentsPageTitle": "Documenti e dati",
     "documentsPageSubtitle": "Scansione del passaporto, foto, poi verifichi i campi.",
     "applicantDetailsTitle": "Dati del richiedente",
-    "applicantSecondaryPassportUploaded": "Verifichi i dati compilati automaticamente dal passaporto, poi completi il caricamento.",
+    "applicantSecondaryPassportUploaded": "Verifichi i dati compilati automaticamente dal passaporto, poi proceda al pagamento.",
     "applicantSecondaryOptional": "Facoltativo per ora — aggiunga i dati dopo il caricamento",
     "requiredFieldsMissing": "Campi obbligatori mancanti:",
     "fieldsLockedPayment": "I campi sono bloccati mentre il pagamento è in corso.",
@@ -190,7 +190,7 @@
   "documents": {
     "title": "Documenti",
     "uploadedBadge": "Documenti caricati",
-    "uploadRequiredToPay": "Carichi i file obbligatori per pagare. I dati potranno essere verificati dopo. Il nostro sistema li leggerà e li precompilerà per lei.",
+    "uploadRequiredToPay": "Carichi una copia del passaporto per pagare. I dati potranno essere verificati dopo. Il nostro sistema li leggerà e li precompilerà per lei.",
     "additionalDocuments": "Documenti aggiuntivi",
     "readingPassport": "Lettura passaporto…",
     "additionalMayBeRequired": "VisaTop potrebbe richiedere documenti aggiuntivi per finalizzare la domanda (es. estratti conto, assicurazione). Il team VisaTop la contatterà una volta inviato il passaporto.",

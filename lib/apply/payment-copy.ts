@@ -5,7 +5,7 @@ export const PAY_FIRST_COMPLETE_COPY =
   "Review your order and pay securely to begin processing.";
 
 export const PAY_BLOCKED_MISSING_DOCS_COPY =
-  "Upload your required documents to pay.";
+  "Upload a passport copy to pay.";
 
 export type TPayCopyInput = {
   requiredSlotKeys: string[];
