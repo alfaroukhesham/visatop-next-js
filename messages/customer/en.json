@@ -190,7 +190,7 @@
   "documents": {
     "title": "Documents",
     "uploadedBadge": "Documents uploaded",
-    "uploadRequiredToPay": "Upload required files to pay. Details can wait.",
+    "uploadRequiredToPay": "Upload required files to pay. Details can be reviewed next. Our system will read and prefill the details for you.",
     "additionalDocuments": "Additional documents",
     "readingPassport": "Reading passport…",
     "additionalMayBeRequired": "Additional documents may be required by VisaTop to finalize the application (e.g. bank statements, insurance). The VisaTop team will contact you once the passport has been submitted.",

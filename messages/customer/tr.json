@@ -190,7 +190,7 @@
   "documents": {
     "title": "Belgeler",
     "uploadedBadge": "Belgeler yüklendi",
-    "uploadRequiredToPay": "Ödeme için gerekli dosyaları yükleyin. Bilgiler bekleyebilir.",
+    "uploadRequiredToPay": "Ödeme için gerekli dosyaları yükleyin. Bilgiler bir sonraki adımda incelenebilir. Sistemimiz bunları okuyup sizin için doldurur.",
     "additionalDocuments": "Ek belgeler",
     "readingPassport": "Pasaport okunuyor…",
     "additionalMayBeRequired": "Başvuruyu tamamlamak için VisaTop ek belgeler isteyebilir (ör. banka ekstreleri, sigorta). Pasaport gönderildikten sonra VisaTop ekibi sizinle iletişime geçecektir.",

@@ -233,7 +233,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
       return { phase: "results" as const, stay: null, entry, kind };
     }
     return { phase, stay, entry, kind };
-  }, [phase, stay, entry, kind, stayBuckets, services]);
+  }, [phase, stay, entry, kind, stayBuckets]);
 
   useEffect(() => {
     onAnswersChange?.({ stay: view.stay, entry: view.entry, kind: view.kind });

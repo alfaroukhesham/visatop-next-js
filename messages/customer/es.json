@@ -190,7 +190,7 @@
   "documents": {
     "title": "Documentos",
     "uploadedBadge": "Documentos subidos",
-    "uploadRequiredToPay": "Suba los archivos obligatorios para pagar. Los datos pueden esperar.",
+    "uploadRequiredToPay": "Suba los archivos obligatorios para pagar. Los datos se podrán revisar a continuación. Nuestro sistema los leerá y los rellenará por usted.",
     "additionalDocuments": "Documentos adicionales",
     "readingPassport": "Leyendo pasaporte…",
     "additionalMayBeRequired": "VisaTop puede requerir documentos adicionales para finalizar la solicitud (p. ej. extractos bancarios, seguro). El equipo de VisaTop se pondrá en contacto con usted una vez enviado el pasaporte.",

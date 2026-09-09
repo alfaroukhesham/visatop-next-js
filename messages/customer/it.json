@@ -190,7 +190,7 @@
   "documents": {
     "title": "Documenti",
     "uploadedBadge": "Documenti caricati",
-    "uploadRequiredToPay": "Carichi i file obbligatori per pagare. I dati possono attendere.",
+    "uploadRequiredToPay": "Carichi i file obbligatori per pagare. I dati potranno essere verificati dopo. Il nostro sistema li leggerà e li precompilerà per lei.",
     "additionalDocuments": "Documenti aggiuntivi",
     "readingPassport": "Lettura passaporto…",
     "additionalMayBeRequired": "VisaTop potrebbe richiedere documenti aggiuntivi per finalizzare la domanda (es. estratti conto, assicurazione). Il team VisaTop la contatterà una volta inviato il passaporto.",
