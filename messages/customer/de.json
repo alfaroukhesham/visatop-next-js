@@ -222,7 +222,7 @@
   "payment": {
     "pageTitle": "Zahlung | Visatop",
     "title": "Zahlung",
-    "subtitle": "Prüfen Sie den Gesamtbetrag und bezahlen Sie.",
+    "subtitle": "Prüfen Sie Ihre Bestellung und fahren Sie mit der Zahlung fort",
     "initiatePaymentTitle": "Zahlung starten",
     "completePaymentTitle": "Zahlung abschließen",
     "checkoutInProgress": "Checkout läuft.",

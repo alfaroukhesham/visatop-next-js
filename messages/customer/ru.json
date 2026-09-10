@@ -222,7 +222,7 @@
   "payment": {
     "pageTitle": "Оплата | Visatop",
     "title": "Оплата",
-    "subtitle": "Проверьте сумму, затем оплатите.",
+    "subtitle": "Проверьте заказ и перейдите к оплате",
     "initiatePaymentTitle": "Начать оплату",
     "completePaymentTitle": "Завершите оплату",
     "checkoutInProgress": "Оформление в процессе.",

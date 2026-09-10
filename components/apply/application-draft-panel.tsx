@@ -111,10 +111,6 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
         <Link href="/" className="text-link hover:underline">
           {t("draft.startAnotherDraft")}
         </Link>
-        {" · "}
-        <Link href="/portal/track" className="hover:text-foreground">
-          {t("draft.yourApplications")}
-        </Link>
       </p>
 
     </div>

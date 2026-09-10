@@ -352,15 +352,9 @@ export function CheckoutOrderRecap({
       )}
 
       {totalText ? (
-        <div className="space-y-2 text-sm">
-          <div className="text-muted-foreground flex justify-between gap-4">
-            <span>{t("payment.subtotal")}</span>
-            <span className="text-foreground font-heading font-bold tabular-nums">{totalText}</span>
-          </div>
-          <div className="text-muted-foreground flex justify-between gap-4">
-            <span>{t("payment.total")}</span>
-            <span className="text-foreground font-heading text-base font-bold tabular-nums">{totalText}</span>
-          </div>
+        <div className="text-muted-foreground flex justify-between gap-4 text-sm">
+          <span>{t("payment.total")}</span>
+          <span className="text-foreground font-heading text-base font-bold tabular-nums">{totalText}</span>
         </div>
       ) : null}
     </div>

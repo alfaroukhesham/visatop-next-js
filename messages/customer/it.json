@@ -222,7 +222,7 @@
   "payment": {
     "pageTitle": "Pagamento | Visatop",
     "title": "Pagamento",
-    "subtitle": "Verifichi il totale, poi proceda al pagamento.",
+    "subtitle": "Controlli l'ordine e proceda al pagamento",
     "initiatePaymentTitle": "Avvia pagamento",
     "completePaymentTitle": "Completi il pagamento",
     "checkoutInProgress": "Il checkout è in corso.",
