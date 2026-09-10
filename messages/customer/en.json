@@ -123,7 +123,7 @@
   },
   "draft": {
     "documentsPageTitle": "Documents & details",
-    "documentsPageSubtitle": "Passport scan, photo, then check the fields.",
+    "documentsPageSubtitle": "Upload your passport and check your data",
     "applicantDetailsTitle": "Applicant details",
     "applicantSecondaryPassportUploaded": "Review auto-filled details from your passport, then continue to payment.",
     "applicantSecondaryOptional": "Optional for now — add details after upload",

@@ -123,7 +123,7 @@
   },
   "draft": {
     "documentsPageTitle": "Документы и данные",
-    "documentsPageSubtitle": "Скан паспорта, фото, затем проверка полей.",
+    "documentsPageSubtitle": "Загрузите паспорт и проверьте свои данные",
     "applicantDetailsTitle": "Данные заявителя",
     "applicantSecondaryPassportUploaded": "Проверьте автоматически заполненные данные из паспорта, затем переходите к оплате.",
     "applicantSecondaryOptional": "Необязательно сейчас — добавьте данные после загрузки",
