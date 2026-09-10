@@ -13,8 +13,10 @@ import {
   resolveDocumentRequirements,
   type TDocumentSlot,
 } from "@/lib/apply/document-requirements";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
 import { oversizedUploadMessage } from "@/lib/apply/customer-upload-copy";
+import { translateDocumentSlot } from "@/lib/apply/document-slot-i18n";
 import {
   buildUploadPresence,
   memberUploadStateFromDraft,
@@ -57,6 +59,11 @@ const emptyMemberState = (): TMemberState => ({
 });
 
 export function useApplicationDraft(applicationId: string) {
+  const t = useCustomerT();
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  });
   const [app, setApp] = useState<PublicApplication | null>(null);
   const [members, setMembers] = useState<TPublicPartyMember[]>([]);
   const [selectedMemberId, setSelectedMemberId] = useState<string>(applicationId);
@@ -174,11 +181,11 @@ export function useApplicationDraft(applicationId: string) {
       updateMemberState(memberId, { extractResult: res.data });
       const s = res.data.extraction.status;
       if (s === "succeeded") {
-        setActionMsg("We filled in what we could. Review your details below.");
+        setActionMsg(tRef.current("draft.actionMessages.ocrPartial"));
       } else if (s === "needs_manual") {
-        setActionMsg("We couldn’t read everything. Please enter the remaining details manually.");
+        setActionMsg(tRef.current("draft.actionMessages.ocrManual"));
       } else {
-        setActionMsg("We couldn’t read your passport. Please enter the details manually.");
+        setActionMsg(tRef.current("draft.actionMessages.ocrFailed"));
       }
       await load({ silent: true });
     })();
@@ -193,7 +200,7 @@ export function useApplicationDraft(applicationId: string) {
   const onUpload = useCallback(
     async (type: DocType, file: File) => {
       const memberId = selectedMemberId;
-      const tooLarge = oversizedUploadMessage(file.size, UPLOAD_MAX_BYTES);
+      const tooLarge = oversizedUploadMessage(file.size, UPLOAD_MAX_BYTES, tRef.current);
       if (tooLarge) {
         setActionMsg(tooLarge);
         return;
@@ -213,12 +220,20 @@ export function useApplicationDraft(applicationId: string) {
       if (!res.ok || !json?.ok) {
         const msg =
           json?.error?.message ??
-          (res.status === 413 ? "File exceeds 8MB limit." : `Upload failed (HTTP ${res.status})`);
+          (res.status === 413
+            ? tRef.current("upload.fileExceedsLimit")
+            : tRef.current("upload.failedHttp", { status: res.status }));
         setActionMsg(msg);
         return;
       }
       const slot = memberStatesRef.current[memberId]?.slots.find((s) => s.key === type);
-      setActionMsg(slot ? `${slot.label} uploaded.` : "Document uploaded.");
+      setActionMsg(
+        slot
+          ? tRef.current("draft.actionMessages.slotUploaded", {
+              document: translateDocumentSlot(slot, tRef.current).label,
+            })
+          : tRef.current("draft.actionMessages.documentUploaded"),
+      );
       if (type === "passport_copy") {
         updateMemberState(memberId, { extractResult: null, extracting: true });
         const pipeline = (async () => {
@@ -248,7 +263,7 @@ export function useApplicationDraft(applicationId: string) {
       return;
     }
     setCountdown(null);
-    setActionMsg("Checkout cancelled.");
+    setActionMsg(tRef.current("draft.actionMessages.checkoutCancelled"));
     await load({ silent: true });
   }, [applicationId, load]);
 

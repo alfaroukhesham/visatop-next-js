@@ -2,7 +2,9 @@
 
 import type { FC } from "react";
 import { AlertTriangle, CheckCircle2, FileStack, Loader2 } from "lucide-react";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import type { TDocumentSlot } from "@/lib/apply/document-requirements";
+import { translateDocumentSlot } from "@/lib/apply/document-slot-i18n";
 import { DocumentUploadSlot } from "./document-upload-slot";
 import type { DocType, PublicDocument } from "./types";
 
@@ -23,6 +25,7 @@ export const DraftDocumentsSection: FC<IDraftDocumentsSectionProps> = ({
   extracting,
   onUpload,
 }) => {
+  const t = useCustomerT();
   const required = slots.filter((s) => s.role === "required");
   const additional = slots.filter((s) => s.role === "additional");
   const allRequiredUploaded = required.every((s) => docsByType[s.key as DocType]);
@@ -31,11 +34,12 @@ export const DraftDocumentsSection: FC<IDraftDocumentsSectionProps> = ({
 
   const renderSlot = (slot: TDocumentSlot) => {
     const type = slot.key as DocType;
+    const copy = translateDocumentSlot(slot, t);
     return (
       <DocumentUploadSlot
         key={slot.key}
-        label={slot.label}
-        description={slot.description}
+        label={copy.label}
+        description={copy.description}
         currentDoc={docsByType[type] ?? null}
         docType={type}
         applicationId={applicationId}
@@ -51,27 +55,21 @@ export const DraftDocumentsSection: FC<IDraftDocumentsSectionProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-heading flex items-center gap-2 text-xl font-semibold tracking-tight">
             <FileStack className="text-primary size-5" aria-hidden />
-            Documents
+            {t("documents.title")}
           </h2>
           {allRequiredUploaded ? (
             <span className="text-success inline-flex items-center gap-1 text-xs font-medium">
               <CheckCircle2 className="size-4" aria-hidden />
-              Documents uploaded
+              {t("documents.uploadedBadge")}
             </span>
           ) : null}
         </div>
         {allRequiredUploaded ? null : passportUploaded ? (
-          <p className="text-muted-foreground text-xs leading-relaxed">
-            You can continue to payment. Remaining files can be added now or after — we will follow
-            up if anything is missing.
-          </p>
+          <p className="text-muted-foreground text-xs leading-relaxed">{t("documents.continueAfterUpload")}</p>
         ) : (
           <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
             <AlertTriangle className="text-error size-3.5 shrink-0" aria-hidden />
-            <span>
-              Upload a passport copy to pay. Details can be reviewed next. Our system will read
-              and prefill the details for you.
-            </span>
+            <span>{t("documents.uploadRequiredToPay")}</span>
           </p>
         )}
       </div>
@@ -81,7 +79,7 @@ export const DraftDocumentsSection: FC<IDraftDocumentsSectionProps> = ({
       {additional.length > 0 ? (
         <>
           <h3 className="font-heading text-foreground text-sm font-bold uppercase tracking-wide">
-            Additional documents
+            {t("documents.additionalDocuments")}
           </h3>
           <div className="grid gap-4 sm:grid-cols-2">{additional.map(renderSlot)}</div>
         </>
@@ -91,14 +89,10 @@ export const DraftDocumentsSection: FC<IDraftDocumentsSectionProps> = ({
         {extracting ? (
           <p className="text-muted-foreground flex items-center gap-2 text-xs" role="status">
             <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
-            <span>Reading passport…</span>
+            <span>{t("documents.readingPassport")}</span>
           </p>
         ) : !hasBank ? (
-          <p className="text-muted-foreground text-xs leading-relaxed">
-            Additional documents may be required by VisaTop to finalize the application (e.g. bank
-            statements, insurance). The VisaTop team will contact you once the passport has been
-            submitted.
-          </p>
+          <p className="text-muted-foreground text-xs leading-relaxed">{t("documents.additionalMayBeRequired")}</p>
         ) : null}
       </div>
     </section>

@@ -13,6 +13,7 @@ import { withSystemDbActor } from "@/lib/db/actor-context";
 import { sendAdminStep2ServiceSelectedEmail } from "@/lib/email/send-admin-notification-emails";
 import { sendApplicationDraftStartedEmail } from "@/lib/email/send-application-transactional-emails";
 import { readCustomerLocaleFromCookieHeader } from "@/lib/i18n/customer-locale";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 
 const queueAdminStep2Email = (applicationId: string, requestId: string | null) => {
   after(() => {
@@ -90,8 +91,9 @@ export async function POST(req: Request) {
       });
     }
 
+    const t = createCustomerT(readCustomerLocaleFromCookieHeader(hdrs.get("cookie")));
     const applicationJson = {
-      ...toPublicApplication(primaryRow),
+      ...toPublicApplication(primaryRow, undefined, t),
       isGuest,
     };
 

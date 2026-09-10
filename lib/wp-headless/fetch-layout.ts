@@ -1,6 +1,7 @@
 import { allowlistWpCssUrls } from "./allowlist-css";
 import { normalizeWpMenuUrl } from "./normalize-links";
 import { sanitizeWpShellHtml } from "./sanitize-wp-html";
+import { fetchWordpressRestJson } from "./wordpress-rest";
 import type {
   NormalizedWpMenuItem,
   WpHeadlessLayoutResponse,
@@ -101,20 +102,24 @@ export async function fetchWpShellModel(input: {
   includeHtml?: boolean;
 }): Promise<WpShellModel | null> {
   const include = input.includeHtml ? "menus,css,html" : "menus,css";
-  const url = new URL("/wp-json/headless/v1/layout", input.wpOrigin);
-  url.searchParams.set("include", include);
-  if (input.lang) url.searchParams.set("lang", input.lang);
-
   const revalidateSeconds = input.revalidateSeconds ?? 60;
+  const searchParams: Record<string, string> = { include };
+  if (input.lang) searchParams.lang = input.lang;
+
+  const fetched = await fetchWordpressRestJson({
+    wpOrigin: input.wpOrigin,
+    route: "/headless/v1/layout",
+    searchParams,
+    revalidateSeconds,
+  });
+
+  if (!fetched) {
+    return null;
+  }
 
   let json: WpHeadlessLayoutResponse;
   try {
-    const res = await fetch(url.toString(), {
-      next: { revalidate: revalidateSeconds },
-      headers: { accept: "application/json" },
-    });
-    if (!res.ok) return null;
-    json = (await res.json()) as WpHeadlessLayoutResponse;
+    json = (await fetched.res.json()) as WpHeadlessLayoutResponse;
   } catch {
     return null;
   }

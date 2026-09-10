@@ -10,6 +10,8 @@ import {
   signedInPortalTrackRowFilter,
 } from "@/lib/applications/portal-track-application-access";
 import { mapTrackLookupRow } from "@/lib/applications/track-lookup";
+import { readCustomerLocaleFromCookieHeader } from "@/lib/i18n/customer-locale";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { application } from "@/lib/db/schema/applications";
@@ -99,13 +101,20 @@ export async function GET(req: Request) {
   const nextCursor =
     hasMore && last ? encodeCursor({ createdAt: last.createdAt.toISOString(), id: last.id }) : null;
 
+  const t = createCustomerT(readCustomerLocaleFromCookieHeader(hdrs.get("cookie")));
+
   return jsonOk(
     {
       items: slice.map((r) => ({
-        ...mapTrackLookupRow(r, {
-          serviceName: services.find((s) => s.id === r.serviceId)?.name ?? null,
-          nationalityName: nationalityDisplayName(r.nationalityCode, nationalities),
-        }),
+        ...mapTrackLookupRow(
+          r,
+          {
+            serviceName: services.find((s) => s.id === r.serviceId)?.name ?? null,
+            nationalityName: nationalityDisplayName(r.nationalityCode, nationalities),
+          },
+          undefined,
+          t,
+        ),
         paymentStatus: r.paymentStatus,
         draftExpiresAt: r.draftExpiresAt ? r.draftExpiresAt.toISOString() : null,
       })),

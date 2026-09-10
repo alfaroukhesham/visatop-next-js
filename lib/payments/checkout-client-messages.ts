@@ -1,3 +1,6 @@
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
+import type { TCustomerMessageVars } from "@/lib/i18n/customer-messages";
+
 /** Machine-readable checkout blockers returned in API `error.details.reason`. */
 export type CheckoutBlockReason =
   | "checkout_in_progress"
@@ -15,51 +18,48 @@ export type CheckoutApiErrorShape = {
   details?: { reason?: string; [key: string]: unknown };
 };
 
+export type TCheckoutTranslate = (key: string, vars?: TCustomerMessageVars) => string;
+
 /**
  * Customer-facing copy for checkout failures (secure payment section).
  * Keeps technical detail out of the UI while remaining actionable.
  */
-export function checkoutErrorToUserMessage(err: CheckoutApiErrorShape | null | undefined): string {
-  if (!err) return "We couldn't start checkout. Please try again in a moment.";
+export const checkoutErrorToUserMessage = (
+  err: CheckoutApiErrorShape | null | undefined,
+  t: TCheckoutTranslate = createCustomerT("en"),
+): string => {
+  if (!err) return t("checkout.errors.genericStart");
 
   const reason = (err.details?.reason as CheckoutBlockReason | undefined) ?? inferReasonFromCode(err.code);
 
   switch (reason) {
     case "checkout_in_progress":
-      return (
-        "You already have a payment session open for this application. " +
-        "Use Complete your payment below to continue, or choose Cancel & Reset to start over."
-      );
+      return t("checkout.errors.checkoutInProgress");
     case "not_ready_for_payment":
-      return (
-        "This application isn't ready for payment yet. Refresh the page—if you just saved your details, wait a moment and try again."
-      );
+      return t("checkout.errors.notReady");
     case "payments_origin_blocked":
-      return (
-        "Payments can't be started from this address (for example localhost without HTTPS). " +
-        "Use the published https link for this site, or ask your developer to enable local payment testing."
-      );
+      return t("checkout.errors.originBlocked");
     case "missing_guest_email":
-      return "Add your email on the visa selection step before paying.";
+      return t("checkout.errors.missingGuestEmail");
     case "missing_passport":
-      return "Upload a passport copy to start payment. Other documents can be added now or after.";
+      return t("checkout.errors.missingPassport");
     case "pricing_unavailable":
-      return "We couldn't load a price for this visa right now. Refresh the page or contact support if it continues.";
+      return t("checkout.errors.pricingUnavailable");
     case "provider_unavailable":
-      return "Our payment partner is temporarily unavailable. Please try again in a few minutes.";
+      return t("checkout.errors.providerUnavailable");
     case "unknown":
     default:
       if (err.code === "PAYMENT_PROVIDER_ERROR" || err.code === "ZIINA_UNAVAILABLE") {
-        return checkoutErrorToUserMessage({ ...err, details: { reason: "provider_unavailable" } });
+        return checkoutErrorToUserMessage({ ...err, details: { reason: "provider_unavailable" } }, t);
       }
       if (err.message && !isGenericConflictMessage(err.message)) {
         return err.message;
       }
-      return "We couldn't start checkout. Please refresh the page and try again.";
+      return t("checkout.errors.refreshAndRetry");
   }
-}
+};
 
-function inferReasonFromCode(code: string | undefined): CheckoutBlockReason {
+const inferReasonFromCode = (code: string | undefined): CheckoutBlockReason => {
   switch (code) {
     case "CONFLICT":
       return "unknown";
@@ -73,8 +73,8 @@ function inferReasonFromCode(code: string | undefined): CheckoutBlockReason {
     default:
       return "unknown";
   }
-}
+};
 
-function isGenericConflictMessage(message: string): boolean {
+const isGenericConflictMessage = (message: string): boolean => {
   return /locked|not ready|already in progress/i.test(message);
-}
+};

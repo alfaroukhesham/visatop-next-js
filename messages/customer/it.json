@@ -201,7 +201,23 @@
     "chooseFile": "Scegli file",
     "replace": "Sostituisci",
     "chooseFileAria": "Scegli un file: {label}",
-    "uploading": "Caricamento…"
+    "uploading": "Caricamento…",
+    "continueAfterUpload": "Puoi continuare al pagamento. I file restanti possono essere aggiunti ora o dopo: ti contatteremo se manca qualcosa.",
+    "slots": {
+      "passportCopy": {
+        "label": "Passaporto (pagina dati)",
+        "description": "JPEG / PNG / PDF di una pagina · max 8 MB"
+      },
+      "personalPhoto": {
+        "label": "Foto personale",
+        "description": "JPEG o PNG · max 8 MB"
+      },
+      "bankStatement6m": {
+        "label": "Estratto conto degli ultimi 6 mesi",
+        "description": "Un PDF o un'immagine degli ultimi 6 mesi · JPEG / PNG / PDF · max 8 MB"
+      },
+      "genericAcceptHint": "JPEG / PNG / PDF · max 8 MB"
+    }
   },
   "payment": {
     "pageTitle": "Pagamento | Visatop",
@@ -447,7 +463,10 @@
       "pricingUnavailable": "Non siamo riusciti a caricare un prezzo per questo visto al momento. Aggiorni la pagina o contatti l'assistenza se il problema persiste.",
       "providerUnavailable": "Il nostro partner di pagamento non è temporaneamente disponibile. Riprovi tra qualche minuto.",
       "refreshAndRetry": "Non siamo riusciti ad avviare il checkout. Aggiorni la pagina e riprovi.",
-      "checkoutFailed": "Checkout non riuscito"
+      "checkoutFailed": "Checkout non riuscito",
+      "missingPassport": "Carica una copia del passaporto per avviare il pagamento. Gli altri documenti possono essere aggiunti ora o dopo.",
+      "sdkFailed": "Impossibile inizializzare l'SDK Paddle",
+      "failedDot": "Pagamento non riuscito."
     }
   },
   "expert": {
@@ -469,7 +488,9 @@
     "visa": "Visto",
     "documents": "Documenti",
     "payment": "Pagamento",
-    "status": "Stato"
+    "status": "Stato",
+    "stepBadge": "Passo {step}/{total}",
+    "hideProgressAria": "Nascondi il riepilogo dei progressi"
   },
   "common": {
     "continue": "Continua",
@@ -491,7 +512,8 @@
     "loadingAccountActions": "Caricamento azioni account",
     "loadingVisaOptions": "Caricamento opzioni visto",
     "loadingApplications": "Caricamento domande",
-    "loadingOrderSummary": "Caricamento riepilogo ordine"
+    "loadingOrderSummary": "Caricamento riepilogo ordine",
+    "whatsappSupport": "Chatta su WhatsApp"
   },
   "seo": {
     "homeTitle": "Richiedi online il visto turistico per gli Emirati Arabi Uniti",
@@ -540,7 +562,8 @@
   "upload": {
     "fileExceedsLimit": "Il file supera il limite di 8 MB.",
     "uploaded": "Caricato",
-    "notUploadedYet": "Non ancora caricato"
+    "notUploadedYet": "Non ancora caricato",
+    "failedHttp": "Caricamento non riuscito (HTTP {status})"
   },
   "ocr": {
     "reading": "Lettura passaporto…",

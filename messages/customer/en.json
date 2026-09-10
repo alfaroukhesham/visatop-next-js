@@ -201,7 +201,23 @@
     "chooseFile": "Choose file",
     "replace": "Replace",
     "chooseFileAria": "Choose a file: {label}",
-    "uploading": "Uploading…"
+    "uploading": "Uploading…",
+    "continueAfterUpload": "You can continue to payment. Remaining files can be added now or after — we will follow up if anything is missing.",
+    "slots": {
+      "passportCopy": {
+        "label": "Passport (bio page)",
+        "description": "JPEG / PNG / single-page PDF · 8MB max"
+      },
+      "personalPhoto": {
+        "label": "Personal photo",
+        "description": "JPEG or PNG · 8MB max"
+      },
+      "bankStatement6m": {
+        "label": "Last 6 months bank account statement",
+        "description": "One PDF or image covering the last 6 months · JPEG / PNG / PDF · 8MB max"
+      },
+      "genericAcceptHint": "JPEG / PNG / PDF · 8MB max"
+    }
   },
   "payment": {
     "pageTitle": "Payment | Visatop",
@@ -447,7 +463,10 @@
       "pricingUnavailable": "We couldn't load a price for this visa right now. Refresh the page or contact support if it continues.",
       "providerUnavailable": "Our payment partner is temporarily unavailable. Please try again in a few minutes.",
       "refreshAndRetry": "We couldn't start checkout. Please refresh the page and try again.",
-      "checkoutFailed": "Checkout failed"
+      "checkoutFailed": "Checkout failed",
+      "missingPassport": "Upload a passport copy to start payment. Other documents can be added now or after.",
+      "sdkFailed": "Failed to initialize Paddle SDK",
+      "failedDot": "Checkout failed."
     }
   },
   "expert": {
@@ -469,7 +488,9 @@
     "visa": "Visa",
     "documents": "Documents",
     "payment": "Payment",
-    "status": "Status"
+    "status": "Status",
+    "stepBadge": "Step {step}/{total}",
+    "hideProgressAria": "Hide progress summary"
   },
   "common": {
     "continue": "Continue",
@@ -491,7 +512,8 @@
     "loadingAccountActions": "Loading account actions",
     "loadingVisaOptions": "Loading visa options",
     "loadingApplications": "Loading applications",
-    "loadingOrderSummary": "Loading order summary"
+    "loadingOrderSummary": "Loading order summary",
+    "whatsappSupport": "Chat on WhatsApp"
   },
   "seo": {
     "homeTitle": "Apply for UAE Tourist Visa Online",
@@ -540,7 +562,8 @@
   "upload": {
     "fileExceedsLimit": "File exceeds 8MB limit.",
     "uploaded": "Uploaded",
-    "notUploadedYet": "Not uploaded yet"
+    "notUploadedYet": "Not uploaded yet",
+    "failedHttp": "Upload failed (HTTP {status})"
   },
   "ocr": {
     "reading": "Reading your passport…",

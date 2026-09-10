@@ -8,6 +8,7 @@ import {
   type PaddleEventData,
 } from "@paddle/paddle-js";
 import { ClientButton } from "@/components/client/client-button";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { Loader2 } from "lucide-react";
 import { apiHref } from "@/lib/app-href";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
@@ -35,6 +36,7 @@ export function PaddleCheckoutButton({
   onCancel,
   onError,
 }: PaddleCheckoutButtonProps) {
+  const t = useCustomerT();
   const [isInitializing, setIsInitializing] = useState(false);
 
   const handleCheckout = async () => {
@@ -87,11 +89,11 @@ export function PaddleCheckoutButton({
       }
 
       if (!res.ok) {
-        throw new Error(checkoutErrorToUserMessage(envelope.error));
+        throw new Error(checkoutErrorToUserMessage(envelope.error, t));
       }
 
       if (!envelope.ok || !envelope.data) {
-        throw new Error(checkoutErrorToUserMessage(envelope.error));
+        throw new Error(checkoutErrorToUserMessage(envelope.error, t));
       }
 
       const data = envelope.data;
@@ -111,7 +113,7 @@ export function PaddleCheckoutButton({
       });
 
       if (!("transactionId" in data) || !data.transactionId) {
-        throw new Error(checkoutErrorToUserMessage(envelope.error));
+        throw new Error(checkoutErrorToUserMessage(envelope.error, t));
       }
 
       const { transactionId, clientToken } = data;
@@ -166,14 +168,14 @@ export function PaddleCheckoutButton({
             const detail =
               "detail" in event && typeof (event as { detail?: string }).detail === "string"
                 ? (event as { detail: string }).detail
-                : "Checkout failed";
+                : t("checkout.errors.checkoutFailed");
             markFailure(detail);
           }
         },
       });
 
       if (!paddle) {
-        throw new Error("Failed to initialize Paddle SDK");
+        throw new Error(t("checkout.errors.sdkFailed"));
       }
 
       paddle.Checkout.open({
@@ -181,7 +183,7 @@ export function PaddleCheckoutButton({
       });
     } catch (err: unknown) {
       console.error("Checkout error:", err);
-      onError?.(err instanceof Error ? err.message : "Checkout failed.");
+      onError?.(err instanceof Error ? err.message : t("checkout.errors.failedDot"));
       setIsInitializing(false);
     }
   };
@@ -195,10 +197,10 @@ export function PaddleCheckoutButton({
       {isInitializing ? (
         <>
           <Loader2 className="mr-2 size-5 animate-spin" />
-          Preparing Secure Checkout...
+          {t("payment.preparingCheckout")}
         </>
       ) : (
-        "Pay & Submit Application"
+        t("payment.payAndSubmit")
       )}
     </ClientButton>
   );

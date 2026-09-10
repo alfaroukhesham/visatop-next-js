@@ -1,27 +1,30 @@
 "use client";
 
+import type { FC } from "react";
 import Link from "next/link";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { SUPPORT_WHATSAPP_URL } from "@/lib/support-contact";
 
 /**
  * Shared client footer — subtle, does not compete with primary flows.
  */
-export function ClientShellFooter() {
+export const ClientShellFooter: FC = () => {
+  const t = useCustomerT();
   const year = new Date().getFullYear();
 
   return (
     <footer className="border-secondary/10 mt-auto border-t bg-white/80 py-8 text-center text-sm text-muted-foreground backdrop-blur-md supports-[backdrop-filter]:bg-white/65">
       <div className="mx-auto flex w-full max-w-[calc(1300px+3rem)] flex-col items-center justify-center gap-3 px-5 sm:flex-row sm:gap-8">
-        <span className="tabular-nums">© {year} Visatop</span>
-        <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2" aria-label="Footer">
+        <span className="tabular-nums">{t("common.copyright", { year })}</span>
+        <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2" aria-label={t("common.footerAriaLabel")}>
           <Link href="/" className="text-link font-medium transition-colors duration-200 hover:underline">
-            Home
+            {t("common.home")}
           </Link>
           <Link href={SUPPORT_WHATSAPP_URL} className="text-link font-medium transition-colors duration-200 hover:underline">
-            Help
+            {t("common.help")}
           </Link>
         </nav>
       </div>
     </footer>
   );
-}
+};

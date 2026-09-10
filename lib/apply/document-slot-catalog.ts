@@ -18,6 +18,9 @@ export type TDocumentSlot = {
 
 export const DOCUMENT_SLOT_MAX_BYTES = 8 * 1024 * 1024;
 
+/** Fallback accept hint for catalog extras without a custom description. */
+export const GENERIC_DOCUMENT_ACCEPT_HINT = "JPEG / PNG / PDF · 8MB max";
+
 export const PASSPORT_SLOT: TDocumentSlot = {
   key: DOCUMENT_TYPE.PASSPORT_COPY,
   label: "Passport (bio page)",

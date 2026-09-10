@@ -6,6 +6,7 @@ import {
   slotForDocumentType,
   FLOOR_DOCUMENT_TYPE_KEYS,
   DOCUMENT_SLOT_MAX_BYTES,
+  GENERIC_DOCUMENT_ACCEPT_HINT,
   type TDocumentSlot,
   type TDocSlotRole,
   type TDocumentSlotKey,
@@ -27,7 +28,7 @@ const extraSlot = (row: TRequirementRow): TDocumentSlot => {
   return {
     key: row.documentType,
     label: row.label ?? humanizeDocumentTypeKey(row.documentType),
-    description: row.description || "JPEG / PNG / PDF · 8MB max",
+    description: row.description || GENERIC_DOCUMENT_ACCEPT_HINT,
     role: row.role,
     acceptMime: row.acceptMime ?? "image/jpeg,image/png,application/pdf",
     maxBytes: DOCUMENT_SLOT_MAX_BYTES,

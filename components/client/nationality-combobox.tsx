@@ -12,6 +12,7 @@ import {
 import { createPortal } from "react-dom";
 import { ChevronDown, Globe } from "lucide-react";
 import { ClientInput } from "@/components/client/client-input";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { iso2FlagEmoji } from "@/lib/apply/display-names";
 import { cn } from "@/lib/utils";
 
@@ -37,12 +38,14 @@ export function NationalityCombobox({
   nationalities,
   valueCode,
   onSelectCode,
-  placeholder = "Type your country…",
+  placeholder,
   disabled,
   size = "default",
   className,
   inputClassName,
 }: NationalityComboboxProps) {
+  const t = useCustomerT();
+  const resolvedPlaceholder = placeholder ?? t("common.nationalityDefaultPlaceholder");
   const reactId = useId();
   const listId = `${reactId}-listbox`;
   const id = idProp ?? `${reactId}-input`;
@@ -215,7 +218,7 @@ export function NationalityCombobox({
           </ul>
         ) : (
           <p id={listId} className="text-muted-foreground px-4 py-3 text-sm" role="status">
-            No country matches that search.
+            {t("common.noCountryMatch")}
           </p>
         )}
       </div>,
@@ -253,7 +256,7 @@ export function NationalityCombobox({
           aria-autocomplete="list"
           autoComplete="off"
           disabled={disabled}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           value={inputValue}
           onChange={(e) => {
             openList(e.target.value);

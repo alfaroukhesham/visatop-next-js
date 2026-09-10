@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FC } from "react";
 import { ClientInput } from "@/components/client/client-input";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { composeE164, splitStoredPhone } from "@/lib/apply/phone-country";
 
 export type TPhoneNationalityOption = {
@@ -27,6 +28,7 @@ export const PhoneCountryField: FC<IPhoneCountryFieldProps> = ({
   invalid = false,
   onChange,
 }) => {
+  const t = useCustomerT();
   const defaultDial = useMemo(
     () =>
       nationalities
@@ -56,7 +58,7 @@ export const PhoneCountryField: FC<IPhoneCountryFieldProps> = ({
           maxLength={6}
           disabled={disabled}
           invalid={invalid}
-          aria-label="Country calling code"
+          aria-label={t("draft.fields.countryCallingCode")}
           value={dialDigits}
           className="h-8 pl-6"
           onChange={(e) => {
@@ -73,7 +75,7 @@ export const PhoneCountryField: FC<IPhoneCountryFieldProps> = ({
         disabled={disabled}
         invalid={invalid}
         value={nationalDigits}
-        placeholder="Phone number"
+        placeholder={t("draft.fields.phoneNumberPlaceholder")}
         className="h-8 min-w-0 flex-1"
         onChange={(e) => {
           const next = e.target.value.replace(/\D/g, "");

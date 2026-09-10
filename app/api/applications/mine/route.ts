@@ -5,6 +5,8 @@ import { application } from "@/lib/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { computeClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
+import { readCustomerLocaleFromCookieHeader } from "@/lib/i18n/customer-locale";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,14 +44,19 @@ export async function GET() {
     return rows;
   });
 
+  const t = createCustomerT(readCustomerLocaleFromCookieHeader(hdrs.get("cookie")));
+
   const withTracking = applications.map((row) => ({
     ...row,
-    clientTracking: computeClientApplicationTracking({
-      applicationStatus: row.applicationStatus,
-      paymentStatus: row.paymentStatus,
-      fulfillmentStatus: row.fulfillmentStatus,
-      adminAttentionRequired: row.adminAttentionRequired,
-    }),
+    clientTracking: computeClientApplicationTracking(
+      {
+        applicationStatus: row.applicationStatus,
+        paymentStatus: row.paymentStatus,
+        fulfillmentStatus: row.fulfillmentStatus,
+        adminAttentionRequired: row.adminAttentionRequired,
+      },
+      t,
+    ),
   }));
 
   return jsonOk({ applications: withTracking }, { requestId });

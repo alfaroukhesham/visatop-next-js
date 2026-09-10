@@ -201,7 +201,23 @@
     "chooseFile": "Dosya seç",
     "replace": "Değiştir",
     "chooseFileAria": "Dosya seç: {label}",
-    "uploading": "Yükleniyor…"
+    "uploading": "Yükleniyor…",
+    "continueAfterUpload": "Ödemeye devam edebilirsiniz. Kalan dosyalar şimdi veya sonra eklenebilir — bir şey eksikse sizinle iletişime geçeriz.",
+    "slots": {
+      "passportCopy": {
+        "label": "Pasaport (kimlik sayfası)",
+        "description": "JPEG / PNG / tek sayfalık PDF · en fazla 8 MB"
+      },
+      "personalPhoto": {
+        "label": "Kişisel fotoğraf",
+        "description": "JPEG veya PNG · en fazla 8 MB"
+      },
+      "bankStatement6m": {
+        "label": "Son 6 aya ait banka hesap özeti",
+        "description": "Son 6 ayı kapsayan bir PDF veya görsel · JPEG / PNG / PDF · en fazla 8 MB"
+      },
+      "genericAcceptHint": "JPEG / PNG / PDF · en fazla 8 MB"
+    }
   },
   "payment": {
     "pageTitle": "Ödeme | Visatop",
@@ -447,7 +463,10 @@
       "pricingUnavailable": "Bu vize için şu anda fiyat yükleyemedik. Sayfayı yenileyin veya devam ederse destekle iletişime geçin.",
       "providerUnavailable": "Ödeme ortağımız geçici olarak kullanılamıyor. Lütfen birkaç dakika sonra tekrar deneyin.",
       "refreshAndRetry": "Ödeme başlatılamadı. Lütfen sayfayı yenileyip tekrar deneyin.",
-      "checkoutFailed": "Ödeme başarısız"
+      "checkoutFailed": "Ödeme başarısız",
+      "missingPassport": "Ödemeyi başlatmak için bir pasaport kopyası yükleyin. Diğer belgeler şimdi veya sonra eklenebilir.",
+      "sdkFailed": "Paddle SDK başlatılamadı",
+      "failedDot": "Ödeme başarısız oldu."
     }
   },
   "expert": {
@@ -469,7 +488,9 @@
     "visa": "Vize",
     "documents": "Belgeler",
     "payment": "Ödeme",
-    "status": "Durum"
+    "status": "Durum",
+    "stepBadge": "Adım {step}/{total}",
+    "hideProgressAria": "İlerleme özetini gizle"
   },
   "common": {
     "continue": "Devam et",
@@ -491,7 +512,8 @@
     "loadingAccountActions": "Hesap işlemleri yükleniyor",
     "loadingVisaOptions": "Vize seçenekleri yükleniyor",
     "loadingApplications": "Başvurular yükleniyor",
-    "loadingOrderSummary": "Sipariş özeti yükleniyor"
+    "loadingOrderSummary": "Sipariş özeti yükleniyor",
+    "whatsappSupport": "WhatsApp'ta sohbet et"
   },
   "seo": {
     "homeTitle": "BAE Turist Vizesine Online Başvurun",
@@ -540,7 +562,8 @@
   "upload": {
     "fileExceedsLimit": "Dosya 8 MB sınırını aşıyor.",
     "uploaded": "Yüklendi",
-    "notUploadedYet": "Henüz yüklenmedi"
+    "notUploadedYet": "Henüz yüklenmedi",
+    "failedHttp": "Yükleme başarısız (HTTP {status})"
   },
   "ocr": {
     "reading": "Pasaportunuz okunuyor…",

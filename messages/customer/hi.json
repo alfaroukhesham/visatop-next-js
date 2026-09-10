@@ -201,7 +201,23 @@
     "chooseFile": "फ़ाइल चुनें",
     "replace": "बदलें",
     "chooseFileAria": "फ़ाइल चुनें: {label}",
-    "uploading": "अपलोड हो रहा है…"
+    "uploading": "अपलोड हो रहा है…",
+    "continueAfterUpload": "आप भुगतान पर जारी रख सकते हैं. शेष फ़ाइलें अभी या बाद में जोड़ी जा सकती हैं — कुछ छूटा हो तो हम संपर्क करेंगे.",
+    "slots": {
+      "passportCopy": {
+        "label": "पासपोर्ट (बायो पेज)",
+        "description": "JPEG / PNG / एक पेज का PDF · अधिकतम 8MB"
+      },
+      "personalPhoto": {
+        "label": "व्यक्तिगत फ़ोटो",
+        "description": "JPEG या PNG · अधिकतम 8MB"
+      },
+      "bankStatement6m": {
+        "label": "पिछले 6 महीनों का बैंक स्टेटमेंट",
+        "description": "पिछले 6 महीनों का एक PDF या चित्र · JPEG / PNG / PDF · अधिकतम 8MB"
+      },
+      "genericAcceptHint": "JPEG / PNG / PDF · अधिकतम 8MB"
+    }
   },
   "payment": {
     "pageTitle": "भुगतान | Visatop",
@@ -447,7 +463,10 @@
       "pricingUnavailable": "हम अभी इस वीज़ा की कीमत लोड नहीं कर सके। पेज रिफ़्रेश करें या जारी रहे तो सहायता से संपर्क करें।",
       "providerUnavailable": "हमारा भुगतान भागीदार अस्थायी रूप से उपलब्ध नहीं। कृपया कुछ मिनट बाद पुनः प्रयास करें।",
       "refreshAndRetry": "हम चेकआउट शुरू नहीं कर सके। कृपया पेज रिफ़्रेश करें और पुनः प्रयास करें।",
-      "checkoutFailed": "चेकआउट विफल"
+      "checkoutFailed": "चेकआउट विफल",
+      "missingPassport": "भुगतान शुरू करने के लिए पासपोर्ट की प्रति अपलोड करें. अन्य दस्तावेज़ अभी या बाद में जोड़े जा सकते हैं.",
+      "sdkFailed": "Paddle SDK शुरू नहीं हो सका",
+      "failedDot": "चेकआउट असफल रहा."
     }
   },
   "expert": {
@@ -469,7 +488,9 @@
     "visa": "वीज़ा",
     "documents": "दस्तावेज़",
     "payment": "भुगतान",
-    "status": "स्थिति"
+    "status": "स्थिति",
+    "stepBadge": "चरण {step}/{total}",
+    "hideProgressAria": "प्रगति सारांश छिपाएँ"
   },
   "common": {
     "continue": "जारी रखें",
@@ -491,7 +512,8 @@
     "loadingAccountActions": "खाता क्रियाएँ लोड हो रही हैं",
     "loadingVisaOptions": "वीज़ा विकल्प लोड हो रहे हैं",
     "loadingApplications": "आवेदन लोड हो रहे हैं",
-    "loadingOrderSummary": "ऑर्डर सारांश लोड हो रहा है"
+    "loadingOrderSummary": "ऑर्डर सारांश लोड हो रहा है",
+    "whatsappSupport": "WhatsApp पर चैट करें"
   },
   "seo": {
     "homeTitle": "यूएई पर्यटक वीज़ा के लिए ऑनलाइन आवेदन करें",
@@ -540,7 +562,8 @@
   "upload": {
     "fileExceedsLimit": "फ़ाइल 8MB सीमा से अधिक है।",
     "uploaded": "अपलोड हो गया",
-    "notUploadedYet": "अभी अपलोड नहीं"
+    "notUploadedYet": "अभी अपलोड नहीं",
+    "failedHttp": "अपलोड असफल (HTTP {status})"
   },
   "ocr": {
     "reading": "आपका पासपोर्ट पढ़ा जा रहा है…",

@@ -1,3 +1,10 @@
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
+import type { TCustomerMessageVars } from "@/lib/i18n/customer-messages";
+
+type TTranslate = (key: string, vars?: TCustomerMessageVars) => string;
+
+const englishT = createCustomerT("en");
+
 export const OCR_READING_COPY = "Reading your passport…";
 
 export const OCR_SUCCEEDED_COPY =
@@ -8,15 +15,16 @@ export const OCR_NEEDS_REVIEW_COPY =
 
 export const customerFacingOcrMessage = (
   status: string | null | undefined,
+  t: TTranslate = englishT,
 ): string | null => {
   switch (status) {
     case "running":
-      return OCR_READING_COPY;
+      return t("ocr.reading");
     case "succeeded":
-      return OCR_SUCCEEDED_COPY;
+      return t("ocr.succeeded");
     case "needs_manual":
     case "failed":
-      return OCR_NEEDS_REVIEW_COPY;
+      return t("ocr.needsReview");
     default:
       return null;
   }

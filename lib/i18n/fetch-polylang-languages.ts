@@ -2,6 +2,7 @@ import {
   FALLBACK_CUSTOMER_LOCALE_SLUGS,
   type ICustomerLocaleOption,
 } from "./customer-locale";
+import { fetchWordpressRestJson } from "@/lib/wp-headless/wordpress-rest";
 
 type TPolylangLanguageRaw = {
   slug?: string | null;
@@ -49,16 +50,16 @@ export const fetchPolylangLanguages = async (input: {
   const wpOrigin = input.wpOrigin.trim();
   if (!wpOrigin) return fallbackOptions();
 
-  const url = new URL("/wp-json/pll/v1/languages", wpOrigin);
   const revalidateSeconds = input.revalidateSeconds ?? 300;
+  const fetched = await fetchWordpressRestJson({
+    wpOrigin,
+    route: "/pll/v1/languages",
+    revalidateSeconds,
+  });
+  if (!fetched) return fallbackOptions();
 
   try {
-    const res = await fetch(url.toString(), {
-      next: { revalidate: revalidateSeconds },
-      headers: { accept: "application/json" },
-    });
-    if (!res.ok) return fallbackOptions();
-    const json = (await res.json()) as TPolylangLanguageRaw[] | null;
+    const json = (await fetched.res.json()) as TPolylangLanguageRaw[] | null;
     if (!Array.isArray(json) || json.length === 0) return fallbackOptions();
     const options = json.map(normalizeLanguage).filter((o): o is ICustomerLocaleOption => o !== null);
     return options.length > 0 ? options : fallbackOptions();

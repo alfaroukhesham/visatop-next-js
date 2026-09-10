@@ -10,7 +10,6 @@ import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 import { APPLY_STEP3_VALIDATION_DISABLED } from "@/lib/apply/apply-flow-config";
 import { customerFacingOcrMessage } from "@/lib/apply/ocr-customer-copy";
-import { PAY_BLOCKED_MISSING_DOCS_COPY } from "@/lib/apply/payment-copy";
 import { paymentReviewNavState } from "@/lib/apply/payment-review-nav";
 import { parseDobInputToIsoUtc, type Readiness } from "@/lib/documents/validation-readiness";
 import { cn } from "@/lib/utils";
@@ -20,45 +19,91 @@ import { PhoneCountryField, type TPhoneNationalityOption } from "./phone-country
 import { applicantFieldValue, applyDateMask } from "./utils";
 
 const APPLICANT_ROWS_WITHOUT_PHONE: Array<{
-  label: string;
   key: ApplicantProfileFieldKey;
   apiKey: string;
-  placeholder?: string;
+  labelKey: string;
+  placeholderKey: string;
 }> = [
-  { label: "Full name", key: "fullName", apiKey: "fullName", placeholder: "e.g. John Smith" },
-  { label: "Date of birth", key: "dateOfBirth", apiKey: "dateOfBirth", placeholder: "DD-MM-YYYY" },
-  { label: "Nationality", key: "nationality", apiKey: "applicantNationality", placeholder: "e.g. Egyptian" },
-  { label: "Passport number", key: "passportNumber", apiKey: "passportNumber", placeholder: "e.g. A12345678" },
-  { label: "Passport expiry", key: "passportExpiryDate", apiKey: "passportExpiryDate", placeholder: "DD-MM-YYYY" },
-  { label: "Place of birth", key: "placeOfBirth", apiKey: "placeOfBirth", placeholder: "e.g. Cairo" },
-  { label: "Profession", key: "profession", apiKey: "profession", placeholder: "e.g. Engineer" },
-  { label: "Address", key: "address", apiKey: "address", placeholder: "Full home address" },
+  {
+    key: "fullName",
+    apiKey: "fullName",
+    labelKey: "draft.fields.fullName",
+    placeholderKey: "draft.fields.fullNamePlaceholder",
+  },
+  {
+    key: "dateOfBirth",
+    apiKey: "dateOfBirth",
+    labelKey: "draft.fields.dateOfBirth",
+    placeholderKey: "draft.fields.dateOfBirthPlaceholder",
+  },
+  {
+    key: "nationality",
+    apiKey: "applicantNationality",
+    labelKey: "draft.fields.nationality",
+    placeholderKey: "draft.fields.nationalityPlaceholder",
+  },
+  {
+    key: "passportNumber",
+    apiKey: "passportNumber",
+    labelKey: "draft.fields.passportNumber",
+    placeholderKey: "draft.fields.passportNumberPlaceholder",
+  },
+  {
+    key: "passportExpiryDate",
+    apiKey: "passportExpiryDate",
+    labelKey: "draft.fields.passportExpiry",
+    placeholderKey: "draft.fields.passportExpiryPlaceholder",
+  },
+  {
+    key: "placeOfBirth",
+    apiKey: "placeOfBirth",
+    labelKey: "draft.fields.placeOfBirth",
+    placeholderKey: "draft.fields.placeOfBirthPlaceholder",
+  },
+  {
+    key: "profession",
+    apiKey: "profession",
+    labelKey: "draft.fields.profession",
+    placeholderKey: "draft.fields.professionPlaceholder",
+  },
+  {
+    key: "address",
+    apiKey: "address",
+    labelKey: "draft.fields.address",
+    placeholderKey: "draft.fields.addressPlaceholder",
+  },
 ];
 
 const APPLICANT_ROWS = [
   ...APPLICANT_ROWS_WITHOUT_PHONE,
-  { label: "Phone", key: "phone" as const, apiKey: "phone", placeholder: "+1 555 000 0000" },
+  {
+    key: "phone" as const,
+    apiKey: "phone",
+    labelKey: "draft.fields.phone",
+    placeholderKey: "draft.fields.phonePlaceholder",
+  },
 ];
 
 const buildReadinessLabel = (
   readiness: string | null,
   paymentReadiness: Readiness,
+  t: (key: string) => string,
 ) => {
   if (paymentReadiness !== "ready") {
-    return { text: PAY_BLOCKED_MISSING_DOCS_COPY, tone: "warn" as const };
+    return { text: t("pay.blockedMissingDocs"), tone: "warn" as const };
   }
   if (APPLY_STEP3_VALIDATION_DISABLED) {
-    return { text: "Continue to payment", tone: "neutral" as const };
+    return { text: t("draft.continueToPayment"), tone: "neutral" as const };
   }
   switch (readiness) {
     case "ready":
-      return { text: "Continue to payment", tone: "neutral" as const };
+      return { text: t("draft.continueToPayment"), tone: "neutral" as const };
     case "blocked_validation":
-      return { text: "Needs attention before checkout", tone: "warn" as const };
+      return { text: t("draft.needsAttentionCheckout"), tone: "warn" as const };
     case "blocked_missing_docs":
-      return { text: "Upload remaining documents", tone: "warn" as const };
+      return { text: t("draft.uploadRemainingDocs"), tone: "warn" as const };
     case "blocked_missing_required_fields":
-      return { text: "Complete required details", tone: "warn" as const };
+      return { text: t("draft.completeRequiredDetails"), tone: "warn" as const };
     default:
       return null;
   }
@@ -126,7 +171,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
     router.push(paymentPath);
   };
 
-  async function handleSave() {
+  const handleSave = async () => {
     setSaving(true);
     setSaveMsg(null);
     setSaveError(null);
@@ -145,9 +190,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
           const iso = parseDobInputToIsoUtc(trimmed);
           if (!iso) {
             setSaveError(
-              r.apiKey === "dateOfBirth"
-                ? "Date of birth must be DD-MM-YYYY."
-                : "Passport expiry must be DD-MM-YYYY.",
+              r.apiKey === "dateOfBirth" ? t("draft.dateOfBirthInvalid") : t("draft.passportExpiryInvalid"),
             );
             setSaving(false);
             return;
@@ -160,7 +203,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
     }
     if (Object.keys(patch).length === 0) {
       setSaving(false);
-      setSaveMsg("No changes to save.");
+      setSaveMsg(t("draft.noChangesToSave"));
       return;
     }
     const res = await fetchApiEnvelope<{ application: unknown }>(
@@ -175,26 +218,26 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
         const issues = Object.entries(fieldErrs)
           .map(([k, v]) => {
             const row = APPLICANT_ROWS.find((r) => r.apiKey === k);
-            return `${row ? row.label : k}: ${Array.isArray(v) ? v[0] : v}`;
+            return `${row ? t(row.labelKey) : k}: ${Array.isArray(v) ? v[0] : v}`;
           })
           .join(" | ");
-        setSaveError(`Validation failed → ${issues}`);
+        setSaveError(t("draft.validationFailedPrefix", { issues }));
       } else {
         setSaveError(res.error.message);
       }
       return;
     }
-    setSaveMsg("Changes saved.");
+    setSaveMsg(t("draft.changesSaved"));
     onSaved();
     if (canContinueToPayment && passportUploaded) {
       void goToPayment();
     }
-  }
+  };
 
-  const readinessLabel = buildReadinessLabel(readiness, paymentReadiness);
+  const readinessLabel = buildReadinessLabel(readiness, paymentReadiness, t);
   const isSecondary = !documentsReady;
 
-  async function onNext() {
+  const onNext = async () => {
     if (locked) return;
     setSaveError(null);
     const nav = paymentReviewNavState({
@@ -211,7 +254,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
       return;
     }
     if (nav === "blocked") {
-      setSaveError(PAY_BLOCKED_MISSING_DOCS_COPY);
+      setSaveError(t("pay.blockedMissingDocs"));
       return;
     }
     if (!dirty) {
@@ -219,7 +262,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
       return;
     }
     void handleSave();
-  }
+  };
 
   return (
     <section
@@ -250,7 +293,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
           {readinessLabel ? (
             <span
               className={cn(
-                "text-xs font-medium inline-flex items-center gap-1",
+                "inline-flex items-center gap-1 text-xs font-medium",
                 readinessLabel.tone === "warn" ? "text-error" : "text-muted-foreground",
               )}
             >
@@ -266,21 +309,24 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
       <div className="space-y-4 pt-2">
       {!APPLY_STEP3_VALIDATION_DISABLED && missing.length > 0 && (
         <div className="border-error bg-error/5 border-b-2 px-3 py-2 text-sm">
-          <p className="text-error font-semibold">Required fields missing:</p>
-          <p className="mt-1 text-xs text-error/90">{missing.join(", ")}</p>
+          <p className="text-error font-semibold">{t("draft.requiredFieldsMissing")}</p>
+          <p className="text-error/90 mt-1 text-xs">
+            {missing
+              .map((k) => {
+                const row = APPLICANT_ROWS.find((r) => r.key === k);
+                return row ? t(row.labelKey) : k;
+              })
+              .join(", ")}
+          </p>
         </div>
       )}
 
       {extraction ? (
-        <p className="text-muted-foreground text-xs">
-          {customerFacingOcrMessage(extraction.status)}
-        </p>
+        <p className="text-muted-foreground text-xs">{customerFacingOcrMessage(extraction.status, t)}</p>
       ) : null}
 
       {locked && (
-        <p className="text-muted-foreground bg-muted px-3 py-2 text-xs rounded">
-          Fields are locked while payment is in progress.
-        </p>
+        <p className="text-muted-foreground bg-muted rounded px-3 py-2 text-xs">{t("draft.fieldsLockedPayment")}</p>
       )}
 
       <dl className="grid gap-3 sm:grid-cols-2">
@@ -291,9 +337,11 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
             <div key={r.key}>
               <dt className="text-foreground flex flex-col gap-0.5 text-[11px] font-bold uppercase tracking-wide">
                 <span className="flex flex-wrap items-center gap-1">
-                  {r.label}
+                  {t(r.labelKey)}
                   {wasOcr && (
-                    <span className="text-[10px] text-primary bg-primary/10 px-1 rounded">Auto-filled</span>
+                    <span className="bg-primary/10 text-primary rounded px-1 text-[10px]">
+                      {t("draft.autoFilledBadge")}
+                    </span>
                   )}
                 </span>
               </dt>
@@ -304,7 +352,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
                   maxLength={DATE_API_KEYS.has(r.apiKey) ? 10 : undefined}
                   readOnly={locked}
                   value={values[r.apiKey] ?? ""}
-                  placeholder={r.placeholder ?? "—"}
+                  placeholder={t(r.placeholderKey)}
                   onChange={(e) => {
                     const v = DATE_API_KEYS.has(r.apiKey)
                       ? applyDateMask(e.target.value)
@@ -320,7 +368,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
         })}
         <div key="phone">
           <dt className="text-foreground flex flex-col gap-0.5 text-[11px] font-bold uppercase tracking-wide">
-            <span>Phone</span>
+            <span>{t("draft.fields.phone")}</span>
           </dt>
           <dd className="mt-1">
             <PhoneCountryField
@@ -338,7 +386,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
       <div className="space-y-2 pt-2">
         <DoubleDecision
           className="max-w-md"
-          dismissLabel="Previous"
+          dismissLabel={t("draft.previous")}
           onDismiss={() =>
             router.push(`/apply/start?nationality=${encodeURIComponent(nationalityCode)}`)
           }

@@ -201,7 +201,23 @@
     "chooseFile": "Elegir archivo",
     "replace": "Reemplazar",
     "chooseFileAria": "Elegir un archivo: {label}",
-    "uploading": "Subiendo…"
+    "uploading": "Subiendo…",
+    "continueAfterUpload": "Puede continuar al pago. Los archivos restantes se pueden añadir ahora o después; haremos seguimiento si falta algo.",
+    "slots": {
+      "passportCopy": {
+        "label": "Pasaporte (página de datos)",
+        "description": "JPEG / PNG / PDF de una página · 8 MB máx."
+      },
+      "personalPhoto": {
+        "label": "Foto personal",
+        "description": "JPEG o PNG · 8 MB máx."
+      },
+      "bankStatement6m": {
+        "label": "Extracto bancario de los últimos 6 meses",
+        "description": "Un PDF o imagen de los últimos 6 meses · JPEG / PNG / PDF · 8 MB máx."
+      },
+      "genericAcceptHint": "JPEG / PNG / PDF · 8 MB máx."
+    }
   },
   "payment": {
     "pageTitle": "Pago | Visatop",
@@ -447,7 +463,10 @@
       "pricingUnavailable": "No pudimos cargar un precio para este visado en este momento. Actualice la página o contacte con soporte si continúa.",
       "providerUnavailable": "Nuestro socio de pago no está disponible temporalmente. Inténtelo de nuevo en unos minutos.",
       "refreshAndRetry": "No pudimos iniciar el pago. Actualice la página e inténtelo de nuevo.",
-      "checkoutFailed": "Error en el pago"
+      "checkoutFailed": "Error en el pago",
+      "missingPassport": "Suba una copia del pasaporte para iniciar el pago. Otros documentos se pueden añadir ahora o después.",
+      "sdkFailed": "No se pudo inicializar el SDK de Paddle",
+      "failedDot": "El pago ha fallado."
     }
   },
   "expert": {
@@ -469,7 +488,9 @@
     "visa": "Visado",
     "documents": "Documentos",
     "payment": "Pago",
-    "status": "Estado"
+    "status": "Estado",
+    "stepBadge": "Paso {step}/{total}",
+    "hideProgressAria": "Ocultar el resumen de progreso"
   },
   "common": {
     "continue": "Continuar",
@@ -491,7 +512,8 @@
     "loadingAccountActions": "Cargando acciones de cuenta",
     "loadingVisaOptions": "Cargando opciones de visado",
     "loadingApplications": "Cargando solicitudes",
-    "loadingOrderSummary": "Cargando resumen del pedido"
+    "loadingOrderSummary": "Cargando resumen del pedido",
+    "whatsappSupport": "Chatear por WhatsApp"
   },
   "seo": {
     "homeTitle": "Solicite en línea su visado turístico para los EAU",
@@ -540,7 +562,8 @@
   "upload": {
     "fileExceedsLimit": "El archivo supera el límite de 8 MB.",
     "uploaded": "Subido",
-    "notUploadedYet": "Aún no subido"
+    "notUploadedYet": "Aún no subido",
+    "failedHttp": "Error al subir (HTTP {status})"
   },
   "ocr": {
     "reading": "Leyendo su pasaporte…",

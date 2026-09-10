@@ -13,6 +13,8 @@ import {
   isValidTrackContact,
   mapTrackLookupRow,
 } from "@/lib/applications/track-lookup";
+import { readCustomerLocaleFromCookieHeader } from "@/lib/i18n/customer-locale";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,6 +75,7 @@ export async function POST(req: Request) {
   });
 
   const partyHashById = new Map(partyHashes.map((p) => [p.id, p.resumeTokenHash]));
+  const t = createCustomerT(readCustomerLocaleFromCookieHeader(hdrs.get("cookie")));
 
   const applications = rows.map((row) =>
     mapTrackLookupRow(
@@ -85,6 +88,7 @@ export async function POST(req: Request) {
         cookiePlain,
         partyResumeTokenHash: row.partyId ? (partyHashById.get(row.partyId) ?? null) : null,
       },
+      t,
     ),
   );
 

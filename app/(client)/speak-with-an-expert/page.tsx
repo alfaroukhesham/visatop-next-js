@@ -1,18 +1,27 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { ClientAppHeader } from "@/components/client/client-app-header";
 import { ClientHeroPanel } from "@/components/client/client-surface";
 import { WhatsAppExpertCtaButton } from "@/components/client/whatsapp-expert-cta-button";
+import { CUSTOMER_LOCALE_COOKIE, parseCustomerLocale } from "@/lib/i18n/customer-locale";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 import { SUPPORT_PHONE_DISPLAY, SUPPORT_WHATSAPP_LP_URL } from "@/lib/support-contact";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = {
-  title: "Speak with a Visa Expert",
-  description:
-    "Get instant answers and personalized UAE visa guidance from the Visatop team on WhatsApp.",
-  robots: { index: false, follow: true },
+export const generateMetadata = async (): Promise<Metadata> => {
+  const cookieStore = await cookies();
+  const t = createCustomerT(parseCustomerLocale(cookieStore.get(CUSTOMER_LOCALE_COOKIE)?.value));
+  return {
+    title: t("expert.pageTitle"),
+    description: t("expert.pageDescription"),
+    robots: { index: false, follow: true },
+  };
 };
 
-const SpeakWithAnExpertPage = () => {
+const SpeakWithAnExpertPage = async () => {
+  const cookieStore = await cookies();
+  const t = createCustomerT(parseCustomerLocale(cookieStore.get(CUSTOMER_LOCALE_COOKIE)?.value));
+
   return (
     <div className="text-foreground flex min-h-0 flex-1 flex-col">
       <ClientAppHeader />
@@ -30,17 +39,16 @@ const SpeakWithAnExpertPage = () => {
           >
             <section aria-labelledby="expert-headline">
               <p className="text-secondary text-center text-[11px] font-bold uppercase tracking-[0.28em]">
-                UAE Visa Support
+                {t("expert.eyebrow")}
               </p>
               <h1
                 id="expert-headline"
                 className="font-heading text-foreground mt-6 text-center text-[2rem] leading-[1.2] font-semibold md:text-[2.25rem]"
               >
-                Speak with our Expert
+                {t("expert.headline")}
               </h1>
               <p className="text-muted-foreground mt-6 text-center text-base leading-relaxed md:text-lg">
-                Tell us your nationality and travel dates. Our visa specialists reply on WhatsApp with clear next steps,
-                pricing, and document guidance — no obligation to apply online.
+                {t("expert.body")}
               </p>
 
               <div className="mt-8">
@@ -48,7 +56,7 @@ const SpeakWithAnExpertPage = () => {
               </div>
 
               <p className="text-muted-foreground mt-4 text-center text-sm">
-                Typical reply within minutes during UAE business hours ({SUPPORT_PHONE_DISPLAY}).
+                {t("expert.replyTime", { phone: SUPPORT_PHONE_DISPLAY })}
               </p>
             </section>
 
@@ -58,30 +66,13 @@ const SpeakWithAnExpertPage = () => {
               className="border-secondary/20 mt-10 border-t pt-8"
             >
               <h2 id="privacy-heading" className="font-heading text-foreground text-lg font-semibold">
-                Privacy Policy
+                {t("expert.privacyTitle")}
               </h2>
               <div className="text-muted-foreground mt-3 space-y-3 text-sm leading-relaxed">
-                <p>
-                  Visatop (&quot;we&quot;, &quot;us&quot;) operates this page to help visitors contact our visa support
-                  team through WhatsApp. When you tap the button above, you open a chat with our official business number
-                  on Meta&apos;s WhatsApp service. Messages you send, your phone number, and any information you choose
-                  to share in chat are processed so we can respond to your enquiry and provide visa-related assistance.
-                </p>
-                <p>
-                  We use this information only to communicate about UAE visa services, quotes, and application support.
-                  We do not sell your personal data. We retain chat records only as long as needed for customer service,
-                  legal, or accounting requirements, then delete or anonymize them where appropriate.
-                </p>
-                <p>
-                  This page uses privacy-friendly analytics tags to measure whether visitors find the WhatsApp option
-                  helpful. We do not use this page for unrelated advertising profiles. For questions about your data or
-                  to request deletion, email{" "}
-                  <a href="mailto:info@visatop.com" className="text-link font-medium hover:underline">
-                    info@visatop.com
-                  </a>{" "}
-                  or write to us via WhatsApp at {SUPPORT_PHONE_DISPLAY}.
-                </p>
-                <p className="text-xs">Last updated: August 2026</p>
+                <p>{t("expert.privacyParagraph1")}</p>
+                <p>{t("expert.privacyParagraph2")}</p>
+                <p>{t("expert.privacyParagraph3", { phone: SUPPORT_PHONE_DISPLAY })}</p>
+                <p className="text-xs">{t("expert.privacyUpdated")}</p>
               </div>
             </section>
           </ClientHeroPanel>

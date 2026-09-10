@@ -4,6 +4,9 @@ import { application, user } from "@/lib/db/schema";
 import type { InferSelectModel } from "drizzle-orm";
 import type { Cursor } from "@/lib/api/cursor";
 import { computeClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
+
+const defaultTrackLookupT = createCustomerT("en");
 import { verifyResumeToken } from "@/lib/applications/resume-token";
 
 type ApplicationRow = InferSelectModel<typeof application>;
@@ -205,6 +208,7 @@ export function mapTrackLookupRow(
   },
   names: { serviceName: string | null; nationalityName: string },
   opts: { cookiePlain?: string | null; partyResumeTokenHash?: string | null } = {},
+  t: (key: string) => string = defaultTrackLookupT,
 ): TrackLookupDisplayRow {
   const rowHash = opts.partyResumeTokenHash ?? row.resumeTokenHash ?? null;
   const canContinue = canContinueTrackRow({
@@ -221,12 +225,15 @@ export function mapTrackLookupRow(
     serviceName: names.serviceName ?? "Visa",
     nationalityName: names.nationalityName,
     paymentStatus: row.paymentStatus,
-    clientTracking: computeClientApplicationTracking({
-      applicationStatus: row.applicationStatus,
-      paymentStatus: row.paymentStatus,
-      fulfillmentStatus: row.fulfillmentStatus,
-      adminAttentionRequired: row.adminAttentionRequired,
-    }),
+    clientTracking: computeClientApplicationTracking(
+      {
+        applicationStatus: row.applicationStatus,
+        paymentStatus: row.paymentStatus,
+        fulfillmentStatus: row.fulfillmentStatus,
+        adminAttentionRequired: row.adminAttentionRequired,
+      },
+      t,
+    ),
     canContinue,
     continueHref: canContinue ? `/apply/applications/${row.id}` : null,
   };

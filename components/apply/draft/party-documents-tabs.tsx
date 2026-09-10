@@ -1,6 +1,7 @@
 "use client";
 
 import type { FC } from "react";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import type { TPublicPartyMember } from "@/lib/applications/load-party-members";
 
 export interface IPartyDocumentsTabsProps {
@@ -14,19 +15,22 @@ export const PartyDocumentsTabs: FC<IPartyDocumentsTabsProps> = ({
   selectedMemberId,
   onSelect,
 }) => {
+  const t = useCustomerT();
   if (members.length <= 1) return null;
 
   return (
     <div
       role="tablist"
-      aria-label="Travellers"
+      aria-label={t("draft.partyTabsLabel")}
       className="flex flex-wrap gap-2 rounded-[12px] border border-border bg-card p-2"
     >
       {members.map((m) => {
         const active = m.applicationId === selectedMemberId;
         const label =
-          m.travelerRole === "primary" ? "Primary traveller" : `Traveller ${m.travelerIndex}`;
-        const kind = m.travelerKind === "child" ? "Child" : "Adult";
+          m.travelerRole === "primary"
+            ? t("draft.primaryTraveller")
+            : t("draft.travellerNumber", { number: m.travelerIndex });
+        const kind = m.travelerKind === "child" ? t("start.party.child") : t("start.party.adult");
         return (
           <button
             key={m.applicationId}

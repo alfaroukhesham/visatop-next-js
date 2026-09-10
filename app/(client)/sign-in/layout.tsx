@@ -1,23 +1,28 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
-import { headers } from "next/headers";
+import { Suspense, type ReactNode } from "react";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AuthFlowSkeleton } from "@/components/auth/auth-flow-skeleton";
 import { auth } from "@/lib/auth";
 import { adminAuth } from "@/lib/admin-auth";
+import { CUSTOMER_LOCALE_COOKIE, parseCustomerLocale } from "@/lib/i18n/customer-locale";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 
-export const metadata: Metadata = {
-  title: "Sign in",
-  description:
-    "Sign in to your Visatop portal to create, resume, or track your visa application.",
-  robots: { index: false, follow: true },
+export const generateMetadata = async (): Promise<Metadata> => {
+  const cookieStore = await cookies();
+  const t = createCustomerT(parseCustomerLocale(cookieStore.get(CUSTOMER_LOCALE_COOKIE)?.value));
+  return {
+    title: t("auth.signIn.pageTitle"),
+    description: t("auth.signIn.pageDescription"),
+    robots: { index: false, follow: true },
+  };
 };
 
-export default async function SignInLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+interface ISignInLayoutProps {
+  children: ReactNode;
+}
+
+const SignInLayout = async ({ children }: ISignInLayoutProps) => {
   const hdrs = await headers();
   const [clientSession, adminSession] = await Promise.all([
     auth.api.getSession({ headers: hdrs }),
@@ -28,4 +33,6 @@ export default async function SignInLayout({
   if (clientSession) redirect("/portal/track");
 
   return <Suspense fallback={<AuthFlowSkeleton />}>{children}</Suspense>;
-}
+};
+
+export default SignInLayout;

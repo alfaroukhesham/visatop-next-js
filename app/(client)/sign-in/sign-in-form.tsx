@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, type FC, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AuthFlowSkeleton } from "@/components/auth/auth-flow-skeleton";
 import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
@@ -22,18 +22,24 @@ import {
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
 import { ClientHeroPanel } from "@/components/client/client-surface";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 
-type SocialProvider = "google" | "facebook";
+type TSocialProvider = "google" | "facebook";
 
-export function SignInForm({ facebookEnabled }: { facebookEnabled: boolean }) {
+interface ISignInFormProps {
+  facebookEnabled: boolean;
+}
+
+export const SignInForm: FC<ISignInFormProps> = ({ facebookEnabled }) => {
   return (
     <Suspense fallback={<AuthFlowSkeleton />}>
       <SignInFormContent facebookEnabled={facebookEnabled} />
     </Suspense>
   );
-}
+};
 
-function SignInFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
+const SignInFormContent: FC<ISignInFormProps> = ({ facebookEnabled }) => {
+  const t = useCustomerT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -41,7 +47,7 @@ function SignInFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  async function signInWith(provider: SocialProvider) {
+  const signInWith = async (provider: TSocialProvider) => {
     setError(null);
     setPending(true);
     const next = safeCallbackUrl(searchParams.get("callbackUrl"));
@@ -51,11 +57,11 @@ function SignInFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
     });
     setPending(false);
     if (socialError) {
-      setError(socialError.message ?? "Could not sign in");
+      setError(socialError.message ?? t("auth.signIn.couldNotSignIn"));
     }
-  }
+  };
 
-  async function onSubmit(e: React.FormEvent) {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setPending(true);
@@ -72,14 +78,14 @@ function SignInFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
       setError(
         [signInError.message, code ? `(${code})` : null]
           .filter(Boolean)
-          .join(" ") || "Could not sign in",
+          .join(" ") || t("auth.signIn.couldNotSignIn"),
       );
       return;
     }
     const next = safeCallbackUrl(searchParams.get("callbackUrl"));
     router.refresh();
     router.push(next);
-  }
+  };
 
   const socialCols =
     facebookEnabled ? "sm:grid-cols-2" : "sm:grid-cols-1 max-w-xs sm:max-w-none";
@@ -95,35 +101,33 @@ function SignInFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
         />
         <div className="relative mx-auto grid w-full max-w-[calc(1300px+3rem)] flex-1 items-center gap-10 px-5 py-12 lg:grid-cols-[1fr_420px] lg:gap-16 lg:py-20 xl:gap-24">
           <div className="space-y-2 lg:hidden">
-            <h1 className="font-heading text-2xl font-semibold tracking-tight text-[#012031]">Welcome back</h1>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight text-[#012031]">
+              {t("auth.signIn.mobileTitle")}
+            </h1>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              Sign in to pick up your application where you left off.
+              {t("auth.signIn.mobileSubtitle")}
             </p>
           </div>
           <ClientHeroPanel className="border-secondary/20 hidden bg-gradient-to-br from-white via-[#F2F9FC] to-white p-8 shadow-[0_12px_48px_rgba(1,32,49,0.08)] lg:block lg:p-10">
-            <p className="text-secondary text-xs font-semibold uppercase tracking-[0.2em]">Welcome back</p>
-            <h2 className="font-heading mt-4 text-[clamp(1.85rem,3.5vw,3rem)] font-semibold leading-[1.1] tracking-tight text-[#012031]">
-            Check your application status
-            or Continue your application
+            <p className="text-secondary text-xs font-semibold uppercase tracking-[0.2em]">
+              {t("auth.signIn.heroEyebrow")}
+            </p>
+            <h2 className="font-heading mt-4 whitespace-pre-line text-[clamp(1.85rem,3.5vw,3rem)] font-semibold leading-[1.1] tracking-tight text-[#012031]">
+              {t("auth.signIn.heroTitle")}
             </h2>
             <p className="text-muted-foreground mt-5 max-w-[48ch] text-lg leading-relaxed">
-              Documents, payments, and status — structured so you always know what happens next.
+              {t("auth.signIn.heroBody")}
             </p>
-            {/* <div className="border-secondary/15 bg-secondary/5 mt-8 rounded-[5px] border p-4">
-              <p className="text-secondary text-[10px] font-bold uppercase tracking-widest">Tip</p>
-              <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-                Use the same email you registered with. For admin access, use{" "}
-                <span className="text-foreground font-semibold">Admin</span> in the top bar.
-              </p>
-            </div> */}
           </ClientHeroPanel>
 
           <div className="w-full lg:max-w-none">
             <ClientCard className="border-secondary/20 overflow-hidden shadow-[0_16px_48px_rgba(1,32,49,0.1)]">
               <CardHeader className="border-b border-border bg-muted/30 pb-6">
-                <CardTitle className="font-heading text-2xl text-[#012031]">Login</CardTitle>
+                <CardTitle className="font-heading text-2xl text-[#012031]">
+                  {t("auth.signIn.cardTitle")}
+                </CardTitle>
                 <CardDescription className="text-muted-foreground text-base">
-                  Email, password, or a social provider.
+                  {t("auth.signIn.cardDescription")}
                 </CardDescription>
               </CardHeader>
               <form onSubmit={onSubmit}>
@@ -138,27 +142,27 @@ function SignInFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
                       type="button"
                       variant="outline"
                       disabled={pending}
-                      onClick={() => signInWith("google")}
+                      onClick={() => void signInWith("google")}
                     >
-                      Continue with Google
+                      {t("auth.signIn.continueGoogle")}
                     </ClientButton>
                     {facebookEnabled ? (
                       <ClientButton
                         type="button"
                         variant="outline"
                         disabled={pending}
-                        onClick={() => signInWith("facebook")}
+                        onClick={() => void signInWith("facebook")}
                       >
-                        Continue with Facebook
+                        {t("auth.signIn.continueFacebook")}
                       </ClientButton>
                     ) : null}
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="bg-border h-px flex-1" />
-                    <span className="text-muted-foreground text-xs">or</span>
+                    <span className="text-muted-foreground text-xs">{t("auth.signIn.orDivider")}</span>
                     <div className="bg-border h-px flex-1" />
                   </div>
-                  <ClientField id="email" label="Email">
+                  <ClientField id="email" label={t("auth.signIn.emailLabel")}>
                     <ClientInput
                       id="email"
                       type="email"
@@ -169,7 +173,7 @@ function SignInFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
                       onChange={(e) => setEmail(e.target.value)}
                     />
                   </ClientField>
-                  <ClientField id="password" label="Password">
+                  <ClientField id="password" label={t("auth.signIn.passwordLabel")}>
                     <ClientInput
                       id="password"
                       type="password"
@@ -183,7 +187,7 @@ function SignInFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
                 </CardContent>
                 <CardFooter className="flex flex-col gap-3 border-t border-border bg-muted/20 pt-6 sm:flex-row sm:justify-between">
                   <ClientButton type="submit" brand="cta" disabled={pending} className="w-full sm:w-auto">
-                    {pending ? "Signing in…" : "Sign in"}
+                    {pending ? t("auth.signIn.signingIn") : t("auth.signIn.signInButton")}
                   </ClientButton>
                   <ClientButtonLink
                     href={
@@ -194,7 +198,7 @@ function SignInFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
                     brand="white"
                     className="w-full sm:w-auto"
                   >
-                    Create account
+                    {t("auth.signIn.createAccountLink")}
                   </ClientButtonLink>
                 </CardFooter>
               </form>
@@ -204,4 +208,4 @@ function SignInFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
       </main>
     </div>
   );
-}
+};

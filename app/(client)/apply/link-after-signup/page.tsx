@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { LinkAfterSignupClient } from "./link-after-signup-client";
+import { CUSTOMER_LOCALE_COOKIE, parseCustomerLocale } from "@/lib/i18n/customer-locale";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 
-export const metadata: Metadata = {
-  title: "Linking your application",
-  description: "Connecting your visa application to your new Visatop account after sign-up.",
+export const generateMetadata = async (): Promise<Metadata> => {
+  const cookieStore = await cookies();
+  const t = createCustomerT(parseCustomerLocale(cookieStore.get(CUSTOMER_LOCALE_COOKIE)?.value));
+  return {
+    title: t("auth.linkAfterSignup.pageTitle"),
+    description: t("auth.linkAfterSignup.pageDescription"),
+  };
 };
 
-export default function LinkAfterSignupPage() {
+const LinkAfterSignupPage = () => {
   return <LinkAfterSignupClient />;
-}
+};
+
+export default LinkAfterSignupPage;

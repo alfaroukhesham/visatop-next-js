@@ -201,7 +201,23 @@
     "chooseFile": "Выбрать файл",
     "replace": "Заменить",
     "chooseFileAria": "Выбрать файл: {label}",
-    "uploading": "Загрузка…"
+    "uploading": "Загрузка…",
+    "continueAfterUpload": "Можно перейти к оплате. Остальные файлы можно добавить сейчас или позже — мы свяжемся, если чего-то не хватает.",
+    "slots": {
+      "passportCopy": {
+        "label": "Паспорт (страница с данными)",
+        "description": "JPEG / PNG / одностраничный PDF · до 8 МБ"
+      },
+      "personalPhoto": {
+        "label": "Личное фото",
+        "description": "JPEG или PNG · до 8 МБ"
+      },
+      "bankStatement6m": {
+        "label": "Выписка по счёту за последние 6 месяцев",
+        "description": "Один PDF или изображение за последние 6 месяцев · JPEG / PNG / PDF · до 8 МБ"
+      },
+      "genericAcceptHint": "JPEG / PNG / PDF · до 8 МБ"
+    }
   },
   "payment": {
     "pageTitle": "Оплата | Visatop",
@@ -447,7 +463,10 @@
       "pricingUnavailable": "Сейчас не удалось загрузить цену для этой визы. Обновите страницу или свяжитесь с поддержкой, если проблема сохраняется.",
       "providerUnavailable": "Наш платёжный партнёр временно недоступен. Пожалуйста, попробуйте через несколько минут.",
       "refreshAndRetry": "Не удалось начать оформление. Обновите страницу и попробуйте снова.",
-      "checkoutFailed": "Оформление не удалось"
+      "checkoutFailed": "Оформление не удалось",
+      "missingPassport": "Загрузите копию паспорта, чтобы начать оплату. Другие документы можно добавить сейчас или позже.",
+      "sdkFailed": "Не удалось инициализировать Paddle SDK",
+      "failedDot": "Оплата не удалась."
     }
   },
   "expert": {
@@ -469,7 +488,9 @@
     "visa": "Виза",
     "documents": "Документы",
     "payment": "Оплата",
-    "status": "Статус"
+    "status": "Статус",
+    "stepBadge": "Шаг {step}/{total}",
+    "hideProgressAria": "Скрыть сводку прогресса"
   },
   "common": {
     "continue": "Продолжить",
@@ -491,7 +512,8 @@
     "loadingAccountActions": "Загрузка действий аккаунта",
     "loadingVisaOptions": "Загрузка вариантов виз",
     "loadingApplications": "Загрузка заявок",
-    "loadingOrderSummary": "Загрузка сводки заказа"
+    "loadingOrderSummary": "Загрузка сводки заказа",
+    "whatsappSupport": "Написать в WhatsApp"
   },
   "seo": {
     "homeTitle": "Подать заявку на туристическую визу ОАЭ онлайн",
@@ -540,7 +562,8 @@
   "upload": {
     "fileExceedsLimit": "Файл превышает лимит 8 МБ.",
     "uploaded": "Загружено",
-    "notUploadedYet": "Ещё не загружено"
+    "notUploadedYet": "Ещё не загружено",
+    "failedHttp": "Ошибка загрузки (HTTP {status})"
   },
   "ocr": {
     "reading": "Чтение вашего паспорта…",

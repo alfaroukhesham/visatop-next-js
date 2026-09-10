@@ -23,7 +23,7 @@ const ApplyLayout: FC<IApplyLayoutProps> = ({ children }) => {
     <div className="text-foreground flex min-h-0 flex-1 flex-col">
       <ClientAppHeader hideWhenSignedOut />
       <div className="relative flex-1">
-        <div className="relative mx-auto w-full max-w-[calc(1300px+3rem)] px-3 py-10 sm:px-4 sm:py-12">
+        <div className="relative mx-auto w-full max-w-[calc(1300px+3rem)] px-3 pt-10 pb-24 sm:px-4 sm:pt-12 sm:pb-20">
           {children}
         </div>
       </div>

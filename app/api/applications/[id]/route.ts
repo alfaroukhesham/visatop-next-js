@@ -8,6 +8,8 @@ import { loadPartyMembers } from "@/lib/applications/load-party-members";
 import { readResumeTokenFromRequestCookies } from "@/lib/applications/resume-cookie";
 import { toPublicApplication } from "@/lib/applications/public-application";
 import { toPublicApplicationWithCharge } from "@/lib/applications/load-application-charge";
+import { readCustomerLocaleFromCookieHeader } from "@/lib/i18n/customer-locale";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withClientDbActor, withSystemDbActor } from "@/lib/db/actor-context";
@@ -27,9 +29,12 @@ async function loadApplicationForGuest(
   return loadGuestApplicationRowByResumeCookie(applicationId, resumePlain);
 }
 
-async function applicationWithMembers(row: typeof application.$inferSelect) {
+async function applicationWithMembers(
+  row: typeof application.$inferSelect,
+  t: (key: string) => string,
+) {
   const [publicApp, members] = await Promise.all([
-    toPublicApplicationWithCharge(row),
+    toPublicApplicationWithCharge(row, t),
     withSystemDbActor((tx) => loadPartyMembers(tx, row)),
   ]);
   return { application: publicApp, members };
@@ -38,6 +43,7 @@ async function applicationWithMembers(row: typeof application.$inferSelect) {
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const hdrs = await headers();
   const requestId = hdrs.get("x-request-id");
+  const t = createCustomerT(readCustomerLocaleFromCookieHeader(hdrs.get("cookie")));
   const [{ id }, session] = await Promise.all([
     ctx.params,
     auth.api.getSession({ headers: hdrs }),
@@ -48,7 +54,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     if (!row) {
       return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
     }
-    return jsonOk(await applicationWithMembers(row), { requestId });
+    return jsonOk(await applicationWithMembers(row, t), { requestId });
   }
 
   const cookieHeader = req.headers.get("cookie");
@@ -62,12 +68,13 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   if (!row) {
     return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
   }
-  return jsonOk(await applicationWithMembers(row), { requestId });
+  return jsonOk(await applicationWithMembers(row, t), { requestId });
 }
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const hdrs = await headers();
   const requestId = hdrs.get("x-request-id");
+  const t = createCustomerT(readCustomerLocaleFromCookieHeader(hdrs.get("cookie")));
   const [{ id }, parsed] = await Promise.all([
     ctx.params,
     parseJsonBody(req, patchBody, requestId),
@@ -95,7 +102,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       if (!row) {
         return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
       }
-      return jsonOk({ application: toPublicApplication(row) }, { requestId });
+      return jsonOk({ application: toPublicApplication(row, undefined, t) }, { requestId });
     }
 
     if (existing.userId == null) {
@@ -110,7 +117,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       if (!row) {
         return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
       }
-      return jsonOk({ application: toPublicApplication(row) }, { requestId });
+      return jsonOk({ application: toPublicApplication(row, undefined, t) }, { requestId });
     }
 
     return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
@@ -136,5 +143,5 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (!next) {
     return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
   }
-  return jsonOk({ application: toPublicApplication(next) }, { requestId });
+  return jsonOk({ application: toPublicApplication(next, undefined, t) }, { requestId });
 }

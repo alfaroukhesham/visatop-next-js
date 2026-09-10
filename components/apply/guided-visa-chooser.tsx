@@ -60,11 +60,11 @@ export interface IGuidedVisaChooserProps {
 
 const EMPTY_SHORTLIST_KEY = "chooser.noMatches";
 
-const entriesLabel = (entries: string | null): string | null => {
+const entriesLabel = (entries: string | null, t: ReturnType<typeof useCustomerT>): string | null => {
   if (!entries) return null;
   const e = entries.toLowerCase();
-  if (e.includes("multi")) return "Multiple entry";
-  if (e.includes("single")) return "Single entry";
+  if (e.includes("multi")) return t("chooser.entryLabels.multiple");
+  if (e.includes("single")) return t("chooser.entryLabels.single");
   return entries;
 };
 
@@ -75,14 +75,15 @@ export const serviceResultSubtitle = (
   name: string,
   durationDays: number | null,
   entryText: string | null,
+  t: ReturnType<typeof useCustomerT>,
 ): string | null => {
   const normalizedName = compactFact(name);
   const parts: string[] = [];
   if (durationDays != null) {
-    const dayFact = compactFact(`${durationDays} days`);
-    const dayFactSingular = compactFact(`${durationDays} day`);
-    if (!normalizedName.includes(dayFact) && !normalizedName.includes(dayFactSingular)) {
-      parts.push(`${durationDays} days`);
+    const dayLabel = t("chooser.durationDays", { count: durationDays });
+    const dayFact = compactFact(dayLabel);
+    if (!normalizedName.includes(dayFact)) {
+      parts.push(dayLabel);
     }
   }
   if (entryText) {
@@ -419,8 +420,8 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
               <ul className="space-y-3">
                 {matches.map((s) => {
                   const price = formatPrice(s);
-                  const entryText = entriesLabel(s.entries);
-                  const subtitle = serviceResultSubtitle(s.name, s.durationDays, entryText);
+                  const entryText = entriesLabel(s.entries, t);
+                  const subtitle = serviceResultSubtitle(s.name, s.durationDays, entryText, t);
                   const selected = selectedServiceId === s.id;
                   return (
                     <li key={s.id}>

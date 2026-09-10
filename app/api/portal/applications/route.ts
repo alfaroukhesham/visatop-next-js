@@ -5,6 +5,8 @@ import { and, desc, eq, lt, or } from "drizzle-orm";
 import { decodeCursor, encodeCursor, parseLimit } from "@/lib/api/cursor";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { computeClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
+import { readCustomerLocaleFromCookieHeader } from "@/lib/i18n/customer-locale";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 import { auth } from "@/lib/auth";
 import { withClientDbActor } from "@/lib/db/actor-context";
 import { application } from "@/lib/db/schema/applications";
@@ -54,18 +56,23 @@ export async function GET(req: Request) {
   const nextCursor =
     hasMore && last ? encodeCursor({ createdAt: last.createdAt.toISOString(), id: last.id }) : null;
 
+  const t = createCustomerT(readCustomerLocaleFromCookieHeader(hdrs.get("cookie")));
+
   return jsonOk(
     {
       items: slice.map((r) => ({
         id: r.id,
         referenceDisplay: r.referenceNumber ?? r.id.slice(0, 8),
         createdAt: r.createdAt.toISOString(),
-        clientTracking: computeClientApplicationTracking({
-          applicationStatus: r.applicationStatus,
-          paymentStatus: r.paymentStatus,
-          fulfillmentStatus: r.fulfillmentStatus,
-          adminAttentionRequired: r.adminAttentionRequired,
-        }),
+        clientTracking: computeClientApplicationTracking(
+          {
+            applicationStatus: r.applicationStatus,
+            paymentStatus: r.paymentStatus,
+            fulfillmentStatus: r.fulfillmentStatus,
+            adminAttentionRequired: r.adminAttentionRequired,
+          },
+          t,
+        ),
       })),
       nextCursor,
     },

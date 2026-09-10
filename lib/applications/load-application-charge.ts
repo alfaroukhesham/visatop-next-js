@@ -45,7 +45,8 @@ export const loadLatestApplicationCharge = async (
 
 export const toPublicApplicationWithCharge = async (
   row: InferSelectModel<typeof application>,
+  t?: (key: string) => string,
 ) => {
   const charge = await withSystemDbActor((tx) => loadLatestApplicationCharge(tx, row.id));
-  return toPublicApplication(row, charge);
+  return toPublicApplication(row, charge, t);
 };

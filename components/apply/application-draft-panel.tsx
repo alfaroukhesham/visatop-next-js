@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { ClientDraftPanelSkeleton } from "@/components/client/client-loading";
 import { AppShimmer } from "@/components/ui/app-loading";
 import { computeValidation } from "@/lib/documents/validation-readiness";
@@ -13,6 +14,7 @@ import { applicantFormResetKey } from "./draft/utils";
 import { useApplicationDraft } from "./draft/use-application-draft";
 
 export function ApplicationDraftPanel({ applicationId }: { applicationId: string }) {
+  const t = useCustomerT();
   const draft = useApplicationDraft(applicationId);
 
   if (draft.loading) {
@@ -64,7 +66,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
         <section
           className="border-border bg-card space-y-4 rounded-[12px] border p-5 shadow-[0_4px_20px_rgba(0,0,0,0.06)] sm:p-6"
           aria-busy="true"
-          aria-label="Loading documents"
+          aria-label={t("draft.loadingDocuments")}
         >
           <AppShimmer className="h-5 w-40" />
           <div className="grid gap-4 sm:grid-cols-2">
@@ -107,11 +109,11 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
 
       <p className="text-muted-foreground text-center text-xs">
         <Link href="/" className="text-link hover:underline">
-          Start another draft
+          {t("draft.startAnotherDraft")}
         </Link>
         {" · "}
         <Link href="/portal/track" className="hover:text-foreground">
-          Your applications
+          {t("draft.yourApplications")}
         </Link>
       </p>
 

@@ -1,14 +1,18 @@
+"use client";
+
 import { Loader2 } from "lucide-react";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { AppLoadingMessage, AppShimmer } from "@/components/ui/app-loading";
 import { cn } from "@/lib/utils";
 
 /** Hero nationality combobox placeholder. */
 export function ClientComboboxSkeleton({ className }: { className?: string }) {
+  const t = useCustomerT();
   return (
     <div
       className={cn("app-rise flex min-h-[3.5rem] items-center", className)}
       aria-busy="true"
-      aria-label="Loading countries"
+      aria-label={t("common.loadingCountries")}
     >
       <AppShimmer className="h-12 w-full rounded-[8px]" />
     </div>
@@ -27,8 +31,9 @@ export function ClientButtonRowSkeleton() {
 
 /** Header nav auth actions (on dark bar). */
 export function ClientHeaderAuthSkeleton() {
+  const t = useCustomerT();
   return (
-    <div className="app-stagger flex items-center gap-2" aria-label="Loading account actions">
+    <div className="app-stagger flex items-center gap-2" aria-label={t("common.loadingAccountActions")}>
       <AppShimmer className="h-9 w-[92px] rounded-md bg-white/10" />
       <AppShimmer className="h-9 w-[120px] rounded-md bg-white/10" />
     </div>
@@ -42,8 +47,9 @@ export function ClientAccountCardSkeleton() {
 
 /** Apply step 2 — currency, visa cards, email (initial catalog load). */
 export function ClientStartStepSkeleton() {
+  const t = useCustomerT();
   return (
-    <div className="app-stagger space-y-6" aria-busy="true" aria-label="Loading visa options">
+    <div className="app-stagger space-y-6" aria-busy="true" aria-label={t("common.loadingVisaOptions")}>
       <div className="grid gap-4 sm:grid-cols-2">
         <AppShimmer className="h-[7.5rem] rounded-[12px] border-2 border-border" />
         <AppShimmer className="h-[7.5rem] rounded-[12px] border-2 border-border" />
@@ -65,11 +71,12 @@ export function ClientStartStepSkeleton() {
 
 /** Visa service selection cards on /apply/start. */
 export function ClientServiceCardsSkeleton({ count = 3 }: { count?: number }) {
+  const t = useCustomerT();
   return (
     <div
       className="app-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
       aria-busy="true"
-      aria-label="Loading visa options"
+      aria-label={t("common.loadingVisaOptions")}
     >
       {Array.from({ length: count }, (_, i) => (
         <div
@@ -87,8 +94,9 @@ export function ClientServiceCardsSkeleton({ count = 3 }: { count?: number }) {
 
 /** Application draft workspace (documents + review + payment blocks). */
 export function ClientDraftPanelSkeleton() {
+  const t = useCustomerT();
   return (
-    <div className="app-stagger space-y-8" aria-busy="true" aria-label="Loading application">
+    <div className="app-stagger space-y-8" aria-busy="true" aria-label={t("draft.loadingApplication")}>
       <section className="border-border bg-card space-y-4 rounded-[12px] border p-6 shadow-sm">
         <AppShimmer className="h-5 w-40" />
         <div className="grid gap-4 sm:grid-cols-2">
@@ -132,8 +140,9 @@ function ClientTrackCardSkeleton() {
 }
 
 export function ClientTrackListSkeleton({ count = 2 }: { count?: number }) {
+  const t = useCustomerT();
   return (
-    <ul className="app-stagger space-y-8" aria-busy="true" aria-label="Loading applications">
+    <ul className="app-stagger space-y-8" aria-busy="true" aria-label={t("common.loadingApplications")}>
       {Array.from({ length: count }, (_, i) => (
         <ClientTrackCardSkeleton key={i} />
       ))}
@@ -143,11 +152,12 @@ export function ClientTrackListSkeleton({ count = 2 }: { count?: number }) {
 
 /** Checkout order recap sidebar. */
 export function ClientOrderRecapSkeleton() {
+  const t = useCustomerT();
   return (
     <div
       className="app-rise space-y-4 rounded-[12px] border border-border bg-card p-4 shadow-sm sm:p-5"
       aria-busy="true"
-      aria-label="Loading order summary"
+      aria-label={t("common.loadingOrderSummary")}
     >
       <div className="flex items-end justify-between gap-4">
         <AppShimmer className="h-6 w-28" />

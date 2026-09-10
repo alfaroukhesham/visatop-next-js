@@ -6,6 +6,8 @@ import { jsonError, jsonOk } from "@/lib/api/response";
 import { withClientDbActor, withSystemDbActor } from "@/lib/db/actor-context";
 import { application } from "@/lib/db/schema";
 import { toPublicApplication } from "@/lib/applications/public-application";
+import { readCustomerLocaleFromCookieHeader } from "@/lib/i18n/customer-locale";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
 import { evaluateApplicationReadiness } from "@/lib/applications/evaluate-readiness";
 import type { DbTransaction } from "@/lib/db";
@@ -40,6 +42,7 @@ export async function PATCH(
 ) {
   const [{ id: applicationId }, hdrs] = await Promise.all([params, headers()]);
   const requestId = hdrs.get("x-request-id");
+  const t = createCustomerT(readCustomerLocaleFromCookieHeader(hdrs.get("cookie")));
 
   const parsed = await parseJsonBody(req, profilePatchBody, requestId);
   if (!parsed.ok) return parsed.response;
@@ -77,7 +80,7 @@ export async function PATCH(
     if (!row) {
       return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
     }
-    return jsonOk({ application: toPublicApplication(row) }, { requestId });
+    return jsonOk({ application: toPublicApplication(row, undefined, t) }, { requestId });
   };
 
   if (accessRes.access.kind === "user") {

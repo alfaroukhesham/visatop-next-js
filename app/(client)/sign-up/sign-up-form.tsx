@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, type FC, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AuthFlowSkeleton } from "@/components/auth/auth-flow-skeleton";
 import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
@@ -22,18 +22,24 @@ import {
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
 import { ClientHeroPanel } from "@/components/client/client-surface";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 
-type SocialProvider = "google" | "facebook";
+type TSocialProvider = "google" | "facebook";
 
-export function SignUpForm({ facebookEnabled }: { facebookEnabled: boolean }) {
+interface ISignUpFormProps {
+  facebookEnabled: boolean;
+}
+
+export const SignUpForm: FC<ISignUpFormProps> = ({ facebookEnabled }) => {
   return (
     <Suspense fallback={<AuthFlowSkeleton />}>
       <SignUpFormContent facebookEnabled={facebookEnabled} />
     </Suspense>
   );
-}
+};
 
-function SignUpFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
+const SignUpFormContent: FC<ISignUpFormProps> = ({ facebookEnabled }) => {
+  const t = useCustomerT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [name, setName] = useState("");
@@ -42,7 +48,7 @@ function SignUpFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  async function signInWith(provider: SocialProvider) {
+  const signInWith = async (provider: TSocialProvider) => {
     setError(null);
     setPending(true);
     const next = safeCallbackUrl(searchParams.get("callbackUrl"));
@@ -52,11 +58,11 @@ function SignUpFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
     });
     setPending(false);
     if (socialError) {
-      setError(socialError.message ?? "Could not continue");
+      setError(socialError.message ?? t("auth.signUp.couldNotContinue"));
     }
-  }
+  };
 
-  async function onSubmit(e: React.FormEvent) {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
     setPending(true);
@@ -67,12 +73,12 @@ function SignUpFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
     });
     setPending(false);
     if (signUpError) {
-      setError(signUpError.message ?? "Could not create account");
+      setError(signUpError.message ?? t("auth.signUp.couldNotCreateAccount"));
       return;
     }
     router.refresh();
     router.push(safeCallbackUrl(searchParams.get("callbackUrl")));
-  }
+  };
 
   const socialCols =
     facebookEnabled ? "sm:grid-cols-2" : "sm:grid-cols-1 max-w-xs sm:max-w-none";
@@ -88,31 +94,38 @@ function SignUpFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
         />
         <div className="relative mx-auto grid w-full max-w-[calc(1300px+3rem)] flex-1 items-center gap-10 px-5 py-12 lg:grid-cols-[1fr_420px] lg:gap-16 lg:py-20 xl:gap-24">
           <div className="space-y-2 lg:hidden">
-            <h1 className="font-heading text-2xl font-semibold tracking-tight text-[#012031]">Create your account</h1>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight text-[#012031]">
+              {t("auth.signUp.mobileTitle")}
+            </h1>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              Secure portal for documents, payments, and status.
+              {t("auth.signUp.mobileSubtitle")}
             </p>
           </div>
           <ClientHeroPanel className="border-secondary/20 hidden bg-gradient-to-br from-white via-[#F2F9FC] to-white p-8 shadow-[0_12px_48px_rgba(1,32,49,0.08)] lg:block lg:p-10">
-            <p className="text-secondary text-xs font-semibold uppercase tracking-[0.2em]">Create account</p>
+            <p className="text-secondary text-xs font-semibold uppercase tracking-[0.2em]">
+              {t("auth.signUp.heroEyebrow")}
+            </p>
             <h1 className="font-heading mt-4 text-[clamp(1.85rem,3.5vw,3rem)] font-semibold leading-[1.1] tracking-tight text-[#012031]">
-              Your portal for every document and update.
+              {t("auth.signUp.heroTitle")}
             </h1>
             <p className="text-muted-foreground mt-5 max-w-[48ch] text-lg leading-relaxed">
-              One secure place to upload files, review extracted fields, pay, and track status ,  built for
-              clarity under pressure.
+              {t("auth.signUp.heroBody")}
             </p>
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
               <div className="border-secondary/15 rounded-[5px] border bg-white/60 p-4">
-                <p className="text-secondary text-[10px] font-bold uppercase tracking-widest">Built for clarity</p>
+                <p className="text-secondary text-[10px] font-bold uppercase tracking-widest">
+                  {t("auth.signUp.featureClarityTitle")}
+                </p>
                 <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-                  Left-aligned rhythm and generous spacing for busy days.
+                  {t("auth.signUp.featureClarityBody")}
                 </p>
               </div>
               <div className="border-secondary/15 rounded-[5px] border bg-white/60 p-4">
-                <p className="text-secondary text-[10px] font-bold uppercase tracking-widest">Translation-ready</p>
+                <p className="text-secondary text-[10px] font-bold uppercase tracking-widest">
+                  {t("auth.signUp.featureTranslationTitle")}
+                </p>
                 <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-                  Layouts stay resilient with longer labels and RTL.
+                  {t("auth.signUp.featureTranslationBody")}
                 </p>
               </div>
             </div>
@@ -121,9 +134,11 @@ function SignUpFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
           <div className="w-full">
             <ClientCard className="border-secondary/20 overflow-hidden shadow-[0_16px_48px_rgba(1,32,49,0.1)]">
               <CardHeader className="border-b border-border bg-muted/30 pb-6">
-                <CardTitle className="font-heading text-2xl text-[#012031]">Create account</CardTitle>
+                <CardTitle className="font-heading text-2xl text-[#012031]">
+                  {t("auth.signUp.cardTitle")}
+                </CardTitle>
                 <CardDescription className="text-muted-foreground text-base">
-                  Email and password, or continue with a provider.
+                  {t("auth.signUp.cardDescription")}
                 </CardDescription>
               </CardHeader>
               <form onSubmit={onSubmit}>
@@ -138,27 +153,27 @@ function SignUpFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
                       type="button"
                       variant="outline"
                       disabled={pending}
-                      onClick={() => signInWith("google")}
+                      onClick={() => void signInWith("google")}
                     >
-                      Continue with Google
+                      {t("auth.signUp.continueGoogle")}
                     </ClientButton>
                     {facebookEnabled ? (
                       <ClientButton
                         type="button"
                         variant="outline"
                         disabled={pending}
-                        onClick={() => signInWith("facebook")}
+                        onClick={() => void signInWith("facebook")}
                       >
-                        Continue with Facebook
+                        {t("auth.signUp.continueFacebook")}
                       </ClientButton>
                     ) : null}
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="bg-border h-px flex-1" />
-                    <span className="text-muted-foreground text-xs">or</span>
+                    <span className="text-muted-foreground text-xs">{t("auth.signUp.orDivider")}</span>
                     <div className="bg-border h-px flex-1" />
                   </div>
-                  <ClientField id="name" label="Name">
+                  <ClientField id="name" label={t("auth.signUp.nameLabel")}>
                     <ClientInput
                       id="name"
                       autoComplete="name"
@@ -168,7 +183,7 @@ function SignUpFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
                       onChange={(e) => setName(e.target.value)}
                     />
                   </ClientField>
-                  <ClientField id="email" label="Email">
+                  <ClientField id="email" label={t("auth.signUp.emailLabel")}>
                     <ClientInput
                       id="email"
                       type="email"
@@ -181,8 +196,8 @@ function SignUpFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
                   </ClientField>
                   <ClientField
                     id="password"
-                    label="Password"
-                    hint="Use at least 8 characters."
+                    label={t("auth.signUp.passwordLabel")}
+                    hint={t("auth.signUp.passwordHint")}
                   >
                     <ClientInput
                       id="password"
@@ -198,7 +213,7 @@ function SignUpFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
                 </CardContent>
                 <CardFooter className="flex flex-col gap-3 border-t border-border bg-muted/20 pt-6 sm:flex-row sm:justify-between">
                   <ClientButton type="submit" brand="cta" disabled={pending} className="w-full sm:w-auto">
-                    {pending ? "Creating…" : "Create account"}
+                    {pending ? t("auth.signUp.creating") : t("auth.signUp.createAccountButton")}
                   </ClientButton>
                   <ClientButtonLink
                     href={
@@ -209,7 +224,7 @@ function SignUpFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
                     brand="white"
                     className="w-full sm:w-auto"
                   >
-                    I already have an account
+                    {t("auth.signUp.alreadyHaveAccountLink")}
                   </ClientButtonLink>
                 </CardFooter>
               </form>
@@ -219,4 +234,4 @@ function SignUpFormContent({ facebookEnabled }: { facebookEnabled: boolean }) {
       </main>
     </div>
   );
-}
+};

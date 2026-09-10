@@ -1,7 +1,9 @@
 "use client";
 
+import type { FC } from "react";
 import { signOutAction } from "@/app/actions/auth";
 import { ClientButton, ClientButtonLink } from "@/components/client/client-button";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import {
   ClientAccountCardSkeleton,
   ClientButtonRowSkeleton,
@@ -9,7 +11,8 @@ import {
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 
 /** “Track application” for guests only; hidden while session is resolving and when signed in. */
-export function HomeHeroGuestTrackLink() {
+export const HomeHeroGuestTrackLink: FC = () => {
+  const t = useCustomerT();
   const session = useClientAuthStore((s) => s.session);
   const pending = useClientAuthStore((s) => s.isPending);
 
@@ -22,12 +25,13 @@ export function HomeHeroGuestTrackLink() {
       brand="white"
       className="min-w-[148px] justify-center border-secondary/40 text-secondary hover:bg-secondary/10"
     >
-      Track application
+      {t("home.guestTrackLink")}
     </ClientButtonLink>
   );
-}
+};
 
-export function HomeHeroAuthActions() {
+export const HomeHeroAuthActions: FC = () => {
+  const t = useCustomerT();
   const session = useClientAuthStore((s) => s.session);
   const pending = useClientAuthStore((s) => s.isPending);
 
@@ -40,7 +44,7 @@ export function HomeHeroAuthActions() {
   return (
     <>
       <ClientButtonLink href="/portal/track" brand="cta" className="min-w-[148px] justify-center">
-        My applications
+        {t("home.signedInApplicationsLink")}
       </ClientButtonLink>
       <form action={signOutAction} className="sm:ml-1">
         <ClientButton
@@ -49,14 +53,15 @@ export function HomeHeroAuthActions() {
           variant="outline"
           className="w-full min-w-[148px] justify-center sm:w-auto"
         >
-          Sign out
+          {t("header.signOut")}
         </ClientButton>
       </form>
     </>
   );
-}
+};
 
-export function HomeAccountCardBody() {
+export const HomeAccountCardBody: FC = () => {
+  const t = useCustomerT();
   const session = useClientAuthStore((s) => s.session);
   const pending = useClientAuthStore((s) => s.isPending);
 
@@ -67,15 +72,12 @@ export function HomeAccountCardBody() {
   if (session?.user) {
     return (
       <p className="text-muted-foreground text-sm leading-relaxed">
-        Signed in as <span className="text-foreground font-semibold">{session.user.email}</span>
+        {t("home.accountSignedInAs", { email: session.user.email ?? "" })}
       </p>
     );
   }
 
   return (
-    <p className="text-muted-foreground text-sm leading-relaxed">
-      Use the nationality form above to start, or sign in from the header or below. If you begin as a guest, complete
-      payment and follow the email we send to connect this application to an account.
-    </p>
+    <p className="text-muted-foreground text-sm leading-relaxed">{t("home.accountGuestBody")}</p>
   );
-}
+};

@@ -147,7 +147,9 @@ export function ApplicationTrackLookupForm() {
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="space-y-1">
-                      <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">Reference</p>
+                      <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+                        {t("track.referenceLabel")}
+                      </p>
                       <p className="font-mono text-sm text-foreground">{row.referenceDisplay}</p>
                       <p className="text-muted-foreground text-xs">
                         {row.serviceName} · {nationalityLabelWithFlag(row.nationalityCode, row.nationalityName)}
@@ -161,7 +163,7 @@ export function ApplicationTrackLookupForm() {
                           size="sm"
                           className="h-9 px-4 text-xs font-bold"
                         >
-                          Continue
+                          {t("track.continue")}
                         </ClientButtonLink>
                       ) : row.paymentStatus === "paid" ? (
                         <ClientButtonLink
@@ -170,7 +172,7 @@ export function ApplicationTrackLookupForm() {
                           size="sm"
                           className="h-9 px-4 text-xs font-semibold"
                         >
-                          View status
+                          {t("track.viewStatus")}
                         </ClientButtonLink>
                       ) : null}
                     </div>
@@ -181,7 +183,7 @@ export function ApplicationTrackLookupForm() {
             </ul>
           )}
           {loading && results.length > 0 ? (
-            <ClientInlineLoading label="Loading more applications…" />
+            <ClientInlineLoading label={t("track.loadingMore")} />
           ) : null}
           {nextCursor && !loading ? (
             <div className="flex justify-center">
@@ -191,13 +193,12 @@ export function ApplicationTrackLookupForm() {
                 onClick={() => void runLookup({ reset: false, cursor: nextCursor })}
                 className="font-semibold"
               >
-                Load more
+                {t("track.loadMore")}
               </ClientButton>
             </div>
           ) : null}
           <p className="text-muted-foreground border-t border-border pt-4 text-xs leading-relaxed">
-            To upload documents or pay, open the application from the same browser you started with, or sign in if you
-            linked it to your account.
+            {t("track.guestLookupFooter")}
           </p>
         </section>
       ) : null}

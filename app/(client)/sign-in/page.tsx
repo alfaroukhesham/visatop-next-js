@@ -1,14 +1,22 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { SignInForm } from "./sign-in-form";
-
-export const metadata: Metadata = {
-  title: "Sign in",
-  description:
-    "Sign in to your Visatop portal to create, resume, or track your visa application.",
-  robots: { index: false, follow: true },
-};
 import { isFacebookOAuthConfigured } from "@/lib/social-oauth";
+import { CUSTOMER_LOCALE_COOKIE, parseCustomerLocale } from "@/lib/i18n/customer-locale";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 
-export default function SignInPage() {
+export const generateMetadata = async (): Promise<Metadata> => {
+  const cookieStore = await cookies();
+  const t = createCustomerT(parseCustomerLocale(cookieStore.get(CUSTOMER_LOCALE_COOKIE)?.value));
+  return {
+    title: t("auth.signIn.pageTitle"),
+    description: t("auth.signIn.pageDescription"),
+    robots: { index: false, follow: true },
+  };
+};
+
+const SignInPage = () => {
   return <SignInForm facebookEnabled={isFacebookOAuthConfigured()} />;
-}
+};
+
+export default SignInPage;

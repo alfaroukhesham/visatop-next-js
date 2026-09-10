@@ -8,9 +8,11 @@ import { DraftPanelError } from "@/components/apply/draft/draft-panel-error";
 import { DraftPaymentSection } from "@/components/apply/draft/draft-payment-section";
 import { useApplicationDraft } from "@/components/apply/draft/use-application-draft";
 import { ClientButton } from "@/components/client/client-button";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { computeValidation, type Readiness } from "@/lib/documents/validation-readiness";
 
 export function ApplicationPaymentPanel({ applicationId }: { applicationId: string }) {
+  const t = useCustomerT();
   const router = useRouter();
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const draft = useApplicationDraft(applicationId);
@@ -45,11 +47,11 @@ export function ApplicationPaymentPanel({ applicationId }: { applicationId: stri
 
   const checkoutHandlers = {
     onExternalRedirect: () =>
-      draft.setActionMsg("Redirecting to our payment partner to complete checkout securely…"),
+      draft.setActionMsg(t("draft.actionMessages.redirectingPaymentPartner")),
     onOverlayClosed: () => void draft.load({ silent: true }),
     onSuccess: () => {
       draft.setCountdown(null);
-      draft.setActionMsg("Payment submitted. Confirming with our systems…");
+      draft.setActionMsg(t("draft.actionMessages.paymentSubmittedConfirming"));
       router.push(submittedPath);
     },
     onError: (msg: string) => {
@@ -94,17 +96,17 @@ export function ApplicationPaymentPanel({ applicationId }: { applicationId: stri
           brand="white"
           onClick={() => router.push(documentsPath)}
         >
-          Previous
+          {t("payment.previous")}
         </ClientButton>
       </div>
 
       <p className="text-muted-foreground text-center text-xs">
         <Link href="/" className="text-link hover:underline">
-          Start another draft
+          {t("draft.startAnotherDraft")}
         </Link>
         {" · "}
         <Link href="/portal/track" className="hover:text-foreground">
-          Your applications
+          {t("draft.yourApplications")}
         </Link>
       </p>
 

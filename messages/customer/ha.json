@@ -201,7 +201,23 @@
     "chooseFile": "Zaɓi fayil",
     "replace": "Maye gurbi",
     "chooseFileAria": "Zaɓi fayil: {label}",
-    "uploading": "Ana lodawa…"
+    "uploading": "Ana lodawa…",
+    "continueAfterUpload": "Kuna iya ci gaba zuwa biya. Sauran fayiloli za a iya ƙarawa yanzu ko daga baya — za mu bi ku idan wani abu ya ɓace.",
+    "slots": {
+      "passportCopy": {
+        "label": "Fasfo (shafin bayanai)",
+        "description": "JPEG / PNG / PDF na shafi ɗaya · 8MB mafi yawa"
+      },
+      "personalPhoto": {
+        "label": "Hoton kai",
+        "description": "JPEG ko PNG · 8MB mafi yawa"
+      },
+      "bankStatement6m": {
+        "label": "Bayanan asusun banki na watanni 6 da suka wuce",
+        "description": "PDF ko hoto ɗaya na watanni 6 da suka wuce · JPEG / PNG / PDF · 8MB mafi yawa"
+      },
+      "genericAcceptHint": "JPEG / PNG / PDF · 8MB mafi yawa"
+    }
   },
   "payment": {
     "pageTitle": "Biya | Visatop",
@@ -447,7 +463,10 @@
       "pricingUnavailable": "Ba mu iya lodawa farashin wannan visa a yanzu ba. Wartsake shafin ko tuntubi tallafi idan ya ci gaba.",
       "providerUnavailable": "Abokin biyan kuɗi ba ya samuwa a yanzu. Da fatan za a sake gwadawa cikin 'yan mintuna.",
       "refreshAndRetry": "Ba mu iya fara biya ba. Da fatan za a wartsake shafin kuma sake gwadawa.",
-      "checkoutFailed": "Biya ta gaza"
+      "checkoutFailed": "Biya ta gaza",
+      "missingPassport": "Loda kwafin fasfo don fara biya. Sauran takardu za a iya ƙarawa yanzu ko daga baya.",
+      "sdkFailed": "An kasa fara Paddle SDK",
+      "failedDot": "Biyan kudi ya gaza."
     }
   },
   "expert": {
@@ -469,7 +488,9 @@
     "visa": "Visa",
     "documents": "Takardu",
     "payment": "Biya",
-    "status": "Matsayi"
+    "status": "Matsayi",
+    "stepBadge": "Mataki {step}/{total}",
+    "hideProgressAria": "Ɓoye taƙaitaccen ci gaba"
   },
   "common": {
     "continue": "Ci gaba",
@@ -491,7 +512,8 @@
     "loadingAccountActions": "Ana lodawa ayyukan asusu",
     "loadingVisaOptions": "Ana lodawa zaɓuɓɓukan visa",
     "loadingApplications": "Ana lodawa nema",
-    "loadingOrderSummary": "Ana lodawa taƙaitaccen odar"
+    "loadingOrderSummary": "Ana lodawa taƙaitaccen odar",
+    "whatsappSupport": "Yi hira a WhatsApp"
   },
   "seo": {
     "homeTitle": "Nemi Visa ta Ziyara ta UAE Akan Layi",
@@ -540,7 +562,8 @@
   "upload": {
     "fileExceedsLimit": "Fayil ya wuce iyakar 8MB.",
     "uploaded": "An loda",
-    "notUploadedYet": "Ba a loda ba tukuna"
+    "notUploadedYet": "Ba a loda ba tukuna",
+    "failedHttp": "Lodawa ta gaza (HTTP {status})"
   },
   "ocr": {
     "reading": "Ana karanta fasfon ku…",

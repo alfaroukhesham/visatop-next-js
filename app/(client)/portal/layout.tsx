@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { ClientAppHeader } from "@/components/client/client-app-header";
+import { CUSTOMER_LOCALE_COOKIE, parseCustomerLocale } from "@/lib/i18n/customer-locale";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 
-export const metadata: Metadata = {
-  title: "Portal | Visatop",
-  description: "Signed-in area to track every application on your account in one place.",
+export const generateMetadata = async (): Promise<Metadata> => {
+  const cookieStore = await cookies();
+  const t = createCustomerT(parseCustomerLocale(cookieStore.get(CUSTOMER_LOCALE_COOKIE)?.value));
+  return {
+    title: t("portal.layoutTitle"),
+    description: t("portal.layoutDescription"),
+  };
 };
 
 export const dynamic = "force-dynamic";

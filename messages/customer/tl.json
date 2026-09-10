@@ -201,7 +201,23 @@
     "chooseFile": "Pumili ng file",
     "replace": "Palitan",
     "chooseFileAria": "Pumili ng file: {label}",
-    "uploading": "Ina-upload…"
+    "uploading": "Ina-upload…",
+    "continueAfterUpload": "Maaari ka nang magpatuloy sa bayad. Ang natitirang file ay maaaring idagdag ngayon o mamaya — susundan namin kung may kulang.",
+    "slots": {
+      "passportCopy": {
+        "label": "Pasaporte (bio page)",
+        "description": "JPEG / PNG / single-page PDF · 8MB max"
+      },
+      "personalPhoto": {
+        "label": "Personal na litrato",
+        "description": "JPEG o PNG · 8MB max"
+      },
+      "bankStatement6m": {
+        "label": "Bank statement ng huling 6 na buwan",
+        "description": "Isang PDF o larawan ng huling 6 na buwan · JPEG / PNG / PDF · 8MB max"
+      },
+      "genericAcceptHint": "JPEG / PNG / PDF · 8MB max"
+    }
   },
   "payment": {
     "pageTitle": "Payment | Visatop",
@@ -447,7 +463,10 @@
       "pricingUnavailable": "Hindi namin ma-load ang presyo para sa visa na ito ngayon. I-refresh ang page o makipag-ugnayan sa support kung magpapatuloy ito.",
       "providerUnavailable": "Pansamantalang hindi available ang payment partner namin. Subukan ulit sa loob ng ilang minuto.",
       "refreshAndRetry": "Hindi namin masimulan ang checkout. Paki-refresh ang page at subukan ulit.",
-      "checkoutFailed": "Hindi natuloy ang checkout"
+      "checkoutFailed": "Hindi natuloy ang checkout",
+      "missingPassport": "Mag-upload ng kopya ng pasaporte para simulan ang bayad. Ang ibang dokumento ay maaaring idagdag ngayon o mamaya.",
+      "sdkFailed": "Hindi na-initialize ang Paddle SDK",
+      "failedDot": "Hindi natuloy ang checkout."
     }
   },
   "expert": {
@@ -469,7 +488,9 @@
     "visa": "Visa",
     "documents": "Mga dokumento",
     "payment": "Payment",
-    "status": "Status"
+    "status": "Status",
+    "stepBadge": "Hakbang {step}/{total}",
+    "hideProgressAria": "Itago ang buod ng progreso"
   },
   "common": {
     "continue": "Ituloy",
@@ -491,7 +512,8 @@
     "loadingAccountActions": "Naglo-load ng account actions",
     "loadingVisaOptions": "Naglo-load ng visa options",
     "loadingApplications": "Naglo-load ng mga application",
-    "loadingOrderSummary": "Naglo-load ng order summary"
+    "loadingOrderSummary": "Naglo-load ng order summary",
+    "whatsappSupport": "Mag-chat sa WhatsApp"
   },
   "seo": {
     "homeTitle": "Mag-apply para sa UAE Tourist Visa Online",
@@ -540,7 +562,8 @@
   "upload": {
     "fileExceedsLimit": "Lumampas ang file sa 8MB limit.",
     "uploaded": "Na-upload na",
-    "notUploadedYet": "Hindi pa na-upload"
+    "notUploadedYet": "Hindi pa na-upload",
+    "failedHttp": "Hindi na-upload (HTTP {status})"
   },
   "ocr": {
     "reading": "Binabasa ang pasaporte mo…",

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
 import { CheckoutOrderRecap } from "@/components/apply/checkout-order-recap";
@@ -9,16 +9,23 @@ import { loadPaymentUploadPresence } from "@/lib/applications/load-payment-uploa
 import { loadPartyMembers } from "@/lib/applications/load-party-members";
 import { paymentPanelMayShow } from "@/lib/applications/payment-panel-may-show";
 import { toPublicApplication } from "@/lib/applications/public-application";
+import { CUSTOMER_LOCALE_COOKIE, parseCustomerLocale } from "@/lib/i18n/customer-locale";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 
-type Props = { params: Promise<{ id: string }> };
-
-export async function generateMetadata(): Promise<Metadata> {
-  return { title: "Payment | Visatop" };
+interface IApplyApplicationPaymentPageProps {
+  params: Promise<{ id: string }>;
 }
 
-export default async function ApplyApplicationPaymentPage({ params }: Props) {
-  const [{ id }, hdrs] = await Promise.all([params, headers()]);
+export const generateMetadata = async (): Promise<Metadata> => {
+  const cookieStore = await cookies();
+  const t = createCustomerT(parseCustomerLocale(cookieStore.get(CUSTOMER_LOCALE_COOKIE)?.value));
+  return { title: t("payment.pageTitle") };
+};
+
+const ApplyApplicationPaymentPage = async ({ params }: IApplyApplicationPaymentPageProps) => {
+  const [{ id }, hdrs, cookieStore] = await Promise.all([params, headers(), cookies()]);
+  const t = createCustomerT(parseCustomerLocale(cookieStore.get(CUSTOMER_LOCALE_COOKIE)?.value));
   const row = await loadApplicationRowForRequest(id, hdrs.get("cookie"));
   if (!row) {
     notFound();
@@ -29,7 +36,7 @@ export default async function ApplyApplicationPaymentPage({ params }: Props) {
 
   const uploads = await withSystemDbActor((tx) => loadPaymentUploadPresence(tx, id));
   const members = await withSystemDbActor((tx) => loadPartyMembers(tx, row));
-  const publicApp = toPublicApplication(row);
+  const publicApp = toPublicApplication(row, undefined, t);
   if (!paymentPanelMayShow(publicApp, uploads)) {
     redirect(`/apply/applications/${encodeURIComponent(id)}`);
   }
@@ -45,14 +52,16 @@ export default async function ApplyApplicationPaymentPage({ params }: Props) {
       >
         <header className="space-y-1.5">
           <h1 className="font-heading text-foreground text-xl! font-semibold leading-snug tracking-tight md:text-[1.75rem]!">
-            Payment
+            {t("payment.title")}
           </h1>
           <p className="text-muted-foreground max-w-[62ch] text-sm leading-relaxed">
-            Review the total, then pay.
+            {t("payment.subtitle")}
           </p>
         </header>
         <ApplicationPaymentPanel applicationId={id} />
       </ApplyTwoColumn>
     </div>
   );
-}
+};
+
+export default ApplyApplicationPaymentPage;

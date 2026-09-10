@@ -3,6 +3,8 @@ import { and, desc, eq } from "drizzle-orm";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
 import { toPublicApplication } from "@/lib/applications/public-application";
+import { readCustomerLocaleFromCookieHeader } from "@/lib/i18n/customer-locale";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { application as applicationTable, payment } from "@/lib/db/schema";
 import { getActivePaymentProvider } from "@/lib/payments/resolve-payment-provider";
@@ -45,6 +47,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const [hdrs, { id: applicationId }] = await Promise.all([headers(), ctx.params]);
   const requestId = hdrs.get("x-request-id");
+  const t = createCustomerT(readCustomerLocaleFromCookieHeader(hdrs.get("cookie")));
 
   if (getActivePaymentProvider() !== "ziina") {
     return jsonOk({ reconciled: false, reason: "not_ziina_provider" }, { requestId });
@@ -111,7 +114,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       {
         reconciled: true,
         alreadyPaid: true,
-        application: toPublicApplication(result.application),
+        application: toPublicApplication(result.application, undefined, t),
       },
       { requestId },
     );
@@ -122,7 +125,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       {
         reconciled: false,
         reason: "no_open_checkout",
-        application: toPublicApplication(result.application),
+        application: toPublicApplication(result.application, undefined, t),
       },
       { requestId },
     );
@@ -139,7 +142,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
         outcome: result.attempt.outcome,
         ziinaStatus: result.attempt.ziinaStatus,
       },
-      application: toPublicApplication(result.application),
+      application: toPublicApplication(result.application, undefined, t),
     },
     { requestId },
   );

@@ -201,7 +201,23 @@
     "chooseFile": "اختيار ملف",
     "replace": "استبدال",
     "chooseFileAria": "اختيار ملف: {label}",
-    "uploading": "جارٍ الرفع…"
+    "uploading": "جارٍ الرفع…",
+    "continueAfterUpload": "يمكنك المتابعة إلى الدفع. يمكن إضافة الملفات المتبقية الآن أو لاحقاً — سنتابع معك إذا نقص شيء.",
+    "slots": {
+      "passportCopy": {
+        "label": "جواز السفر (صفحة البيانات)",
+        "description": "JPEG / PNG / PDF من صفحة واحدة · 8 ميغابايت كحد أقصى"
+      },
+      "personalPhoto": {
+        "label": "صورة شخصية",
+        "description": "JPEG أو PNG · 8 ميغابايت كحد أقصى"
+      },
+      "bankStatement6m": {
+        "label": "كشف حساب بنكي لآخر 6 أشهر",
+        "description": "ملف PDF أو صورة لآخر 6 أشهر · JPEG / PNG / PDF · 8 ميغابايت كحد أقصى"
+      },
+      "genericAcceptHint": "JPEG / PNG / PDF · 8 ميغابايت كحد أقصى"
+    }
   },
   "payment": {
     "pageTitle": "الدفع | Visatop",
@@ -447,7 +463,10 @@
       "pricingUnavailable": "تعذّر تحميل سعر هذه التأشيرة حاليًا. حدّث الصفحة أو تواصل مع الدعم إذا استمرّ الأمر.",
       "providerUnavailable": "شريك الدفع غير متاح مؤقتًا. يرجى المحاولة بعد بضع دقائق.",
       "refreshAndRetry": "تعذّر بدء الدفع. يرجى تحديث الصفحة والمحاولة مرة أخرى.",
-      "checkoutFailed": "فشل الدفع"
+      "checkoutFailed": "فشل الدفع",
+      "missingPassport": "ارفع صورة جواز السفر لبدء الدفع. يمكن إضافة المستندات الأخرى الآن أو لاحقاً.",
+      "sdkFailed": "تعذّر تهيئة Paddle SDK",
+      "failedDot": "فشل الدفع."
     }
   },
   "expert": {
@@ -469,7 +488,9 @@
     "visa": "التأشيرة",
     "documents": "المستندات",
     "payment": "الدفع",
-    "status": "الحالة"
+    "status": "الحالة",
+    "stepBadge": "الخطوة {step}/{total}",
+    "hideProgressAria": "إخفاء ملخص التقدم"
   },
   "common": {
     "continue": "متابعة",
@@ -491,7 +512,8 @@
     "loadingAccountActions": "جارٍ تحميل إجراءات الحساب",
     "loadingVisaOptions": "جارٍ تحميل خيارات التأشيرة",
     "loadingApplications": "جارٍ تحميل الطلبات",
-    "loadingOrderSummary": "جارٍ تحميل ملخص الطلب"
+    "loadingOrderSummary": "جارٍ تحميل ملخص الطلب",
+    "whatsappSupport": "تحدّث على WhatsApp"
   },
   "seo": {
     "homeTitle": "قدّم طلب تأشيرة سياحية للإمارات عبر الإنترنت",
@@ -540,7 +562,8 @@
   "upload": {
     "fileExceedsLimit": "الملف يتجاوز حد 8MB.",
     "uploaded": "تم الرفع",
-    "notUploadedYet": "لم يُرفع بعد"
+    "notUploadedYet": "لم يُرفع بعد",
+    "failedHttp": "فشل الرفع (HTTP {status})"
   },
   "ocr": {
     "reading": "جارٍ قراءة جواز سفرك…",

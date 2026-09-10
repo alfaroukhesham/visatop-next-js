@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ClientInlineLoading, ClientTrackListSkeleton } from "@/components/client/client-loading";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 
 import { ClientButton, ClientButtonLink } from "@/components/client/client-button";
 import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
@@ -38,6 +39,7 @@ function isContinueDraft(row: Row): boolean {
 }
 
 export function SignedInTrackList() {
+  const t = useCustomerT();
   const [items, setItems] = useState<Row[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -61,8 +63,8 @@ export function SignedInTrackList() {
       if (!res.ok || !json.ok) {
         setError(
           json.ok === false
-            ? (json.error?.message ?? "Unable to load applications right now.")
-            : "Unable to load applications right now.",
+            ? (json.error?.message ?? t("track.signedInLoadError"))
+            : t("track.signedInLoadError"),
         );
         return;
       }
@@ -71,7 +73,7 @@ export function SignedInTrackList() {
       );
       setNextCursor(json.data.nextCursor);
     } catch {
-      setError("Network error. Check your connection and try again.");
+      setError(t("track.networkError"));
     } finally {
       setLoading(false);
     }
@@ -97,10 +99,10 @@ export function SignedInTrackList() {
         <ClientTrackListSkeleton count={2} />
       ) : items.length === 0 ? (
         <div className="text-muted-foreground rounded-[12px] border border-border bg-card p-6 text-center text-sm leading-relaxed shadow-sm">
-          <p>No applications found for this account yet.</p>
+          <p>{t("track.signedInEmpty")}</p>
           <p className="mt-3">
             <Link href="/" className="text-link font-medium hover:underline">
-              Start a new application
+              {t("track.startNewApplication")}
             </Link>
           </p>
         </div>
@@ -114,7 +116,7 @@ export function SignedInTrackList() {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="space-y-1">
                   <p className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">
-                    Reference
+                    {t("track.referenceLabel")}
                   </p>
                   <p className="font-mono text-sm text-foreground">{row.referenceDisplay}</p>
                   <p className="text-muted-foreground text-xs">
@@ -122,7 +124,9 @@ export function SignedInTrackList() {
                   </p>
                   {row.paymentStatus === "unpaid" && row.draftExpiresAt ? (
                     <p className="text-muted-foreground text-xs">
-                      Draft expires {new Date(row.draftExpiresAt).toLocaleString()}
+                      {t("track.draftExpires", {
+                        date: new Date(row.draftExpiresAt).toLocaleString(),
+                      })}
                     </p>
                   ) : null}
                 </div>
@@ -134,7 +138,7 @@ export function SignedInTrackList() {
                       size="sm"
                       className="h-9 px-4 text-xs font-bold"
                     >
-                      Continue
+                      {t("track.continue")}
                     </ClientButtonLink>
                   ) : (
                     <ClientButtonLink
@@ -143,7 +147,7 @@ export function SignedInTrackList() {
                       size="sm"
                       className="h-9 px-4 text-xs font-semibold"
                     >
-                      Open
+                      {t("track.open")}
                     </ClientButtonLink>
                   )}
                 </div>
@@ -155,7 +159,7 @@ export function SignedInTrackList() {
       )}
 
       {loading && items.length > 0 ? (
-        <ClientInlineLoading label="Loading more applications…" />
+        <ClientInlineLoading label={t("track.loadingMore")} />
       ) : null}
 
       {nextCursor && !loading ? (
@@ -166,7 +170,7 @@ export function SignedInTrackList() {
             onClick={() => void load(nextCursor)}
             className="font-semibold"
           >
-            Load more
+            {t("track.loadMore")}
           </ClientButton>
         </div>
       ) : null}

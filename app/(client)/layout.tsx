@@ -6,6 +6,7 @@ import { GoogleTag } from "@/components/analytics/google-tag";
 import { ClientAuthStoreSync } from "@/components/client/client-auth-store-sync";
 import { BfcacheRestoreSync } from "@/components/client/bfcache-restore-sync";
 import { CustomerI18nProvider } from "@/components/client/customer-i18n-provider";
+import { StickyWhatsAppButton } from "@/components/client/sticky-whatsapp-button";
 import { WpShellFallbackFooter, WpShellFallbackHeader } from "@/components/client/wp-shell/wp-shell-fallback";
 import { WpShellFrame } from "@/components/client/wp-shell/wp-shell-frame";
 import { getAppOrigin } from "@/lib/app-url";
@@ -14,6 +15,7 @@ import {
   isCustomerLocaleRtl,
   parseCustomerLocale,
 } from "@/lib/i18n/customer-locale";
+import { formatCustomerMessage, type TCustomerMessageVars } from "@/lib/i18n/customer-messages";
 import { getCustomerI18nBundle } from "@/lib/i18n/load-customer-catalog";
 import { fetchPolylangLanguages } from "@/lib/i18n/fetch-polylang-languages";
 import { fetchWpShellModel } from "@/lib/wp-headless/fetch-layout";
@@ -89,6 +91,8 @@ export default async function ClientLayout({ children }: { children: ReactNode }
       : null;
   const hideNativeWpLangSwitcher = disableWpLangSwitcher || languageSwitcher !== null;
   const i18n = getCustomerI18nBundle(locale);
+  const t = (key: string, vars?: TCustomerMessageVars) =>
+    formatCustomerMessage(i18n.messages, i18n.fallback, key, vars);
 
   return (
     <div
@@ -106,7 +110,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
           languageSwitcher={languageSwitcher ?? undefined}
         />
       ) : (
-        <WpShellFallbackHeader />
+        <WpShellFallbackHeader t={t} />
       )}
 
       <div
@@ -135,8 +139,10 @@ export default async function ClientLayout({ children }: { children: ReactNode }
           hideLangSwitcher={hideNativeWpLangSwitcher}
         />
       ) : (
-        <WpShellFallbackFooter />
+        <WpShellFallbackFooter t={t} />
       )}
+
+      <StickyWhatsAppButton label={t("common.whatsappSupport")} />
     </div>
   );
 }

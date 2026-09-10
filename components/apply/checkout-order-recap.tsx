@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ClientOrderRecapSkeleton } from "@/components/client/client-loading";
 import { AllInPriceBadges } from "@/components/apply/all-in-price-badges";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { convertMinorBetweenUsdAed, parsePublicDisplayFxAedPerUsd } from "@/lib/catalog/display-price";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
@@ -10,6 +11,7 @@ import type { PublicApplication } from "@/lib/applications/public-application";
 import type { TPublicPartyMember } from "@/lib/applications/load-party-members";
 import { DEFAULT_APPLY_PRICE_BADGES, type TApplyPriceBadges } from "@/lib/apply/apply-config";
 import { formatIsoDateAsDdMmYyyy } from "@/lib/documents/validation-readiness";
+import type { TCustomerMessageVars } from "@/lib/i18n/customer-messages";
 
 type CatalogService = {
   id: string;
@@ -21,6 +23,8 @@ type CatalogService = {
 };
 
 type DisplayCurrency = "USD" | "AED";
+
+type TTranslate = (key: string, vars?: TCustomerMessageVars) => string;
 
 const displayCurrencyFormatters = new Map<string, Intl.NumberFormat>();
 
@@ -71,38 +75,31 @@ function formatPriceForDisplay(
   return text ? { text, isEstimate: s.currency !== tab } : null;
 }
 
-function entriesLabel(entries: string | null): string | null {
+const entriesLabel = (entries: string | null, t: TTranslate): string | null => {
   if (!entries) return null;
   const e = entries.toLowerCase();
-  if (e.includes("multi")) return "Multiple entry";
-  if (e.includes("single")) return "Single entry";
+  if (e.includes("multi")) return t("chooser.entryLabels.multiple");
+  if (e.includes("single")) return t("chooser.entryLabels.single");
   return entries;
-}
+};
 
-function serviceTitle(s: CatalogService): string {
+function serviceTitle(s: CatalogService, t: TTranslate): string {
   const parts: string[] = [];
-  if (s.durationDays != null) parts.push(`${s.durationDays} days`);
-  const ent = entriesLabel(s.entries);
+  if (s.durationDays != null) parts.push(t("chooser.durationDays", { count: s.durationDays }));
+  const ent = entriesLabel(s.entries, t);
   if (ent) parts.push(ent);
   parts.push(s.name);
   return parts.join(" · ");
 }
 
-const NotAddedYet = () => <span className="text-muted-foreground">Not added yet</span>;
-
-const RecapPending = () => <span className="text-muted-foreground">Reading passport…</span>;
+const badgesAreDefault = (badges: TApplyPriceBadges): boolean =>
+  badges.allFeesIncluded === DEFAULT_APPLY_PRICE_BADGES.allFeesIncluded &&
+  badges.noHiddenCharges === DEFAULT_APPLY_PRICE_BADGES.noHiddenCharges;
 
 export const applicantForPaymentRecap = (
   ssr: PublicApplication["applicant"],
   live: PublicApplication["applicant"] | null,
 ): PublicApplication["applicant"] => live ?? ssr;
-
-function contactEmailContent(app: PublicApplication) {
-  const em = app.guestEmail?.trim();
-  if (em) return em;
-  if (!app.isGuest) return "Your sign-in email (for updates)";
-  return <NotAddedYet />;
-}
 
 export function CheckoutOrderRecap({
   application,
@@ -111,11 +108,20 @@ export function CheckoutOrderRecap({
   application: PublicApplication;
   members?: TPublicPartyMember[];
 }) {
+  const t = useCustomerT();
   const [services, setServices] = useState<CatalogService[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [badges, setBadges] = useState<TApplyPriceBadges>(DEFAULT_APPLY_PRICE_BADGES);
   const [liveApplicant, setLiveApplicant] = useState<PublicApplication["applicant"] | null>(null);
   const [liveApplicantResolved, setLiveApplicantResolved] = useState(false);
+
+  const displayBadges = useMemo((): TApplyPriceBadges => {
+    if (!badgesAreDefault(badges)) return badges;
+    return {
+      allFeesIncluded: t("payment.badges.allFeesIncluded"),
+      noHiddenCharges: t("payment.badges.noHiddenCharges"),
+    };
+  }, [badges, t]);
 
   const currency = (application.catalogCurrency?.toUpperCase() === "AED" ? "AED" : "USD") as DisplayCurrency;
 
@@ -211,10 +217,21 @@ export function CheckoutOrderRecap({
   const dob = formatIsoDateAsDdMmYyyy(recapApplicant.dateOfBirth ?? null) ?? "";
   const recapFieldsPending =
     !liveApplicantResolved && !fullName && !passportNo && !dob;
+
+  const notAddedYet = <span className="text-muted-foreground">{t("payment.notAddedYet")}</span>;
+  const recapPending = <span className="text-muted-foreground">{t("documents.readingPassport")}</span>;
+
   const recapValue = (value: string) => {
     if (value) return value;
-    if (recapFieldsPending) return <RecapPending />;
-    return <NotAddedYet />;
+    if (recapFieldsPending) return recapPending;
+    return notAddedYet;
+  };
+
+  const contactEmailContent = () => {
+    const em = application.guestEmail?.trim();
+    if (em) return em;
+    if (!application.isGuest) return t("payment.signInEmailForUpdates");
+    return notAddedYet;
   };
 
   const subtotalText = price?.text ?? null;
@@ -226,14 +243,14 @@ export function CheckoutOrderRecap({
   return (
     <div className="space-y-4">
       <div className="flex items-end justify-between gap-4">
-        <h3 className="font-heading text-foreground text-lg font-bold tracking-tight">Your order</h3>
+        <h3 className="font-heading text-foreground text-lg font-bold tracking-tight">{t("payment.orderTitle")}</h3>
       </div>
 
-      <AllInPriceBadges badges={badges} />
+      <AllInPriceBadges badges={displayBadges} />
 
       <div className="text-muted-foreground flex justify-between gap-4 text-[10px] font-bold uppercase tracking-widest">
-        <span>Product</span>
-        <span>Subtotal</span>
+        <span>{t("payment.productColumn")}</span>
+        <span>{t("payment.subtotalColumn")}</span>
       </div>
 
       {members.length > 1 ? (
@@ -246,17 +263,20 @@ export function CheckoutOrderRecap({
                 <div key={line.member.applicationId} className="flex items-start justify-between gap-4">
                   <div>
                     <p className="font-heading text-foreground text-sm font-bold leading-snug">
-                      Traveller {line.member.travelerIndex + 1} — {line.member.serviceName}
+                      {t("payment.travellerLine", {
+                        number: line.member.travelerIndex + 1,
+                        service: line.member.serviceName,
+                      })}
                     </p>
                     {line.service ? (
-                      <p className="text-muted-foreground mt-0.5 text-xs">{serviceTitle(line.service)}</p>
+                      <p className="text-muted-foreground mt-0.5 text-xs">{serviceTitle(line.service, t)}</p>
                     ) : null}
                   </div>
                   <div className="text-right">
                     {line.price ? (
                       <p className="text-foreground font-heading text-base font-bold tabular-nums">{line.price.text}</p>
                     ) : (
-                      <p className="text-muted-foreground text-sm">Total at checkout</p>
+                      <p className="text-muted-foreground text-sm">{t("payment.totalAtCheckout")}</p>
                     )}
                   </div>
                 </div>
@@ -270,63 +290,62 @@ export function CheckoutOrderRecap({
             <p className="text-error text-sm">{loadError}</p>
           ) : service ? (
             <>
-              <p className="font-heading text-foreground text-base font-bold leading-snug">{serviceTitle(service)}</p>
+              <p className="font-heading text-foreground text-base font-bold leading-snug">{serviceTitle(service, t)}</p>
               <dl className="text-muted-foreground mt-3 space-y-1.5 text-sm">
                 <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                  <dt className="sr-only">Name</dt>
+                  <dt className="sr-only">{t("payment.nameLabel")}</dt>
                   <dd>
-                    <span className="font-medium text-foreground/80">Name</span>{" "}
+                    <span className="font-medium text-foreground/80">{t("payment.nameLabel")}</span>{" "}
                     {recapValue(fullName)}
                   </dd>
                 </div>
                 <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                  <dt className="sr-only">Email</dt>
+                  <dt className="sr-only">{t("payment.emailLabel")}</dt>
                   <dd>
-                    <span className="font-medium text-foreground/80">Email</span> {contactEmailContent(application)}
+                    <span className="font-medium text-foreground/80">{t("payment.emailLabel")}</span> {contactEmailContent()}
                   </dd>
                 </div>
                 <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                  <dt className="sr-only">Date of birth</dt>
+                  <dt className="sr-only">{t("payment.dateOfBirthLabel")}</dt>
                   <dd>
-                    <span className="font-medium text-foreground/80">Date of birth</span>{" "}
+                    <span className="font-medium text-foreground/80">{t("payment.dateOfBirthLabel")}</span>{" "}
                     {recapValue(dob)}
                   </dd>
                 </div>
                 <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                  <dt className="sr-only">Passport</dt>
+                  <dt className="sr-only">{t("payment.passportLabel")}</dt>
                   <dd>
-                    <span className="font-medium text-foreground/80">Passport</span>{" "}
+                    <span className="font-medium text-foreground/80">{t("payment.passportLabel")}</span>{" "}
                     {passportNo ? (
                       <span className="font-mono tabular-nums">{passportNo}</span>
                     ) : recapFieldsPending ? (
-                      <RecapPending />
+                      recapPending
                     ) : (
-                      <NotAddedYet />
+                      notAddedYet
                     )}
                   </dd>
                 </div>
               </dl>
 
               <div className="mt-4 flex items-end justify-between gap-4 border-t border-border pt-4">
-                <p className="text-muted-foreground text-sm tabular-nums">× 1</p>
+                <p className="text-muted-foreground text-sm tabular-nums">{t("payment.quantityOne")}</p>
                 <div className="text-right">
                   {subtotalText ? (
                     <p className="text-foreground font-heading text-lg font-bold tabular-nums">{subtotalText}</p>
                   ) : (
-                    <p className="text-muted-foreground text-sm">Total at checkout</p>
+                    <p className="text-muted-foreground text-sm">{t("payment.totalAtCheckout")}</p>
                   )}
                 </div>
               </div>
               {price?.isEstimate ? (
                 <p className="text-muted-foreground mt-2 text-[10px] font-medium uppercase tracking-wide">
-                  Estimated — exact total confirmed when you pay
+                  {t("payment.estimatedCheckoutNote")}
                 </p>
               ) : null}
             </>
           ) : (
             <p className="text-muted-foreground text-sm">
-              Visa service{" "}
-              <span className="font-mono text-xs break-all">{application.serviceId}</span> — catalog details unavailable.
+              {t("payment.catalogUnavailable", { serviceId: application.serviceId })}
             </p>
           )}
         </div>
@@ -335,11 +354,11 @@ export function CheckoutOrderRecap({
       {totalText ? (
         <div className="space-y-2 text-sm">
           <div className="text-muted-foreground flex justify-between gap-4">
-            <span>Subtotal</span>
+            <span>{t("payment.subtotal")}</span>
             <span className="text-foreground font-heading font-bold tabular-nums">{totalText}</span>
           </div>
           <div className="text-muted-foreground flex justify-between gap-4">
-            <span>Total</span>
+            <span>{t("payment.total")}</span>
             <span className="text-foreground font-heading text-base font-bold tabular-nums">{totalText}</span>
           </div>
         </div>

@@ -17,13 +17,20 @@ export type TApplicationCharge = {
  * intentionally omitted — callers only need to know whether a field was
  * auto-filled (server handles that internally).
  */
-export function toPublicApplication(row: ApplicationRow, charge?: TApplicationCharge | null) {
-  const clientTracking = computeClientApplicationTracking({
-    applicationStatus: row.applicationStatus,
-    paymentStatus: row.paymentStatus,
-    fulfillmentStatus: row.fulfillmentStatus,
-    adminAttentionRequired: row.adminAttentionRequired,
-  });
+export function toPublicApplication(
+  row: ApplicationRow,
+  charge?: TApplicationCharge | null,
+  t?: (key: string) => string,
+) {
+  const clientTracking = computeClientApplicationTracking(
+    {
+      applicationStatus: row.applicationStatus,
+      paymentStatus: row.paymentStatus,
+      fulfillmentStatus: row.fulfillmentStatus,
+      adminAttentionRequired: row.adminAttentionRequired,
+    },
+    t,
+  );
 
   return {
     id: row.id,

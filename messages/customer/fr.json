@@ -201,7 +201,23 @@
     "chooseFile": "Choisir un fichier",
     "replace": "Remplacer",
     "chooseFileAria": "Choisir un fichier : {label}",
-    "uploading": "Téléversement…"
+    "uploading": "Téléversement…",
+    "continueAfterUpload": "Vous pouvez continuer vers le paiement. Les fichiers restants peuvent être ajoutés maintenant ou plus tard — nous vous relancerons si quelque chose manque.",
+    "slots": {
+      "passportCopy": {
+        "label": "Passeport (page d'identité)",
+        "description": "JPEG / PNG / PDF d'une page · 8 Mo max"
+      },
+      "personalPhoto": {
+        "label": "Photo personnelle",
+        "description": "JPEG ou PNG · 8 Mo max"
+      },
+      "bankStatement6m": {
+        "label": "Relevé de compte des 6 derniers mois",
+        "description": "Un PDF ou une image couvrant les 6 derniers mois · JPEG / PNG / PDF · 8 Mo max"
+      },
+      "genericAcceptHint": "JPEG / PNG / PDF · 8 Mo max"
+    }
   },
   "payment": {
     "pageTitle": "Paiement | Visatop",
@@ -447,7 +463,10 @@
       "pricingUnavailable": "Nous n'avons pas pu charger le prix de ce visa pour le moment. Actualisez la page ou contactez le support si le problème persiste.",
       "providerUnavailable": "Notre partenaire de paiement est temporairement indisponible. Veuillez réessayer dans quelques minutes.",
       "refreshAndRetry": "Nous n'avons pas pu démarrer le paiement. Actualisez la page et réessayez.",
-      "checkoutFailed": "Échec du paiement"
+      "checkoutFailed": "Échec du paiement",
+      "missingPassport": "Téléversez une copie de passeport pour commencer le paiement. Les autres documents peuvent être ajoutés maintenant ou plus tard.",
+      "sdkFailed": "Échec de l'initialisation du SDK Paddle",
+      "failedDot": "Le paiement a échoué."
     }
   },
   "expert": {
@@ -469,7 +488,9 @@
     "visa": "Visa",
     "documents": "Documents",
     "payment": "Paiement",
-    "status": "Statut"
+    "status": "Statut",
+    "stepBadge": "Étape {step}/{total}",
+    "hideProgressAria": "Masquer le résumé de progression"
   },
   "common": {
     "continue": "Continuer",
@@ -491,7 +512,8 @@
     "loadingAccountActions": "Chargement des actions du compte",
     "loadingVisaOptions": "Chargement des options de visa",
     "loadingApplications": "Chargement des demandes",
-    "loadingOrderSummary": "Chargement du récapitulatif de commande"
+    "loadingOrderSummary": "Chargement du récapitulatif de commande",
+    "whatsappSupport": "Discuter sur WhatsApp"
   },
   "seo": {
     "homeTitle": "Demander un visa touristique UAE en ligne",
@@ -540,7 +562,8 @@
   "upload": {
     "fileExceedsLimit": "Le fichier dépasse la limite de 8 Mo.",
     "uploaded": "Téléversé",
-    "notUploadedYet": "Pas encore téléversé"
+    "notUploadedYet": "Pas encore téléversé",
+    "failedHttp": "Échec du téléversement (HTTP {status})"
   },
   "ocr": {
     "reading": "Lecture de votre passeport…",

@@ -201,7 +201,23 @@
     "chooseFile": "Datei wählen",
     "replace": "Ersetzen",
     "chooseFileAria": "Datei wählen: {label}",
-    "uploading": "Wird hochgeladen…"
+    "uploading": "Wird hochgeladen…",
+    "continueAfterUpload": "Sie können zur Zahlung fortfahren. Fehlende Dateien können jetzt oder später hinzugefügt werden — wir melden uns, wenn etwas fehlt.",
+    "slots": {
+      "passportCopy": {
+        "label": "Reisepass (Datenseite)",
+        "description": "JPEG / PNG / einseitiges PDF · max. 8 MB"
+      },
+      "personalPhoto": {
+        "label": "Persönliches Foto",
+        "description": "JPEG oder PNG · max. 8 MB"
+      },
+      "bankStatement6m": {
+        "label": "Kontoauszug der letzten 6 Monate",
+        "description": "Ein PDF oder Bild der letzten 6 Monate · JPEG / PNG / PDF · max. 8 MB"
+      },
+      "genericAcceptHint": "JPEG / PNG / PDF · max. 8 MB"
+    }
   },
   "payment": {
     "pageTitle": "Zahlung | Visatop",
@@ -447,7 +463,10 @@
       "pricingUnavailable": "Wir konnten derzeit keinen Preis für dieses Visum laden. Aktualisieren Sie die Seite oder kontaktieren Sie den Support, falls es anhält.",
       "providerUnavailable": "Unser Zahlungspartner ist vorübergehend nicht verfügbar. Bitte versuchen Sie es in einigen Minuten erneut.",
       "refreshAndRetry": "Wir konnten den Checkout nicht starten. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
-      "checkoutFailed": "Checkout fehlgeschlagen"
+      "checkoutFailed": "Checkout fehlgeschlagen",
+      "missingPassport": "Laden Sie eine Passkopie hoch, um die Zahlung zu starten. Weitere Dokumente können jetzt oder später hinzugefügt werden.",
+      "sdkFailed": "Paddle-SDK konnte nicht initialisiert werden",
+      "failedDot": "Zahlung fehlgeschlagen."
     }
   },
   "expert": {
@@ -469,7 +488,9 @@
     "visa": "Visum",
     "documents": "Dokumente",
     "payment": "Zahlung",
-    "status": "Status"
+    "status": "Status",
+    "stepBadge": "Schritt {step}/{total}",
+    "hideProgressAria": "Fortschrittsübersicht ausblenden"
   },
   "common": {
     "continue": "Weiter",
@@ -491,7 +512,8 @@
     "loadingAccountActions": "Kontoaktionen werden geladen",
     "loadingVisaOptions": "Visumoptionen werden geladen",
     "loadingApplications": "Anträge werden geladen",
-    "loadingOrderSummary": "Bestellübersicht wird geladen"
+    "loadingOrderSummary": "Bestellübersicht wird geladen",
+    "whatsappSupport": "Per WhatsApp chatten"
   },
   "seo": {
     "homeTitle": "VAE-Touristenvisum online beantragen",
@@ -540,7 +562,8 @@
   "upload": {
     "fileExceedsLimit": "Datei überschreitet das 8-MB-Limit.",
     "uploaded": "Hochgeladen",
-    "notUploadedYet": "Noch nicht hochgeladen"
+    "notUploadedYet": "Noch nicht hochgeladen",
+    "failedHttp": "Upload fehlgeschlagen (HTTP {status})"
   },
   "ocr": {
     "reading": "Reisepass wird gelesen…",

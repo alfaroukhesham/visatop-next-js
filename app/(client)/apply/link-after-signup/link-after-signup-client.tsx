@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FC } from "react";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { linkAfterSignupAndRedirect } from "./actions";
 import { ClientCenteredStatus } from "@/components/client/client-loading";
@@ -11,8 +11,10 @@ import {
   trackGuestLinkEvent,
 } from "@/lib/analytics/guest-link-events";
 import { ClientSurface } from "@/components/client/client-surface";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 
-export function LinkAfterSignupClient() {
+export const LinkAfterSignupClient: FC = () => {
+  const t = useCustomerT();
   const userId = useClientAuthStore((s) => s.session?.user?.id);
   const isPending = useClientAuthStore((s) => s.isPending);
   const [message, setMessage] = useState<string | null>(null);
@@ -42,9 +44,7 @@ export function LinkAfterSignupClient() {
 
     void (async () => {
       if (!applicationId) {
-        setMessage(
-          "We could not read your saved application id in this browser. Return to your submitted page and run “Create account” or “Sign in” again.",
-        );
+        setMessage(t("auth.linkAfterSignup.missingApplicationId"));
         return;
       }
 
@@ -55,9 +55,7 @@ export function LinkAfterSignupClient() {
             applicationId,
             reason: outcome.reason,
           });
-          setMessage(
-            "We could not attach this application to your account from this browser. Try again from the submitted page, or contact support with your reference number.",
-          );
+          setMessage(t("auth.linkAfterSignup.attachFailed"));
         }
       } catch (err) {
         if (isRedirectError(err)) {
@@ -68,15 +66,15 @@ export function LinkAfterSignupClient() {
           applicationId: applicationId ?? "",
           reason: "unknown",
         });
-        setMessage("Something went wrong. Please try again.");
+        setMessage(t("auth.linkAfterSignup.somethingWrong"));
       }
     })();
-  }, [isPending, userId]);
+  }, [isPending, userId, t]);
 
   if (isPending) {
     return (
       <ClientCenteredStatus
-        label="Checking your session…"
+        label={t("auth.linkAfterSignup.checkingSession")}
         className="min-h-[min(60vh,520px)]"
       />
     );
@@ -87,11 +85,7 @@ export function LinkAfterSignupClient() {
       <div className="mx-auto flex min-h-[min(50vh,420px)] max-w-md flex-col justify-center px-6 py-16">
         <ClientSurface preset="panel" className="border-secondary/20 bg-white/90 p-8 text-center shadow-md">
           <AlertCircle className="text-secondary mx-auto mb-4 size-10" aria-hidden />
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            You are not signed in. Return to your submitted confirmation page and choose{" "}
-            <span className="text-foreground font-semibold">Create account</span> or{" "}
-            <span className="text-foreground font-semibold">Sign in</span>.
-          </p>
+          <p className="text-muted-foreground text-sm leading-relaxed">{t("auth.linkAfterSignup.notSignedIn")}</p>
         </ClientSurface>
       </div>
     );
@@ -112,8 +106,8 @@ export function LinkAfterSignupClient() {
 
   return (
     <ClientCenteredStatus
-      label="Linking your application…"
+      label={t("auth.linkAfterSignup.linking")}
       className="min-h-[min(50vh,420px)]"
     />
   );
-}
+};

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FC } from "react";
 import Link from "next/link";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { redirectToSubmittedApplication } from "./actions";
@@ -8,15 +8,21 @@ import { ClientCenteredStatus } from "@/components/client/client-loading";
 import { trackApplyPaymentCompleted } from "@/lib/analytics/gtag-client";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 
-type AppPoll = {
+type TAppPoll = {
   paymentStatus: string;
   chargedAmountMajor?: number | null;
   chargedCurrency?: string | null;
 };
 
-export function CheckoutReturnClient({ applicationId }: { applicationId: string }) {
-  const [message, setMessage] = useState("Confirming payment with our servers…");
+interface ICheckoutReturnClientProps {
+  applicationId: string;
+}
+
+export const CheckoutReturnClient: FC<ICheckoutReturnClientProps> = ({ applicationId }) => {
+  const t = useCustomerT();
+  const [message, setMessage] = useState(t("checkout.confirmingWithServers"));
   const startedAt = useRef(0);
   const nextDelayMs = useRef(1000);
   const paymentCompletedFired = useRef(false);
@@ -34,65 +40,61 @@ export function CheckoutReturnClient({ applicationId }: { applicationId: string 
       timer = setTimeout(fn, delay);
     };
 
-    async function pollOnce() {
+    const pollOnce = async () => {
       try {
-      if (cancelled) return;
-      const elapsed = Date.now() - startedAt.current;
-      if (elapsed > 120_000) {
-        setMessage(
-          "This is taking longer than usual. Your payment may still be processing—open your application and refresh, or contact support if the charge appears on your statement.",
-        );
-        return;
-      }
-
-      await fetchApiEnvelope<{ reconciled?: boolean }>(
-        apiHref(`/applications/${encodeURIComponent(applicationId)}/checkout/reconcile`),
-        { method: "POST" },
-      );
-
-      const res = await fetchApiEnvelope<{ application: AppPoll }>(
-        apiHref(`/applications/${encodeURIComponent(applicationId)}`),
-      );
-      if (cancelled) return;
-      if (!res.ok) {
-        setMessage(res.error.message);
-        return;
-      }
-
-      const ps = res.data.application.paymentStatus;
-      if (ps === "paid") {
-        if (!paymentCompletedFired.current) {
-          paymentCompletedFired.current = true;
-          trackApplyPaymentCompleted({
-            applicationId,
-            paymentProvider: "ziina",
-            value: res.data.application.chargedAmountMajor ?? undefined,
-            currency: res.data.application.chargedCurrency ?? undefined,
-          });
+        if (cancelled) return;
+        const elapsed = Date.now() - startedAt.current;
+        if (elapsed > 120_000) {
+          setMessage(t("checkout.takingLonger"));
+          return;
         }
-        await redirectToSubmittedApplication(applicationId);
-        return;
-      }
-      if (ps !== "checkout_created") {
-        setMessage(
-          "We could not confirm a completed payment yet. Return to your application to check status or try again.",
-        );
-        return;
-      }
 
-      if (!cancelled) schedule(pollOnce);
+        await fetchApiEnvelope<{ reconciled?: boolean }>(
+          apiHref(`/applications/${encodeURIComponent(applicationId)}/checkout/reconcile`),
+          { method: "POST" },
+        );
+
+        const res = await fetchApiEnvelope<{ application: TAppPoll }>(
+          apiHref(`/applications/${encodeURIComponent(applicationId)}`),
+        );
+        if (cancelled) return;
+        if (!res.ok) {
+          setMessage(res.error.message);
+          return;
+        }
+
+        const ps = res.data.application.paymentStatus;
+        if (ps === "paid") {
+          if (!paymentCompletedFired.current) {
+            paymentCompletedFired.current = true;
+            trackApplyPaymentCompleted({
+              applicationId,
+              paymentProvider: "ziina",
+              value: res.data.application.chargedAmountMajor ?? undefined,
+              currency: res.data.application.chargedCurrency ?? undefined,
+            });
+          }
+          await redirectToSubmittedApplication(applicationId);
+          return;
+        }
+        if (ps !== "checkout_created") {
+          setMessage(t("checkout.notConfirmedYet"));
+          return;
+        }
+
+        if (!cancelled) schedule(pollOnce);
       } catch (err) {
         if (isRedirectError(err)) throw err;
-        setMessage("Something went wrong while confirming payment. Please refresh or contact support.");
+        setMessage(t("checkout.confirmError"));
       }
-    }
+    };
 
     void pollOnce();
     return () => {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [applicationId]);
+  }, [applicationId, t]);
 
   return (
     <div className="mx-auto max-w-lg px-4">
@@ -102,9 +104,9 @@ export function CheckoutReturnClient({ applicationId }: { applicationId: string 
           href={`/apply/applications/${encodeURIComponent(applicationId)}/payment`}
           className="text-link text-sm font-medium"
         >
-          Back to payment
+          {t("checkout.backToPayment")}
         </Link>
       </p>
     </div>
   );
-}
+};
