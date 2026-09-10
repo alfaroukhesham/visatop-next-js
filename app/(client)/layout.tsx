@@ -1,5 +1,5 @@
 import { Inter, Noto_Serif } from "next/font/google";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import type { ReactNode } from "react";
 import { AnalyticsProviders } from "@/components/analytics/analytics-providers";
 import { GoogleTag } from "@/components/analytics/google-tag";
@@ -12,8 +12,9 @@ import { WpShellFrame } from "@/components/client/wp-shell/wp-shell-frame";
 import { getAppOrigin } from "@/lib/app-url";
 import {
   CUSTOMER_LOCALE_COOKIE,
+  CUSTOMER_LOCALE_REQUEST_HEADER,
   isCustomerLocaleRtl,
-  parseCustomerLocale,
+  resolveCustomerLocale,
 } from "@/lib/i18n/customer-locale";
 import { formatCustomerMessage, type TCustomerMessageVars } from "@/lib/i18n/customer-messages";
 import { getCustomerI18nBundle } from "@/lib/i18n/load-customer-catalog";
@@ -65,9 +66,14 @@ export default async function ClientLayout({ children }: { children: ReactNode }
     process.env.DISABLE_WP_LANG_SWITCHER === "1";
 
   const cookieStore = await cookies();
+  const requestHeaders = await headers();
   const polylang = wpOrigin.trim().length > 0 ? await fetchPolylangLanguages({ wpOrigin }) : [];
   const knownSlugs = polylang.map((item) => item.slug);
-  const locale = parseCustomerLocale(cookieStore.get(CUSTOMER_LOCALE_COOKIE)?.value ?? null, knownSlugs);
+  const locale = resolveCustomerLocale({
+    headerValue: requestHeaders.get(CUSTOMER_LOCALE_REQUEST_HEADER),
+    cookieValue: cookieStore.get(CUSTOMER_LOCALE_COOKIE)?.value ?? null,
+    knownSlugs: knownSlugs.length > 0 ? knownSlugs : undefined,
+  });
 
   const model =
     wpOrigin.trim().length > 0

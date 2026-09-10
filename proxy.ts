@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
   CUSTOMER_LOCALE_COOKIE,
+  CUSTOMER_LOCALE_REQUEST_HEADER,
   customerLocaleCookieOptions,
   isValidCustomerLocaleParam,
   parseCustomerLocale,
@@ -32,26 +33,43 @@ export function proxy(request: NextRequest) {
     requestHeaders.set("x-pathname", appPathname);
   }
 
+  const localeParam = requestUrl.searchParams.get("locale");
+  const localeSlug =
+    localeParam !== null && isValidCustomerLocaleParam(localeParam)
+      ? parseCustomerLocale(localeParam)
+      : null;
+  if (localeSlug) {
+    requestHeaders.set(CUSTOMER_LOCALE_REQUEST_HEADER, localeSlug);
+  }
+
   const response = NextResponse.next({
     request: { headers: requestHeaders },
   });
 
   response.headers.set("x-request-id", requestId);
 
-  const localeParam = requestUrl.searchParams.get("locale");
-  if (localeParam !== null && isValidCustomerLocaleParam(localeParam)) {
-    const slug = parseCustomerLocale(localeParam);
-    response.cookies.set(CUSTOMER_LOCALE_COOKIE, slug, customerLocaleCookieOptions());
+  if (localeSlug) {
+    response.cookies.set(CUSTOMER_LOCALE_COOKIE, localeSlug, customerLocaleCookieOptions());
   }
 
   return response;
 }
 
+/**
+ * Paths are relative to `basePath` (`/visa-processing`). Next.js prepends that
+ * automatically — listing `/visa-processing` here matches `/visa-processing/visa-processing`.
+ */
 export const config = {
   matcher: [
-    "/visa-processing",
-    "/visa-processing/:path*",
-    "/visa-processing/:path*/",
+    "/",
+    "/apply",
+    "/apply/:path*",
+    "/sign-in",
+    "/sign-in/:path*",
+    "/sign-up",
+    "/sign-up/:path*",
+    "/speak-with-an-expert",
+    "/speak-with-an-expert/:path*",
     "/api/:path*",
     "/portal",
     "/portal/:path*",

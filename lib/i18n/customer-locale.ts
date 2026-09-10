@@ -1,6 +1,9 @@
 /** Polylang slug persisted for customer apply/track shell (not HttpOnly — parent may set it). */
 export const CUSTOMER_LOCALE_COOKIE = "vt_locale";
 
+/** Set by `proxy.ts` from `?locale=` so the first RSC render sees the slug. */
+export const CUSTOMER_LOCALE_REQUEST_HEADER = "x-vt-locale";
+
 /** ~1 year */
 export const CUSTOMER_LOCALE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
@@ -36,6 +39,23 @@ const normalizeSlugList = (knownSlugs: Iterable<string>): Set<string> =>
       .map((s) => s.trim().toLowerCase())
       .filter(Boolean),
   );
+
+export interface IResolveCustomerLocaleInput {
+  headerValue?: string | null;
+  cookieValue?: string | null;
+  knownSlugs?: Iterable<string>;
+}
+
+/** Query/header from proxy wins so `?locale=` applies on the same request as Set-Cookie. */
+export const resolveCustomerLocale = ({
+  headerValue,
+  cookieValue,
+  knownSlugs,
+}: IResolveCustomerLocaleInput): string => {
+  const header = (headerValue ?? "").trim();
+  if (header) return parseCustomerLocale(header, knownSlugs);
+  return parseCustomerLocale(cookieValue, knownSlugs);
+};
 
 /**
  * Parse a Polylang slug from query/cookie. Unknown or empty → `en`.

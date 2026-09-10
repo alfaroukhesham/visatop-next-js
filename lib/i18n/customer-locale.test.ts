@@ -3,6 +3,7 @@ import {
   CUSTOMER_LOCALE_COOKIE,
   buildCustomerLocaleSetCookieValue,
   parseCustomerLocale,
+  resolveCustomerLocale,
 } from "./customer-locale";
 
 describe("parseCustomerLocale", () => {
@@ -29,6 +30,26 @@ describe("parseCustomerLocale", () => {
   it("respects a runtime slug list", () => {
     expect(parseCustomerLocale("de", ["de", "fr"])).toBe("de");
     expect(parseCustomerLocale("en", ["de", "fr"])).toBe("en");
+  });
+});
+
+describe("resolveCustomerLocale", () => {
+  it("prefers the proxy request header over the cookie", () => {
+    expect(
+      resolveCustomerLocale({
+        headerValue: "ar",
+        cookieValue: "en",
+      }),
+    ).toBe("ar");
+  });
+
+  it("falls back to the cookie when the header is missing", () => {
+    expect(
+      resolveCustomerLocale({
+        headerValue: null,
+        cookieValue: "fr",
+      }),
+    ).toBe("fr");
   });
 });
 
