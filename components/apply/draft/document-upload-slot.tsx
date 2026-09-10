@@ -7,6 +7,8 @@ import { ClientField } from "@/components/client/client-field";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { apiHref } from "@/lib/app-href";
 import { customerUploadStateLabel, oversizedUploadMessage } from "@/lib/apply/customer-upload-copy";
+import { trackDocumentUploadAnalytics, type TDocumentUploadSource } from "@/lib/analytics/document-upload-events";
+import { uploadFailureReason } from "@/lib/analytics/upload-failure";
 import { MIME_BY_TYPE, UPLOAD_MAX_BYTES, type DocType, type PublicDocument } from "./types";
 
 export interface IDocumentUploadSlotProps {
@@ -16,7 +18,7 @@ export interface IDocumentUploadSlotProps {
   docType: DocType;
   applicationId: string;
   uploading: boolean;
-  onUpload: (file: File) => void;
+  onUpload: (file: File, source: TDocumentUploadSource) => void;
 }
 
 export const DocumentUploadSlot: FC<IDocumentUploadSlotProps> = ({
@@ -35,17 +37,24 @@ export const DocumentUploadSlot: FC<IDocumentUploadSlotProps> = ({
   const cameraFacing = docType === "personal_photo" ? "user" : "environment";
   const [sizeError, setSizeError] = useState<string | null>(null);
 
-  const handleFileChosen = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChosen = (source: TDocumentUploadSource) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     e.target.value = "";
     if (!file) return;
     const tooLarge = oversizedUploadMessage(file.size, UPLOAD_MAX_BYTES, t);
     if (tooLarge) {
       setSizeError(tooLarge);
+      trackDocumentUploadAnalytics({
+        docType,
+        applicationId,
+        success: false,
+        source,
+        failureReason: uploadFailureReason({ oversized: true }),
+      });
       return;
     }
     setSizeError(null);
-    onUpload(file);
+    onUpload(file, source);
   };
 
   return (
@@ -83,7 +92,7 @@ export const DocumentUploadSlot: FC<IDocumentUploadSlotProps> = ({
             type="file"
             accept="image/*"
             capture={cameraFacing}
-            onChange={handleFileChosen}
+            onChange={handleFileChosen("camera")}
             className="sr-only"
             tabIndex={-1}
             aria-hidden
@@ -93,7 +102,7 @@ export const DocumentUploadSlot: FC<IDocumentUploadSlotProps> = ({
             id={inputId}
             type="file"
             accept={MIME_BY_TYPE[docType]}
-            onChange={handleFileChosen}
+            onChange={handleFileChosen("file")}
             className="sr-only"
             tabIndex={-1}
             aria-hidden

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FC } from "react";
 import { ClientOrderRecapSkeleton } from "@/components/client/client-loading";
 import { AllInPriceBadges } from "@/components/apply/all-in-price-badges";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
@@ -10,6 +10,8 @@ import { apiHref } from "@/lib/app-href";
 import type { PublicApplication } from "@/lib/applications/public-application";
 import type { TPublicPartyMember } from "@/lib/applications/load-party-members";
 import { DEFAULT_APPLY_PRICE_BADGES, type TApplyPriceBadges } from "@/lib/apply/apply-config";
+import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
+import { trackEventOnce } from "@/lib/analytics/gtag-client";
 import { formatIsoDateAsDdMmYyyy } from "@/lib/documents/validation-readiness";
 import type { TCustomerMessageVars } from "@/lib/i18n/customer-messages";
 
@@ -101,13 +103,18 @@ export const applicantForPaymentRecap = (
   live: PublicApplication["applicant"] | null,
 ): PublicApplication["applicant"] => live ?? ssr;
 
-export function CheckoutOrderRecap({
-  application,
-  members = [],
-}: {
+interface ICheckoutOrderRecapProps {
   application: PublicApplication;
   members?: TPublicPartyMember[];
-}) {
+  /** Payment page only — documents/thank-you recaps also reuse this UI. */
+  trackCheckoutViewed?: boolean;
+}
+
+export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
+  application,
+  members = [],
+  trackCheckoutViewed = false,
+}) => {
   const t = useCustomerT();
   const [services, setServices] = useState<CatalogService[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -210,6 +217,20 @@ export function CheckoutOrderRecap({
   }, [services, members, memberLines, service, currency]);
 
   const totalText = totalMinor === null ? null : formatDisplayMinor(totalMinor.toString(), currency);
+
+  useEffect(() => {
+    if (!trackCheckoutViewed || totalMinor === null) return;
+    trackEventOnce(
+      APPLY_FUNNEL_EVENTS.checkoutViewed,
+      {
+        application_id: application.id,
+        currency,
+        value: Number(totalMinor) / 100,
+        traveler_count: Math.max(members.length, 1),
+      },
+      `${APPLY_FUNNEL_EVENTS.checkoutViewed}:${application.id}`,
+    );
+  }, [trackCheckoutViewed, totalMinor, application.id, currency, members.length]);
 
   const recapApplicant = applicantForPaymentRecap(application.applicant, liveApplicant);
   const fullName = recapApplicant.fullName?.trim() ?? "";

@@ -47,7 +47,9 @@ const ApplyApplicationPaymentPage = async ({ params }: IApplyApplicationPaymentP
         currentStep={4}
         applicationId={id}
         hasSelectedVisa
-        visaSummary={<CheckoutOrderRecap application={publicApp} members={members} />}
+        visaSummary={
+          <CheckoutOrderRecap application={publicApp} members={members} trackCheckoutViewed />
+        }
         contentClassName="theme-client-rise mx-auto w-full max-w-4xl space-y-8"
       >
         <header className="space-y-1.5">

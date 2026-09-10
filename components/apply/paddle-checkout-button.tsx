@@ -12,7 +12,7 @@ import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { Loader2 } from "lucide-react";
 import { apiHref } from "@/lib/app-href";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
-import { trackApplyPaymentCompleted, trackEvent } from "@/lib/analytics/gtag-client";
+import { trackApplyPaymentCompleted, trackEventOnce } from "@/lib/analytics/gtag-client";
 import { checkoutErrorToUserMessage } from "@/lib/payments/checkout-client-messages";
 
 interface PaddleCheckoutButtonProps {
@@ -98,19 +98,27 @@ export function PaddleCheckoutButton({
 
       const data = envelope.data;
       if ("provider" in data && data.provider === "ziina") {
-        trackEvent(APPLY_FUNNEL_EVENTS.paymentStarted, {
-          application_id: applicationId,
-          payment_provider: "ziina",
-        });
+        trackEventOnce(
+          APPLY_FUNNEL_EVENTS.paymentStarted,
+          {
+            application_id: applicationId,
+            payment_provider: "ziina",
+          },
+          `${APPLY_FUNNEL_EVENTS.paymentStarted}:${applicationId}:ziina`,
+        );
         onExternalRedirect?.();
         window.location.assign(data.redirectUrl);
         return;
       }
 
-      trackEvent(APPLY_FUNNEL_EVENTS.paymentStarted, {
-        application_id: applicationId,
-        payment_provider: "paddle",
-      });
+      trackEventOnce(
+        APPLY_FUNNEL_EVENTS.paymentStarted,
+        {
+          application_id: applicationId,
+          payment_provider: "paddle",
+        },
+        `${APPLY_FUNNEL_EVENTS.paymentStarted}:${applicationId}:paddle`,
+      );
 
       if (!("transactionId" in data) || !data.transactionId) {
         throw new Error(checkoutErrorToUserMessage(envelope.error, t));

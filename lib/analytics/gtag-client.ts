@@ -10,6 +10,7 @@ import {
   buildGadsCheckoutConversionParams,
   type TGadsCheckoutConversionInput,
 } from "@/lib/analytics/gads-checkout-conversion";
+import { claimAnalyticsOnce } from "@/lib/analytics/track-once";
 
 export type GtagEventParams = Record<string, string | number | boolean | undefined | null>;
 
@@ -55,6 +56,16 @@ export function trackEvent(eventName: string, params?: GtagEventParams): void {
   gtagCommand("event", eventName, cleaned);
 }
 
+/** Same as `trackEvent`, but skips if this dedupe key already fired in the tab. */
+export const trackEventOnce = (
+  eventName: string,
+  params?: GtagEventParams,
+  dedupeKey = eventName,
+): void => {
+  if (!claimAnalyticsOnce(dedupeKey)) return;
+  trackEvent(eventName, params);
+};
+
 export function trackPageView(pathname: string, search: string): void {
   if (isAnalyticsExcludedPath(pathname)) return;
   trackEvent("page_view", {
@@ -76,7 +87,7 @@ export const trackGadsCheckoutConversion = (input: TGadsCheckoutConversionInput)
 const purchaseDedupeKey = (applicationId: string): string => `vt_ga4_purchase:${applicationId}`;
 
 /**
- * Funnel + standard GA4 purchase. Import `purchase` (or `apply_payment_completed`) in Google Ads.
+ * Funnel `payment_succeeded` + standard GA4 `purchase`.
  * Dedupes per application for this browser tab so overlay + thank-you do not double-count.
  */
 export const trackApplyPaymentCompleted = (input: {
@@ -98,7 +109,7 @@ export const trackApplyPaymentCompleted = (input: {
   } catch {
     /* private mode — still send */
   }
-  trackEvent(APPLY_FUNNEL_EVENTS.paymentCompleted, {
+  trackEvent(APPLY_FUNNEL_EVENTS.paymentSucceeded, {
     ...purchase,
     application_id: input.applicationId,
     payment_provider: input.paymentProvider,

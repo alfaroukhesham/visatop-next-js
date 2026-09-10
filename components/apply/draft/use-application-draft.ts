@@ -17,6 +17,11 @@ import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
 import { oversizedUploadMessage } from "@/lib/apply/customer-upload-copy";
 import { translateDocumentSlot } from "@/lib/apply/document-slot-i18n";
+import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
+import { trackDocumentUploadAnalytics, type TDocumentUploadSource } from "@/lib/analytics/document-upload-events";
+import { trackEventOnce } from "@/lib/analytics/gtag-client";
+import { buildOcrReviewParams } from "@/lib/analytics/ocr-review-params";
+import { uploadFailureReason } from "@/lib/analytics/upload-failure";
 import {
   buildUploadPresence,
   memberUploadStateFromDraft,
@@ -180,6 +185,19 @@ export function useApplicationDraft(applicationId: string) {
       }
       updateMemberState(memberId, { extractResult: res.data });
       const s = res.data.extraction.status;
+      const review = buildOcrReviewParams({
+        applicationId: memberId,
+        documentId: res.data.extraction.documentId,
+        status: s,
+        missingFields: res.data.extraction.ocrMissingFields ?? [],
+      });
+      if (review) {
+        trackEventOnce(
+          APPLY_FUNNEL_EVENTS.ocrReviewRequired,
+          review,
+          `${APPLY_FUNNEL_EVENTS.ocrReviewRequired}:${memberId}:${res.data.extraction.documentId ?? s}`,
+        );
+      }
       if (s === "succeeded") {
         setActionMsg(tRef.current("draft.actionMessages.ocrPartial"));
       } else if (s === "needs_manual") {
@@ -198,11 +216,18 @@ export function useApplicationDraft(applicationId: string) {
   }, []);
 
   const onUpload = useCallback(
-    async (type: DocType, file: File) => {
+    async (type: DocType, file: File, source: TDocumentUploadSource = "file") => {
       const memberId = selectedMemberId;
       const tooLarge = oversizedUploadMessage(file.size, UPLOAD_MAX_BYTES, tRef.current);
       if (tooLarge) {
         setActionMsg(tooLarge);
+        trackDocumentUploadAnalytics({
+          docType: type,
+          applicationId: memberId,
+          success: false,
+          source,
+          failureReason: uploadFailureReason({ oversized: true }),
+        });
         return;
       }
       setActionMsg(null);
@@ -210,11 +235,25 @@ export function useApplicationDraft(applicationId: string) {
       const form = new FormData();
       form.set("documentType", type);
       form.set("file", file);
-      const res = await fetch(apiHref(`/applications/${memberId}/documents/upload`), {
-        method: "POST",
-        body: form,
-        credentials: "include",
-      });
+      let res: Response;
+      try {
+        res = await fetch(apiHref(`/applications/${memberId}/documents/upload`), {
+          method: "POST",
+          body: form,
+          credentials: "include",
+        });
+      } catch {
+        updateMemberState(memberId, { uploading: null });
+        setActionMsg(tRef.current("upload.failedHttp", { status: 0 }));
+        trackDocumentUploadAnalytics({
+          docType: type,
+          applicationId: memberId,
+          success: false,
+          source,
+          failureReason: uploadFailureReason({ network: true }),
+        });
+        return;
+      }
       updateMemberState(memberId, { uploading: null });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json?.ok) {
@@ -224,8 +263,24 @@ export function useApplicationDraft(applicationId: string) {
             ? tRef.current("upload.fileExceedsLimit")
             : tRef.current("upload.failedHttp", { status: res.status }));
         setActionMsg(msg);
+        trackDocumentUploadAnalytics({
+          docType: type,
+          applicationId: memberId,
+          success: false,
+          source,
+          failureReason: uploadFailureReason({
+            httpStatus: res.status,
+            oversized: res.status === 413,
+          }),
+        });
         return;
       }
+      trackDocumentUploadAnalytics({
+        docType: type,
+        applicationId: memberId,
+        success: true,
+        source,
+      });
       const slot = memberStatesRef.current[memberId]?.slots.find((s) => s.key === type);
       setActionMsg(
         slot

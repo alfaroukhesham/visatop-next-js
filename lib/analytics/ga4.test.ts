@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  APPLY_FUNNEL_EVENTS,
   applyStepFromPathname,
   applyStepLabel,
   buildGa4PurchaseParams,
@@ -42,6 +43,14 @@ describe("applyStepFromPathname", () => {
     expect(applyStepFromPathname("/visa-processing/apply/applications/abc/submitted")).toBe(5);
   });
 
+  it("does not treat checkout return/cancel as the documents step", () => {
+    expect(applyStepFromPathname("/apply/applications/abc/checkout/return")).toBeNull();
+    expect(applyStepFromPathname("/apply/applications/abc/checkout/cancel")).toBeNull();
+    expect(
+      applyStepFromPathname("/visa-processing/apply/applications/abc/checkout/return"),
+    ).toBeNull();
+  });
+
   it("returns null for non-funnel routes", () => {
     expect(applyStepFromPathname("/visa-processing/sign-in")).toBeNull();
     expect(applyStepFromPathname("/visa-processing/portal")).toBeNull();
@@ -50,6 +59,23 @@ describe("applyStepFromPathname", () => {
   it("labels steps", () => {
     expect(applyStepLabel(1)).toBe("nationality");
     expect(applyStepLabel(4)).toBe("payment");
+  });
+});
+
+describe("APPLY_FUNNEL_EVENTS", () => {
+  it("uses the customer funnel event names", () => {
+    expect(APPLY_FUNNEL_EVENTS.applicationStarted).toBe("application_started");
+    expect(APPLY_FUNNEL_EVENTS.eligibilityCompleted).toBe("eligibility_completed");
+    expect(APPLY_FUNNEL_EVENTS.visaListViewed).toBe("visa_list_viewed");
+    expect(APPLY_FUNNEL_EVENTS.visaSelected).toBe("visa_selected");
+    expect(APPLY_FUNNEL_EVENTS.applicationLinkSaved).toBe("application_link_saved");
+    expect(APPLY_FUNNEL_EVENTS.passportUploaded).toBe("passport_uploaded");
+    expect(APPLY_FUNNEL_EVENTS.photoUploaded).toBe("photo_uploaded");
+    expect(APPLY_FUNNEL_EVENTS.ocrReviewRequired).toBe("ocr_review_required");
+    expect(APPLY_FUNNEL_EVENTS.applicantVerified).toBe("applicant_verified");
+    expect(APPLY_FUNNEL_EVENTS.checkoutViewed).toBe("checkout_viewed");
+    expect(APPLY_FUNNEL_EVENTS.paymentSucceeded).toBe("payment_succeeded");
+    expect(APPLY_FUNNEL_EVENTS.purchase).toBe("purchase");
   });
 });
 

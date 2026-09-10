@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   APPLY_FUNNEL_EVENTS,
@@ -10,6 +10,9 @@ import {
 import { isAnalyticsExcludedPath } from "@/lib/analytics/excluded-paths";
 import { trackEvent, trackPageView } from "@/lib/analytics/gtag-client";
 
+/** Survives React Strict Mode remount so SPA hits are not doubled in dev. */
+let lastTrackedRouteKey: string | null = null;
+
 /**
  * Fires GA4 `page_view` on App Router navigations and `apply_step_view` for funnel routes.
  * Skips admin (and any other excluded) paths.
@@ -17,7 +20,6 @@ import { trackEvent, trackPageView } from "@/lib/analytics/gtag-client";
 export function AnalyticsRouteTracker() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const lastKey = useRef<string | null>(null);
 
   useEffect(() => {
     const search = searchParams?.toString();
@@ -37,8 +39,8 @@ export function AnalyticsRouteTracker() {
     }
 
     const key = `${publicPath}${searchWithQ}`;
-    if (lastKey.current === key) return;
-    lastKey.current = key;
+    if (lastTrackedRouteKey === key) return;
+    lastTrackedRouteKey = key;
 
     trackPageView(publicPath, searchWithQ);
 

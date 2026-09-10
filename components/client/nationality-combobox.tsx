@@ -31,6 +31,7 @@ type NationalityComboboxProps = {
   size?: "default" | "hero";
   className?: string;
   inputClassName?: string;
+  onFirstInteraction?: () => void;
 };
 
 export function NationalityCombobox({
@@ -43,6 +44,7 @@ export function NationalityCombobox({
   size = "default",
   className,
   inputClassName,
+  onFirstInteraction,
 }: NationalityComboboxProps) {
   const t = useCustomerT();
   const resolvedPlaceholder = placeholder ?? t("common.nationalityDefaultPlaceholder");
@@ -63,6 +65,7 @@ export function NationalityCombobox({
   const [highlight, setHighlight] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
   const portalRef = useRef<HTMLDivElement>(null);
+  const firstInteractionRef = useRef(false);
   const [listPos, setListPos] = useState<ListPosition | null>(null);
 
   const selectedIndex = useMemo(() => {
@@ -132,11 +135,15 @@ export function NationalityCombobox({
 
   const openList = useCallback(
     (query = "") => {
+      if (!firstInteractionRef.current) {
+        firstInteractionRef.current = true;
+        onFirstInteraction?.();
+      }
       setOpen(true);
       setDraftQuery(query);
       setHighlight(query.trim() ? 0 : selectedIndex);
     },
-    [selectedIndex],
+    [onFirstInteraction, selectedIndex],
   );
 
   const pick = useCallback(

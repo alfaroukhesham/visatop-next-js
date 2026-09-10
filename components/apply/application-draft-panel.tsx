@@ -82,7 +82,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
           docsByType={draft.selected.docsByType}
           uploading={draft.selected.uploading}
           extracting={draft.selected.extracting}
-          onUpload={(type, file) => void draft.onUpload(type, file)}
+          onUpload={(type, file, source) => void draft.onUpload(type, file, source)}
         />
       )}
 

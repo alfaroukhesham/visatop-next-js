@@ -6,6 +6,7 @@ import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import type { TDocumentSlot } from "@/lib/apply/document-requirements";
 import { translateDocumentSlot } from "@/lib/apply/document-slot-i18n";
 import { DocumentUploadSlot } from "./document-upload-slot";
+import type { TDocumentUploadSource } from "@/lib/analytics/document-upload-events";
 import type { DocType, PublicDocument } from "./types";
 
 export interface IDraftDocumentsSectionProps {
@@ -14,7 +15,7 @@ export interface IDraftDocumentsSectionProps {
   docsByType: Partial<Record<DocType, PublicDocument | null>>;
   uploading: DocType | null;
   extracting: boolean;
-  onUpload: (type: DocType, file: File) => void;
+  onUpload: (type: DocType, file: File, source: TDocumentUploadSource) => void;
 }
 
 export const DraftDocumentsSection: FC<IDraftDocumentsSectionProps> = ({
@@ -44,7 +45,7 @@ export const DraftDocumentsSection: FC<IDraftDocumentsSectionProps> = ({
         docType={type}
         applicationId={applicationId}
         uploading={uploading === type}
-        onUpload={(f) => onUpload(type, f)}
+        onUpload={(f, source) => onUpload(type, f, source)}
       />
     );
   };

@@ -8,6 +8,8 @@ import { ClientInput } from "@/components/client/client-input";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
+import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
+import { trackEventOnce } from "@/lib/analytics/gtag-client";
 import { APPLY_STEP3_VALIDATION_DISABLED } from "@/lib/apply/apply-flow-config";
 import { customerFacingOcrMessage } from "@/lib/apply/ocr-customer-copy";
 import { paymentReviewNavState } from "@/lib/apply/payment-review-nav";
@@ -168,6 +170,13 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
 
   const goToPayment = async () => {
     await waitForPassportExtract();
+    if (canContinueToPayment) {
+      trackEventOnce(
+        APPLY_FUNNEL_EVENTS.applicantVerified,
+        { application_id: paymentApplicationId ?? applicationId },
+        `${APPLY_FUNNEL_EVENTS.applicantVerified}:${paymentApplicationId ?? applicationId}`,
+      );
+    }
     router.push(paymentPath);
   };
 

@@ -23,13 +23,13 @@ import { convertMinorBetweenUsdAed, parsePublicDisplayFxAedPerUsd } from "@/lib/
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
-import { trackEvent } from "@/lib/analytics/gtag-client";
+import { trackEventOnce } from "@/lib/analytics/gtag-client";
 import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
 import { DEFAULT_APPLY_PRICE_BADGES, DEFAULT_PARTY_ENABLED, DEFAULT_PARTY_MAX_TRAVELERS, type TApplyPriceBadges } from "@/lib/apply/apply-config";
 import { assertTravelersReady, canAddTraveler, resolvePartyTravelerServiceId, type TPartyTravelerDraft } from "@/lib/apply/party-travelers";
-import { filterPartyVisaOptions, stayOptionsForChooser, needsEntryQuestion, needsKindQuestion, kindOptionsForStay, type TChooserPhase } from "@/lib/apply/guided-visa-filter";
+import { filterGuidedServices, filterPartyVisaOptions, stayOptionsForChooser, needsEntryQuestion, needsKindQuestion, kindOptionsForStay, type TChooserPhase } from "@/lib/apply/guided-visa-filter";
 import type { TStayBucket, TTravelerKind } from "@/lib/catalog/guided-choice";
 import { AllInPriceBadges } from "@/components/apply/all-in-price-badges";
 import { ApplyStepsRail } from "@/components/apply/apply-steps-rail";
@@ -366,6 +366,55 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   }, [nationality, displayCurrency, catalogReloadEpoch]);
 
   useEffect(() => {
+    if (loadingServices || !nationality) return;
+    if (services.length === 0) return;
+    trackEventOnce(
+      APPLY_FUNNEL_EVENTS.eligibilityCompleted,
+      { nationality, visa_count: services.length },
+      `${APPLY_FUNNEL_EVENTS.eligibilityCompleted}:${nationality}`,
+    );
+  }, [loadingServices, nationality, services]);
+
+  useEffect(() => {
+    if (chooserPhase !== "results" || !answers.stay || !nationality) return;
+    const count = filterGuidedServices(services, {
+      stay: answers.stay,
+      entry: answers.entry,
+      kind: answers.kind,
+    }).length;
+    if (count === 0) return;
+    trackEventOnce(
+      APPLY_FUNNEL_EVENTS.visaListViewed,
+      {
+        nationality,
+        stay: answers.stay,
+        entry: answers.entry,
+        kind: answers.kind,
+        visa_count: count,
+      },
+      `${APPLY_FUNNEL_EVENTS.visaListViewed}:${nationality}:${answers.stay}:${answers.entry}:${answers.kind}`,
+    );
+  }, [chooserPhase, answers.stay, answers.entry, answers.kind, nationality, services]);
+
+  useEffect(() => {
+    if (!serviceId || !nationality) return;
+    const selected = services.find((s) => s.id === serviceId);
+    if (!selected) return;
+    trackEventOnce(
+      APPLY_FUNNEL_EVENTS.visaSelected,
+      {
+        nationality,
+        service_id: serviceId,
+        stay: answers.stay,
+        entry: answers.entry,
+        duration_days: selected.durationDays,
+        currency: displayCurrency,
+      },
+      `${APPLY_FUNNEL_EVENTS.visaSelected}:${nationality}:${serviceId}`,
+    );
+  }, [serviceId, nationality, services, answers.stay, answers.entry, displayCurrency]);
+
+  useEffect(() => {
     if (!nationality) return;
     writeChooserDraft(nationality, {
       displayCurrency,
@@ -443,13 +492,17 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       setError(res.error.message);
       return;
     }
-    trackEvent(APPLY_FUNNEL_EVENTS.applicationCreated, {
-      nationality,
-      service_id: serviceId,
-      currency: displayCurrency,
-      application_id: res.data.application.id,
-      is_guest: res.data.application.isGuest,
-    });
+    trackEventOnce(
+      APPLY_FUNNEL_EVENTS.applicationLinkSaved,
+      {
+        nationality,
+        service_id: serviceId,
+        currency: displayCurrency,
+        application_id: res.data.application.id,
+        is_guest: res.data.application.isGuest,
+      },
+      `${APPLY_FUNNEL_EVENTS.applicationLinkSaved}:${res.data.application.id}`,
+    );
     router.push(`/apply/applications/${res.data.application.id}`);
   }
 
