@@ -137,4 +137,37 @@ export const readCustomerLocaleFromCookieHeader = (
   return "en";
 };
 
+export interface IPlanCustomerLocaleSwitchInput {
+  href: string;
+  slug: string;
+}
+
+export interface IPlanCustomerLocaleSwitchResult {
+  slug: string;
+  nextPath: string;
+  sameUrl: boolean;
+}
+
+/** Keep `?locale=` in sync with the switcher so URL and cookie stay interchangeable. */
+export const withCustomerLocaleQuery = (href: string, slug: string): string => {
+  const url = new URL(href, "https://visatop.com");
+  url.searchParams.set("locale", slug);
+  return `${url.pathname}${url.search}${url.hash}`;
+};
+
+export const planCustomerLocaleSwitch = ({
+  href,
+  slug,
+}: IPlanCustomerLocaleSwitchInput): IPlanCustomerLocaleSwitchResult => {
+  const normalized = parseCustomerLocale(slug);
+  const nextPath = withCustomerLocaleQuery(href, normalized);
+  const current = new URL(href, "https://visatop.com");
+  const currentPath = `${current.pathname}${current.search}${current.hash}`;
+  return {
+    slug: normalized,
+    nextPath,
+    sameUrl: nextPath === currentPath,
+  };
+};
+
 export const isCustomerLocaleRtl = (slug: string): boolean => slug === "ar";

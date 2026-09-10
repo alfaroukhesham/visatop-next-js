@@ -3,7 +3,9 @@ import {
   CUSTOMER_LOCALE_COOKIE,
   buildCustomerLocaleSetCookieValue,
   parseCustomerLocale,
+  planCustomerLocaleSwitch,
   resolveCustomerLocale,
+  withCustomerLocaleQuery,
 } from "./customer-locale";
 
 describe("parseCustomerLocale", () => {
@@ -50,6 +52,57 @@ describe("resolveCustomerLocale", () => {
         cookieValue: "fr",
       }),
     ).toBe("fr");
+  });
+});
+
+describe("withCustomerLocaleQuery", () => {
+  it("replaces an existing locale query so the switcher can override the URL", () => {
+    expect(
+      withCustomerLocaleQuery("https://app-staging.visatop.com/visa-processing?locale=ar", "en"),
+    ).toBe("/visa-processing?locale=en");
+  });
+
+  it("adds locale when the URL has none", () => {
+    expect(
+      withCustomerLocaleQuery("https://app-staging.visatop.com/visa-processing/apply/track", "ar"),
+    ).toBe("/visa-processing/apply/track?locale=ar");
+  });
+
+  it("keeps other query params", () => {
+    expect(
+      withCustomerLocaleQuery(
+        "https://app-staging.visatop.com/visa-processing/apply/start?nationality=IN&locale=ar",
+        "fr",
+      ),
+    ).toBe("/visa-processing/apply/start?nationality=IN&locale=fr");
+  });
+});
+
+describe("planCustomerLocaleSwitch", () => {
+  it("navigates when the URL locale differs from the chosen slug", () => {
+    expect(
+      planCustomerLocaleSwitch({
+        href: "https://app-staging.visatop.com/visa-processing?locale=ar",
+        slug: "en",
+      }),
+    ).toEqual({
+      slug: "en",
+      nextPath: "/visa-processing?locale=en",
+      sameUrl: false,
+    });
+  });
+
+  it("stays on the same URL when locale is already set", () => {
+    expect(
+      planCustomerLocaleSwitch({
+        href: "https://app-staging.visatop.com/visa-processing?locale=ar",
+        slug: "ar",
+      }),
+    ).toEqual({
+      slug: "ar",
+      nextPath: "/visa-processing?locale=ar",
+      sameUrl: true,
+    });
   });
 });
 

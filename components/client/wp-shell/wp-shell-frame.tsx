@@ -5,6 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 import {
   buildCustomerLocaleSetCookieValue,
+  planCustomerLocaleSwitch,
 } from "@/lib/i18n/customer-locale";
 import { classifyWpShellNavigateUrl } from "@/lib/wp-headless/classify-shell-navigate-url";
 import type { WpShellLanguageOption } from "@/lib/wp-headless/types";
@@ -655,9 +656,16 @@ export function WpShellFrame(props: {
       };
       if (msg.token !== postMessageToken) return;
       if (msg.type === "wp-shell:locale" && typeof msg.slug === "string" && msg.slug.trim()) {
-        const slug = msg.slug.trim().toLowerCase();
-        document.cookie = buildCustomerLocaleSetCookieValue(slug);
-        router.refresh();
+        const planned = planCustomerLocaleSwitch({
+          href: window.location.href,
+          slug: msg.slug,
+        });
+        document.cookie = buildCustomerLocaleSetCookieValue(planned.slug);
+        if (planned.sameUrl) {
+          router.refresh();
+          return;
+        }
+        window.location.assign(planned.nextPath);
         return;
       }
       if (msg.type === "wp-shell:navigate" && typeof msg.href === "string") {
