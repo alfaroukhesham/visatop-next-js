@@ -27,6 +27,7 @@ export type CreateZiinaPaymentIntentParams = {
 export type ZiinaPaymentIntentCreated = {
   id: string;
   redirectUrl: string;
+  embeddedUrl: string;
   operationId: string;
 };
 
@@ -36,7 +37,32 @@ export type ZiinaPaymentIntentRecord = {
   amountMinor: number;
   currencyCode: string;
   operationId: string | null;
+  embeddedUrl: string | null;
   raw: Record<string, unknown>;
+};
+
+const readRecordString = (rec: Record<string, unknown>, key: string): string =>
+  typeof rec[key] === "string" ? rec[key] : "";
+
+export const parseZiinaPaymentIntentCreated = (
+  json: unknown,
+  fallbackOperationId: string,
+): ZiinaPaymentIntentCreated => {
+  if (typeof json !== "object" || json === null) {
+    throw new ZiinaProviderError("Ziina payment_intent returned non-object JSON", 502);
+  }
+  const rec = json as Record<string, unknown>;
+  const id = readRecordString(rec, "id");
+  const redirectUrl = readRecordString(rec, "redirect_url");
+  const embeddedUrl = readRecordString(rec, "embedded_url");
+  const operationId = readRecordString(rec, "operation_id") || fallbackOperationId;
+  if (!id || !embeddedUrl) {
+    throw new ZiinaProviderError(
+      "Ziina payment_intent response missing id or embedded_url",
+      502,
+    );
+  }
+  return { id, redirectUrl, embeddedUrl, operationId };
 };
 
 export async function createZiinaPaymentIntent(
@@ -96,15 +122,14 @@ export async function createZiinaPaymentIntent(
   } catch {
     throw new ZiinaProviderError("Ziina payment_intent returned non-JSON", 502, text.slice(0, 200));
   }
-  const rec = json as Record<string, unknown>;
-  const id = typeof rec.id === "string" ? rec.id : "";
-  const redirectUrl = typeof rec.redirect_url === "string" ? rec.redirect_url : "";
-  const operationId =
-    typeof rec.operation_id === "string" ? rec.operation_id : params.operationId;
-  if (!id || !redirectUrl) {
-    throw new ZiinaProviderError("Ziina payment_intent response missing id or redirect_url", 502, text.slice(0, 300));
+  try {
+    return parseZiinaPaymentIntentCreated(json, params.operationId);
+  } catch (e) {
+    if (e instanceof ZiinaProviderError) {
+      throw new ZiinaProviderError(e.message, e.httpStatus, text.slice(0, 300));
+    }
+    throw e;
   }
-  return { id, redirectUrl, operationId };
 }
 
 export async function getZiinaPaymentIntent(params: {
@@ -138,6 +163,7 @@ export async function getZiinaPaymentIntent(params: {
   const currencyCode =
     typeof rec.currency_code === "string" ? rec.currency_code.trim().toUpperCase() : "USD";
   const operationId = typeof rec.operation_id === "string" ? rec.operation_id : null;
+  const embeddedUrl = typeof rec.embedded_url === "string" ? rec.embedded_url : null;
   if (!id || !status) {
     throw new ZiinaProviderError("Ziina payment_intent response missing id or status", 502);
   }
@@ -147,6 +173,7 @@ export async function getZiinaPaymentIntent(params: {
     amountMinor: Number.isFinite(amount) ? amount : 0,
     currencyCode,
     operationId,
+    embeddedUrl,
     raw: rec,
   };
 }

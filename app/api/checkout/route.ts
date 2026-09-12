@@ -16,6 +16,7 @@ import {
   requireCheckoutAppOrigin,
 } from "@/lib/payments/resolve-payment-provider";
 import { createZiinaPaymentIntent, ZiinaProviderError } from "@/lib/payments/ziina-client";
+import { isTrustedZiinaEmbeddedUrl } from "@/lib/payments/ziina-embedded";
 import type { CheckoutSessionData } from "@/lib/payments/checkout-types";
 import { diagnoseCheckoutBlock } from "@/lib/payments/diagnose-checkout-block";
 import { loadPaymentUploadPresence } from "@/lib/applications/load-payment-upload-presence";
@@ -286,12 +287,16 @@ export async function POST(req: Request) {
           timeoutMs: 8000,
         });
 
+        if (!isTrustedZiinaEmbeddedUrl(ziina.embeddedUrl)) {
+          throw new ZiinaProviderError("Ziina embedded_url is not a trusted checkout host", 502);
+        }
+
         await tx
           .update(schema.payment)
           .set({ providerCheckoutId: ziina.id })
           .where(eq(schema.payment.id, paymentId));
 
-        const data: CheckoutSessionData = { provider: "ziina", redirectUrl: ziina.redirectUrl };
+        const data: CheckoutSessionData = { provider: "ziina", embeddedUrl: ziina.embeddedUrl };
         return jsonOk(data, { requestId });
       } catch (e) {
         if (e instanceof ZiinaProviderError) {

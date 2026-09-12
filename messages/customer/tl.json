@@ -226,6 +226,8 @@
     "initiatePaymentTitle": "Simulan ang payment",
     "completePaymentTitle": "Kumpletuhin ang payment mo",
     "checkoutInProgress": "May checkout na isinasagawa.",
+    "completeInWidget": "Ilagay ang iyong payment details sa ibaba. Manatili sa page na ito hanggang makita mo ang confirmation.",
+    "iframeTitle": "Secure payment form",
     "expiresLabel": "Mag-e-expire:",
     "cancelAndReset": "Kanselahin at i-reset",
     "paymentConfirmed": "Nakumpirma ang Payment",
@@ -465,6 +467,8 @@
       "refreshAndRetry": "Hindi namin masimulan ang checkout. Paki-refresh ang page at subukan ulit.",
       "checkoutFailed": "Hindi natuloy ang checkout",
       "missingPassport": "Mag-upload ng kopya ng pasaporte para simulan ang bayad. Ang ibang dokumento ay maaaring idagdag ngayon o mamaya.",
+      "paymentNotCompleted": "Hindi natapos ang bayad. Puwede mong subukan ulit sa form sa ibaba, o kanselahin at i-reset para magsimula ulit.",
+      "sessionUnavailable": "Hindi na-restore ang payment session na ito. Kanselahin at i-reset, tapos subukan ulit.",
       "sdkFailed": "Hindi na-initialize ang Paddle SDK",
       "failedDot": "Hindi natuloy ang checkout."
     }

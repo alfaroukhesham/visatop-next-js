@@ -19,8 +19,8 @@ interface PaddleCheckoutButtonProps {
   applicationId: string;
   disabled?: boolean;
   onSuccess?: () => void;
-  /** Called when Ziina mode is about to redirect the browser to the hosted checkout page. */
-  onExternalRedirect?: () => void;
+  /** Called with Ziina `embedded_url` so checkout stays on the payment step. */
+  onZiinaEmbedded?: (embeddedUrl: string) => void;
   /** Runs whenever the Paddle overlay closes (success, cancel, or dismiss). Use to refetch server payment state. */
   onOverlayClosed?: () => void;
   onCancel?: () => void;
@@ -31,7 +31,7 @@ export function PaddleCheckoutButton({
   applicationId,
   disabled,
   onSuccess,
-  onExternalRedirect,
+  onZiinaEmbedded,
   onOverlayClosed,
   onCancel,
   onError,
@@ -74,7 +74,7 @@ export function PaddleCheckoutButton({
         ok?: boolean;
         data?:
           | { provider: "paddle"; transactionId: string; clientToken: string }
-          | { provider: "ziina"; redirectUrl: string }
+          | { provider: "ziina"; embeddedUrl: string }
           | { transactionId?: string; clientToken?: string };
         error?: { code?: string; message?: string; details?: { reason?: string } };
       };
@@ -98,6 +98,9 @@ export function PaddleCheckoutButton({
 
       const data = envelope.data;
       if ("provider" in data && data.provider === "ziina") {
+        if (!("embeddedUrl" in data) || !data.embeddedUrl) {
+          throw new Error(checkoutErrorToUserMessage(envelope.error, t));
+        }
         trackEventOnce(
           APPLY_FUNNEL_EVENTS.paymentStarted,
           {
@@ -106,8 +109,8 @@ export function PaddleCheckoutButton({
           },
           `${APPLY_FUNNEL_EVENTS.paymentStarted}:${applicationId}:ziina`,
         );
-        onExternalRedirect?.();
-        window.location.assign(data.redirectUrl);
+        onZiinaEmbedded?.(data.embeddedUrl);
+        setIsInitializing(false);
         return;
       }
 

@@ -314,9 +314,6 @@ export const SubmittedApplicationClient: FC<ISubmittedApplicationClientProps> = 
           <h2 className="font-heading text-lg font-semibold text-[#012031]">{t("submitted.nextStepsTitle")}</h2>
           <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{t("submitted.nextStepsBody")}</p>
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <ClientButtonLink href="/apply/track" brand="cta" className="inline-flex">
-              {t("submitted.trackApplication")}
-            </ClientButtonLink>
             <ClientButtonLink href="/" brand="white" className="inline-flex">
               {t("submitted.startNewApplication")}
             </ClientButtonLink>

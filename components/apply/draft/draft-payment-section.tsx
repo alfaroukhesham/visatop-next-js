@@ -1,5 +1,6 @@
 "use client";
 
+import type { FC } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
@@ -8,27 +9,20 @@ import { customerLooksCompleteForPayCopy } from "@/lib/apply/payment-copy";
 import type { Readiness } from "@/lib/documents/validation-readiness";
 import { CheckoutErrorAlert } from "../checkout-error-alert";
 import { PaddleCheckoutButton } from "../paddle-checkout-button";
+import { ZiinaEmbeddedCheckout } from "../ziina-embedded-checkout";
 
 type CheckoutHandlers = {
-  onExternalRedirect: () => void;
+  onZiinaEmbedded: (embeddedUrl: string) => void;
+  onZiinaCompleted: () => void;
+  onZiinaFailed: () => void;
+  onZiinaCanceled: () => void;
   onOverlayClosed: () => void;
   onSuccess: () => void;
   onStartCheckoutTimer: () => void;
   onError: (msg: string) => void;
 };
 
-export function DraftPaymentSection({
-  applicationId,
-  app,
-  paymentReadiness,
-  requiredSlotKeys,
-  uploadedTypes,
-  countdown,
-  checkoutError,
-  onDismissCheckoutError,
-  onCancelCheckout,
-  checkout,
-}: {
+interface IDraftPaymentSectionProps {
   applicationId: string;
   app: PublicApplication;
   paymentReadiness: Readiness;
@@ -39,7 +33,28 @@ export function DraftPaymentSection({
   onDismissCheckoutError: () => void;
   onCancelCheckout: () => void;
   checkout: CheckoutHandlers;
-}) {
+  embeddedUrl: string | null;
+  confirming: boolean;
+  sessionLoading: boolean;
+  showPaddleRetry: boolean;
+}
+
+export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
+  applicationId,
+  app,
+  paymentReadiness,
+  requiredSlotKeys,
+  uploadedTypes,
+  countdown,
+  checkoutError,
+  onDismissCheckoutError,
+  onCancelCheckout,
+  checkout,
+  embeddedUrl,
+  confirming,
+  sessionLoading,
+  showPaddleRetry,
+}) => {
   const t = useCustomerT();
   const payCopyComplete = customerLooksCompleteForPayCopy({
     requiredSlotKeys,
@@ -49,6 +64,25 @@ export function DraftPaymentSection({
     hasPassportNumber: Boolean(app.applicant.passportNumber?.trim()),
   });
 
+  const showUnpaidPay =
+    paymentReadiness === "ready" && app.paymentStatus === "unpaid" && !embeddedUrl;
+  const showCheckoutCard =
+    app.paymentStatus !== "paid" && (app.paymentStatus === "checkout_created" || Boolean(embeddedUrl));
+
+  const payButton = (
+    <PaddleCheckoutButton
+      applicationId={applicationId}
+      onZiinaEmbedded={(url) => {
+        onDismissCheckoutError();
+        checkout.onZiinaEmbedded(url);
+      }}
+      onOverlayClosed={checkout.onOverlayClosed}
+      onSuccess={checkout.onSuccess}
+      onCancel={checkout.onStartCheckoutTimer}
+      onError={checkout.onError}
+    />
+  );
+
   return (
     <section id="draft-payment-section" className="space-y-4">
       {paymentReadiness !== "ready" && app.paymentStatus === "unpaid" && (
@@ -57,33 +91,25 @@ export function DraftPaymentSection({
         </div>
       )}
 
-      {paymentReadiness === "ready" && app.paymentStatus === "unpaid" && (
+      {showUnpaidPay && (
         <div className="space-y-4 rounded-[12px] border-2 border-primary bg-primary/5 p-5 shadow-[0_8px_32px_rgba(1,32,49,0.08)] sm:p-6">
           <h2 className="font-heading text-base! font-semibold md:text-lg!">{t("payment.initiatePaymentTitle")}</h2>
           <p className="text-sm text-muted-foreground">
             {payCopyComplete ? t("pay.payNowComplete") : t("pay.payNowIncomplete")}
           </p>
           {checkoutError ? <CheckoutErrorAlert message={checkoutError} /> : null}
-          <PaddleCheckoutButton
-            applicationId={applicationId}
-            onExternalRedirect={() => {
-              onDismissCheckoutError();
-              checkout.onExternalRedirect();
-            }}
-            onOverlayClosed={checkout.onOverlayClosed}
-            onSuccess={checkout.onSuccess}
-            onCancel={checkout.onStartCheckoutTimer}
-            onError={checkout.onError}
-          />
+          {payButton}
         </div>
       )}
 
-      {app.paymentStatus === "checkout_created" && (
+      {showCheckoutCard && (
         <div className="space-y-6 rounded-[12px] border-2 border-primary bg-primary/5 p-5 shadow-[0_8px_32px_rgba(1,32,49,0.08)] sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="font-heading text-base! font-semibold md:text-lg!">{t("payment.completePaymentTitle")}</h2>
-              <p className="text-sm text-muted-foreground">{t("payment.checkoutInProgress")}</p>
+              <p className="text-sm text-muted-foreground">
+                {embeddedUrl ? t("payment.completeInWidget") : t("payment.checkoutInProgress")}
+              </p>
             </div>
             {countdown !== null && (
               <div className="bg-primary text-primary-foreground px-4 py-2 font-mono text-xl font-bold flex items-center gap-2">
@@ -95,27 +121,31 @@ export function DraftPaymentSection({
 
           {checkoutError ? <CheckoutErrorAlert message={checkoutError} /> : null}
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1">
-              <PaddleCheckoutButton
-                applicationId={applicationId}
-                onExternalRedirect={() => {
-                  onDismissCheckoutError();
-                  checkout.onExternalRedirect();
-                }}
-                onOverlayClosed={checkout.onOverlayClosed}
-                onSuccess={checkout.onSuccess}
-                onError={checkout.onError}
-              />
-            </div>
-            <ClientButton
-              variant="ghost"
-              className="hover:bg-destructive/10 hover:text-destructive"
-              onClick={onCancelCheckout}
-            >
-              {t("payment.cancelAndReset")}
-            </ClientButton>
-          </div>
+          {sessionLoading && !embeddedUrl && !showPaddleRetry ? (
+            <p className="text-muted-foreground text-sm" role="status">
+              {t("payment.preparingCheckout")}
+            </p>
+          ) : null}
+
+          {embeddedUrl ? (
+            <ZiinaEmbeddedCheckout
+              embeddedUrl={embeddedUrl}
+              confirming={confirming}
+              onCompleted={checkout.onZiinaCompleted}
+              onFailed={checkout.onZiinaFailed}
+              onCanceled={checkout.onZiinaCanceled}
+            />
+          ) : null}
+
+          {showPaddleRetry ? <div className="flex-1">{payButton}</div> : null}
+
+          <ClientButton
+            variant="ghost"
+            className="hover:bg-destructive/10 hover:text-destructive"
+            onClick={onCancelCheckout}
+          >
+            {t("payment.cancelAndReset")}
+          </ClientButton>
         </div>
       )}
 
@@ -130,4 +160,4 @@ export function DraftPaymentSection({
       )}
     </section>
   );
-}
+};

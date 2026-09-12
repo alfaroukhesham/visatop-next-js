@@ -226,6 +226,8 @@
     "initiatePaymentTitle": "Initiate payment",
     "completePaymentTitle": "Complete your payment",
     "checkoutInProgress": "Checkout is in progress.",
+    "completeInWidget": "Enter your payment details below. Stay on this page until you see confirmation.",
+    "iframeTitle": "Secure payment form",
     "expiresLabel": "Expires:",
     "cancelAndReset": "Cancel & Reset",
     "paymentConfirmed": "Payment Confirmed",
@@ -356,7 +358,7 @@
     "refreshStatus": "Refresh status",
     "contactSupport": "Contact support",
     "nextStepsTitle": "Next steps",
-    "nextStepsBody": "Your application is in progress. You can track updates any time, or start a new application.",
+    "nextStepsBody": "Your application is in progress. You can start a new application any time.",
     "trackApplication": "Track application",
     "startNewApplication": "Start new application",
     "browseServices": "Browse services",
@@ -456,7 +458,7 @@
     "confirmError": "Something went wrong while confirming payment. Please refresh or contact support.",
     "errors": {
       "genericStart": "We couldn't start checkout. Please try again in a moment.",
-      "checkoutInProgress": "You already have a payment session open for this application. Use Complete your payment below to continue, or choose Cancel & Reset to start over.",
+      "checkoutInProgress": "You already have a payment session open for this application. Complete payment in the form below, or choose Cancel & Reset to start over.",
       "notReady": "This application isn't ready for payment yet. Refresh the page—if you just saved your details, wait a moment and try again.",
       "originBlocked": "Payments can't be started from this address (for example localhost without HTTPS). Use the published https link for this site, or ask your developer to enable local payment testing.",
       "missingGuestEmail": "Add your email on the visa selection step before paying.",
@@ -465,6 +467,8 @@
       "refreshAndRetry": "We couldn't start checkout. Please refresh the page and try again.",
       "checkoutFailed": "Checkout failed",
       "missingPassport": "Upload a passport copy to start payment. Other documents can be added now or after.",
+      "paymentNotCompleted": "Payment was not completed. You can try again in the form below, or cancel and reset to start over.",
+      "sessionUnavailable": "We couldn't restore this payment session. Cancel and reset, then try again.",
       "sdkFailed": "Failed to initialize Paddle SDK",
       "failedDot": "Checkout failed."
     }

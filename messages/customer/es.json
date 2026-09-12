@@ -226,6 +226,8 @@
     "initiatePaymentTitle": "Iniciar pago",
     "completePaymentTitle": "Complete su pago",
     "checkoutInProgress": "El pago está en curso.",
+    "completeInWidget": "Introduzca los datos de pago abajo. Permanezca en esta página hasta ver la confirmación.",
+    "iframeTitle": "Formulario de pago seguro",
     "expiresLabel": "Caduca:",
     "cancelAndReset": "Cancelar y restablecer",
     "paymentConfirmed": "Pago confirmado",
@@ -465,6 +467,8 @@
       "refreshAndRetry": "No pudimos iniciar el pago. Actualice la página e inténtelo de nuevo.",
       "checkoutFailed": "Error en el pago",
       "missingPassport": "Suba una copia del pasaporte para iniciar el pago. Otros documentos se pueden añadir ahora o después.",
+      "paymentNotCompleted": "El pago no se completó. Puede intentarlo de nuevo en el formulario o cancelar y restablecer para empezar de nuevo.",
+      "sessionUnavailable": "No pudimos restaurar esta sesión de pago. Cancele y restablezca, luego inténtelo de nuevo.",
       "sdkFailed": "No se pudo inicializar el SDK de Paddle",
       "failedDot": "El pago ha fallado."
     }

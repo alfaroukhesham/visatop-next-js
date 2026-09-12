@@ -226,6 +226,8 @@
     "initiatePaymentTitle": "Ödemeyi başlat",
     "completePaymentTitle": "Ödemenizi tamamlayın",
     "checkoutInProgress": "Ödeme devam ediyor.",
+    "completeInWidget": "Ödeme bilgilerinizi aşağıya girin. Onayı görene kadar bu sayfada kalın.",
+    "iframeTitle": "Güvenli ödeme formu",
     "expiresLabel": "Bitiş:",
     "cancelAndReset": "İptal et ve sıfırla",
     "paymentConfirmed": "Ödeme onaylandı",
@@ -465,6 +467,8 @@
       "refreshAndRetry": "Ödeme başlatılamadı. Lütfen sayfayı yenileyip tekrar deneyin.",
       "checkoutFailed": "Ödeme başarısız",
       "missingPassport": "Ödemeyi başlatmak için bir pasaport kopyası yükleyin. Diğer belgeler şimdi veya sonra eklenebilir.",
+      "paymentNotCompleted": "Ödeme tamamlanmadı. Aşağıdaki formda tekrar deneyebilir veya iptal edip sıfırlayarak baştan başlayabilirsiniz.",
+      "sessionUnavailable": "Bu ödeme oturumu geri yüklenemedi. İptal edip sıfırlayın, ardından tekrar deneyin.",
       "sdkFailed": "Paddle SDK başlatılamadı",
       "failedDot": "Ödeme başarısız oldu."
     }

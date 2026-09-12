@@ -226,6 +226,8 @@
     "initiatePaymentTitle": "Initier le paiement",
     "completePaymentTitle": "Finaliser votre paiement",
     "checkoutInProgress": "Paiement en cours.",
+    "completeInWidget": "Saisissez vos informations de paiement ci-dessous. Restez sur cette page jusqu’à la confirmation.",
+    "iframeTitle": "Formulaire de paiement sécurisé",
     "expiresLabel": "Expire le :",
     "cancelAndReset": "Annuler et réinitialiser",
     "paymentConfirmed": "Paiement confirmé",
@@ -465,6 +467,8 @@
       "refreshAndRetry": "Nous n'avons pas pu démarrer le paiement. Actualisez la page et réessayez.",
       "checkoutFailed": "Échec du paiement",
       "missingPassport": "Téléversez une copie de passeport pour commencer le paiement. Les autres documents peuvent être ajoutés maintenant ou plus tard.",
+      "paymentNotCompleted": "Le paiement n’a pas été effectué. Vous pouvez réessayer dans le formulaire ci-dessous, ou annuler et réinitialiser pour recommencer.",
+      "sessionUnavailable": "Impossible de restaurer cette session de paiement. Annulez et réinitialisez, puis réessayez.",
       "sdkFailed": "Échec de l'initialisation du SDK Paddle",
       "failedDot": "Le paiement a échoué."
     }

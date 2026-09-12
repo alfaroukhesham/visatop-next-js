@@ -226,6 +226,8 @@
     "initiatePaymentTitle": "بدء الدفع",
     "completePaymentTitle": "أكمل الدفع",
     "checkoutInProgress": "الدفع قيد التنفيذ.",
+    "completeInWidget": "أدخل بيانات الدفع أدناه. ابقَ في هذه الصفحة حتى تظهر رسالة التأكيد.",
+    "iframeTitle": "نموذج الدفع الآمن",
     "expiresLabel": "ينتهي:",
     "cancelAndReset": "إلغاء وإعادة التعيين",
     "paymentConfirmed": "تم تأكيد الدفع",
@@ -356,7 +358,7 @@
     "refreshStatus": "تحديث الحالة",
     "contactSupport": "التواصل مع الدعم",
     "nextStepsTitle": "الخطوات التالية",
-    "nextStepsBody": "طلبك قيد التنفيذ. يمكنك تتبّع التحديثات في أي وقت، أو بدء طلب جديد.",
+    "nextStepsBody": "طلبك قيد التنفيذ. يمكنك بدء طلب جديد في أي وقت.",
     "trackApplication": "تتبّع الطلب",
     "startNewApplication": "بدء طلب جديد",
     "browseServices": "تصفّح الخدمات",
@@ -465,6 +467,8 @@
       "refreshAndRetry": "تعذّر بدء الدفع. يرجى تحديث الصفحة والمحاولة مرة أخرى.",
       "checkoutFailed": "فشل الدفع",
       "missingPassport": "ارفع صورة جواز السفر لبدء الدفع. يمكن إضافة المستندات الأخرى الآن أو لاحقاً.",
+      "paymentNotCompleted": "لم يكتمل الدفع. يمكنك المحاولة مرة أخرى في النموذج أدناه، أو الإلغاء وإعادة التعيين للبدء من جديد.",
+      "sessionUnavailable": "تعذّر استعادة جلسة الدفع. ألغِ وأعد التعيين ثم حاول مرة أخرى.",
       "sdkFailed": "تعذّر تهيئة Paddle SDK",
       "failedDot": "فشل الدفع."
     }

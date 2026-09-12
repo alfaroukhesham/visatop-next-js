@@ -226,6 +226,8 @@
     "initiatePaymentTitle": "Fara biya",
     "completePaymentTitle": "Kammala biyan kuɗi",
     "checkoutInProgress": "Biya na ci gaba.",
+    "completeInWidget": "Shigar da bayanan biyan ku a ƙasa. Ku zauna a wannan shafin har sai kun ga tabbaci.",
+    "iframeTitle": "Fom ɗin biya mai tsaro",
     "expiresLabel": "Ya ƙare:",
     "cancelAndReset": "Soke & Sake saiti",
     "paymentConfirmed": "An tabbatar da biya",
@@ -465,6 +467,8 @@
       "refreshAndRetry": "Ba mu iya fara biya ba. Da fatan za a wartsake shafin kuma sake gwadawa.",
       "checkoutFailed": "Biya ta gaza",
       "missingPassport": "Loda kwafin fasfo don fara biya. Sauran takardu za a iya ƙarawa yanzu ko daga baya.",
+      "paymentNotCompleted": "Ba a kammala biya ba. Kuna iya sake gwadawa a fom ɗin ƙasa, ko soke kuma sake saiti don farawa daga farko.",
+      "sessionUnavailable": "Ba mu iya maido da wannan zaman biya ba. Soke kuma sake saiti, sannan sake gwadawa.",
       "sdkFailed": "An kasa fara Paddle SDK",
       "failedDot": "Biyan kudi ya gaza."
     }

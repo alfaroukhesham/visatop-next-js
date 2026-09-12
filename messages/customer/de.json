@@ -226,6 +226,8 @@
     "initiatePaymentTitle": "Zahlung starten",
     "completePaymentTitle": "Zahlung abschließen",
     "checkoutInProgress": "Checkout läuft.",
+    "completeInWidget": "Geben Sie unten Ihre Zahlungsdaten ein. Bleiben Sie auf dieser Seite, bis die Bestätigung erscheint.",
+    "iframeTitle": "Sicheres Zahlungsformular",
     "expiresLabel": "Läuft ab:",
     "cancelAndReset": "Abbrechen & Zurücksetzen",
     "paymentConfirmed": "Zahlung bestätigt",
@@ -465,6 +467,8 @@
       "refreshAndRetry": "Wir konnten den Checkout nicht starten. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "checkoutFailed": "Checkout fehlgeschlagen",
       "missingPassport": "Laden Sie eine Passkopie hoch, um die Zahlung zu starten. Weitere Dokumente können jetzt oder später hinzugefügt werden.",
+      "paymentNotCompleted": "Die Zahlung wurde nicht abgeschlossen. Sie können es im Formular unten erneut versuchen oder abbrechen und zurücksetzen.",
+      "sessionUnavailable": "Diese Zahlungssitzung konnte nicht wiederhergestellt werden. Brechen Sie ab, setzen Sie zurück und versuchen Sie es erneut.",
       "sdkFailed": "Paddle-SDK konnte nicht initialisiert werden",
       "failedDot": "Zahlung fehlgeschlagen."
     }

@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { and, desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
 import { toPublicApplication } from "@/lib/applications/public-application";
@@ -10,6 +10,7 @@ import { application as applicationTable, payment } from "@/lib/db/schema";
 import { getActivePaymentProvider } from "@/lib/payments/resolve-payment-provider";
 import { reconcileZiinaPaymentFromReturn } from "@/lib/payments/reconcile-ziina-payments";
 import { scheduleZiinaPaidSideEffects } from "@/lib/payments/ziina-payment-side-effects";
+import { findOpenZiinaPaymentForApplication } from "@/lib/payments/ziina-checkout-session";
 import type { DbTransaction } from "@/lib/db";
 
 async function loadApplicationRowAfterZiinaAttempt(
@@ -71,20 +72,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       return { kind: "already_paid" as const, application: appRow };
     }
 
-    const payRows = await tx
-      .select()
-      .from(payment)
-      .where(
-        and(
-          eq(payment.applicationId, applicationId),
-          eq(payment.provider, "ziina"),
-          eq(payment.status, "checkout_created"),
-        ),
-      )
-      .orderBy(desc(payment.createdAt))
-      .limit(1);
-
-    const payRow = payRows[0];
+    // Payment rows are stored on the party primary; look across all members.
+    const payRow = await findOpenZiinaPaymentForApplication(tx, applicationId);
     if (!payRow) {
       return { kind: "no_checkout" as const, application: appRow };
     }
