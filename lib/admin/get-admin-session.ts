@@ -13,7 +13,7 @@ export const getAdminSession = cache(async () => {
 export async function getAdminUserId(): Promise<string> {
   const session = await getAdminSession();
   if (!session) {
-    redirect("/admin/sign-in?callbackUrl=%2Fadmin");
+    redirect("/admin/sign-in");
   }
   return session.user.id;
 }

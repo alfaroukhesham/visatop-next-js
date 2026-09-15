@@ -1,14 +1,11 @@
-/**
- * Detect Postgres `foreign_key_violation` (23503), including wrapped driver errors.
- */
-export function isForeignKeyViolation(err: unknown): boolean {
+const postgresErrorHasCode = (err: unknown, code: string): boolean => {
   let current: unknown = err;
   for (let depth = 0; depth < 6 && current; depth += 1) {
     if (
       typeof current === "object" &&
       current !== null &&
       "code" in current &&
-      (current as { code: unknown }).code === "23503"
+      (current as { code: unknown }).code === code
     ) {
       return true;
     }
@@ -19,4 +16,10 @@ export function isForeignKeyViolation(err: unknown): boolean {
     }
   }
   return false;
-}
+};
+
+/** Detect Postgres `foreign_key_violation` (23503), including wrapped driver errors. */
+export const isForeignKeyViolation = (err: unknown): boolean => postgresErrorHasCode(err, "23503");
+
+/** Detect Postgres `unique_violation` (23505), including wrapped driver errors. */
+export const isUniqueViolation = (err: unknown): boolean => postgresErrorHasCode(err, "23505");

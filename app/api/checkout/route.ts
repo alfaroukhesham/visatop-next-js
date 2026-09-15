@@ -22,6 +22,8 @@ import { diagnoseCheckoutBlock } from "@/lib/payments/diagnose-checkout-block";
 import { loadPaymentUploadPresence } from "@/lib/applications/load-payment-upload-presence";
 import { passportsPresentForPayment } from "@/lib/documents/validation-readiness";
 import { sumCheckoutTotals, sumPartyLines, type TPartyLine } from "@/lib/payments/party-checkout-total";
+import { FUNNEL_CHECKOUT_CREATED, serverFunnelEventId } from "@/lib/analytics/funnel-event-names";
+import { recordFunnelEvent } from "@/lib/analytics/record-funnel-event";
 import * as schema from "@/lib/db/schema";
 import { asc, eq, and, or, inArray, isNull } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
@@ -218,6 +220,18 @@ export async function POST(req: Request) {
         .update(schema.application)
         .set({ paymentStatus: "checkout_created" })
         .where(inArray(schema.application.id, memberIds));
+
+      for (const member of lockedRows) {
+        await recordFunnelEvent(tx, {
+          eventId: serverFunnelEventId(member.id, FUNNEL_CHECKOUT_CREATED),
+          eventName: FUNNEL_CHECKOUT_CREATED,
+          sessionId: `server:${member.id}`,
+          applicationId: member.id,
+          nationalityCode: member.nationalityCode,
+          serviceId: member.serviceId,
+          source: "server",
+        });
+      }
 
       const metadata: Record<string, string> = {
         applicationId: primary.id,

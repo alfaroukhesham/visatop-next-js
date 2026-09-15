@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   Banknote,
+  ChartColumn,
   ClipboardList,
   FileStack,
   Globe2,
@@ -45,6 +46,12 @@ const links = [
     title: "Applications",
     description: "Manage and monitor all visa applications, payments, and fulfillment.",
     icon: FileStack,
+  },
+  {
+    href: "/admin/analytics",
+    title: "Analytics",
+    description: "Funnel, churn, volume, and revenue for the customer apply journey.",
+    icon: ChartColumn,
   },
 ] as const;
 

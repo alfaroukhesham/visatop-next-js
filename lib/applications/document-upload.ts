@@ -9,6 +9,9 @@ import {
   EXTRACTION_STATUS,
 } from "@/lib/db/schema";
 import { evaluateApplicationReadiness } from "@/lib/applications/evaluate-readiness";
+import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
+import { serverFunnelEventId } from "@/lib/analytics/funnel-event-names";
+import { recordFunnelEvent } from "@/lib/analytics/record-funnel-event";
 import {
   clearOcrSourcedProfileFields,
   type ApplicantProfileProvenance,
@@ -44,6 +47,27 @@ export type PersistDocumentInput = {
 export type PersistDocumentResult =
   | { ok: true; document: UploadedDocument; replacedPriorId: string | null; wasIdempotent: boolean }
   | { ok: false; error: FrozenCheckoutError | NotFoundError };
+
+const recordDocumentFunnelEvent = async (
+  tx: DbTransaction,
+  applicationId: string,
+  documentType: string,
+): Promise<void> => {
+  const eventName =
+    documentType === "passport_copy"
+      ? APPLY_FUNNEL_EVENTS.passportUploaded
+      : documentType === "personal_photo"
+        ? APPLY_FUNNEL_EVENTS.photoUploaded
+        : null;
+  if (!eventName) return;
+  await recordFunnelEvent(tx, {
+    eventId: serverFunnelEventId(applicationId, eventName),
+    eventName,
+    sessionId: `server:${applicationId}`,
+    applicationId,
+    source: "server",
+  });
+};
 
 /**
  * Run the replace-then-insert flow for a document upload inside the caller's
@@ -119,6 +143,7 @@ export async function persistUploadedDocument(
         .set({ tempExpiresAt })
         .where(eq(applicationDocumentBlob.documentId, prior.id));
     }
+    await recordDocumentFunnelEvent(tx, input.applicationId, input.documentType);
     return {
       ok: true,
       document: prior,
@@ -183,6 +208,7 @@ export async function persistUploadedDocument(
 
   await evaluateApplicationReadiness(tx, input.applicationId);
 
+  await recordDocumentFunnelEvent(tx, input.applicationId, input.documentType);
   return { ok: true, document: newDoc, replacedPriorId, wasIdempotent: false };
 }
 

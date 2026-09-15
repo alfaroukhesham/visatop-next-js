@@ -7,6 +7,9 @@ import {
 import type { ValidationResult } from "@/lib/documents/validation-readiness";
 import { computeValidation } from "@/lib/documents/validation-readiness";
 import { loadPaymentUploadPresence } from "@/lib/applications/load-payment-upload-presence";
+import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
+import { serverFunnelEventId } from "@/lib/analytics/funnel-event-names";
+import { recordFunnelEvent } from "@/lib/analytics/record-funnel-event";
 
 /**
  * Re-evaluates application readiness and auto-advances the applicationStatus.
@@ -109,6 +112,17 @@ export async function evaluateApplicationReadiness(
       .update(application)
       .set({ applicationStatus: "ready_for_payment" })
       .where(inArray(application.id, memberIds));
+    for (const memberId of memberIds) {
+      await recordFunnelEvent(tx, {
+        eventId: serverFunnelEventId(memberId, APPLY_FUNNEL_EVENTS.applicantVerified),
+        eventName: APPLY_FUNNEL_EVENTS.applicantVerified,
+        sessionId: `server:${memberId}`,
+        applicationId: memberId,
+        nationalityCode: primary.nationalityCode,
+        serviceId: primary.serviceId,
+        source: "server",
+      });
+    }
   } else if (action === "revert") {
     await tx
       .update(application)

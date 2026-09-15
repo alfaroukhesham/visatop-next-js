@@ -11,6 +11,8 @@ import {
   type TGadsCheckoutConversionInput,
 } from "@/lib/analytics/gads-checkout-conversion";
 import { claimAnalyticsOnce } from "@/lib/analytics/track-once";
+import { sendFunnelBeacon } from "@/lib/analytics/funnel-beacon-client";
+import { funnelIdsFromTrackParams } from "@/lib/analytics/funnel-beacon-params";
 
 export type GtagEventParams = Record<string, string | number | boolean | undefined | null>;
 
@@ -54,6 +56,7 @@ export function trackEvent(eventName: string, params?: GtagEventParams): void {
     }
   }
   gtagCommand("event", eventName, cleaned);
+  sendFunnelBeacon(eventName, funnelIdsFromTrackParams(cleaned));
 }
 
 /** Same as `trackEvent`, but skips if this dedupe key already fired in the tab. */

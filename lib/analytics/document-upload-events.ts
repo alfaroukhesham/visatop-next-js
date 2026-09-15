@@ -1,8 +1,8 @@
 "use client";
 
-import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { analyticsDeviceType } from "@/lib/analytics/device-type";
 import { trackEvent } from "@/lib/analytics/gtag-client";
+import { persistableUploadFunnelEventName } from "@/lib/analytics/upload-funnel-event";
 import type { TUploadFailureReason } from "@/lib/analytics/upload-failure";
 
 export type TDocumentUploadSource = "camera" | "file";
@@ -14,12 +14,10 @@ export const trackDocumentUploadAnalytics = (input: {
   source?: TDocumentUploadSource;
   failureReason?: TUploadFailureReason;
 }): void => {
-  const eventName =
-    input.docType === "passport_copy"
-      ? APPLY_FUNNEL_EVENTS.passportUploaded
-      : input.docType === "personal_photo"
-        ? APPLY_FUNNEL_EVENTS.photoUploaded
-        : null;
+  const persistableName = persistableUploadFunnelEventName(input.docType, input.success);
+  const eventName = persistableName ?? (input.docType === "passport_copy" || input.docType === "personal_photo"
+    ? "document_upload_failed"
+    : null);
   if (!eventName) return;
   trackEvent(eventName, {
     application_id: input.applicationId,

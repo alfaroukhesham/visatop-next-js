@@ -211,6 +211,13 @@
       "when": 1782230000000,
       "tag": "0029_seed_5_years_bank_statement",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1782240000000,
+      "tag": "0030_analytics_funnel_event",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,9 @@ import type { DbTransaction } from "@/lib/db";
 import { and, asc, desc, eq, ne, or } from "drizzle-orm";
 import type { NormalizedPaymentWebhookEvent } from "./normalized-webhook";
 import type { ApplicationRow } from "@/lib/applications/load-application-row-for-request";
+import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
+import { serverFunnelEventId } from "@/lib/analytics/funnel-event-names";
+import { recordFunnelEvent } from "@/lib/analytics/record-funnel-event";
 
 export type ApplyPaymentWebhookContext = {
   requestId?: string | null;
@@ -211,16 +214,26 @@ export async function applyPaymentWebhookEvent(
         }),
       });
 
-      for (const memberId of newlyPaidIds) {
-        const retainRes = await retainRequiredDocuments(tx, memberId);
+      for (const member of memberRows) {
+        if (!newlyPaidIds.includes(member.id)) continue;
+        await recordFunnelEvent(tx, {
+          eventId: serverFunnelEventId(member.id, APPLY_FUNNEL_EVENTS.paymentSucceeded),
+          eventName: APPLY_FUNNEL_EVENTS.paymentSucceeded,
+          sessionId: `server:${member.id}`,
+          applicationId: member.id,
+          nationalityCode: member.nationalityCode,
+          serviceId: member.serviceId,
+          source: "server",
+        });
+        const retainRes = await retainRequiredDocuments(tx, member.id);
         if (!retainRes.ok) {
-          await tx.update(application).set({ adminAttentionRequired: true }).where(eq(application.id, memberId));
+          await tx.update(application).set({ adminAttentionRequired: true }).where(eq(application.id, member.id));
           await tx.insert(auditLog).values({
             actorType: "system",
             actorId: null,
             action: "payment_paid_docs_retain_failed_flagged",
             entityType: "application",
-            entityId: memberId,
+            entityId: member.id,
             beforeJson: JSON.stringify({ adminAttentionRequired: appRow.adminAttentionRequired }),
             afterJson: JSON.stringify({
               providerEventId,

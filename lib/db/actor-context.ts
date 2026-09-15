@@ -96,6 +96,15 @@ export async function withClientDbActor<T>(
   return withDbActor({ type: "client", id: userId, permissions: [] }, fn);
 }
 
+/** Anonymous funnel beacon: client INSERT policy only, not a system RLS bypass. */
+export const ANALYTICS_BEACON_ACTOR_ID = "analytics-beacon";
+
+export async function withAnalyticsBeaconDbActor<T>(
+  fn: (tx: DbTransaction) => Promise<T>,
+) {
+  return withDbActor({ type: "client", id: ANALYTICS_BEACON_ACTOR_ID, permissions: [] }, fn);
+}
+
 export async function withSystemDbActor<T>(
   fn: (tx: DbTransaction) => Promise<T>,
 ) {

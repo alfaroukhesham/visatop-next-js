@@ -1,9 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { AdminSignInSkeleton } from "@/components/auth/admin-sign-in-skeleton";
+import { useState } from "react";
 import { adminAuthClient } from "@/lib/admin-auth-client";
 import { appHref } from "@/lib/app-href";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -19,24 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-function safeCallbackUrl(raw: string | null): string {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) {
-    return "/admin";
-  }
-  if (!raw.startsWith("/admin")) return "/admin";
-  return raw;
-}
-
 export default function AdminSignInPage() {
-  return (
-    <Suspense fallback={<AdminSignInSkeleton />}>
-      <AdminSignInPageContent />
-    </Suspense>
-  );
-}
-
-function AdminSignInPageContent() {
-  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -63,8 +44,7 @@ function AdminSignInPageContent() {
       );
       return;
     }
-    const next = safeCallbackUrl(searchParams.get("callbackUrl"));
-    window.location.assign(appHref(next));
+    window.location.assign(appHref("/admin"));
   }
 
   return (

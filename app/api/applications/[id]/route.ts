@@ -14,6 +14,9 @@ import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withClientDbActor, withSystemDbActor } from "@/lib/db/actor-context";
 import { application } from "@/lib/db/schema";
+import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
+import { serverFunnelEventId } from "@/lib/analytics/funnel-event-names";
+import { recordFunnelEvent } from "@/lib/analytics/record-funnel-event";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -92,11 +95,24 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
     if (existing.userId === session.user.id) {
       const updated = await withClientDbActor(session.user.id, async (tx) => {
-        return tx
+        const rows = await tx
           .update(application)
           .set({ guestEmail: nextEmail })
           .where(and(eq(application.id, id), eq(application.userId, session.user.id)))
           .returning();
+        const row = rows[0];
+        if (row) {
+          await recordFunnelEvent(tx, {
+            eventId: serverFunnelEventId(row.id, APPLY_FUNNEL_EVENTS.applicationLinkSaved),
+            eventName: APPLY_FUNNEL_EVENTS.applicationLinkSaved,
+            sessionId: `server:${row.id}`,
+            applicationId: row.id,
+            nationalityCode: row.nationalityCode,
+            serviceId: row.serviceId,
+            source: "server",
+          });
+        }
+        return rows;
       });
       const row = updated[0];
       if (!row) {
@@ -107,11 +123,24 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
 
     if (existing.userId == null) {
       const updated = await withSystemDbActor(async (tx) => {
-        return tx
+        const rows = await tx
           .update(application)
           .set({ guestEmail: nextEmail })
           .where(and(eq(application.id, id), isNull(application.userId)))
           .returning();
+        const row = rows[0];
+        if (row) {
+          await recordFunnelEvent(tx, {
+            eventId: serverFunnelEventId(row.id, APPLY_FUNNEL_EVENTS.applicationLinkSaved),
+            eventName: APPLY_FUNNEL_EVENTS.applicationLinkSaved,
+            sessionId: `server:${row.id}`,
+            applicationId: row.id,
+            nationalityCode: row.nationalityCode,
+            serviceId: row.serviceId,
+            source: "server",
+          });
+        }
+        return rows;
       });
       const row = updated[0];
       if (!row) {
@@ -133,11 +162,24 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
   }
   const updated = await withSystemDbActor(async (tx) => {
-    return tx
+    const rows = await tx
       .update(application)
       .set({ guestEmail: parsed.data.guestEmail.trim().toLowerCase() })
       .where(and(eq(application.id, id), eq(application.isGuest, true)))
       .returning();
+    const row = rows[0];
+    if (row) {
+      await recordFunnelEvent(tx, {
+        eventId: serverFunnelEventId(row.id, APPLY_FUNNEL_EVENTS.applicationLinkSaved),
+        eventName: APPLY_FUNNEL_EVENTS.applicationLinkSaved,
+        sessionId: `server:${row.id}`,
+        applicationId: row.id,
+        nationalityCode: row.nationalityCode,
+        serviceId: row.serviceId,
+        source: "server",
+      });
+    }
+    return rows;
   });
   const next = updated[0];
   if (!next) {

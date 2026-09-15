@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/admin/get-admin-session";
 import { adminSignOutAction } from "@/app/actions/admin-auth";
@@ -18,13 +17,10 @@ export default async function AdminProtectedLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [hdrs, session] = await Promise.all([headers(), getAdminSession()]);
+  const session = await getAdminSession();
 
   if (!session) {
-    const path = hdrs.get("x-pathname") ?? "/admin";
-    const callback =
-      path.startsWith("/admin") && !path.startsWith("//") ? path : "/admin";
-    redirect(`/admin/sign-in?callbackUrl=${encodeURIComponent(callback)}`);
+    redirect("/admin/sign-in");
   }
 
   return (

@@ -5,6 +5,9 @@ import { listPublicServicesForNationality } from "@/lib/catalog/queries";
 import type { TTravelerKind } from "@/lib/catalog/guided-choice";
 import { computeDraftExpiresAt, getDraftTtlHoursFromTx } from "@/lib/applications/draft-ttl";
 import type { CreateDraftTraveler } from "@/lib/applications/create-draft-body";
+import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
+import { serverFunnelEventId } from "@/lib/analytics/funnel-event-names";
+import { recordFunnelEvent } from "@/lib/analytics/record-funnel-event";
 
 export type TCatalogServiceRow = { id: string; travelerKind: TTravelerKind };
 
@@ -128,6 +131,29 @@ export async function createPartyDraft(
 
   const primary = members.find((m) => m.travelerRole === "primary");
   if (!primary) throw new Error("Failed to create primary application");
+
+  for (const member of members) {
+    await recordFunnelEvent(tx, {
+      eventId: serverFunnelEventId(member.id, APPLY_FUNNEL_EVENTS.visaSelected),
+      eventName: APPLY_FUNNEL_EVENTS.visaSelected,
+      sessionId: `server:${member.id}`,
+      applicationId: member.id,
+      nationalityCode: params.nationalityCode,
+      serviceId: member.serviceId,
+      source: "server",
+    });
+    if (email) {
+      await recordFunnelEvent(tx, {
+        eventId: serverFunnelEventId(member.id, APPLY_FUNNEL_EVENTS.applicationLinkSaved),
+        eventName: APPLY_FUNNEL_EVENTS.applicationLinkSaved,
+        sessionId: `server:${member.id}`,
+        applicationId: member.id,
+        nationalityCode: params.nationalityCode,
+        serviceId: member.serviceId,
+        source: "server",
+      });
+    }
+  }
 
   return {
     partyId,

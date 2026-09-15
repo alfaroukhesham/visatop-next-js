@@ -12,3 +12,4 @@ export * from "./affiliate";
 export * from "./catalog-customer-price";
 export * from "./catalog-document-requirement";
 export * from "./catalog-document-type";
+export * from "./analytics-funnel-event";
