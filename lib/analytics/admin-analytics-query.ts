@@ -1,6 +1,14 @@
-import { and, eq, gte, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
-import { analyticsFunnelEvent, application, nationality, payment } from "@/lib/db/schema";
+import {
+  analyticsFunnelEvent,
+  application,
+  applicationParty,
+  nationality,
+  payment,
+  user,
+  visaService,
+} from "@/lib/db/schema";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import {
   deltaPct,
@@ -13,9 +21,18 @@ import {
   buildFunnelRows,
   computeChurnTrio,
 } from "@/lib/analytics/funnel-metrics";
+import {
+  ADMIN_FUNNEL_STEP_EVENT_NAMES,
+  applicantEmail,
+  applicantPaidAmountMinor,
+  applicantPaidCurrency,
+  indexApplicantPayments,
+  toApplicantExportRow,
+} from "@/lib/analytics/admin-analytics-applicants";
 import type {
   TAdminAnalyticsPayload,
   TAnalyticsKpi,
+  TApplicantExportRow,
   TFunnelEventExportRow,
 } from "@/lib/analytics/admin-analytics-types";
 import { minorUnitsToJsonSafeNumber } from "@/lib/pricing/minor-units-json";
@@ -304,6 +321,122 @@ export const loadFunnelEventsForExport = async (
       source: r.source,
     })),
   };
+};
+
+export type TApplicantsExport = {
+  rows: TApplicantExportRow[];
+  truncated: boolean;
+};
+
+export const loadApplicantsForExport = async (
+  tx: DbTransaction,
+  range: TInstantRange,
+): Promise<TApplicantsExport> => {
+  const apps = await tx
+    .select({
+      id: application.id,
+      createdAt: application.createdAt,
+      paymentStatus: application.paymentStatus,
+      catalogCurrency: application.catalogCurrency,
+      guestEmail: application.guestEmail,
+      userEmail: user.email,
+      partyGuestEmail: applicationParty.guestEmail,
+      partyId: application.partyId,
+      visaType: visaService.name,
+    })
+    .from(application)
+    .leftJoin(user, eq(user.id, application.userId))
+    .leftJoin(applicationParty, eq(applicationParty.id, application.partyId))
+    .innerJoin(visaService, eq(visaService.id, application.serviceId))
+    .where(inRange(application.createdAt, range))
+    .orderBy(desc(application.createdAt))
+    .limit(ANALYTICS_EVENTS_EXPORT_LIMIT + 1);
+
+  const truncated = apps.length > ANALYTICS_EVENTS_EXPORT_LIMIT;
+  const sliced = truncated ? apps.slice(0, ANALYTICS_EVENTS_EXPORT_LIMIT) : apps;
+  if (sliced.length === 0) {
+    return { rows: [], truncated: false };
+  }
+
+  const ids = sliced.map((app) => app.id);
+  const partyIds = [
+    ...new Set(sliced.map((app) => app.partyId).filter((id): id is string => Boolean(id))),
+  ];
+  const paymentScope =
+    partyIds.length > 0
+      ? or(inArray(payment.applicationId, ids), inArray(application.partyId, partyIds))
+      : inArray(payment.applicationId, ids);
+
+  const paidPayments = await tx
+    .select({
+      applicationId: payment.applicationId,
+      partyId: application.partyId,
+      amount: payment.amount,
+      currency: payment.currency,
+    })
+    .from(payment)
+    .innerJoin(application, eq(application.id, payment.applicationId))
+    .where(and(eq(payment.status, "paid"), paymentScope));
+
+  const events = await tx
+    .select({
+      applicationId: analyticsFunnelEvent.applicationId,
+      eventName: analyticsFunnelEvent.eventName,
+    })
+    .from(analyticsFunnelEvent)
+    .where(
+      and(
+        inArray(analyticsFunnelEvent.applicationId, ids),
+        isNotNull(analyticsFunnelEvent.applicationId),
+        inArray(analyticsFunnelEvent.eventName, [...ADMIN_FUNNEL_STEP_EVENT_NAMES]),
+      ),
+    );
+
+  const eventNamesByApp = new Map<string, string[]>();
+  for (const event of events) {
+    if (!event.applicationId) continue;
+    const list = eventNamesByApp.get(event.applicationId) ?? [];
+    list.push(event.eventName);
+    eventNamesByApp.set(event.applicationId, list);
+  }
+
+  const paymentRows = paidPayments.map((row) => ({
+    applicationId: row.applicationId,
+    partyId: row.partyId,
+    amountMinor: typeof row.amount === "bigint" ? row.amount : BigInt(row.amount ?? 0),
+    currency: row.currency,
+  }));
+  const indexed = indexApplicantPayments(paymentRows);
+
+  const rows = sliced.map((app) => {
+    const isPaid = app.paymentStatus === "paid";
+    return toApplicantExportRow({
+      email: applicantEmail({
+        guestEmail: app.guestEmail,
+        userEmail: app.userEmail,
+        partyGuestEmail: app.partyGuestEmail,
+      }),
+      createdAt: app.createdAt,
+      isPaid,
+      amountMinor: applicantPaidAmountMinor({
+        isPaid,
+        applicationId: app.id,
+        partyId: app.partyId,
+        indexed,
+      }),
+      currency: applicantPaidCurrency({
+        isPaid,
+        catalogCurrency: app.catalogCurrency,
+        applicationId: app.id,
+        partyId: app.partyId,
+        indexed,
+      }),
+      visaType: app.visaType,
+      eventNames: eventNamesByApp.get(app.id) ?? [],
+    });
+  });
+
+  return { rows, truncated };
 };
 
 /** Exported for tests — Postgres `date_trunc('week')` is Monday. */

@@ -1,5 +1,6 @@
 import type {
   TAdminAnalyticsPayload,
+  TApplicantExportRow,
   TFunnelEventExportRow,
 } from "@/lib/analytics/admin-analytics-types";
 
@@ -7,6 +8,12 @@ const csvCell = (value: string | number | null | undefined): string => {
   const s = value === null || value === undefined ? "" : String(value);
   if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
+};
+
+const formulaSafeCsvCell = (value: string | number | null | undefined): string => {
+  const s = value === null || value === undefined ? "" : String(value);
+  if (/^[=+\-@]/.test(s)) return csvCell(`'${s}`);
+  return csvCell(s);
 };
 
 const csvLine = (cells: Array<string | number | null | undefined>): string =>
@@ -77,5 +84,30 @@ export const funnelEventsToCsv = (
     "max_rows",
     opts?.maxRows ?? rows.length,
   ]);
+  return `${[meta, header, ...body].join("\n")}\n`;
+};
+
+export const applicantsToCsv = (
+  rows: TApplicantExportRow[],
+  opts?: { truncated?: boolean; maxRows?: number },
+): string => {
+  const truncated = Boolean(opts?.truncated);
+  const meta = csvLine([
+    "truncated",
+    truncated ? "true" : "false",
+    "max_rows",
+    opts?.maxRows ?? rows.length,
+  ]);
+  const header = csvLine(["email", "created_at", "paid", "amount_paid", "visa_type", "last_step"]);
+  const body = rows.map((r) =>
+    [
+      formulaSafeCsvCell(r.email),
+      csvCell(r.createdAt),
+      csvCell(r.paid),
+      csvCell(r.amountPaid),
+      formulaSafeCsvCell(r.visaType),
+      csvCell(r.lastStep),
+    ].join(","),
+  );
   return `${[meta, header, ...body].join("\n")}\n`;
 };

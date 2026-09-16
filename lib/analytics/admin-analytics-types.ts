@@ -49,3 +49,12 @@ export type TFunnelEventExportRow = {
   serviceId: string | null;
   source: string;
 };
+
+export type TApplicantExportRow = {
+  email: string;
+  createdAt: string;
+  paid: "yes" | "no";
+  amountPaid: string;
+  visaType: string;
+  lastStep: string;
+};

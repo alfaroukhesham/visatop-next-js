@@ -199,8 +199,16 @@ export const AdminAnalyticsClient: FC = () => {
               Export events CSV
             </Button>
           </a>
+          <a href={query ? apiHref(`/admin/analytics/export${query}&kind=applicants`) : undefined}>
+            <Button type="button" variant="outline" size="sm" disabled={!query}>
+              Export applicants CSV
+            </Button>
+          </a>
         </div>
       </div>
+      <p className="text-muted-foreground text-xs">
+        Applicants CSV includes contact emails. Summary and events CSVs do not.
+      </p>
 
       {preset === "custom" ? (
         <div className="grid max-w-xl gap-3 sm:grid-cols-2">
