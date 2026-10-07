@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseAdminPriceMajorInput } from "./apply-nationality-price-ui-updates";
+import { parseAdminPriceMajorInput } from "./parse-admin-price-input";
 
 describe("parseAdminPriceMajorInput", () => {
   it("parses decimal major units to minor", () => {

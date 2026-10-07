@@ -27,7 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import type { TCatalogDocumentType } from "@/lib/admin/catalog/document-type";
+import type { TCatalogDocumentType } from "@/lib/admin/catalog/document-type-helpers";
 import {
   assignDocumentRequirements,
   previewDocumentRequirements,

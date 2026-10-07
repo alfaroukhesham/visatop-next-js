@@ -9,7 +9,7 @@ import {
   applyManualUsdChange,
   type TFxFillDirty,
 } from "@/lib/admin/catalog/service-price-fx-fill";
-import { FX_SETTINGS_HREF } from "@/lib/admin/catalog/apply-service-price-ui-updates";
+import { FX_SETTINGS_HREF } from "@/lib/admin/catalog/fx-settings-href";
 
 interface ICatalogServicePriceInputsProps {
   aedMajor: string;
