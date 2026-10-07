@@ -76,3 +76,11 @@ export const areMarketingTagsEnabledFromHeaders = (
     envFlag,
   });
 };
+
+/** Client-side gate: browser hostname only (no X-Forwarded-Host spoofing). */
+export const areMarketingTagsEnabledInBrowser = (
+  hostname = typeof window !== "undefined" ? window.location.hostname : "",
+): boolean => {
+  if (!hostname) return false;
+  return areMarketingTagsEnabled({ hostname });
+};

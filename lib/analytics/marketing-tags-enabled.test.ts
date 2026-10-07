@@ -8,6 +8,7 @@ import {
   isMarketingTagsKillSwitchOff,
   isProductionMarketingHost,
   parseRequestHostname,
+  areMarketingTagsEnabledInBrowser,
 } from "@/lib/analytics/marketing-tags-enabled";
 
 const originalKillSwitch = process.env.ENABLE_MARKETING_TAGS;
@@ -156,5 +157,16 @@ describe("areMarketingTagsEnabledFromHeaders", () => {
     expect(areMarketingTagsEnabledFromHeaders(headersOf({ host: "visatop.com" }))).toBe(
       false,
     );
+  });
+});
+
+describe("areMarketingTagsEnabledInBrowser", () => {
+  it("allowlists only production hostnames", () => {
+    expect(areMarketingTagsEnabledInBrowser("visatop.com")).toBe(true);
+    expect(areMarketingTagsEnabledInBrowser("www.visatop.com")).toBe(true);
+    expect(areMarketingTagsEnabledInBrowser("app-staging.visatop.com")).toBe(false);
+    expect(areMarketingTagsEnabledInBrowser("localhost")).toBe(false);
+    expect(areMarketingTagsEnabledInBrowser("138.68.184.84")).toBe(false);
+    expect(areMarketingTagsEnabledInBrowser("")).toBe(false);
   });
 });
