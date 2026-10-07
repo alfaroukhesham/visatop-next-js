@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   DEFAULT_GADS_CHECKOUT_CONVERSION_SEND_TO,
@@ -88,5 +90,32 @@ describe("claimGadsCheckoutConversionOnce", () => {
     expect(claimGadsCheckoutConversionOnce("app_123")).toBe(true);
     expect(claimGadsCheckoutConversionOnce("app_123")).toBe(false);
     expect(claimGadsCheckoutConversionOnce("app_456")).toBe(true);
+  });
+});
+
+describe("checkout conversion call sites", () => {
+  const root = process.cwd();
+  const paymentCallers = [
+    "components/apply/paddle-checkout-button.tsx",
+    "components/apply/submitted-application-client.tsx",
+    "app/(client)/apply/applications/[id]/checkout/return/checkout-return-client.tsx",
+  ];
+
+  it("routes paid conversions through trackApplyPaymentCompleted, not a raw send_to", () => {
+    for (const rel of paymentCallers) {
+      const src = readFileSync(join(root, rel), "utf8");
+      expect(src, rel).toContain("trackApplyPaymentCompleted");
+      expect(src, rel).not.toContain("trackGadsCheckoutConversion");
+      expect(src, rel).not.toContain("THfyCPCPh-wcEKanophC");
+    }
+  });
+
+  it("gates the tracker on the production marketing host before gtag conversion", () => {
+    const src = readFileSync(join(root, "lib/analytics/gtag-client.ts"), "utf8");
+    const tracker = src.slice(src.indexOf("export const trackGadsCheckoutConversion"));
+    expect(tracker).toContain("areMarketingTagsEnabledInBrowser()");
+    expect(tracker.indexOf("areMarketingTagsEnabledInBrowser()")).toBeLessThan(
+      tracker.indexOf('window.gtag("event", "conversion"'),
+    );
   });
 });

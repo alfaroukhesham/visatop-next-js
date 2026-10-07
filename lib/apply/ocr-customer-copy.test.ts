@@ -4,6 +4,7 @@ import {
   OCR_NEEDS_REVIEW_COPY,
   OCR_READING_COPY,
   OCR_SUCCEEDED_COPY,
+  ocrStatusForDraftUi,
   passportSlotOcrNotice,
 } from "./ocr-customer-copy";
 
@@ -35,5 +36,12 @@ describe("ocr-customer-copy", () => {
     expect(passportSlotOcrNotice("failed", false)).toMatch(/couldn't read your passport/i);
     expect(passportSlotOcrNotice("succeeded", false)).toMatch(/filled in what we could/i);
     expect(passportSlotOcrNotice("needs_manual", true)).toBe(OCR_READING_COPY);
+  });
+
+  it("prefers this-session extract status, then persisted application status", () => {
+    expect(ocrStatusForDraftUi("needs_manual", "succeeded")).toBe("needs_manual");
+    expect(ocrStatusForDraftUi(null, "needs_manual")).toBe("needs_manual");
+    expect(ocrStatusForDraftUi(undefined, "failed")).toBe("failed");
+    expect(ocrStatusForDraftUi(null, "not_started")).toBeNull();
   });
 });

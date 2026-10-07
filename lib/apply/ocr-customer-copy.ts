@@ -30,6 +30,18 @@ export const customerFacingOcrMessage = (
   }
 };
 
+/** Prefer this-session extract status; fall back to persisted application status. */
+export const ocrStatusForDraftUi = (
+  extractStatus: string | null | undefined,
+  persistedStatus: string | null | undefined,
+): string | null => {
+  if (extractStatus) return extractStatus;
+  if (!persistedStatus || persistedStatus === "not_started" || persistedStatus === "running") {
+    return null;
+  }
+  return persistedStatus;
+};
+
 /** Passport-slot OCR notice (replaces the leftover banner above Documents). */
 export const passportSlotOcrNotice = (
   status: string | null | undefined,

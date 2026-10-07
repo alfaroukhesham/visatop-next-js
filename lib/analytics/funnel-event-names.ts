@@ -1,4 +1,9 @@
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
+import {
+  sanitizeFunnelErrorCode,
+  sanitizeFunnelHttpStatus,
+  sanitizeFunnelReason,
+} from "@/lib/analytics/funnel-event-metadata";
 import { GUEST_LINK_EVENTS } from "@/lib/analytics/guest-link-events";
 import {
   DOCUMENT_UPLOAD_CANCELLED,
@@ -40,6 +45,9 @@ export type TBeaconPayload = {
   applicationId?: string | null;
   nationalityCode?: string | null;
   serviceId?: string | null;
+  errorCode?: string;
+  httpStatus?: number;
+  reason?: string;
 };
 
 export type TParseBeaconResult =
@@ -54,6 +62,11 @@ const FORBIDDEN_KEYS = new Set([
   "passportNumber",
   "phone",
   "address",
+  "filename",
+  "fileName",
+  "file_name",
+  "originalFilename",
+  "original_filename",
 ]);
 
 export const parseBeaconPayload = (raw: unknown): TParseBeaconResult => {
@@ -94,6 +107,9 @@ export const parseBeaconPayload = (raw: unknown): TParseBeaconResult => {
   if (serviceId && !OPTIONAL_ID_RE.test(serviceId)) {
     return { ok: false, message: "Invalid serviceId" };
   }
+  const errorCode = sanitizeFunnelErrorCode(rec.errorCode ?? rec.error_code);
+  const httpStatus = sanitizeFunnelHttpStatus(rec.httpStatus ?? rec.http_status);
+  const reason = sanitizeFunnelReason(rec.reason ?? rec.failure_reason);
   return {
     ok: true,
     data: {
@@ -103,6 +119,9 @@ export const parseBeaconPayload = (raw: unknown): TParseBeaconResult => {
       applicationId,
       nationalityCode,
       serviceId,
+      ...(errorCode ? { errorCode } : {}),
+      ...(httpStatus !== undefined ? { httpStatus } : {}),
+      ...(reason ? { reason } : {}),
     },
   };
 };

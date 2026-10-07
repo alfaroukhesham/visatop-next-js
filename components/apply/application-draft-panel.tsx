@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { ClientDraftPanelSkeleton } from "@/components/client/client-loading";
 import { AppShimmer } from "@/components/ui/app-loading";
+import { ocrStatusForDraftUi } from "@/lib/apply/ocr-customer-copy";
 import { computeValidation } from "@/lib/documents/validation-readiness";
 import { ApplicantReview } from "./draft/applicant-review";
 import { DraftDocumentsSection } from "./draft/draft-documents-section";
@@ -86,7 +87,10 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
           onCancelUpload={draft.cancelInFlightUpload}
           uploadPercent={draft.selected.uploadPercent}
           lastUploadErrors={draft.selected.lastUploadErrors}
-          ocrStatus={draft.selected.extractResult?.extraction.status ?? null}
+          ocrStatus={ocrStatusForDraftUi(
+            draft.selected.extractResult?.extraction.status,
+            selectedApp.passportExtraction.status,
+          )}
         />
       )}
 

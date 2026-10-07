@@ -41,6 +41,55 @@ describe("parseBeaconPayload", () => {
     expect(parsed.ok).toBe(true);
   });
 
+  it("keeps upload failure fields on document_upload_failed", () => {
+    const parsed = parseBeaconPayload({
+      eventId: "11111111-1111-4111-8111-111111111111",
+      eventName: "document_upload_failed",
+      sessionId: "22222222-2222-4222-8222-222222222222",
+      applicationId: "app-1",
+      errorCode: "TIMEOUT",
+      httpStatus: 0,
+      reason: "timeout",
+    });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.data).toMatchObject({
+      eventId: "11111111-1111-4111-8111-111111111111",
+      eventName: "document_upload_failed",
+      sessionId: "22222222-2222-4222-8222-222222222222",
+      applicationId: "app-1",
+      errorCode: "TIMEOUT",
+      reason: "timeout",
+    });
+    expect(parsed.data.httpStatus).toBeUndefined();
+  });
+
+  it("keeps cancel reason on document_upload_cancelled", () => {
+    const parsed = parseBeaconPayload({
+      eventId: "11111111-1111-4111-8111-111111111111",
+      eventName: "document_upload_cancelled",
+      sessionId: "22222222-2222-4222-8222-222222222222",
+      applicationId: "app-1",
+      errorCode: "CANCELLED",
+      reason: "cancelled",
+    });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.data.errorCode).toBe("CANCELLED");
+    expect(parsed.data.reason).toBe("cancelled");
+  });
+
+  it("rejects file names on funnel beacons", () => {
+    expect(
+      parseBeaconPayload({
+        eventId: "11111111-1111-4111-8111-111111111111",
+        eventName: "document_upload_failed",
+        sessionId: "22222222-2222-4222-8222-222222222222",
+        originalFilename: "IMG_1234.HEIC",
+      }).ok,
+    ).toBe(false);
+  });
+
   it("rejects unknown events and emails", () => {
     expect(
       parseBeaconPayload({
