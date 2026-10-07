@@ -15,9 +15,13 @@ import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { trackApplyPaymentCompleted, trackEventOnce } from "@/lib/analytics/gtag-client";
 import { checkoutErrorToUserMessage } from "@/lib/payments/checkout-client-messages";
 
-interface PaddleCheckoutButtonProps {
+interface IPaddleCheckoutButtonProps {
   applicationId: string;
   disabled?: boolean;
+  /** Must be true to POST /api/checkout. Unticked clicks must not start payment. */
+  termsAccepted?: boolean;
+  /** Called when the user tries to pay without accepting Terms (inline error). */
+  onTermsRejected?: () => void;
   onSuccess?: () => void;
   /** Called with Ziina `embedded_url` so checkout stays on the payment step. */
   onZiinaEmbedded?: (embeddedUrl: string) => void;
@@ -30,12 +34,14 @@ interface PaddleCheckoutButtonProps {
 export function PaddleCheckoutButton({
   applicationId,
   disabled,
+  termsAccepted = false,
+  onTermsRejected,
   onSuccess,
   onZiinaEmbedded,
   onOverlayClosed,
   onCancel,
   onError,
-}: PaddleCheckoutButtonProps) {
+}: IPaddleCheckoutButtonProps) {
   const t = useCustomerT();
   const [isInitializing, setIsInitializing] = useState(false);
 
@@ -61,12 +67,18 @@ export function PaddleCheckoutButton({
       onError?.(message);
     };
 
+    if (!termsAccepted) {
+      if (onTermsRejected) onTermsRejected();
+      else onError?.(t("checkout.errors.termsRequired"));
+      return;
+    }
+
     setIsInitializing(true);
     try {
       const res = await fetch(apiHref("/checkout"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ applicationId }),
+        body: JSON.stringify({ applicationId, termsAccepted: true }),
       });
 
       const raw = await res.text();

@@ -264,7 +264,9 @@
     "badges": {
       "allFeesIncluded": "Todas las tasas incluidas",
       "noHiddenCharges": "Sin cargos ocultos"
-    }
+    },
+    "termsAgree": "Acepto los {link} de VisaTop",
+    "termsLink": "Términos de uso"
   },
   "pay": {
     "payNowIncomplete": "Pague ahora para iniciar el procesamiento. Puede añadir los datos restantes después del pago.",
@@ -480,7 +482,8 @@
       "paymentNotCompleted": "El pago no se completó. Puede intentarlo de nuevo en el formulario o cancelar y restablecer para empezar de nuevo.",
       "sessionUnavailable": "No pudimos restaurar esta sesión de pago. Cancele y restablezca, luego inténtelo de nuevo.",
       "sdkFailed": "No se pudo inicializar el SDK de Paddle",
-      "failedDot": "El pago ha fallado."
+      "failedDot": "El pago ha fallado.",
+      "termsRequired": "Acepte los Términos de uso de VisaTop para continuar con el pago."
     }
   },
   "expert": {

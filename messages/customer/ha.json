@@ -264,7 +264,9 @@
     "badges": {
       "allFeesIncluded": "An haɗa duk kuɗaɗe",
       "noHiddenCharges": "Babu ɓoyayyun kuɗi"
-    }
+    },
+    "termsAgree": "Na yarda da {link} na VisaTop",
+    "termsLink": "Sharuɗɗan Amfani"
   },
   "pay": {
     "payNowIncomplete": "Biya yanzu don fara sarrafawa. Za ku iya ƙara sauran cikakkun bayanai bayan biya.",
@@ -480,7 +482,8 @@
       "paymentNotCompleted": "Ba a kammala biya ba. Kuna iya sake gwadawa a fom ɗin ƙasa, ko soke kuma sake saiti don farawa daga farko.",
       "sessionUnavailable": "Ba mu iya maido da wannan zaman biya ba. Soke kuma sake saiti, sannan sake gwadawa.",
       "sdkFailed": "An kasa fara Paddle SDK",
-      "failedDot": "Biyan kudi ya gaza."
+      "failedDot": "Biyan kudi ya gaza.",
+      "termsRequired": "Da fatan za a yarda da Sharuɗɗan Amfani na VisaTop kafin biya."
     }
   },
   "expert": {

@@ -1,6 +1,8 @@
 import { headers } from "next/headers";
 
 import { jsonError, jsonOk } from "@/lib/api/response";
+import { isUniqueViolation } from "@/lib/db/pg-errors";
+import { logger } from "@/lib/logger";
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
 import { extractClientIp } from "@/lib/applications/client-ip";
 import { consume } from "@/lib/applications/document-rate-limit";
@@ -234,10 +236,25 @@ export async function POST(
       originalFilename,
     });
 
-  const result =
-    access.access.kind === "user"
-      ? await withClientDbActor(access.access.userId, persist)
-      : await withSystemDbActor(persist);
+  let result: Awaited<ReturnType<typeof persistUploadedDocument>>;
+  try {
+    result =
+      access.access.kind === "user"
+        ? await withClientDbActor(access.access.userId, persist)
+        : await withSystemDbActor(persist);
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      return jsonError("CONFLICT", "This file is already on the application.", {
+        status: 409,
+        requestId,
+      });
+    }
+    logger.error({ err, requestId }, "document upload persist failed");
+    return jsonError("INTERNAL_ERROR", "Upload failed unexpectedly.", {
+      status: 500,
+      requestId,
+    });
+  }
 
   if (!result.ok) {
     if (result.error.code === "CHECKOUT_FROZEN") {

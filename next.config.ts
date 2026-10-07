@@ -124,12 +124,14 @@ const nextConfig: NextConfig = {
     "heic-decode",
     "libheif-js",
   ],
+  // Combine PR #19 (PDF worker) and PR #20 (HEIC WASM) tracing includes.
+  // Do not overwrite one object with the other.
+  // pdfjs Node "fake worker" does `import("./pdf.worker.mjs")`. Standalone tracing
+  // otherwise copies only `pdf.mjs` (serverExternalPackages) and valid PDFs 400.
   // heic-decode / libheif-js are transitive. Under pnpm they live in
-  // node_modules/.pnpm/<pkg>@<ver>/..., not as top-level node_modules/<pkg>,
-  // so those hoisted globs match nothing. Include the .pnpm store (and the
-  // hoisted paths if a future hoist appears). Docker copies .next/standalone
-  // to /app, so these files must be in the standalone tree.
+  // node_modules/.pnpm/<pkg>@<ver>/..., not as top-level node_modules/<pkg>.
   outputFileTracingIncludes: {
+    "/*": ["./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"],
     "/api/applications/*/documents/upload": [
       "./node_modules/heic-convert/**/*",
       "./node_modules/heic-decode/**/*",

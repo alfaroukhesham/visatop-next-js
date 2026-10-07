@@ -8,6 +8,7 @@ export type CheckoutBlockReason =
   | "payments_origin_blocked"
   | "missing_guest_email"
   | "missing_passport"
+  | "terms_not_accepted"
   | "pricing_unavailable"
   | "provider_unavailable"
   | "unknown";
@@ -43,6 +44,8 @@ export const checkoutErrorToUserMessage = (
       return t("checkout.errors.missingGuestEmail");
     case "missing_passport":
       return t("checkout.errors.missingPassport");
+    case "terms_not_accepted":
+      return t("checkout.errors.termsRequired");
     case "pricing_unavailable":
       return t("checkout.errors.pricingUnavailable");
     case "provider_unavailable":
@@ -67,6 +70,8 @@ const inferReasonFromCode = (code: string | undefined): CheckoutBlockReason => {
       return "payments_origin_blocked";
     case "VALIDATION_ERROR":
       return "unknown";
+    case "TERMS_NOT_ACCEPTED":
+      return "terms_not_accepted";
     case "ZIINA_UNAVAILABLE":
     case "SERVICE_UNAVAILABLE":
       return "provider_unavailable";

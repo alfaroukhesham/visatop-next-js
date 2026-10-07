@@ -27,6 +27,14 @@ describe("checkoutErrorToUserMessage", () => {
     expect(msg).toMatch(/localhost|https/i);
   });
 
+  it("maps terms_not_accepted", () => {
+    const msg = checkoutErrorToUserMessage({
+      code: "TERMS_NOT_ACCEPTED",
+      details: { reason: "terms_not_accepted" },
+    });
+    expect(msg).toMatch(/terms of use/i);
+  });
+
   it("maps missing_passport", () => {
     const msg = checkoutErrorToUserMessage({
       code: "VALIDATION_ERROR",

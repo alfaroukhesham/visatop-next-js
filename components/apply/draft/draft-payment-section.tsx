@@ -1,6 +1,6 @@
 "use client";
 
-import type { FC } from "react";
+import { useState, type FC } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
@@ -8,6 +8,7 @@ import type { PublicApplication } from "@/lib/applications/public-application";
 import { customerLooksCompleteForPayCopy } from "@/lib/apply/payment-copy";
 import type { Readiness } from "@/lib/documents/validation-readiness";
 import { CheckoutErrorAlert } from "../checkout-error-alert";
+import { CheckoutTermsCheckbox } from "../checkout-terms-checkbox";
 import { PaddleCheckoutButton } from "../paddle-checkout-button";
 import { ZiinaEmbeddedCheckout } from "../ziina-embedded-checkout";
 
@@ -56,6 +57,8 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
   showPaddleRetry,
 }) => {
   const t = useCustomerT();
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsError, setTermsError] = useState<string | null>(null);
   const payCopyComplete = customerLooksCompleteForPayCopy({
     requiredSlotKeys,
     uploadedTypes,
@@ -70,17 +73,29 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
     app.paymentStatus !== "paid" && (app.paymentStatus === "checkout_created" || Boolean(embeddedUrl));
 
   const payButton = (
-    <PaddleCheckoutButton
-      applicationId={applicationId}
-      onZiinaEmbedded={(url) => {
-        onDismissCheckoutError();
-        checkout.onZiinaEmbedded(url);
-      }}
-      onOverlayClosed={checkout.onOverlayClosed}
-      onSuccess={checkout.onSuccess}
-      onCancel={checkout.onStartCheckoutTimer}
-      onError={checkout.onError}
-    />
+    <div className="space-y-4">
+      <CheckoutTermsCheckbox
+        checked={termsAccepted}
+        onCheckedChange={(next) => {
+          setTermsAccepted(next);
+          if (next) setTermsError(null);
+        }}
+        error={termsError}
+      />
+      <PaddleCheckoutButton
+        applicationId={applicationId}
+        termsAccepted={termsAccepted}
+        onTermsRejected={() => setTermsError(t("checkout.errors.termsRequired"))}
+        onZiinaEmbedded={(url) => {
+          onDismissCheckoutError();
+          checkout.onZiinaEmbedded(url);
+        }}
+        onOverlayClosed={checkout.onOverlayClosed}
+        onSuccess={checkout.onSuccess}
+        onCancel={checkout.onStartCheckoutTimer}
+        onError={checkout.onError}
+      />
+    </div>
   );
 
   return (

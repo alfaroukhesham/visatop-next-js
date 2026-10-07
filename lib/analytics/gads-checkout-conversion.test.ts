@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   DEFAULT_GADS_CHECKOUT_CONVERSION_SEND_TO,
   buildGadsCheckoutConversionParams,
+  claimGadsCheckoutConversionOnce,
   getGadsCheckoutConversionSendTo,
+  resetGadsCheckoutConversionClaims,
 } from "@/lib/analytics/gads-checkout-conversion";
 
 const originalSendTo = process.env.NEXT_PUBLIC_GADS_CHECKOUT_CONVERSION_SEND_TO;
@@ -35,40 +37,56 @@ describe("getGadsCheckoutConversionSendTo", () => {
 });
 
 describe("buildGadsCheckoutConversionParams", () => {
-  it("builds the Google Ads event payload with transaction id", () => {
-    expect(
-      buildGadsCheckoutConversionParams({
-        transactionId: "app_123",
-      }),
-    ).toEqual({
-      send_to: DEFAULT_GADS_CHECKOUT_CONVERSION_SEND_TO,
-      value: 1.0,
-      currency: "AED",
-      transaction_id: "app_123",
-    });
-  });
-
-  it("passes through a charged amount when provided", () => {
+  it("builds the Google Ads event payload from the charged amount", () => {
     expect(
       buildGadsCheckoutConversionParams({
         transactionId: "app_123",
         value: 399,
-        currency: "USD",
+        currency: "usd",
       }),
-    ).toMatchObject({
+    ).toEqual({
+      send_to: DEFAULT_GADS_CHECKOUT_CONVERSION_SEND_TO,
       value: 399,
       currency: "USD",
       transaction_id: "app_123",
     });
   });
 
+  it("does not invent 1.0 or AED when amount or currency is missing", () => {
+    expect(buildGadsCheckoutConversionParams({ transactionId: "app_123" })).toBeNull();
+    expect(
+      buildGadsCheckoutConversionParams({ transactionId: "app_123", currency: "USD" }),
+    ).toBeNull();
+    expect(
+      buildGadsCheckoutConversionParams({ transactionId: "app_123", value: 10 }),
+    ).toBeNull();
+  });
+
   it("returns null without a transaction id so Ads cannot double-count blank ids", () => {
-    expect(buildGadsCheckoutConversionParams({ transactionId: "  " })).toBeNull();
+    expect(
+      buildGadsCheckoutConversionParams({
+        transactionId: "  ",
+        value: 10,
+        currency: "USD",
+      }),
+    ).toBeNull();
   });
 
   it("returns null when send_to is disabled", () => {
     expect(
-      buildGadsCheckoutConversionParams({ transactionId: "app_123" }, ""),
+      buildGadsCheckoutConversionParams({ transactionId: "app_123", value: 10, currency: "USD" }, ""),
     ).toBeNull();
+  });
+});
+
+describe("claimGadsCheckoutConversionOnce", () => {
+  afterEach(() => {
+    resetGadsCheckoutConversionClaims();
+  });
+
+  it("allows the first claim and blocks repeats for the same transaction id", () => {
+    expect(claimGadsCheckoutConversionOnce("app_123")).toBe(true);
+    expect(claimGadsCheckoutConversionOnce("app_123")).toBe(false);
+    expect(claimGadsCheckoutConversionOnce("app_456")).toBe(true);
   });
 });

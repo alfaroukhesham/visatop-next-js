@@ -8,8 +8,10 @@ import { isAnalyticsExcludedPath } from "@/lib/analytics/excluded-paths";
 import { APPLY_FUNNEL_EVENTS, buildGa4PurchaseParams } from "@/lib/analytics/apply-funnel";
 import {
   buildGadsCheckoutConversionParams,
+  claimGadsCheckoutConversionOnce,
   type TGadsCheckoutConversionInput,
 } from "@/lib/analytics/gads-checkout-conversion";
+import { areMarketingTagsEnabledInBrowser } from "@/lib/analytics/marketing-tags-enabled";
 import { claimAnalyticsOnce } from "@/lib/analytics/track-once";
 import { sendFunnelBeacon } from "@/lib/analytics/funnel-beacon-client";
 import { funnelIdsFromTrackParams } from "@/lib/analytics/funnel-beacon-params";
@@ -78,13 +80,19 @@ export function trackPageView(pathname: string, search: string): void {
   });
 }
 
-/** Google Ads Checkout Completed — fires only the Ads conversion event snippet. */
+/**
+ * Google Ads Checkout Completed (`AW-17767633830/THfyCPCPh-wcEKanophC`).
+ * Prod Host only; no-op if gtag.js was not loaded. Once per transaction id.
+ */
 export const trackGadsCheckoutConversion = (input: TGadsCheckoutConversionInput): void => {
   if (typeof window === "undefined") return;
+  if (!areMarketingTagsEnabledInBrowser()) return;
   if (isAnalyticsExcludedPath(window.location.pathname)) return;
+  if (typeof window.gtag !== "function") return;
   const params = buildGadsCheckoutConversionParams(input);
   if (!params) return;
-  gtagCommand("event", "conversion", params);
+  if (!claimGadsCheckoutConversionOnce(params.transaction_id)) return;
+  window.gtag("event", "conversion", params);
 };
 
 const purchaseDedupeKey = (applicationId: string): string => `vt_ga4_purchase:${applicationId}`;
@@ -105,6 +113,11 @@ export const trackApplyPaymentCompleted = (input: {
     currency: input.currency,
   });
   if (!purchase) return;
+  trackGadsCheckoutConversion({
+    transactionId: purchase.transaction_id,
+    value: purchase.value,
+    currency: purchase.currency,
+  });
   try {
     const key = purchaseDedupeKey(input.applicationId);
     if (sessionStorage.getItem(key)) return;

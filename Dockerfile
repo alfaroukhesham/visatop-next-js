@@ -50,6 +50,10 @@ COPY --from=builder /app/public ./public
 
 # Next standalone output may include a copied `.env` from build time.
 # We always provide runtime config via environment variables.
+# Marketing tags (Google / Ads / Meta) are gated at request time on Host
+# visatop.com|www.visatop.com — not via a build-time NEXT_PUBLIC_* flag — so the
+# same image can run on staging without firing prod pixels. Optional kill
+# switch: ENABLE_MARKETING_TAGS=false.
 RUN rm -f .env \
   && chown -R nextjs:nodejs /app
 

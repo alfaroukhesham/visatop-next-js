@@ -264,7 +264,9 @@
     "badges": {
       "allFeesIncluded": "Tüm ücretler dahil",
       "noHiddenCharges": "Gizli ücret yok"
-    }
+    },
+    "termsAgree": "VisaTop'un {link} kabul ediyorum",
+    "termsLink": "Kullanım Koşulları'nı"
   },
   "pay": {
     "payNowIncomplete": "İşleme başlamak için şimdi ödeyin. Ödemeden sonra kalan bilgileri ekleyebilirsiniz.",
@@ -480,7 +482,8 @@
       "paymentNotCompleted": "Ödeme tamamlanmadı. Aşağıdaki formda tekrar deneyebilir veya iptal edip sıfırlayarak baştan başlayabilirsiniz.",
       "sessionUnavailable": "Bu ödeme oturumu geri yüklenemedi. İptal edip sıfırlayın, ardından tekrar deneyin.",
       "sdkFailed": "Paddle SDK başlatılamadı",
-      "failedDot": "Ödeme başarısız oldu."
+      "failedDot": "Ödeme başarısız oldu.",
+      "termsRequired": "Ödemeye geçmeden önce VisaTop Kullanım Koşulları'nı kabul edin."
     }
   },
   "expert": {
