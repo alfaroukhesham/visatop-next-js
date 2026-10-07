@@ -3,7 +3,9 @@ import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
 import { CheckoutOrderRecap } from "@/components/apply/checkout-order-recap";
+import { Suspense } from "react";
 import { ApplicationDraftPanel } from "@/components/apply/application-draft-panel";
+import { ClientDraftPanelSkeleton } from "@/components/client/client-loading";
 import { loadApplicationRowForRequest } from "@/lib/applications/load-application-row-for-request";
 import { loadPartyMembers } from "@/lib/applications/load-party-members";
 import { withSystemDbActor } from "@/lib/db/actor-context";
@@ -11,7 +13,10 @@ import { toPublicApplication } from "@/lib/applications/public-application";
 import { CUSTOMER_LOCALE_COOKIE, parseCustomerLocale } from "@/lib/i18n/customer-locale";
 import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 
-type Props = { params: Promise<{ id: string }> };
+type Props = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ screen?: string }>;
+};
 
 export const generateMetadata = async (): Promise<Metadata> => {
   const cookieStore = await cookies();
@@ -19,8 +24,8 @@ export const generateMetadata = async (): Promise<Metadata> => {
   return { title: t("seo.applicationPageTitle") };
 };
 
-const ApplyApplicationPage = async ({ params }: Props) => {
-  const [{ id }, hdrs] = await Promise.all([params, headers()]);
+const ApplyApplicationPage = async ({ params, searchParams }: Props) => {
+  const [{ id }, hdrs, query] = await Promise.all([params, headers(), searchParams]);
   const row = await loadApplicationRowForRequest(id, hdrs.get("cookie"));
   if (!row) {
     notFound();
@@ -38,21 +43,16 @@ const ApplyApplicationPage = async ({ params }: Props) => {
     <div className="max-w-6xl">
       <ApplyTwoColumn
         currentStep={3}
+        phase={query.screen === "details" ? "details" : "documents"}
         applicationId={id}
         hasSelectedVisa
         contentFirstOnMobile
         visaSummary={<CheckoutOrderRecap application={toPublicApplication(row, undefined, t)} members={members} />}
         contentClassName="theme-client-rise mx-auto w-full max-w-4xl space-y-8"
       >
-        <header className="space-y-1.5">
-          <h1 className="font-heading text-foreground text-xl! font-semibold leading-snug tracking-tight md:text-[1.75rem]!">
-            {t("draft.documentsPageTitle")}
-          </h1>
-          <p className="text-muted-foreground max-w-[62ch] text-sm leading-relaxed">
-            {t("draft.documentsPageSubtitle")}
-          </p>
-        </header>
-        <ApplicationDraftPanel applicationId={id} />
+        <Suspense fallback={<ClientDraftPanelSkeleton />}>
+          <ApplicationDraftPanel applicationId={id} />
+        </Suspense>
       </ApplyTwoColumn>
     </div>
   );

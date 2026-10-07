@@ -227,7 +227,10 @@
     "captureTip2": "Les deux lignes lisibles par machine en bas doivent être nettes et entières.",
     "captureTip3": "Évitez les reflets, les ombres et les bords coupés.",
     "privacyNote": "Votre photo est chiffrée en transit et utilisée uniquement pour traiter cette demande — jamais pour le marketing.",
-    "examplePassportAlt": "Exemple d'une page d'identité de passeport fictive pour guider la photo. Ce n'est pas un vrai document de voyage."
+    "examplePassportAlt": "Exemple d'une page d'identité de passeport fictive pour guider la photo. Ce n'est pas un vrai document de voyage.",
+    "photoTip1": "Plain background.",
+    "photoTip2": "No glasses.",
+    "photoTip3": "Face centred in the oval."
   },
   "payment": {
     "pageTitle": "Paiement | Visatop",
@@ -370,7 +373,7 @@
     "refreshStatus": "Actualiser le statut",
     "contactSupport": "Contacter le support",
     "nextStepsTitle": "Prochaines étapes",
-    "nextStepsBody": "Votre demande est en cours. Vous pouvez suivre les mises à jour à tout moment, ou démarrer une nouvelle demande.",
+    "nextStepsBody": "The VisaTop team will contact you by email or WhatsApp for any documents that were not uploaded.",
     "trackApplication": "Suivre ma demande",
     "startNewApplication": "Démarrer une nouvelle demande",
     "browseServices": "Parcourir les services",
@@ -507,7 +510,11 @@
     "payment": "Paiement",
     "status": "Statut",
     "stepBadge": "Étape {step}/{total}",
-    "hideProgressAria": "Masquer le résumé de progression"
+    "hideProgressAria": "Masquer le résumé de progression",
+    "trip": "Trip",
+    "details": "Details",
+    "pay": "Pay",
+    "finish": "Finish"
   },
   "common": {
     "continue": "Continuer",
@@ -588,7 +595,7 @@
       "pdfNotSinglePage": "Le PDF du passeport doit faire exactement une page.",
       "rateLimited": "Trop de téléversements. Patientez un moment puis réessayez.",
       "network": "Échec du téléversement. Vérifiez la connexion puis réessayez.",
-      "timeout": "Connexion lente. Réessayez ou passez au Wi-Fi.",
+      "timeout": "This is taking longer than 90 seconds. Try again.",
       "generic": "Échec du téléversement. Veuillez réessayer."
     }
   },
@@ -596,5 +603,21 @@
     "reading": "Lecture de votre passeport…",
     "succeeded": "Informations préremplies — veuillez vérifier qu'elles sont correctes.",
     "needsReview": "Nous n'avons pas pu lire certaines informations clairement. Vérifiez les champs surlignés."
+  },
+  "wizard": {
+    "readyTitle": "What you'll need",
+    "neededNow": "Needed now",
+    "addLater": "Can add later",
+    "passportNow": "Passport bio page (photo, or single-page PDF).",
+    "takesTwoMinutes": "Takes about 2 minutes. Your phone camera works.",
+    "encrypted": "Encrypted and used only for your visa application.",
+    "orderTotal": "Order total {total}",
+    "otherTitle": "Other documents",
+    "addAfterPayment": "You can add these after payment too.",
+    "detailsTitle": "Check your details",
+    "pleaseFill": "Please fill these in.",
+    "replacePassport": "Passport photo wrong? Replace it",
+    "continueToPayment": "Looks right, continue to payment",
+    "travellerProgress": "Traveller {current} of {total}"
   }
 }

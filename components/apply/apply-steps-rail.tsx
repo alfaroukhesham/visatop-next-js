@@ -7,35 +7,48 @@ import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { cn } from "@/lib/utils";
 
 const STEPS = [
-  { step: 2, labelKey: "steps.visa" },
-  { step: 3, labelKey: "steps.documents" },
-  { step: 4, labelKey: "steps.payment" },
-  { step: 5, labelKey: "steps.status" },
+  { id: "trip", labelKey: "steps.trip" },
+  { id: "documents", labelKey: "steps.documents" },
+  { id: "details", labelKey: "steps.details" },
+  { id: "pay", labelKey: "steps.pay" },
+  { id: "finish", labelKey: "steps.finish" },
 ] as const;
+
+type TRailPhase = "trip" | "documents" | "details" | "pay" | "finish";
 
 interface IApplyStepsRailProps {
   currentStep: 1 | 2 | 3 | 4 | 5;
+  /** Documents page only: details is its own bar segment. */
+  phase?: "documents" | "details";
   applicationId?: string;
   className?: string;
 }
 
-const hrefForStep = (step: number, applicationId?: string): string | null => {
-  if (step <= 2) return "/";
+const activeIndexFor = (currentStep: number, phase: "documents" | "details" | undefined): number => {
+  if (currentStep <= 2) return 0;
+  if (currentStep === 3) return phase === "details" ? 2 : 1;
+  if (currentStep === 4) return 3;
+  return 4;
+};
+
+const hrefForPhase = (phase: TRailPhase, applicationId?: string): string | null => {
+  if (phase === "trip") return "/";
   if (!applicationId) return null;
-  if (step === 3) return `/apply/applications/${encodeURIComponent(applicationId)}`;
-  if (step === 4) return `/apply/applications/${encodeURIComponent(applicationId)}/payment`;
-  if (step === 5) return `/apply/applications/${encodeURIComponent(applicationId)}/submitted`;
-  return null;
+  const id = encodeURIComponent(applicationId);
+  if (phase === "documents") return `/apply/applications/${id}?screen=ready`;
+  if (phase === "details") return `/apply/applications/${id}?screen=details`;
+  if (phase === "pay") return `/apply/applications/${id}/payment`;
+  return `/apply/applications/${id}/submitted`;
 };
 
-const stepState = (step: number, currentStep: number): "completed" | "active" | "future" => {
-  if (step < currentStep) return "completed";
-  if (step === currentStep || (currentStep === 1 && step === 2)) return "active";
-  return "future";
-};
-
-export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({ currentStep, applicationId, className }) => {
+export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
+  currentStep,
+  phase,
+  applicationId,
+  className,
+}) => {
   const t = useCustomerT();
+  const activeIndex = activeIndexFor(currentStep, phase);
   return (
     <nav
       className={cn(
@@ -46,8 +59,8 @@ export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({ currentStep, applicat
     >
       <ol className="flex items-center justify-between gap-1 sm:gap-3">
         {STEPS.map((s, index) => {
-          const state = stepState(s.step, currentStep);
-          const href = hrefForStep(s.step, applicationId);
+          const state = index < activeIndex ? "completed" : index === activeIndex ? "active" : "future";
+          const href = hrefForPhase(s.id, applicationId);
           const isLink = Boolean(href) && state !== "future";
           const labelText = t(s.labelKey);
           const marker = (

@@ -27,6 +27,7 @@ export type TFunnelBeaconParams = {
   applicationId?: string | number | boolean | null;
   nationalityCode?: string | number | boolean | null;
   serviceId?: string | number | boolean | null;
+  failureReason?: string | number | boolean | null;
 };
 
 const asOptionalString = (value: string | number | boolean | null | undefined): string | undefined => {
@@ -52,6 +53,7 @@ export const sendFunnelBeacon = (
     applicationId: asOptionalString(params?.applicationId),
     nationalityCode: asOptionalString(params?.nationalityCode),
     serviceId: asOptionalString(params?.serviceId),
+    failureReason: asOptionalString(params?.failureReason),
   };
   try {
     void fetch(apiHref("analytics/events"), {

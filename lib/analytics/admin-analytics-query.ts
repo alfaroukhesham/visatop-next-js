@@ -10,6 +10,7 @@ import {
   visaService,
 } from "@/lib/db/schema";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
+import { abandonStopFromCursor, type TApplyWizardScreen } from "@/lib/apply/apply-wizard";
 import {
   deltaPct,
   previousPeriod,
@@ -96,6 +97,16 @@ const paidKpiIdsInRange = (range: TInstantRange) => sql`
 const paidKpiCountInRange = (range: TInstantRange) =>
   sql<number>`cast((select count(*) from (${paidKpiIdsInRange(range)}) paid_ids) as int)`;
 
+const APPLY_STOP_SCREENS = ["ready", "passport", "other", "details", "pay"] as const;
+
+const APPLY_STOP_LABELS: Record<(typeof APPLY_STOP_SCREENS)[number], string> = {
+  ready: "What you'll need",
+  passport: "Passport",
+  other: "Other documents",
+  details: "Check your details",
+  pay: "Payment",
+};
+
 const mergeWeekly = (
   createdRows: { weekStart: string; n: number }[],
   paidRows: { weekStart: string; n: number }[],
@@ -124,7 +135,7 @@ export const loadAdminAnalytics = async (
 ): Promise<TAdminAnalyticsPayload> => {
   const prev = previousPeriod(range);
 
-  const [appAgg, lastPaidRows, revenueRows, createdWeeks, paidWeeks, events, nationalityRows] =
+  const [appAgg, lastPaidRows, revenueRows, createdWeeks, paidWeeks, events, nationalityRows, stopRows, failureRows] =
     await Promise.all([
       tx
         .select({
@@ -224,6 +235,39 @@ export const loadAdminAnalytics = async (
         .groupBy(application.nationalityCode, nationality.name)
         .orderBy(sql`count(*) desc`)
         .limit(10),
+      tx
+        .select({
+          screen: applicationParty.wizardCursorScreen,
+          travellerId: applicationParty.wizardCursorTravellerId,
+          lastId: sql<string | null>`(
+            select a2.id from application a2
+            where a2.party_id = ${application.partyId}
+            order by a2.traveler_index desc
+            limit 1
+          )`,
+        })
+        .from(application)
+        .leftJoin(applicationParty, eq(applicationParty.id, application.partyId))
+        .where(
+          and(
+            sql`${application.paymentStatus} <> 'paid'`,
+            inRange(application.createdAt, range),
+            or(eq(application.travelerRole, "primary"), sql`${application.partyId} is null`),
+          ),
+        ),
+      tx
+        .select({
+          code: analyticsFunnelEvent.failureReason,
+          count: sql<number>`cast(count(distinct coalesce(${analyticsFunnelEvent.applicationId}, ${analyticsFunnelEvent.sessionId})) as int)`,
+        })
+        .from(analyticsFunnelEvent)
+        .where(
+          and(
+            eq(analyticsFunnelEvent.eventName, APPLY_FUNNEL_EVENTS.passportUploadFailed),
+            inRange(analyticsFunnelEvent.occurredAt, range),
+          ),
+        )
+        .groupBy(analyticsFunnelEvent.failureReason),
     ]);
 
   const created = asInt(appAgg[0]?.created);
@@ -238,6 +282,19 @@ export const loadAdminAnalytics = async (
       : lastPaidAtRaw
         ? new Date(lastPaidAtRaw).toISOString()
         : null;
+
+  const isWizardScreen = (value: string | null): value is TApplyWizardScreen =>
+    value === "ready" || value === "passport" || value === "other" || value === "details";
+  const stopCounts = new Map<string, number>();
+  for (const row of stopRows) {
+    const stop = abandonStopFromCursor({
+      cursor: isWizardScreen(row.screen)
+        ? { screen: row.screen, travellerId: row.travellerId }
+        : null,
+      lastTravellerId: row.lastId,
+    });
+    stopCounts.set(stop, (stopCounts.get(stop) ?? 0) + 1);
+  }
 
   const funnel = buildFunnelRows(events);
   const extraSteps = extraStepCounts(events);
@@ -274,6 +331,15 @@ export const loadAdminAnalytics = async (
     churn,
     funnel,
     extraSteps,
+    stops: APPLY_STOP_SCREENS.map((screen) => ({
+      screen,
+      label: APPLY_STOP_LABELS[screen],
+      count: stopCounts.get(screen) ?? 0,
+    })),
+    passportFailures: failureRows.map((row) => ({
+      code: row.code ?? "unspecified",
+      count: asInt(row.count),
+    })),
     weekly,
     nationalities: nationalityRows.map((r) => ({
       code: r.code,
@@ -302,6 +368,7 @@ export const loadFunnelEventsForExport = async (
       nationalityCode: analyticsFunnelEvent.nationalityCode,
       serviceId: analyticsFunnelEvent.serviceId,
       source: analyticsFunnelEvent.source,
+      failureReason: analyticsFunnelEvent.failureReason,
     })
     .from(analyticsFunnelEvent)
     .where(inRange(analyticsFunnelEvent.occurredAt, range))
@@ -319,6 +386,7 @@ export const loadFunnelEventsForExport = async (
       nationalityCode: r.nationalityCode,
       serviceId: r.serviceId,
       source: r.source,
+      failureReason: r.failureReason,
     })),
   };
 };

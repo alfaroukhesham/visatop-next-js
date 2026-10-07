@@ -211,6 +211,9 @@
     "captureTip1": "Lay the passport flat so all four corners are in the photo.",
     "captureTip2": "Keep the two machine-readable lines at the bottom sharp and fully visible.",
     "captureTip3": "Avoid glare, shadows, and cropped edges.",
+    "photoTip1": "Plain background.",
+    "photoTip2": "No glasses.",
+    "photoTip3": "Face centred in the oval.",
     "privacyNote": "Your photo is encrypted in transit and used only to process this application — never for marketing.",
     "examplePassportAlt": "Example of a fake passport identity page for camera guidance. Not a real travel document.",
     "slots": {
@@ -370,7 +373,7 @@
     "refreshStatus": "Refresh status",
     "contactSupport": "Contact support",
     "nextStepsTitle": "Next steps",
-    "nextStepsBody": "Your application is in progress. You can start a new application any time.",
+    "nextStepsBody": "The VisaTop team will contact you by email or WhatsApp for any documents that were not uploaded.",
     "trackApplication": "Track application",
     "startNewApplication": "Start new application",
     "browseServices": "Browse services",
@@ -500,10 +503,30 @@
     "privacyParagraph3": "This page uses privacy-friendly analytics tags to measure whether visitors find the WhatsApp option helpful. We do not use this page for unrelated advertising profiles. For questions about your data or to request deletion, email info@visatop.com or write to us via WhatsApp at {phone}.",
     "privacyUpdated": "Last updated: August 2026"
   },
+  "wizard": {
+    "readyTitle": "What you'll need",
+    "neededNow": "Needed now",
+    "addLater": "Can add later",
+    "passportNow": "Passport bio page (photo, or single-page PDF).",
+    "takesTwoMinutes": "Takes about 2 minutes. Your phone camera works.",
+    "encrypted": "Encrypted and used only for your visa application.",
+    "orderTotal": "Order total {total}",
+    "otherTitle": "Other documents",
+    "addAfterPayment": "You can add these after payment too.",
+    "detailsTitle": "Check your details",
+    "pleaseFill": "Please fill these in.",
+    "replacePassport": "Passport photo wrong? Replace it",
+    "continueToPayment": "Looks right, continue to payment",
+    "travellerProgress": "Traveller {current} of {total}"
+  },
   "steps": {
     "railAriaLabel": "Application steps",
+    "trip": "Trip",
     "visa": "Visa",
     "documents": "Documents",
+    "details": "Details",
+    "pay": "Pay",
+    "finish": "Finish",
     "payment": "Payment",
     "status": "Status",
     "stepBadge": "Step {step}/{total}",
@@ -588,7 +611,7 @@
       "pdfNotSinglePage": "Passport PDF must be exactly one page.",
       "rateLimited": "Too many uploads. Wait a moment and try again.",
       "network": "Upload failed. Check your connection and try again.",
-      "timeout": "Slow connection. Try again, or switch to Wi-Fi.",
+      "timeout": "This is taking longer than 90 seconds. Try again.",
       "generic": "Upload failed. Please try again."
     }
   },

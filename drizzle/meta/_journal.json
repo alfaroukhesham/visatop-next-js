@@ -225,6 +225,13 @@
       "when": 1782250000000,
       "tag": "0031_application_document_sha_partial_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1782260000000,
+      "tag": "0032_apply_wizard_cursor",
+      "breakpoints": true
     }
   ]
 }

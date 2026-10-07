@@ -22,7 +22,8 @@ import { translateDocumentSlot } from "@/lib/apply/document-slot-i18n";
 import { uploadFormDataWithProgress } from "@/lib/apply/upload-xhr";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { trackDocumentUploadAnalytics, type TDocumentUploadSource } from "@/lib/analytics/document-upload-events";
-import { trackEventOnce } from "@/lib/analytics/gtag-client";
+import { trackEvent, trackEventOnce } from "@/lib/analytics/gtag-client";
+import { cursorIsAhead, type TApplyWizardCursor } from "@/lib/apply/apply-wizard";
 import { buildOcrReviewParams } from "@/lib/analytics/ocr-review-params";
 import { buildUploadErrorDataLayerPayload, pushUploadErrorDataLayer } from "@/lib/analytics/upload-error-datalayer";
 import { uploadFailureReason } from "@/lib/analytics/upload-failure";
@@ -92,6 +93,7 @@ export function useApplicationDraft(applicationId: string) {
   const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [nationalities, setNationalities] = useState<CatalogNationality[]>([]);
+  const [wizardCursor, setWizardCursor] = useState<TApplyWizardCursor | null>(null);
 
   const memberStatesRef = useRef<Record<string, TMemberState>>({});
   const nationalitiesRef = useRef<CatalogNationality[]>([]);
@@ -147,6 +149,7 @@ export function useApplicationDraft(applicationId: string) {
       const appRes = await fetchApiEnvelope<{
         application: PublicApplication;
         members: TPublicPartyMember[];
+        wizardCursor: TApplyWizardCursor | null;
       }>(apiHref(`/applications/${applicationId}`));
       if (!appRes.ok) {
         setApp(null);
@@ -158,6 +161,15 @@ export function useApplicationDraft(applicationId: string) {
       const nextMembers = appRes.data.members ?? [];
       setApp(nextApp);
       setMembers(nextMembers);
+      const incomingCursor = appRes.data.wizardCursor ?? null;
+      setWizardCursor((current) => {
+        if (!current) return incomingCursor;
+        const order = nextMembers.map((member) => ({
+          applicationId: member.applicationId,
+          hasPassport: true,
+        }));
+        return cursorIsAhead(order, incomingCursor, current) ? current : incomingCursor;
+      });
       setSelectedMemberId((prev) =>
         nextMembers.some((m) => m.applicationId === prev) ? prev : nextApp.id,
       );
@@ -284,6 +296,9 @@ export function useApplicationDraft(applicationId: string) {
         uploadPercent: 0,
         lastUploadErrors: { ...current.lastUploadErrors, [type]: null },
       });
+      if (type === "passport_copy") {
+        trackEvent(APPLY_FUNNEL_EVENTS.passportUploadStarted, { application_id: memberId });
+      }
       setActionMsg(null);
 
       let prepared = file;
@@ -462,6 +477,7 @@ export function useApplicationDraft(applicationId: string) {
     load,
     cancelCheckout,
     members,
+    memberStates,
     selectedMemberId,
     setSelectedMemberId,
     selectedMember,
@@ -475,5 +491,7 @@ export function useApplicationDraft(applicationId: string) {
     nationalityName: primaryState?.nationalityName ?? "",
     nationalities,
     uploadPresence,
+    wizardCursor,
+    setWizardCursor,
   };
 }

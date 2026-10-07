@@ -227,7 +227,10 @@
     "captureTip2": "Alttaki iki makinece okunabilir satır net ve tam görünsün.",
     "captureTip3": "Parlama, gölge ve kesik kenarlardan kaçının.",
     "privacyNote": "Fotoğrafınız aktarımda şifrelenir ve yalnızca bu başvuru için kullanılır — pazarlama için değil.",
-    "examplePassportAlt": "Çekim rehberi için sahte bir pasaport kimlik sayfası örneği. Gerçek bir seyahat belgesi değildir."
+    "examplePassportAlt": "Çekim rehberi için sahte bir pasaport kimlik sayfası örneği. Gerçek bir seyahat belgesi değildir.",
+    "photoTip1": "Plain background.",
+    "photoTip2": "No glasses.",
+    "photoTip3": "Face centred in the oval."
   },
   "payment": {
     "pageTitle": "Ödeme | Visatop",
@@ -370,7 +373,7 @@
     "refreshStatus": "Durumu yenile",
     "contactSupport": "Destekle iletişime geç",
     "nextStepsTitle": "Sonraki adımlar",
-    "nextStepsBody": "Başvurunuz devam ediyor. Güncellemeleri istediğiniz zaman takip edebilir veya yeni bir başvuru başlatabilirsiniz.",
+    "nextStepsBody": "The VisaTop team will contact you by email or WhatsApp for any documents that were not uploaded.",
     "trackApplication": "Başvuruyu takip et",
     "startNewApplication": "Yeni başvuru başlat",
     "browseServices": "Hizmetlere göz at",
@@ -507,7 +510,11 @@
     "payment": "Ödeme",
     "status": "Durum",
     "stepBadge": "Adım {step}/{total}",
-    "hideProgressAria": "İlerleme özetini gizle"
+    "hideProgressAria": "İlerleme özetini gizle",
+    "trip": "Trip",
+    "details": "Details",
+    "pay": "Pay",
+    "finish": "Finish"
   },
   "common": {
     "continue": "Devam et",
@@ -588,7 +595,7 @@
       "pdfNotSinglePage": "Pasaport PDF’i tam olarak bir sayfa olmalıdır.",
       "rateLimited": "Çok fazla yükleme. Biraz bekleyip yeniden deneyin.",
       "network": "Yükleme başarısız. Bağlantıyı kontrol edip yeniden deneyin.",
-      "timeout": "Bağlantı yavaş. Yeniden deneyin veya Wi-Fi’ye geçin.",
+      "timeout": "This is taking longer than 90 seconds. Try again.",
       "generic": "Yükleme başarısız. Lütfen yeniden deneyin."
     }
   },
@@ -596,5 +603,21 @@
     "reading": "Pasaportunuz okunuyor…",
     "succeeded": "Bilgiler dolduruldu — lütfen doğru olduklarını kontrol edin.",
     "needsReview": "Bazı bilgileri net okuyamadık. Vurgulanan alanları gözden geçirin."
+  },
+  "wizard": {
+    "readyTitle": "What you'll need",
+    "neededNow": "Needed now",
+    "addLater": "Can add later",
+    "passportNow": "Passport bio page (photo, or single-page PDF).",
+    "takesTwoMinutes": "Takes about 2 minutes. Your phone camera works.",
+    "encrypted": "Encrypted and used only for your visa application.",
+    "orderTotal": "Order total {total}",
+    "otherTitle": "Other documents",
+    "addAfterPayment": "You can add these after payment too.",
+    "detailsTitle": "Check your details",
+    "pleaseFill": "Please fill these in.",
+    "replacePassport": "Passport photo wrong? Replace it",
+    "continueToPayment": "Looks right, continue to payment",
+    "travellerProgress": "Traveller {current} of {total}"
   }
 }

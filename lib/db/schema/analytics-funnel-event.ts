@@ -16,6 +16,7 @@ export const analyticsFunnelEvent = pgTable(
     nationalityCode: text("nationality_code"),
     serviceId: text("service_id"),
     source: text("source").notNull(),
+    failureReason: text("failure_reason"),
   },
   (t) => [
     uniqueIndex("analytics_funnel_event_eventId_uidx").on(t.eventId),

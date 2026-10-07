@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FC } from "react";
+import { useEffect, useState, type FC } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { DoubleDecision } from "@/components/client/double-decision";
@@ -130,6 +130,9 @@ export interface IApplicantReviewProps {
   waitForPassportExtract: () => Promise<void>;
   locked: boolean;
   onSaved: () => void;
+  destination?: "payment" | "next";
+  onFinished?: () => void;
+  onReplacePassport?: () => void;
 }
 
 export const ApplicantReview: FC<IApplicantReviewProps> = ({
@@ -150,6 +153,9 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
   waitForPassportExtract,
   locked,
   onSaved,
+  destination = "payment",
+  onFinished,
+  onReplacePassport,
 }) => {
   const t = useCustomerT();
   const router = useRouter();
@@ -174,17 +180,29 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
   });
   const showOcrHighlightHint = ocrHighlightFields.length > 0;
 
+  useEffect(() => {
+    if (!dirty) return;
+    trackEventOnce(
+      APPLY_FUNNEL_EVENTS.detailsFieldsEdited,
+      { application_id: applicationId },
+      `${APPLY_FUNNEL_EVENTS.detailsFieldsEdited}:${applicationId}`,
+    );
+  }, [applicationId, dirty]);
+
   const paymentPath = `/apply/applications/${encodeURIComponent(paymentApplicationId ?? applicationId)}/payment`;
   const canContinueToPayment = !locked && paymentReadiness === "ready";
 
   const goToPayment = async () => {
     await waitForPassportExtract();
-    if (canContinueToPayment) {
-      trackEventOnce(
-        APPLY_FUNNEL_EVENTS.applicantVerified,
-        { application_id: paymentApplicationId ?? applicationId },
-        `${APPLY_FUNNEL_EVENTS.applicantVerified}:${paymentApplicationId ?? applicationId}`,
-      );
+    if (!canContinueToPayment) return;
+    trackEventOnce(
+      APPLY_FUNNEL_EVENTS.applicantVerified,
+      { application_id: paymentApplicationId ?? applicationId },
+      `${APPLY_FUNNEL_EVENTS.applicantVerified}:${paymentApplicationId ?? applicationId}`,
+    );
+    if (onFinished) {
+      onFinished();
+      return;
     }
     router.push(paymentPath);
   };
@@ -247,6 +265,10 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
     }
     setSaveMsg(t("draft.changesSaved"));
     onSaved();
+    if (destination === "next") {
+      onFinished?.();
+      return;
+    }
     if (canContinueToPayment && passportUploaded) {
       void goToPayment();
     }
@@ -258,6 +280,19 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
   const onNext = async () => {
     if (locked) return;
     setSaveError(null);
+    if (destination === "next") {
+      if (!passportUploaded) {
+        setSaveError(t("draft.passportRequiredToPay"));
+        return;
+      }
+      if (extractPending) await waitForPassportExtract();
+      if (dirty) {
+        void handleSave();
+        return;
+      }
+      onFinished?.();
+      return;
+    }
     const nav = paymentReviewNavState({
       passportUploaded,
       extractPending,
@@ -297,7 +332,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
               isSecondary && "text-muted-foreground",
             )}
           >
-            {t("draft.applicantDetailsTitle")}
+            {t("wizard.detailsTitle")}
           </h2>
           {isSecondary ? (
             <p className="text-muted-foreground text-sm font-normal">
@@ -340,9 +375,14 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
       )}
 
       {showOcrHighlightHint ? (
-        <p id="ocr-review-hint" className="text-muted-foreground text-xs">
-          {t("ocr.needsReview")}
+        <p id="ocr-review-hint" className="text-error text-sm font-semibold">
+          {t("wizard.pleaseFill")}
         </p>
+      ) : null}
+      {onReplacePassport ? (
+        <button type="button" className="text-link text-sm underline" onClick={onReplacePassport}>
+          {t("wizard.replacePassport")}
+        </button>
       ) : null}
 
       {locked && (
@@ -409,22 +449,22 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
         <DoubleDecision
           className="max-w-md"
           dismissLabel={t("draft.previous")}
-          onDismiss={() =>
-            router.push(`/apply/start?nationality=${encodeURIComponent(nationalityCode)}`)
-          }
+          onDismiss={() => router.back()}
           confirmLabel={
             locked
               ? undefined
-              : saving || extractPending
-                ? extractPending
+              : saving
+                ? t("draft.saving")
+                : extractPending
                   ? t("documents.readingPassport")
-                  : t("draft.saving")
-                : !dirty && canContinueToPayment
-                  ? t("draft.continueToPayment")
-                  : t("draft.next")
+                  : destination === "next"
+                    ? t("common.continue")
+                    : t("wizard.continueToPayment")
           }
           onConfirm={locked ? undefined : () => void onNext()}
-          confirmDisabled={saving}
+          confirmDisabled={
+            saving || extractPending || (destination === "payment" && !canContinueToPayment)
+          }
           confirmPending={saving || extractPending}
         />
         {!locked && saveMsg ? <p className="text-success text-xs">{saveMsg}</p> : null}

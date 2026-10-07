@@ -21,9 +21,9 @@ export const ADMIN_FUNNEL_STEPS: TFunnelStepDef[] = [
   { eventName: APPLY_FUNNEL_EVENTS.visaListViewed, label: "Visa list viewed" },
   { eventName: APPLY_FUNNEL_EVENTS.visaSelected, label: "Visa selected / created" },
   { eventName: APPLY_FUNNEL_EVENTS.applicationLinkSaved, label: "Email / resume link saved" },
-  { eventName: APPLY_FUNNEL_EVENTS.passportUploaded, label: "Passport uploaded" },
-  { eventName: APPLY_FUNNEL_EVENTS.photoUploaded, label: "Personal photo uploaded" },
-  { eventName: APPLY_FUNNEL_EVENTS.applicantVerified, label: "Applicant verified" },
+  { eventName: APPLY_FUNNEL_EVENTS.docsReadyViewed, label: "What you'll need" },
+  { eventName: APPLY_FUNNEL_EVENTS.passportUploadSucceeded, label: "Passport uploaded" },
+  { eventName: APPLY_FUNNEL_EVENTS.detailsReviewViewed, label: "Check your details" },
   { eventName: APPLY_FUNNEL_EVENTS.checkoutViewed, label: "Checkout viewed" },
   { eventName: FUNNEL_CHECKOUT_CREATED, label: "Checkout created" },
   { eventName: APPLY_FUNNEL_EVENTS.paymentStarted, label: "Payment started" },
@@ -31,6 +31,14 @@ export const ADMIN_FUNNEL_STEPS: TFunnelStepDef[] = [
 ];
 
 export const EXTRA_FUNNEL_STEPS: TFunnelStepDef[] = [
+  { eventName: APPLY_FUNNEL_EVENTS.passportUploaded, label: "Passport uploaded (legacy)" },
+  { eventName: APPLY_FUNNEL_EVENTS.passportUploadStarted, label: "Passport upload started" },
+  { eventName: APPLY_FUNNEL_EVENTS.passportUploadFailed, label: "Passport upload failed" },
+  { eventName: APPLY_FUNNEL_EVENTS.photoUploaded, label: "Personal photo uploaded" },
+  { eventName: APPLY_FUNNEL_EVENTS.otherDocsSkipped, label: "Other documents skipped" },
+  { eventName: APPLY_FUNNEL_EVENTS.otherDocsUploaded, label: "Other documents uploaded" },
+  { eventName: APPLY_FUNNEL_EVENTS.detailsFieldsEdited, label: "Details fields edited" },
+  { eventName: APPLY_FUNNEL_EVENTS.applicantVerified, label: "Applicant verified" },
   { eventName: APPLY_FUNNEL_EVENTS.ocrReviewRequired, label: "OCR review required" },
   { eventName: APPLY_FUNNEL_EVENTS.stepView, label: "Apply step viewed" },
   { eventName: GUEST_LINK_EVENTS.submittedView, label: "Submitted page viewed" },

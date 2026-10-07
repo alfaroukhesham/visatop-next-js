@@ -145,6 +145,7 @@ describe("DocumentUploadSlot", () => {
     const choose = screen.getByRole("button", { name: /Choose a file/i });
     expect(takePhoto.className).toMatch(/min-h-11/);
     expect(takePhoto.className).toMatch(/w-full/);
+    expect(takePhoto.className).toMatch(/bg-secondary/);
     expect(choose.className).toMatch(/min-h-11/);
     const specimen = screen.getByRole("img", { name: /fake passport/i });
     expect(specimen).toHaveAttribute("data-clarity-mask", "true");

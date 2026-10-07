@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 
 type ApplyTwoColumnProps = {
   currentStep: 1 | 2 | 3 | 4 | 5;
+  phase?: "documents" | "details";
   applicationId?: string;
   children: ReactNode;
   className?: string;
@@ -16,6 +17,7 @@ type ApplyTwoColumnProps = {
 
 export function ApplyTwoColumn({
   currentStep,
+  phase,
   applicationId,
   children,
   className,
@@ -30,7 +32,7 @@ export function ApplyTwoColumn({
 
   return (
     <div className={cn("space-y-5", className)}>
-      <ApplyStepsRail currentStep={currentStep} applicationId={applicationId} />
+      <ApplyStepsRail currentStep={currentStep} phase={phase} applicationId={applicationId} />
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div
           className={cn(

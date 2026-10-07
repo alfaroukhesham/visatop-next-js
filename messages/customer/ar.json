@@ -227,7 +227,10 @@
     "captureTip2": "اجعل السطرين المقروءين آلياً في الأسفل واضحين وظاهرين بالكامل.",
     "captureTip3": "تجنّب الوهج والظلال والقص من الحواف.",
     "privacyNote": "تُشفَّر صورتك أثناء النقل وتُستخدم فقط لمعالجة هذا الطلب — وليس للتسويق.",
-    "examplePassportAlt": "مثال توضيحي لصفحة بيانات جواز سفر مزيفة لإرشاد التصوير. ليست وثيقة سفر حقيقية."
+    "examplePassportAlt": "مثال توضيحي لصفحة بيانات جواز سفر مزيفة لإرشاد التصوير. ليست وثيقة سفر حقيقية.",
+    "photoTip1": "Plain background.",
+    "photoTip2": "No glasses.",
+    "photoTip3": "Face centred in the oval."
   },
   "payment": {
     "pageTitle": "الدفع | Visatop",
@@ -370,7 +373,7 @@
     "refreshStatus": "تحديث الحالة",
     "contactSupport": "التواصل مع الدعم",
     "nextStepsTitle": "الخطوات التالية",
-    "nextStepsBody": "طلبك قيد التنفيذ. يمكنك بدء طلب جديد في أي وقت.",
+    "nextStepsBody": "The VisaTop team will contact you by email or WhatsApp for any documents that were not uploaded.",
     "trackApplication": "تتبّع الطلب",
     "startNewApplication": "بدء طلب جديد",
     "browseServices": "تصفّح الخدمات",
@@ -507,7 +510,11 @@
     "payment": "الدفع",
     "status": "الحالة",
     "stepBadge": "الخطوة {step}/{total}",
-    "hideProgressAria": "إخفاء ملخص التقدم"
+    "hideProgressAria": "إخفاء ملخص التقدم",
+    "trip": "Trip",
+    "details": "Details",
+    "pay": "Pay",
+    "finish": "Finish"
   },
   "common": {
     "continue": "متابعة",
@@ -588,7 +595,7 @@
       "pdfNotSinglePage": "يجب أن يكون ملف PDF للجواز صفحة واحدة فقط.",
       "rateLimited": "طلبات رفع كثيرة. انتظر قليلاً ثم أعد المحاولة.",
       "network": "فشل الرفع. تحقق من الاتصال ثم أعد المحاولة.",
-      "timeout": "الاتصال بطيء. أعد المحاولة أو استخدم شبكة Wi-Fi.",
+      "timeout": "This is taking longer than 90 seconds. Try again.",
       "generic": "فشل الرفع. يرجى المحاولة مرة أخرى."
     }
   },
@@ -596,5 +603,21 @@
     "reading": "جارٍ قراءة جواز سفرك…",
     "succeeded": "تم تعبئة التفاصيل — يرجى التحقق من صحتها.",
     "needsReview": "تعذّر قراءة بعض التفاصيل بوضوح. راجع الحقول المميّزة."
+  },
+  "wizard": {
+    "readyTitle": "What you'll need",
+    "neededNow": "Needed now",
+    "addLater": "Can add later",
+    "passportNow": "Passport bio page (photo, or single-page PDF).",
+    "takesTwoMinutes": "Takes about 2 minutes. Your phone camera works.",
+    "encrypted": "Encrypted and used only for your visa application.",
+    "orderTotal": "Order total {total}",
+    "otherTitle": "Other documents",
+    "addAfterPayment": "You can add these after payment too.",
+    "detailsTitle": "Check your details",
+    "pleaseFill": "Please fill these in.",
+    "replacePassport": "Passport photo wrong? Replace it",
+    "continueToPayment": "Looks right, continue to payment",
+    "travellerProgress": "Traveller {current} of {total}"
   }
 }

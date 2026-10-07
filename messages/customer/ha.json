@@ -227,7 +227,10 @@
     "captureTip2": "Tabbatar layukan biyu da na'ura ke karantawa a ƙasa sun fito a fili kuma a cikin hoto.",
     "captureTip3": "Ka guje wa haske, inuwa, da yanke gefuna.",
     "privacyNote": "Hotonku yana tafiya a ɓoye kuma ana amfani da shi kawai don wannan aikace-aikacen — ba don talla ba.",
-    "examplePassportAlt": "Misalin shafin bayanan fasfo na karya don jagorar daukar hoto. Ba takardar tafiya ta gaskiya ba ce."
+    "examplePassportAlt": "Misalin shafin bayanan fasfo na karya don jagorar daukar hoto. Ba takardar tafiya ta gaskiya ba ce.",
+    "photoTip1": "Plain background.",
+    "photoTip2": "No glasses.",
+    "photoTip3": "Face centred in the oval."
   },
   "payment": {
     "pageTitle": "Biya | Visatop",
@@ -370,7 +373,7 @@
     "refreshStatus": "Wartsake matsayi",
     "contactSupport": "Tuntubi tallafi",
     "nextStepsTitle": "Matakan gaba",
-    "nextStepsBody": "Neman ku na ci gaba. Za ku iya bibiyar sabuntawa a kowane lokaci, ko fara sabon nema.",
+    "nextStepsBody": "The VisaTop team will contact you by email or WhatsApp for any documents that were not uploaded.",
     "trackApplication": "Bibiyi nema",
     "startNewApplication": "Fara sabon nema",
     "browseServices": "Bincika sabis",
@@ -507,7 +510,11 @@
     "payment": "Biya",
     "status": "Matsayi",
     "stepBadge": "Mataki {step}/{total}",
-    "hideProgressAria": "Ɓoye taƙaitaccen ci gaba"
+    "hideProgressAria": "Ɓoye taƙaitaccen ci gaba",
+    "trip": "Trip",
+    "details": "Details",
+    "pay": "Pay",
+    "finish": "Finish"
   },
   "common": {
     "continue": "Ci gaba",
@@ -588,7 +595,7 @@
       "pdfNotSinglePage": "PDF ɗin fasfo dole ya kasance shafi ɗaya kawai.",
       "rateLimited": "An yi lodawa da yawa. Jira kadan sannan ka sake gwadawa.",
       "network": "Lodawa ta gaza. Duba haɗin kai sannan ka sake gwadawa.",
-      "timeout": "Haɗin kai yana jinkiri. Sake gwadawa, ko yi amfani da Wi-Fi.",
+      "timeout": "This is taking longer than 90 seconds. Try again.",
       "generic": "Lodawa ta gaza. Da fatan za a sake gwadawa."
     }
   },
@@ -596,5 +603,21 @@
     "reading": "Ana karanta fasfon ku…",
     "succeeded": "An cika cikakkun bayanai — da fatan za a duba cewa sun dace.",
     "needsReview": "Ba mu iya karanta wasu cikakkun bayanai da kyau ba. Duba filayen da aka haskaka."
+  },
+  "wizard": {
+    "readyTitle": "What you'll need",
+    "neededNow": "Needed now",
+    "addLater": "Can add later",
+    "passportNow": "Passport bio page (photo, or single-page PDF).",
+    "takesTwoMinutes": "Takes about 2 minutes. Your phone camera works.",
+    "encrypted": "Encrypted and used only for your visa application.",
+    "orderTotal": "Order total {total}",
+    "otherTitle": "Other documents",
+    "addAfterPayment": "You can add these after payment too.",
+    "detailsTitle": "Check your details",
+    "pleaseFill": "Please fill these in.",
+    "replacePassport": "Passport photo wrong? Replace it",
+    "continueToPayment": "Looks right, continue to payment",
+    "travellerProgress": "Traveller {current} of {total}"
   }
 }

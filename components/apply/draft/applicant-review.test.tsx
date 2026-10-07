@@ -61,7 +61,7 @@ const renderReview = (ocrMissingFields: string[]) =>
 describe("ApplicantReview OCR highlight", () => {
   it("highlights empty OCR-missing fields and describes them", () => {
     renderReview(["dateOfBirth", "passportExpiryDate"]);
-    expect(screen.getByText(/Review the highlighted fields/i)).toBeInTheDocument();
+    expect(screen.getByText(/Please fill these in/i)).toBeInTheDocument();
     const [dob, expiry] = screen.getAllByPlaceholderText("DD-MM-YYYY");
     expect(dob).toHaveAttribute("aria-invalid", "true");
     expect(expiry).toHaveAttribute("aria-invalid", "true");
@@ -71,6 +71,6 @@ describe("ApplicantReview OCR highlight", () => {
 
   it("drops the review line when OCR did not name fields to highlight", () => {
     renderReview([]);
-    expect(screen.queryByText(/Review the highlighted fields/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Please fill these in/i)).not.toBeInTheDocument();
   });
 });

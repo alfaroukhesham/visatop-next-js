@@ -44,6 +44,12 @@ export const analyticsSummaryToCsv = (payload: TAdminAnalyticsPayload): string =
     "extra_event,label,count",
     ...payload.extraSteps.map((r) => csvLine([r.eventName, r.label, r.count])),
     "",
+    "stop_screen,label,count",
+    ...payload.stops.map((r) => csvLine([r.screen, r.label, r.count])),
+    "",
+    "passport_failure_code,count",
+    ...payload.passportFailures.map((r) => csvLine([r.code, r.count])),
+    "",
     "week_start,created,paid",
     ...payload.weekly.map((r) => csvLine([r.weekStart, r.created, r.paid])),
     "",
@@ -65,6 +71,7 @@ export const funnelEventsToCsv = (
     "nationality_code",
     "service_id",
     "source",
+    "failure_reason",
   ]);
   const body = rows.map((r) =>
     csvLine([
@@ -75,6 +82,7 @@ export const funnelEventsToCsv = (
       r.nationalityCode,
       r.serviceId,
       r.source,
+      r.failureReason,
     ]),
   );
   const truncated = Boolean(opts?.truncated);

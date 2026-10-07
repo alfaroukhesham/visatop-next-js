@@ -11,6 +11,7 @@ export type TRecordFunnelEventInput = {
   applicationId?: string | null;
   nationalityCode?: string | null;
   serviceId?: string | null;
+  failureReason?: string | null;
   source: "client" | "server";
   occurredAt?: Date;
 };
@@ -33,6 +34,7 @@ const insertRow = async (
       applicationId: input.applicationId ?? null,
       nationalityCode: input.nationalityCode ?? null,
       serviceId: input.serviceId ?? null,
+      failureReason: input.failureReason ?? null,
       source: input.source,
       occurredAt: input.occurredAt ?? new Date(),
     })

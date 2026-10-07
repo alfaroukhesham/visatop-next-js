@@ -19,6 +19,9 @@ export const applicationParty = pgTable(
     resumeTokenHash: text("resume_token_hash"),
     draftExpiresAt: timestamp("draft_expires_at"),
     paymentStatus: text("payment_status").notNull(),
+    /** Last document/details screen the customer confirmed. No personal data. */
+    wizardCursorScreen: text("wizard_cursor_screen"),
+    wizardCursorTravellerId: text("wizard_cursor_traveller_id"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

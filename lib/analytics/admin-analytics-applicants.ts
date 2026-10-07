@@ -1,3 +1,4 @@
+import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { ADMIN_FUNNEL_STEPS } from "@/lib/analytics/funnel-metrics";
 import { minorUnitsToMajor } from "@/lib/pricing/format-minor-units";
 import type { TApplicantExportRow } from "@/lib/analytics/admin-analytics-types";
@@ -22,10 +23,15 @@ export type TApplicantPaymentIndex = {
  * Linear ADMIN_FUNNEL_STEPS only. Extra branches (OCR, apply_step_view, guest-link)
  * do not fill last_step — historical apps with no linear events stay N/A.
  */
+const FUNNEL_STEP_ALIASES: Record<string, string> = {
+  [APPLY_FUNNEL_EVENTS.passportUploaded]: APPLY_FUNNEL_EVENTS.passportUploadSucceeded,
+};
+
 export const lastApplicantStepLabel = (eventNames: string[]): string => {
   let furthest = -1;
   for (const name of eventNames) {
-    const idx = ADMIN_FUNNEL_STEPS.findIndex((step) => step.eventName === name);
+    const canonical = FUNNEL_STEP_ALIASES[name] ?? name;
+    const idx = ADMIN_FUNNEL_STEPS.findIndex((step) => step.eventName === canonical);
     if (idx > furthest) furthest = idx;
   }
   if (furthest < 0) return "N/A";

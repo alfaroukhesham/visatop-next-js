@@ -227,7 +227,10 @@
     "captureTip2": "नीचे की दोनों मशीन-पठनीय पंक्तियाँ तेज़ और पूरी दिखनी चाहिए।",
     "captureTip3": "चमक, परछाई और कटे किनारे से बचें।",
     "privacyNote": "आपकी फोटो रास्ते में एन्क्रिप्ट रहती है और केवल इस आवेदन के लिए उपयोग होती है — मार्केटिंग के लिए नहीं।",
-    "examplePassportAlt": "कैमरा मार्गदर्शन के लिए नकली पासपोर्ट बायो पेज का उदाहरण। यह वास्तविक यात्रा दस्तावेज़ नहीं है।"
+    "examplePassportAlt": "कैमरा मार्गदर्शन के लिए नकली पासपोर्ट बायो पेज का उदाहरण। यह वास्तविक यात्रा दस्तावेज़ नहीं है।",
+    "photoTip1": "Plain background.",
+    "photoTip2": "No glasses.",
+    "photoTip3": "Face centred in the oval."
   },
   "payment": {
     "pageTitle": "भुगतान | Visatop",
@@ -370,7 +373,7 @@
     "refreshStatus": "स्थिति रिफ़्रेश करें",
     "contactSupport": "सहायता से संपर्क करें",
     "nextStepsTitle": "अगले चरण",
-    "nextStepsBody": "आपका आवेदन प्रगति में है। कभी भी अपडेट ट्रैक कर सकते हैं, या नया आवेदन शुरू करें।",
+    "nextStepsBody": "The VisaTop team will contact you by email or WhatsApp for any documents that were not uploaded.",
     "trackApplication": "आवेदन ट्रैक करें",
     "startNewApplication": "नया आवेदन शुरू करें",
     "browseServices": "सेवाएँ देखें",
@@ -507,7 +510,11 @@
     "payment": "भुगतान",
     "status": "स्थिति",
     "stepBadge": "चरण {step}/{total}",
-    "hideProgressAria": "प्रगति सारांश छिपाएँ"
+    "hideProgressAria": "प्रगति सारांश छिपाएँ",
+    "trip": "Trip",
+    "details": "Details",
+    "pay": "Pay",
+    "finish": "Finish"
   },
   "common": {
     "continue": "जारी रखें",
@@ -588,7 +595,7 @@
       "pdfNotSinglePage": "पासपोर्ट PDF ठीक एक पृष्ठ का होना चाहिए।",
       "rateLimited": "बहुत अधिक अपलोड। थोड़ी देर बाद फिर कोशिश करें।",
       "network": "अपलोड विफल। कनेक्शन जाँचें और फिर कोशिश करें।",
-      "timeout": "कनेक्शन धीमा है। फिर कोशिश करें, या Wi-Fi इस्तेमाल करें।",
+      "timeout": "This is taking longer than 90 seconds. Try again.",
       "generic": "अपलोड विफल। कृपया फिर कोशिश करें।"
     }
   },
@@ -596,5 +603,21 @@
     "reading": "आपका पासपोर्ट पढ़ा जा रहा है…",
     "succeeded": "विवरण भरे गए — कृपया जाँचें कि सही हैं।",
     "needsReview": "हम कुछ विवरण स्पष्ट नहीं पढ़ सके। हाइलाइट किए फ़ील्ड की समीक्षा करें।"
+  },
+  "wizard": {
+    "readyTitle": "What you'll need",
+    "neededNow": "Needed now",
+    "addLater": "Can add later",
+    "passportNow": "Passport bio page (photo, or single-page PDF).",
+    "takesTwoMinutes": "Takes about 2 minutes. Your phone camera works.",
+    "encrypted": "Encrypted and used only for your visa application.",
+    "orderTotal": "Order total {total}",
+    "otherTitle": "Other documents",
+    "addAfterPayment": "You can add these after payment too.",
+    "detailsTitle": "Check your details",
+    "pleaseFill": "Please fill these in.",
+    "replacePassport": "Passport photo wrong? Replace it",
+    "continueToPayment": "Looks right, continue to payment",
+    "travellerProgress": "Traveller {current} of {total}"
   }
 }

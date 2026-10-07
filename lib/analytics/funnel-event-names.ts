@@ -33,6 +33,8 @@ const SESSION_ID_RE = /^[A-Za-z0-9:_-]{8,80}$/;
 const EVENT_ID_RE = /^[A-Za-z0-9:_-]{8,80}$/;
 const OPTIONAL_ID_RE = /^[A-Za-z0-9:_-]{1,80}$/;
 
+const FAILURE_REASON_RE = /^(timeout|cancelled|file_type|too_large|network|server)$/;
+
 export type TBeaconPayload = {
   eventId: string;
   eventName: string;
@@ -40,6 +42,7 @@ export type TBeaconPayload = {
   applicationId?: string | null;
   nationalityCode?: string | null;
   serviceId?: string | null;
+  failureReason?: string | null;
 };
 
 export type TParseBeaconResult =
@@ -94,6 +97,8 @@ export const parseBeaconPayload = (raw: unknown): TParseBeaconResult => {
   if (serviceId && !OPTIONAL_ID_RE.test(serviceId)) {
     return { ok: false, message: "Invalid serviceId" };
   }
+  const failureRaw = typeof rec.failureReason === "string" ? rec.failureReason.trim() : "";
+  const failureReason = FAILURE_REASON_RE.test(failureRaw) ? failureRaw : null;
   return {
     ok: true,
     data: {
@@ -103,6 +108,7 @@ export const parseBeaconPayload = (raw: unknown): TParseBeaconResult => {
       applicationId,
       nationalityCode,
       serviceId,
+      failureReason,
     },
   };
 };

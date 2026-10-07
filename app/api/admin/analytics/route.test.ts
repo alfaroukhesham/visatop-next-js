@@ -62,6 +62,8 @@ describe("GET /api/admin/analytics", () => {
       churn: { overallAbandonPct: null, biggestDrop: null, abandonedDrafts: 0 },
       funnel: [],
       extraSteps: [],
+      stops: [],
+      passportFailures: [],
       weekly: [],
       nationalities: [],
     });

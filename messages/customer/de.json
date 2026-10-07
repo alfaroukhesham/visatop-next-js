@@ -227,7 +227,10 @@
     "captureTip2": "Die beiden maschinenlesbaren Zeilen unten müssen scharf und vollständig sichtbar sein.",
     "captureTip3": "Vermeiden Sie Reflexe, Schatten und abgeschnittene Ränder.",
     "privacyNote": "Ihr Foto wird auf dem Weg verschlüsselt und nur zur Bearbeitung dieses Antrags verwendet — nicht für Marketing.",
-    "examplePassportAlt": "Beispiel einer fiktiven Pass-Datenseite als Aufnahmehilfe. Kein echtes Reisedokument."
+    "examplePassportAlt": "Beispiel einer fiktiven Pass-Datenseite als Aufnahmehilfe. Kein echtes Reisedokument.",
+    "photoTip1": "Plain background.",
+    "photoTip2": "No glasses.",
+    "photoTip3": "Face centred in the oval."
   },
   "payment": {
     "pageTitle": "Zahlung | Visatop",
@@ -370,7 +373,7 @@
     "refreshStatus": "Status aktualisieren",
     "contactSupport": "Support kontaktieren",
     "nextStepsTitle": "Nächste Schritte",
-    "nextStepsBody": "Ihr Antrag ist in Bearbeitung. Sie können jederzeit Updates verfolgen oder einen neuen Antrag starten.",
+    "nextStepsBody": "The VisaTop team will contact you by email or WhatsApp for any documents that were not uploaded.",
     "trackApplication": "Antrag verfolgen",
     "startNewApplication": "Neuen Antrag starten",
     "browseServices": "Services durchsuchen",
@@ -507,7 +510,11 @@
     "payment": "Zahlung",
     "status": "Status",
     "stepBadge": "Schritt {step}/{total}",
-    "hideProgressAria": "Fortschrittsübersicht ausblenden"
+    "hideProgressAria": "Fortschrittsübersicht ausblenden",
+    "trip": "Trip",
+    "details": "Details",
+    "pay": "Pay",
+    "finish": "Finish"
   },
   "common": {
     "continue": "Weiter",
@@ -588,7 +595,7 @@
       "pdfNotSinglePage": "Das Pass-PDF muss genau eine Seite haben.",
       "rateLimited": "Zu viele Uploads. Bitte kurz warten und erneut versuchen.",
       "network": "Upload fehlgeschlagen. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
-      "timeout": "Langsame Verbindung. Versuchen Sie es erneut oder wechseln Sie zu WLAN.",
+      "timeout": "This is taking longer than 90 seconds. Try again.",
       "generic": "Upload fehlgeschlagen. Bitte erneut versuchen."
     }
   },
@@ -596,5 +603,21 @@
     "reading": "Reisepass wird gelesen…",
     "succeeded": "Angaben ausgefüllt — bitte prüfen Sie, ob sie korrekt sind.",
     "needsReview": "Wir konnten einige Angaben nicht eindeutig lesen. Prüfen Sie die hervorgehobenen Felder."
+  },
+  "wizard": {
+    "readyTitle": "What you'll need",
+    "neededNow": "Needed now",
+    "addLater": "Can add later",
+    "passportNow": "Passport bio page (photo, or single-page PDF).",
+    "takesTwoMinutes": "Takes about 2 minutes. Your phone camera works.",
+    "encrypted": "Encrypted and used only for your visa application.",
+    "orderTotal": "Order total {total}",
+    "otherTitle": "Other documents",
+    "addAfterPayment": "You can add these after payment too.",
+    "detailsTitle": "Check your details",
+    "pleaseFill": "Please fill these in.",
+    "replacePassport": "Passport photo wrong? Replace it",
+    "continueToPayment": "Looks right, continue to payment",
+    "travellerProgress": "Traveller {current} of {total}"
   }
 }

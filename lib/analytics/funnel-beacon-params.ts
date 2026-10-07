@@ -4,6 +4,7 @@ export type TFunnelBeaconIds = {
   applicationId?: string;
   nationalityCode?: string;
   serviceId?: string;
+  failureReason?: string;
 };
 
 const asOptionalString = (value: TTrackParamValue): string | undefined => {
@@ -22,8 +23,12 @@ const firstString = (...values: TTrackParamValue[]): string | undefined => {
 
 export const funnelIdsFromTrackParams = (
   params: Record<string, TTrackParamValue>,
-): TFunnelBeaconIds => ({
-  applicationId: firstString(params.application_id, params.applicationId),
-  nationalityCode: firstString(params.nationalityCode, params.nationality),
-  serviceId: firstString(params.service_id, params.serviceId),
-});
+): TFunnelBeaconIds => {
+  const failureReason = firstString(params.failureReason);
+  return {
+    applicationId: firstString(params.application_id, params.applicationId),
+    nationalityCode: firstString(params.nationalityCode, params.nationality),
+    serviceId: firstString(params.service_id, params.serviceId),
+    ...(failureReason ? { failureReason } : {}),
+  };
+};

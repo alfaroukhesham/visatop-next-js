@@ -32,6 +32,8 @@ const sample: TAdminAnalyticsPayload = {
     },
   ],
   extraSteps: [],
+  stops: [],
+  passportFailures: [],
   weekly: [{ weekStart: "2026-09-14", created: 10, paid: 2 }],
   nationalities: [{ code: "IN", name: "India", created: 7, paid: 1 }],
 };
@@ -58,6 +60,7 @@ describe("funnelEventsToCsv", () => {
           nationalityCode: "IN",
           serviceId: null,
           source: "client",
+          failureReason: null,
         },
       ],
       { truncated: true, maxRows: 20000 },
@@ -76,6 +79,7 @@ describe("funnelEventsToCsv", () => {
         nationalityCode: "IN",
         serviceId: null,
         source: "client",
+        failureReason: null,
       },
     ]);
     expect(csv).toContain("event_name");

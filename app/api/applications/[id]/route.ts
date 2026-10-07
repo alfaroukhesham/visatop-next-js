@@ -13,7 +13,7 @@ import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withClientDbActor, withSystemDbActor } from "@/lib/db/actor-context";
-import { application } from "@/lib/db/schema";
+import { application, applicationParty } from "@/lib/db/schema";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { serverFunnelEventId } from "@/lib/analytics/funnel-event-names";
 import { recordFunnelEvent } from "@/lib/analytics/record-funnel-event";
@@ -36,11 +36,32 @@ async function applicationWithMembers(
   row: typeof application.$inferSelect,
   t: (key: string) => string,
 ) {
-  const [publicApp, members] = await Promise.all([
+  const [publicApp, members, wizardCursor] = await Promise.all([
     toPublicApplicationWithCharge(row, t),
     withSystemDbActor((tx) => loadPartyMembers(tx, row)),
+    row.partyId
+      ? withSystemDbActor(async (tx) => {
+          const [party] = await tx
+            .select({
+              screen: applicationParty.wizardCursorScreen,
+              travellerId: applicationParty.wizardCursorTravellerId,
+            })
+            .from(applicationParty)
+            .where(eq(applicationParty.id, row.partyId!))
+            .limit(1);
+          if (
+            party?.screen !== "ready" &&
+            party?.screen !== "passport" &&
+            party?.screen !== "other" &&
+            party?.screen !== "details"
+          ) {
+            return null;
+          }
+          return { screen: party.screen, travellerId: party.travellerId };
+        })
+      : Promise.resolve(null),
   ]);
-  return { application: publicApp, members };
+  return { application: publicApp, members, wizardCursor };
 }
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {

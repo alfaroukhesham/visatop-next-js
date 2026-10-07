@@ -227,7 +227,10 @@
     "captureTip2": "Le due righe a lettura ottica in basso devono essere nitide e complete.",
     "captureTip3": "Eviti riflessi, ombre e bordi tagliati.",
     "privacyNote": "La foto viaggia cifrata e serve solo a elaborare questa domanda, non per il marketing.",
-    "examplePassportAlt": "Esempio di pagina dati di un passaporto fittizio per guidare lo scatto. Non è un documento di viaggio reale."
+    "examplePassportAlt": "Esempio di pagina dati di un passaporto fittizio per guidare lo scatto. Non è un documento di viaggio reale.",
+    "photoTip1": "Plain background.",
+    "photoTip2": "No glasses.",
+    "photoTip3": "Face centred in the oval."
   },
   "payment": {
     "pageTitle": "Pagamento | Visatop",
@@ -370,7 +373,7 @@
     "refreshStatus": "Aggiorna stato",
     "contactSupport": "Contatta l'assistenza",
     "nextStepsTitle": "Prossimi passaggi",
-    "nextStepsBody": "La sua domanda è in corso. Può monitorare gli aggiornamenti in qualsiasi momento o avviare una nuova domanda.",
+    "nextStepsBody": "The VisaTop team will contact you by email or WhatsApp for any documents that were not uploaded.",
     "trackApplication": "Monitora domanda",
     "startNewApplication": "Avvia nuova domanda",
     "browseServices": "Sfoglia servizi",
@@ -507,7 +510,11 @@
     "payment": "Pagamento",
     "status": "Stato",
     "stepBadge": "Passo {step}/{total}",
-    "hideProgressAria": "Nascondi il riepilogo dei progressi"
+    "hideProgressAria": "Nascondi il riepilogo dei progressi",
+    "trip": "Trip",
+    "details": "Details",
+    "pay": "Pay",
+    "finish": "Finish"
   },
   "common": {
     "continue": "Continua",
@@ -588,7 +595,7 @@
       "pdfNotSinglePage": "Il PDF del passaporto deve avere esattamente una pagina.",
       "rateLimited": "Troppi caricamenti. Attenda un momento e riprovi.",
       "network": "Caricamento non riuscito. Controlli la connessione e riprovi.",
-      "timeout": "Connessione lenta. Riprovi o passi al Wi-Fi.",
+      "timeout": "This is taking longer than 90 seconds. Try again.",
       "generic": "Caricamento non riuscito. Riprovi."
     }
   },
@@ -596,5 +603,21 @@
     "reading": "Lettura passaporto…",
     "succeeded": "Dati compilati — verifichi che siano corretti.",
     "needsReview": "Non siamo riusciti a leggere chiaramente alcuni dati. Verifichi i campi evidenziati."
+  },
+  "wizard": {
+    "readyTitle": "What you'll need",
+    "neededNow": "Needed now",
+    "addLater": "Can add later",
+    "passportNow": "Passport bio page (photo, or single-page PDF).",
+    "takesTwoMinutes": "Takes about 2 minutes. Your phone camera works.",
+    "encrypted": "Encrypted and used only for your visa application.",
+    "orderTotal": "Order total {total}",
+    "otherTitle": "Other documents",
+    "addAfterPayment": "You can add these after payment too.",
+    "detailsTitle": "Check your details",
+    "pleaseFill": "Please fill these in.",
+    "replacePassport": "Passport photo wrong? Replace it",
+    "continueToPayment": "Looks right, continue to payment",
+    "travellerProgress": "Traveller {current} of {total}"
   }
 }

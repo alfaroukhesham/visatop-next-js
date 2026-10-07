@@ -36,6 +36,10 @@ export type TAdminAnalyticsPayload = {
   };
   funnel: TFunnelRow[];
   extraSteps: { eventName: string; label: string; count: number }[];
+  /** Unpaid applications by the screen they have not finished. */
+  stops: { screen: string; label: string; count: number }[];
+  /** Passport upload failures in the range, by closed reason code. */
+  passportFailures: { code: string; count: number }[];
   weekly: { weekStart: string; created: number; paid: number }[];
   nationalities: { code: string; name: string; created: number; paid: number }[];
 };
@@ -48,6 +52,7 @@ export type TFunnelEventExportRow = {
   nationalityCode: string | null;
   serviceId: string | null;
   source: string;
+  failureReason: string | null;
 };
 
 export type TApplicantExportRow = {

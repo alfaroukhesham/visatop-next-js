@@ -1,3 +1,23 @@
+export const PASSPORT_FAILURE_CODES = [
+  "timeout",
+  "cancelled",
+  "file_type",
+  "too_large",
+  "network",
+  "server",
+] as const;
+
+export type TPassportFailureCode = (typeof PASSPORT_FAILURE_CODES)[number];
+
+export const passportFailureCode = (reason: TUploadFailureReason): TPassportFailureCode => {
+  if (reason === "file_too_large") return "too_large";
+  if (reason === "upload_rejected") return "file_type";
+  if (reason === "network_error") return "network";
+  if (reason === "timeout") return "timeout";
+  if (reason === "cancelled") return "cancelled";
+  return "server";
+};
+
 export type TUploadFailureReason =
   | "file_too_large"
   | "upload_rejected"

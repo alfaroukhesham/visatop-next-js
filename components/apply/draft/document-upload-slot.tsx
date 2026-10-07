@@ -22,6 +22,8 @@ export interface IDocumentUploadSlotProps {
   lastError: TUploadSlotError | null;
   addLater?: boolean;
   showCaptureGuidance?: boolean;
+  showPhotoGuidance?: boolean;
+  stackActions?: boolean;
   ocrNotice?: string | null;
   onUpload: (file: File, source: TDocumentUploadSource) => void;
   onCancelUpload: () => void;
@@ -38,6 +40,8 @@ export const DocumentUploadSlot: FC<IDocumentUploadSlotProps> = ({
   lastError,
   addLater = false,
   showCaptureGuidance = false,
+  showPhotoGuidance = false,
+  stackActions = false,
   ocrNotice = null,
   onUpload,
   onCancelUpload,
@@ -112,6 +116,20 @@ export const DocumentUploadSlot: FC<IDocumentUploadSlotProps> = ({
         </div>
       ) : null}
 
+      {showPhotoGuidance ? (
+        <div className="border-secondary/20 bg-muted/40 space-y-3 rounded-xl border p-3">
+          <div
+            className="border-secondary/40 mx-auto size-28 rounded-full border-2 border-dashed"
+            aria-hidden
+          />
+          <ul className="text-muted-foreground list-disc space-y-1 ps-4 text-xs leading-relaxed">
+            <li>{t("documents.photoTip1")}</li>
+            <li>{t("documents.photoTip2")}</li>
+            <li>{t("documents.photoTip3")}</li>
+          </ul>
+        </div>
+      ) : null}
+
       {ocrNotice && !errorMessage ? (
         <div
           className="text-destructive flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm"
@@ -134,6 +152,17 @@ export const DocumentUploadSlot: FC<IDocumentUploadSlotProps> = ({
             )}
             {lastError ? t("documents.previousFileKept") : customerUploadStateLabel(true, t)}
           </p>
+          {currentDoc.contentType?.startsWith("image/") ? (
+            <Image
+              src={apiHref(`/applications/${applicationId}/documents/${currentDoc.id}/preview`)}
+              alt=""
+              width={96}
+              height={128}
+              unoptimized
+              className="h-24 w-auto rounded-lg border border-border object-cover"
+              data-clarity-mask="true"
+            />
+          ) : null}
           <a
             href={apiHref(`/applications/${applicationId}/documents/${currentDoc.id}/preview`)}
             target="_blank"
@@ -216,10 +245,10 @@ export const DocumentUploadSlot: FC<IDocumentUploadSlotProps> = ({
               </ClientButton>
             </div>
           ) : (
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className={stackActions ? "flex flex-col gap-2" : "flex flex-col gap-2 sm:flex-row"}>
               <ClientButton
                 type="button"
-                variant="default"
+                brand="blue"
                 className="h-11 min-h-11 w-full rounded-xl sm:flex-1"
                 onClick={() => cameraInputRef.current?.click()}
                 aria-label={t("documents.takePhotoAria", { label })}

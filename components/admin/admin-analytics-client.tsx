@@ -321,6 +321,33 @@ export const AdminAnalyticsClient: FC = () => {
                   </li>
                 ))}
               </ul>
+              <div className="mt-6">
+                <p className="text-muted-foreground mb-2 text-xs font-medium tracking-widest uppercase">
+                  Where unpaid applications stop
+                </p>
+                <ul className="divide-border divide-y">
+                  {data.stops.map((stop) => (
+                    <li key={stop.screen} className="flex items-baseline justify-between gap-2 py-1.5 text-sm">
+                      <span>{stop.label}</span>
+                      <span className="text-muted-foreground">{formatNumber(stop.count)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              {data.passportFailures.length > 0 ? (
+                <div className="mt-6">
+                  <p className="text-muted-foreground mb-2 text-xs font-medium tracking-widest uppercase">
+                    Passport upload failures
+                  </p>
+                  <ul className="text-muted-foreground space-y-1 text-sm">
+                    {data.passportFailures.map((row) => (
+                      <li key={row.code}>
+                        {row.code}: {formatNumber(row.count)}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               {data.extraSteps.some((s) => s.count > 0) ? (
                 <div className="mt-6">
                   <p className="text-muted-foreground mb-2 text-xs font-medium tracking-widest uppercase">

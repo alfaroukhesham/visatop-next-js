@@ -227,7 +227,10 @@
     "captureTip2": "Dapat malinaw at buo ang dalawang machine-readable na linya sa ibaba.",
     "captureTip3": "Iwasan ang silaw, anino, at putol na gilid.",
     "privacyNote": "Naka-encrypt ang litrato habang ipinapadala at ginagamit lang para sa application na ito — hindi para sa marketing.",
-    "examplePassportAlt": "Halimbawa ng pekeng passport bio page para sa gabay sa pagkuha ng litrato. Hindi ito tunay na travel document."
+    "examplePassportAlt": "Halimbawa ng pekeng passport bio page para sa gabay sa pagkuha ng litrato. Hindi ito tunay na travel document.",
+    "photoTip1": "Plain background.",
+    "photoTip2": "No glasses.",
+    "photoTip3": "Face centred in the oval."
   },
   "payment": {
     "pageTitle": "Payment | Visatop",
@@ -370,7 +373,7 @@
     "refreshStatus": "I-refresh ang status",
     "contactSupport": "Makipag-ugnayan sa support",
     "nextStepsTitle": "Susunod na hakbang",
-    "nextStepsBody": "Isinasagawa ang application mo. Puwede mong i-track ang mga update anumang oras, o magsimula ng bagong application.",
+    "nextStepsBody": "The VisaTop team will contact you by email or WhatsApp for any documents that were not uploaded.",
     "trackApplication": "I-track ang application",
     "startNewApplication": "Magsimula ng bagong application",
     "browseServices": "Tingnan ang mga service",
@@ -507,7 +510,11 @@
     "payment": "Payment",
     "status": "Status",
     "stepBadge": "Hakbang {step}/{total}",
-    "hideProgressAria": "Itago ang buod ng progreso"
+    "hideProgressAria": "Itago ang buod ng progreso",
+    "trip": "Trip",
+    "details": "Details",
+    "pay": "Pay",
+    "finish": "Finish"
   },
   "common": {
     "continue": "Ituloy",
@@ -588,7 +595,7 @@
       "pdfNotSinglePage": "Dapat isang page lang ang PDF ng pasaporte.",
       "rateLimited": "Masyadong maraming upload. Maghintay sandali at subukan ulit.",
       "network": "Nabigo ang upload. Tingnan ang connection at subukan ulit.",
-      "timeout": "Mabagal ang connection. Subukan ulit, o gumamit ng Wi-Fi.",
+      "timeout": "This is taking longer than 90 seconds. Try again.",
       "generic": "Nabigo ang upload. Pakisubukan ulit."
     }
   },
@@ -596,5 +603,21 @@
     "reading": "Binabasa ang pasaporte mo…",
     "succeeded": "Pinunan na ang detalye — pakisuri kung tama ang mga ito.",
     "needsReview": "Hindi namin malinaw na mabasa ang ilang detalye. Suriin ang mga naka-highlight na field."
+  },
+  "wizard": {
+    "readyTitle": "What you'll need",
+    "neededNow": "Needed now",
+    "addLater": "Can add later",
+    "passportNow": "Passport bio page (photo, or single-page PDF).",
+    "takesTwoMinutes": "Takes about 2 minutes. Your phone camera works.",
+    "encrypted": "Encrypted and used only for your visa application.",
+    "orderTotal": "Order total {total}",
+    "otherTitle": "Other documents",
+    "addAfterPayment": "You can add these after payment too.",
+    "detailsTitle": "Check your details",
+    "pleaseFill": "Please fill these in.",
+    "replacePassport": "Passport photo wrong? Replace it",
+    "continueToPayment": "Looks right, continue to payment",
+    "travellerProgress": "Traveller {current} of {total}"
   }
 }

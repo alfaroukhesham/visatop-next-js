@@ -227,7 +227,10 @@
     "captureTip2": "Две машиночитаемые строки внизу должны быть чёткими и полностью видны.",
     "captureTip3": "Избегайте бликов, теней и обрезанных краёв.",
     "privacyNote": "Фото шифруется при передаче и используется только для этой заявки — не для маркетинга.",
-    "examplePassportAlt": "Пример вымышленной страницы паспорта для съёмки. Это не настоящий проездной документ."
+    "examplePassportAlt": "Пример вымышленной страницы паспорта для съёмки. Это не настоящий проездной документ.",
+    "photoTip1": "Plain background.",
+    "photoTip2": "No glasses.",
+    "photoTip3": "Face centred in the oval."
   },
   "payment": {
     "pageTitle": "Оплата | Visatop",
@@ -370,7 +373,7 @@
     "refreshStatus": "Обновить статус",
     "contactSupport": "Связаться с поддержкой",
     "nextStepsTitle": "Следующие шаги",
-    "nextStepsBody": "Ваша заявка в обработке. Вы можете отслеживать обновления в любое время или начать новую заявку.",
+    "nextStepsBody": "The VisaTop team will contact you by email or WhatsApp for any documents that were not uploaded.",
     "trackApplication": "Отследить заявку",
     "startNewApplication": "Начать новую заявку",
     "browseServices": "Просмотреть услуги",
@@ -507,7 +510,11 @@
     "payment": "Оплата",
     "status": "Статус",
     "stepBadge": "Шаг {step}/{total}",
-    "hideProgressAria": "Скрыть сводку прогресса"
+    "hideProgressAria": "Скрыть сводку прогресса",
+    "trip": "Trip",
+    "details": "Details",
+    "pay": "Pay",
+    "finish": "Finish"
   },
   "common": {
     "continue": "Продолжить",
@@ -588,7 +595,7 @@
       "pdfNotSinglePage": "PDF паспорта должен содержать ровно одну страницу.",
       "rateLimited": "Слишком много загрузок. Подождите и попробуйте снова.",
       "network": "Загрузка не удалась. Проверьте соединение и повторите попытку.",
-      "timeout": "Медленное соединение. Повторите попытку или перейдите на Wi-Fi.",
+      "timeout": "This is taking longer than 90 seconds. Try again.",
       "generic": "Загрузка не удалась. Попробуйте ещё раз."
     }
   },
@@ -596,5 +603,21 @@
     "reading": "Чтение вашего паспорта…",
     "succeeded": "Данные заполнены — пожалуйста, проверьте их правильность.",
     "needsReview": "Не удалось прочитать некоторые данные. Проверьте выделенные поля."
+  },
+  "wizard": {
+    "readyTitle": "What you'll need",
+    "neededNow": "Needed now",
+    "addLater": "Can add later",
+    "passportNow": "Passport bio page (photo, or single-page PDF).",
+    "takesTwoMinutes": "Takes about 2 minutes. Your phone camera works.",
+    "encrypted": "Encrypted and used only for your visa application.",
+    "orderTotal": "Order total {total}",
+    "otherTitle": "Other documents",
+    "addAfterPayment": "You can add these after payment too.",
+    "detailsTitle": "Check your details",
+    "pleaseFill": "Please fill these in.",
+    "replacePassport": "Passport photo wrong? Replace it",
+    "continueToPayment": "Looks right, continue to payment",
+    "travellerProgress": "Traveller {current} of {total}"
   }
 }

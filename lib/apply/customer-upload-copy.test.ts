@@ -38,7 +38,7 @@ describe("oversizedUploadMessage", () => {
 describe("customerUploadErrorMessage", () => {
   it("maps known codes to localised copy", () => {
     expect(customerUploadErrorMessage("CORRUPT_IMAGE")).toMatch(/couldn't read/i);
-    expect(customerUploadErrorMessage("TIMEOUT")).toMatch(/Wi-Fi/i);
+    expect(customerUploadErrorMessage("TIMEOUT")).toMatch(/90 seconds/i);
     expect(customerUploadErrorMessage("UNSUPPORTED_TYPE")).toMatch(/HEIC/i);
   });
 
