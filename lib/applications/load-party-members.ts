@@ -8,6 +8,8 @@ import {
   type TDocumentSlot,
 } from "@/lib/apply/document-requirements";
 
+export { slotsForPartyMember } from "@/lib/apply/party-member-slots";
+
 export type TPublicPartyMember = {
   applicationId: string;
   travelerRole: "primary" | "additional";
@@ -80,12 +82,6 @@ export const attachMemberDocumentSlots = (
     ...m,
     slots: slotsByApplicationId[m.applicationId] ?? resolveDocumentRequirements([]),
   }));
-
-export const slotsForPartyMember = (
-  members: TPublicPartyMember[],
-  memberId: string,
-): TDocumentSlot[] =>
-  members.find((m) => m.applicationId === memberId)?.slots ?? resolveDocumentRequirements([]);
 
 /**
  * Load the party members for an application. If the application belongs to a

@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
-import { FX_SETTINGS_HREF } from "@/lib/admin/catalog/apply-service-price-ui-updates";
+import { FX_SETTINGS_HREF } from "@/lib/admin/catalog/fx-settings-href";
 import {
   applyManualAedChange,
   applyManualUsdChange,

@@ -1,6 +1,7 @@
 import type { DbTransaction } from "@/lib/db";
 import { application, applicationParty } from "@/lib/db/schema";
-import { getApplyConfigFromTx, type TApplyConfig } from "@/lib/apply/apply-config";
+import type { TApplyConfig } from "@/lib/apply/apply-config";
+import { getApplyConfigFromTx } from "@/lib/apply/apply-config-from-tx";
 import { listPublicServicesForNationality } from "@/lib/catalog/queries";
 import type { TTravelerKind } from "@/lib/catalog/guided-choice";
 import { computeDraftExpiresAt, getDraftTtlHoursFromTx } from "@/lib/applications/draft-ttl";

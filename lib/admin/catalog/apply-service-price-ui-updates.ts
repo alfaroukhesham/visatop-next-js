@@ -3,7 +3,7 @@ import { applyChunksInParallel } from "@/lib/async/apply-chunks-in-parallel";
 import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { syncEligibilityForTouchedPairs } from "@/lib/admin/catalog/apply-customer-price-import";
-import { parseAdminPriceMajorInput } from "@/lib/admin/catalog/apply-nationality-price-ui-updates";
+import { parseAdminPriceMajorInput } from "@/lib/admin/catalog/parse-admin-price-input";
 import {
   fxUsdToAed,
   fxAedToUsd,
@@ -27,7 +27,7 @@ export class ServicePriceFxMissingError extends Error {
   }
 }
 
-export const FX_SETTINGS_HREF = "/admin/settings#display-fx";
+export { FX_SETTINGS_HREF } from "@/lib/admin/catalog/fx-settings-href";
 
 export type ApplyServicePriceUiResult = {
   updated: number;

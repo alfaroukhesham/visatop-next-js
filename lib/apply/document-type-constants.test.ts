@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DOCUMENT_TYPE } from "@/lib/db/schema/application-document";
+import { DOCUMENT_TYPE } from "@/lib/apply/document-type-constants";
 
 describe("DOCUMENT_TYPE", () => {
   it("includes bank_statement_6m for the Africa/Asia tourist rule", () => {

@@ -1,7 +1,3 @@
-import { inArray } from "drizzle-orm";
-import type { DbTransaction } from "@/lib/db";
-import { platformSetting } from "@/lib/db/schema";
-
 export const PLATFORM_KEY_PARTY_ENABLED = "party_enabled";
 export const DEFAULT_PARTY_ENABLED = true;
 
@@ -56,23 +52,4 @@ export type TApplyConfig = {
   partyEnabled: boolean;
   partyMaxTravelers: number;
   badges: TApplyPriceBadges;
-};
-
-export const getApplyConfigFromTx = async (tx: DbTransaction): Promise<TApplyConfig> => {
-  const rows = await tx
-    .select({ key: platformSetting.key, value: platformSetting.value })
-    .from(platformSetting)
-    .where(
-      inArray(platformSetting.key, [
-        PLATFORM_KEY_PARTY_ENABLED,
-        PLATFORM_KEY_PARTY_MAX_TRAVELERS,
-        PLATFORM_KEY_APPLY_PRICE_BADGES,
-      ]),
-    );
-  const byKey = new Map(rows.map((r) => [r.key, r.value]));
-  return {
-    partyEnabled: parsePartyEnabled(byKey.get(PLATFORM_KEY_PARTY_ENABLED)),
-    partyMaxTravelers: parsePartyMaxTravelers(byKey.get(PLATFORM_KEY_PARTY_MAX_TRAVELERS)),
-    badges: parseApplyPriceBadges(byKey.get(PLATFORM_KEY_APPLY_PRICE_BADGES)),
-  };
 };

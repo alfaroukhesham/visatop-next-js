@@ -11,7 +11,7 @@ import { apiHref } from "@/lib/app-href";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { trackEventOnce } from "@/lib/analytics/gtag-client";
 import { APPLY_STEP3_VALIDATION_DISABLED } from "@/lib/apply/apply-flow-config";
-import { customerFacingOcrMessage } from "@/lib/apply/ocr-customer-copy";
+import { emptyOcrReviewFields } from "@/lib/apply/ocr-review-fields";
 import { paymentReviewNavState } from "@/lib/apply/payment-review-nav";
 import { parseDobInputToIsoUtc, type Readiness } from "@/lib/documents/validation-readiness";
 import { cn } from "@/lib/utils";
@@ -165,6 +165,14 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const dirty = APPLICANT_ROWS.some((r) => (values[r.apiKey] ?? "") !== (initial[r.apiKey] ?? ""));
+  const ocrHighlightFields = emptyOcrReviewFields(extraction?.ocrMissingFields, {
+    fullName: values.fullName,
+    dateOfBirth: values.dateOfBirth,
+    nationality: values.applicantNationality,
+    passportNumber: values.passportNumber,
+    passportExpiryDate: values.passportExpiryDate,
+  });
+  const showOcrHighlightHint = ocrHighlightFields.length > 0;
 
   const paymentPath = `/apply/applications/${encodeURIComponent(paymentApplicationId ?? applicationId)}/payment`;
   const canContinueToPayment = !locked && paymentReadiness === "ready";
@@ -331,8 +339,10 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
         </div>
       )}
 
-      {extraction ? (
-        <p className="text-muted-foreground text-xs">{customerFacingOcrMessage(extraction.status, t)}</p>
+      {showOcrHighlightHint ? (
+        <p id="ocr-review-hint" className="text-muted-foreground text-xs">
+          {t("ocr.needsReview")}
+        </p>
       ) : null}
 
       {locked && (
@@ -342,6 +352,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
       <dl className="grid gap-3 sm:grid-cols-2" data-clarity-mask="true">
         {APPLICANT_ROWS_WITHOUT_PHONE.map((r) => {
           const isMissing = !APPLY_STEP3_VALIDATION_DISABLED && missing.includes(r.key);
+          const isOcrHighlight = (ocrHighlightFields as readonly string[]).includes(r.key);
           const wasOcr = prefilled.has(r.key);
           return (
             <div key={r.key}>
@@ -369,7 +380,8 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
                       : e.target.value;
                     setValues((prev) => ({ ...prev, [r.apiKey]: v }));
                   }}
-                  invalid={isMissing && !values[r.apiKey]}
+                  invalid={(isMissing && !values[r.apiKey]) || isOcrHighlight}
+                  aria-describedby={isOcrHighlight ? "ocr-review-hint" : undefined}
                   className={["rounded-xl", locked ? "cursor-not-allowed opacity-70" : ""].join(" ")}
                 />
               </dd>

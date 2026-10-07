@@ -22,6 +22,7 @@ export interface IDocumentUploadSlotProps {
   lastError: TUploadSlotError | null;
   addLater?: boolean;
   showCaptureGuidance?: boolean;
+  ocrNotice?: string | null;
   onUpload: (file: File, source: TDocumentUploadSource) => void;
   onCancelUpload: () => void;
 }
@@ -37,6 +38,7 @@ export const DocumentUploadSlot: FC<IDocumentUploadSlotProps> = ({
   lastError,
   addLater = false,
   showCaptureGuidance = false,
+  ocrNotice = null,
   onUpload,
   onCancelUpload,
 }) => {
@@ -107,6 +109,16 @@ export const DocumentUploadSlot: FC<IDocumentUploadSlotProps> = ({
             <li>{t("documents.captureTip3")}</li>
           </ul>
           <p className="text-muted-foreground text-xs leading-relaxed">{t("documents.privacyNote")}</p>
+        </div>
+      ) : null}
+
+      {ocrNotice && !errorMessage ? (
+        <div
+          className="text-destructive flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm"
+          role="status"
+        >
+          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+          <span className="font-medium">{ocrNotice}</span>
         </div>
       ) : null}
 

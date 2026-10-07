@@ -1,6 +1,6 @@
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
-import type { TCatalogDocumentType } from "@/lib/admin/catalog/document-type";
+import type { TCatalogDocumentType } from "@/lib/admin/catalog/document-type-helpers";
 
 export const listDocumentTypes = async () =>
   fetchApiEnvelope<{ documents: TCatalogDocumentType[] }>(apiHref("/admin/catalog/document-types"));

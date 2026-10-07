@@ -30,6 +30,18 @@ describe("upload-error-datalayer", () => {
       error_type: "network",
       file_type: "heic",
       size_bucket: "1–3MB",
+      error_code: "NETWORK",
+    });
+    expect(
+      buildUploadErrorDataLayerPayload({
+        code: "PDF_NOT_SINGLE_PAGE",
+        file: { name: "scan.pdf", type: "application/pdf", size: 400_000 },
+        httpStatus: 400,
+      }),
+    ).toMatchObject({
+      error_type: "pdf_not_single_page",
+      error_code: "PDF_NOT_SINGLE_PAGE",
+      http_status: 400,
     });
     expect(JSON.stringify(payload)).not.toMatch(/john|smith|passport-john/i);
   });

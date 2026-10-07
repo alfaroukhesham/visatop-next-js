@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { TCatalogDocumentType } from "@/lib/admin/catalog/document-type";
+import type { TCatalogDocumentType } from "@/lib/admin/catalog/document-type-helpers";
 import { deleteDocumentType } from "@/lib/admin/catalog/document-type-mutations";
 
 interface IDocumentRulesDeleteDialogProps {

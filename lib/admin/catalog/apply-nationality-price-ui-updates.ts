@@ -3,9 +3,11 @@ import { applyChunksInParallel } from "@/lib/async/apply-chunks-in-parallel";
 import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { syncEligibilityForTouchedPairs } from "@/lib/admin/catalog/apply-customer-price-import";
-import { extractNumericValue, toMinorUnits } from "@/lib/admin/catalog/parse-price-sheet";
+import { parseAdminPriceMajorInput } from "@/lib/admin/catalog/parse-admin-price-input";
 import { fxUsdToAed, fxAedToUsd, readFxRateString, FxRateMissingError } from "@/lib/pricing/fx-usd-aed";
 import { minorUnitsToJsonSafeNumber } from "@/lib/pricing/minor-units-json";
+
+export { parseAdminPriceMajorInput };
 
 const UPSERT_CHUNK = 100;
 
@@ -25,14 +27,6 @@ export type ApplyNationalityPriceUiResult = {
 /** Must match `syncEligibilityForTouchedPairs` (`\\x1f`). Colon keys are ignored. */
 function natSvcIdKey(nationalityCode: string, serviceId: string): string {
   return `${nationalityCode}\x1f${serviceId}`;
-}
-
-export function parseAdminPriceMajorInput(raw: string): bigint | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  const numeric = extractNumericValue(trimmed);
-  if (numeric === null || numeric <= 0) return null;
-  return toMinorUnits(numeric);
 }
 
 export async function applyNationalityPriceUiUpdates(

@@ -4,10 +4,10 @@ import { runAdminDbJson } from "@/lib/admin-api/require-admin-db";
 import { writeAdminAudit } from "@/lib/admin-api/write-admin-audit";
 import {
   applyServicePriceUiUpdates,
-  FX_SETTINGS_HREF,
   ServicePriceFxMissingError,
   ServicePriceValidationError,
 } from "@/lib/admin/catalog/apply-service-price-ui-updates";
+import { FX_SETTINGS_HREF } from "@/lib/admin/catalog/fx-settings-href";
 import { listServicePricing } from "@/lib/admin/catalog/list-service-pricing";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonOk } from "@/lib/api/response";

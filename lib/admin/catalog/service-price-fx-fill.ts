@@ -1,5 +1,5 @@
-import { parseAdminPriceMajorInput } from "@/lib/admin/catalog/apply-nationality-price-ui-updates";
-import { fxAedToUsd, fxUsdToAed } from "@/lib/pricing/fx-usd-aed";
+import { parseAdminPriceMajorInput } from "@/lib/admin/catalog/parse-admin-price-input";
+import { fxAedToUsd, fxUsdToAed } from "@/lib/pricing/fx-convert";
 import { minorUnitsToMajor } from "@/lib/pricing/format-minor-units";
 
 export type TFxFillDirty = {

@@ -4,6 +4,7 @@ import {
   OCR_NEEDS_REVIEW_COPY,
   OCR_READING_COPY,
   OCR_SUCCEEDED_COPY,
+  passportSlotOcrNotice,
 } from "./ocr-customer-copy";
 
 describe("ocr-customer-copy", () => {
@@ -27,5 +28,12 @@ describe("ocr-customer-copy", () => {
   it("returns null for unknown status", () => {
     expect(customerFacingOcrMessage(null)).toBeNull();
     expect(customerFacingOcrMessage("blocked")).toBeNull();
+  });
+
+  it("maps extract outcomes onto the passport-slot notice copy", () => {
+    expect(passportSlotOcrNotice("needs_manual", false)).toMatch(/couldn't read everything/i);
+    expect(passportSlotOcrNotice("failed", false)).toMatch(/couldn't read your passport/i);
+    expect(passportSlotOcrNotice("succeeded", false)).toMatch(/filled in what we could/i);
+    expect(passportSlotOcrNotice("needs_manual", true)).toBe(OCR_READING_COPY);
   });
 });

@@ -26,11 +26,18 @@ export const looksLikePdfFile = (file: File): boolean =>
 export const looksLikeHeicFile = (file: File): boolean =>
   isHeicMime(file.type) || isHeicFilename(file.name);
 
-const replaceExtension = (filename: string, ext: string): string => {
+/** Swap the last extension; never append when it already matches (`photo.jpg` stays `photo.jpg`). */
+export const replaceUploadExtension = (filename: string, ext: string): string => {
   const trimmed = filename.trim() || "upload";
-  const swapped = trimmed.replace(/\.[^.]+$/, `.${ext}`);
-  return swapped === trimmed ? `${trimmed}.${ext}` : swapped;
+  const cleanExt = ext.replace(/^\./, "");
+  if (/\.[^.]+$/.test(trimmed)) {
+    return trimmed.replace(/\.[^.]+$/, `.${cleanExt}`);
+  }
+  return `${trimmed}.${cleanExt}`;
 };
+
+/** PDFs are not compressed — apply the 8MB cap to the original. Photos compress first. */
+export const shouldApplyUploadLimitBeforePrepare = (file: File): boolean => looksLikePdfFile(file);
 
 const blobToFile = (blob: Blob, filename: string, type: string): File =>
   new File([blob], filename, { type, lastModified: Date.now() });
@@ -117,7 +124,7 @@ export const prepareClientUploadFile = async (file: File): Promise<File> => {
 
   if (wasHeic) {
     working = await convertHeicBlobToJpeg(file);
-    filename = replaceExtension(filename, "jpg");
+    filename = replaceUploadExtension(filename, "jpg");
   }
 
   const skipCompress =
@@ -137,7 +144,7 @@ export const prepareClientUploadFile = async (file: File): Promise<File> => {
     if (compressed.size >= working.size && working.type === "image/jpeg") {
       return working === file ? file : blobToFile(working, filename, "image/jpeg");
     }
-    return blobToFile(compressed, replaceExtension(filename, "jpg"), "image/jpeg");
+    return blobToFile(compressed, replaceUploadExtension(filename, "jpg"), "image/jpeg");
   } catch {
     if (working !== file) {
       return blobToFile(working, filename, working.type || "image/jpeg");

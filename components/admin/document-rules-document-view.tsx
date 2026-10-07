@@ -14,7 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type { TCatalogDocumentType } from "@/lib/admin/catalog/document-type";
+import type { TCatalogDocumentType } from "@/lib/admin/catalog/document-type-helpers";
 import { cn } from "@/lib/utils";
 
 interface IDocumentRulesDocumentViewProps {

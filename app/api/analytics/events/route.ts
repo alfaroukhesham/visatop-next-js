@@ -38,12 +38,18 @@ export async function POST(req: Request) {
     });
   }
 
-  await withAnalyticsBeaconDbActor(async (tx) => {
-    await recordFunnelEvent(tx, {
-      ...payload.data,
-      source: "client",
+  try {
+    await withAnalyticsBeaconDbActor(async (tx) => {
+      await recordFunnelEvent(tx, {
+        ...payload.data,
+        source: "client",
+      });
     });
-  });
+  } catch {
+    // Best-effort ingest: never crash (nginx 502). Duplicates are already swallowed
+    // inside recordFunnelEvent; this covers actor/DB blips.
+    return jsonOk({ accepted: false }, { requestId });
+  }
 
   return jsonOk({ accepted: true }, { requestId });
 }

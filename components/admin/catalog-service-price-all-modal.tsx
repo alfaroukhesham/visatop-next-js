@@ -17,7 +17,7 @@ import {
   CatalogServicePriceInputs,
   useDualCurrencyFxFill,
 } from "@/components/admin/catalog-service-price-inputs";
-import { FX_SETTINGS_HREF } from "@/lib/admin/catalog/apply-service-price-ui-updates";
+import { FX_SETTINGS_HREF } from "@/lib/admin/catalog/fx-settings-href";
 import { hasValidPriceAmount } from "@/lib/admin/catalog/service-price-fx-fill";
 import type { TServicePricingPreview } from "@/lib/admin/catalog/list-service-pricing";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DOCUMENT_TYPE } from "@/lib/db/schema/application-document";
+import { DOCUMENT_TYPE } from "@/lib/apply/document-type-constants";
 import {
   slotForDocumentType,
   FLOOR_DOCUMENT_TYPE_KEYS,

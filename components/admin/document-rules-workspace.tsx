@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { listDocumentTypes } from "@/lib/admin/catalog/document-type-mutations";
-import type { TCatalogDocumentType } from "@/lib/admin/catalog/document-type";
+import type { TCatalogDocumentType } from "@/lib/admin/catalog/document-type-helpers";
 
 interface IDocumentRulesWorkspaceProps {
   canWrite: boolean;

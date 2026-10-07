@@ -42,7 +42,7 @@ export type ExtractResponse = {
 
 export type DocType = "passport_copy" | "personal_photo" | "supporting" | "bank_statement_6m";
 
-export const UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
+export { UPLOAD_MAX_BYTES } from "@/lib/documents/upload-limits";
 
 export const MIME_BY_TYPE: Record<DocType, string> = {
   passport_copy: PASSPORT_ACCEPT_MIME,

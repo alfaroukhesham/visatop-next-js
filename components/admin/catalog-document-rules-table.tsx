@@ -14,7 +14,7 @@ import {
   type CatalogDocumentRequirementFilters,
 } from "@/components/admin/use-catalog-document-requirements-page";
 import { removeOneDocumentRequirement } from "@/lib/admin/catalog/document-requirement-mutations";
-import { humanizeDocumentTypeKey } from "@/lib/admin/catalog/document-type";
+import { humanizeDocumentTypeKey } from "@/lib/admin/catalog/document-type-helpers";
 import { slotForDocumentType } from "@/lib/apply/document-slot-catalog";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";

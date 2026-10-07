@@ -20,20 +20,14 @@ vi.mock("@/lib/admin-api/write-admin-audit", () => ({
   writeAdminAudit: vi.fn(),
 }));
 
-vi.mock("@/lib/apply/apply-config", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/apply/apply-config")>(
-    "@/lib/apply/apply-config",
-  );
-  return {
-    ...actual,
-    getApplyConfigFromTx: vi.fn(),
-  };
-});
+vi.mock("@/lib/apply/apply-config-from-tx", () => ({
+  getApplyConfigFromTx: vi.fn(),
+}));
 
 import { adminAuth } from "@/lib/admin-auth";
 import * as actorContext from "@/lib/db/actor-context";
 import { writeAdminAudit } from "@/lib/admin-api/write-admin-audit";
-import { getApplyConfigFromTx } from "@/lib/apply/apply-config";
+import { getApplyConfigFromTx } from "@/lib/apply/apply-config-from-tx";
 import { GET, PUT } from "./route";
 
 const jsonRequest = (body: unknown) =>

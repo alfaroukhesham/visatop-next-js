@@ -1,14 +1,14 @@
 import { asc, eq } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { parseAdminPriceMajorInput } from "@/lib/admin/catalog/apply-nationality-price-ui-updates";
+import { parseAdminPriceMajorInput } from "@/lib/admin/catalog/parse-admin-price-input";
 import {
   fxUsdToAed,
   fxAedToUsd,
   peekResolvedFxRateFromTx,
 } from "@/lib/pricing/fx-usd-aed";
 import { minorUnitsToMajor } from "@/lib/pricing/format-minor-units";
-import { FX_SETTINGS_HREF } from "@/lib/admin/catalog/apply-service-price-ui-updates";
+import { FX_SETTINGS_HREF } from "@/lib/admin/catalog/fx-settings-href";
 
 export type TServicePricingGroup = {
   aedMajor: string;
