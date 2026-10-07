@@ -136,7 +136,7 @@ const nextConfig: NextConfig = {
       "./node_modules/heic-convert/**/*",
       "./node_modules/heic-decode/**/*",
       "./node_modules/libheif-js/**/*",
-      "./node_modules/.pnpm/heic-convert@*/node_modules/**/*",
+      "./node_modules/.pnpm/heic-convert@*/node_modules/heic-convert/**/*",
       "./node_modules/.pnpm/heic-decode@*/node_modules/heic-decode/**/*",
       "./node_modules/.pnpm/heic-decode@*/node_modules/libheif-js/**/*",
       "./node_modules/.pnpm/libheif-js@*/node_modules/libheif-js/**/*",
