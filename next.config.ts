@@ -121,6 +121,11 @@ const nextConfig: NextConfig = {
     "@google/genai",
     "@napi-rs/canvas",
   ],
+  // pdfjs Node "fake worker" does `import("./pdf.worker.mjs")`. Standalone tracing
+  // otherwise copies only `pdf.mjs` (serverExternalPackages) and valid PDFs 400.
+  outputFileTracingIncludes: {
+    "/*": ["./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"],
+  },
   ...(devTunnelHosts.length > 0
     ? { allowedDevOrigins: devTunnelHosts }
     : {}),

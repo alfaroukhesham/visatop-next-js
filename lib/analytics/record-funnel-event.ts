@@ -20,24 +20,32 @@ export type TRecordFunnelEventResult = {
   reason: "stored" | "skipped" | "duplicate" | "invalid_application" | "error";
 };
 
-const insertRow = async (tx: DbTransaction, input: TRecordFunnelEventInput): Promise<void> => {
-  const builder = tx.insert(analyticsFunnelEvent).values({
-    eventId: input.eventId,
-    eventName: input.eventName,
-    sessionId: input.sessionId,
-    applicationId: input.applicationId ?? null,
-    nationalityCode: input.nationalityCode ?? null,
-    serviceId: input.serviceId ?? null,
-    source: input.source,
-    occurredAt: input.occurredAt ?? new Date(),
-  }) as { then?: unknown; onConflictDoNothing?: () => Promise<unknown> } & Promise<unknown>;
-  if (typeof builder.then === "function") {
-    await builder;
-    return;
-  }
-  if (typeof builder.onConflictDoNothing === "function") {
-    await builder.onConflictDoNothing();
-  }
+const insertRow = async (
+  tx: DbTransaction,
+  input: TRecordFunnelEventInput,
+): Promise<Array<{ eventId: string }>> => {
+  return tx
+    .insert(analyticsFunnelEvent)
+    .values({
+      eventId: input.eventId,
+      eventName: input.eventName,
+      sessionId: input.sessionId,
+      applicationId: input.applicationId ?? null,
+      nationalityCode: input.nationalityCode ?? null,
+      serviceId: input.serviceId ?? null,
+      source: input.source,
+      occurredAt: input.occurredAt ?? new Date(),
+    })
+    .onConflictDoNothing({ target: analyticsFunnelEvent.eventId })
+    .returning({ eventId: analyticsFunnelEvent.eventId });
+};
+
+/** Nested `tx.transaction` is a SAVEPOINT — analytics errors must not abort the parent. */
+const insertInSavepoint = async (
+  tx: DbTransaction,
+  input: TRecordFunnelEventInput,
+): Promise<Array<{ eventId: string }>> => {
+  return tx.transaction(async (sp) => insertRow(sp, input));
 };
 
 /** Insert a funnel row. Never throws — parent mutations must not fail on analytics. */
@@ -52,16 +60,20 @@ export const recordFunnelEvent = async (
     return { stored: false, reason: "skipped" };
   }
   try {
-    await insertRow(tx, input);
-    return { stored: true, reason: "stored" };
+    const rows = await insertInSavepoint(tx, input);
+    return rows.length > 0
+      ? { stored: true, reason: "stored" }
+      : { stored: false, reason: "duplicate" };
   } catch (err) {
     if (isUniqueViolation(err)) {
       return { stored: false, reason: "duplicate" };
     }
     if (isForeignKeyViolation(err) && input.applicationId) {
       try {
-        await insertRow(tx, { ...input, applicationId: null });
-        return { stored: true, reason: "invalid_application" };
+        const rows = await insertInSavepoint(tx, { ...input, applicationId: null });
+        return rows.length > 0
+          ? { stored: true, reason: "invalid_application" }
+          : { stored: false, reason: "duplicate" };
       } catch (retryErr) {
         if (isUniqueViolation(retryErr)) {
           return { stored: false, reason: "duplicate" };

@@ -54,11 +54,9 @@ export const applicationDocument = pgTable(
     index("application_document_applicationId_idx").on(t.applicationId),
     index("application_document_documentType_idx").on(t.documentType),
     index("application_document_status_idx").on(t.status),
-    uniqueIndex("application_document_app_type_sha_uidx").on(
-      t.applicationId,
-      t.documentType,
-      t.sha256,
-    ),
+    uniqueIndex("application_document_app_type_sha_uidx")
+      .on(t.applicationId, t.documentType, t.sha256)
+      .where(sql`${t.status} IS DISTINCT FROM 'deleted'`),
   ],
 );
 

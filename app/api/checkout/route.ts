@@ -24,6 +24,7 @@ import { passportsPresentForPayment } from "@/lib/documents/validation-readiness
 import { sumCheckoutTotals, sumPartyLines, type TPartyLine } from "@/lib/payments/party-checkout-total";
 import { FUNNEL_CHECKOUT_CREATED, serverFunnelEventId } from "@/lib/analytics/funnel-event-names";
 import { recordFunnelEvent } from "@/lib/analytics/record-funnel-event";
+import { isCheckoutTermsAccepted } from "@/lib/legal/terms";
 import * as schema from "@/lib/db/schema";
 import { asc, eq, and, or, inArray, isNull } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
@@ -37,9 +38,21 @@ export async function POST(req: Request) {
   const requestId = hdrs.get("x-request-id");
 
   try {
-    const { applicationId } = await req.json().catch(() => ({ applicationId: null }));
+    const body = await req.json().catch(() => ({} as Record<string, unknown>));
+    const applicationId =
+      typeof (body as { applicationId?: unknown }).applicationId === "string"
+        ? (body as { applicationId: string }).applicationId
+        : null;
 
     if (!applicationId) return jsonError("VALIDATION_ERROR", "Missing applicationId", { status: 400, requestId });
+
+    if (!isCheckoutTermsAccepted(body)) {
+      return jsonError(
+        "TERMS_NOT_ACCEPTED",
+        "Please agree to VisaTop's Terms of Use before paying.",
+        { status: 400, requestId, details: { reason: "terms_not_accepted" } },
+      );
+    }
 
     let origin: string;
     try {

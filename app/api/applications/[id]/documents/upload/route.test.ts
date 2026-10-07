@@ -304,4 +304,41 @@ describe("POST /api/applications/[id]/documents/upload", () => {
     expect(body.error.code).toBe("RATE_LIMITED");
     expect(res.headers.get("retry-after")).toBeTruthy();
   });
+
+  it("returns JSON 409 when persist hits a unique constraint", async () => {
+    vi.mocked(resolveApplicationAccess).mockResolvedValue({
+      ok: true,
+      access: { kind: "user", userId: "u1", isGuest: false },
+    });
+    vi.mocked(persistUploadedDocument).mockRejectedValue(
+      Object.assign(new Error("duplicate key value violates unique constraint"), { code: "23505" }),
+    );
+    const form = new FormData();
+    form.set("documentType", "passport_copy");
+    form.set("file", new File(["x"], "a.jpg", { type: "image/jpeg" }));
+    const res = await POST(buildRequest(form), {
+      params: Promise.resolve({ id: "app-1" }),
+    });
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.error.code).toBe("CONFLICT");
+  });
+
+  it("returns JSON 500 when persist throws an unexpected error", async () => {
+    vi.mocked(resolveApplicationAccess).mockResolvedValue({
+      ok: true,
+      access: { kind: "user", userId: "u1", isGuest: false },
+    });
+    vi.mocked(persistUploadedDocument).mockRejectedValue(new Error("boom"));
+    const form = new FormData();
+    form.set("documentType", "passport_copy");
+    form.set("file", new File(["x"], "a.jpg", { type: "image/jpeg" }));
+    const res = await POST(buildRequest(form), {
+      params: Promise.resolve({ id: "app-1" }),
+    });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error.code).toBe("INTERNAL_ERROR");
+    expect(body.error.message).toBeTruthy();
+  });
 });
