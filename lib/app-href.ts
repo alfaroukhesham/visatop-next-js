@@ -9,10 +9,26 @@ const joinUrl = (base: string, path: string): string => {
 /** Matches `basePath` in `next.config.ts` when `NEXT_PUBLIC_BASE_PATH` is unset. */
 const DEFAULT_NEXT_BASE_PATH = "/visa-processing";
 
-const resolveClientBasePath = (): string => {
-  // Prefer explicit configuration (used by local/ngrok/prod consistently).
+const normalizeBasePath = (raw: string): string => {
+  const t = raw.trim();
+  if (!t || t === "/") return DEFAULT_NEXT_BASE_PATH;
+  const withSlash = t.startsWith("/") ? t : `/${t}`;
+  return withSlash.replace(/\/+$/, "") || DEFAULT_NEXT_BASE_PATH;
+};
+
+/**
+ * Env-only base path. Same on server and client (no `window`), so `next/image`
+ * `src` and other static public URLs cannot hydrate-mismatch.
+ */
+export const resolveConfiguredBasePath = (): string => {
   const env = process.env.NEXT_PUBLIC_BASE_PATH?.trim();
-  if (env) return env.startsWith("/") ? env : `/${env}`;
+  if (env) return normalizeBasePath(env);
+  return DEFAULT_NEXT_BASE_PATH;
+};
+
+const resolveClientBasePath = (): string => {
+  const env = process.env.NEXT_PUBLIC_BASE_PATH?.trim();
+  if (env) return normalizeBasePath(env);
 
   // Fallback: infer from current pathname (works for this project’s /visa-processing mount).
   if (typeof window !== "undefined") {
@@ -23,12 +39,7 @@ const resolveClientBasePath = (): string => {
   return DEFAULT_NEXT_BASE_PATH;
 };
 
-/**
- * Next `router.push` already prepends `basePath`. Callback URLs and `appHref`
- * inputs must be router-relative (`/apply/...`), not `/visa-processing/apply/...`.
- */
-export const stripAppBasePath = (path: string): string => {
-  const basePath = resolveClientBasePath();
+const stripLeadingBasePath = (path: string, basePath: string): string => {
   const raw = path.startsWith("/") ? path : `/${path}`;
   if (!basePath || basePath === "/") return raw;
 
@@ -47,6 +58,25 @@ export const stripAppBasePath = (path: string): string => {
     stripped = pathname.slice(basePath.length) || "/";
   }
   return `${stripped}${rest}`;
+};
+
+/**
+ * Next `router.push` already prepends `basePath`. Callback URLs and `appHref`
+ * inputs must be router-relative (`/apply/...`), not `/visa-processing/apply/...`.
+ */
+export const stripAppBasePath = (path: string): string =>
+  stripLeadingBasePath(path, resolveClientBasePath());
+
+/**
+ * Prefix a `/public` file path with Next `basePath`. Identical on server and
+ * client — do not use `appHref` here (`appHref` is absolute on the server).
+ * `next/image` does not add `basePath` to `src`.
+ */
+export const publicAsset = (path: string): string => {
+  const basePath = resolveConfiguredBasePath();
+  const stripped = stripLeadingBasePath(path, basePath);
+  const suffix = stripped === "/" ? "" : stripped;
+  return `${basePath}${suffix}`;
 };
 
 /**

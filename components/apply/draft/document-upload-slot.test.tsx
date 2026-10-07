@@ -146,9 +146,8 @@ describe("DocumentUploadSlot", () => {
     expect(takePhoto.className).toMatch(/min-h-11/);
     expect(takePhoto.className).toMatch(/w-full/);
     expect(choose.className).toMatch(/min-h-11/);
-    expect(screen.getByRole("img", { name: /fake passport/i })).toHaveAttribute(
-      "data-clarity-mask",
-      "true",
-    );
+    const specimen = screen.getByRole("img", { name: /fake passport/i });
+    expect(specimen).toHaveAttribute("data-clarity-mask", "true");
+    expect(specimen).toHaveAttribute("src", "/visa-processing/apply/passport-bio-specimen.svg");
   });
 });
