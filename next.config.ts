@@ -124,11 +124,22 @@ const nextConfig: NextConfig = {
     "heic-decode",
     "libheif-js",
   ],
+  // heic-decode / libheif-js are transitive. Under pnpm they live in
+  // node_modules/.pnpm/<pkg>@<ver>/..., not as top-level node_modules/<pkg>,
+  // so those hoisted globs match nothing. Include the .pnpm store (and the
+  // hoisted paths if a future hoist appears). Docker copies .next/standalone
+  // to /app, so these files must be in the standalone tree.
   outputFileTracingIncludes: {
     "/api/applications/*/documents/upload": [
       "./node_modules/heic-convert/**/*",
       "./node_modules/heic-decode/**/*",
       "./node_modules/libheif-js/**/*",
+      "./node_modules/.pnpm/heic-convert@*/node_modules/**/*",
+      "./node_modules/.pnpm/heic-decode@*/node_modules/heic-decode/**/*",
+      "./node_modules/.pnpm/heic-decode@*/node_modules/libheif-js/**/*",
+      "./node_modules/.pnpm/libheif-js@*/node_modules/libheif-js/**/*",
+      "./node_modules/.pnpm/jpeg-js@*/node_modules/jpeg-js/**/*",
+      "./node_modules/.pnpm/pngjs@*/node_modules/pngjs/**/*",
     ],
   },
   ...(devTunnelHosts.length > 0

@@ -23,3 +23,4 @@ jobs:
       - run: pnpm run react-doctor:ci
       - run: pnpm run test:ci
       - run: pnpm run build
+      - run: node scripts/assert-heic-standalone.mjs
