@@ -45,6 +45,9 @@ const insertInSavepoint = async (
   tx: DbTransaction,
   input: TRecordFunnelEventInput,
 ): Promise<Array<{ eventId: string }>> => {
+  if (typeof tx.transaction !== "function") {
+    return insertRow(tx, input);
+  }
   return tx.transaction(async (sp) => insertRow(sp, input));
 };
 

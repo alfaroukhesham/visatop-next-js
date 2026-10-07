@@ -11,13 +11,11 @@ const input = {
   source: "server" as const,
 };
 
-type TConflictOpts = { target?: unknown };
-
 const makeTx = (opts?: {
   onConflictRows?: Array<{ eventId: string }>;
   onConflictThrow?: unknown;
 }) => {
-  const onConflictDoNothing = vi.fn((_conflictOpts?: TConflictOpts) => {
+  const onConflictDoNothing = vi.fn(() => {
     if (opts?.onConflictThrow) {
       return {
         returning: async () => {
