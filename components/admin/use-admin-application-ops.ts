@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useReducer, useRef } from "react";
 import { apiHref } from "@/lib/app-href";
-import { UPLOAD_MAX_BYTES } from "@/lib/applications/document-upload";
+import { UPLOAD_MAX_BYTES } from "@/lib/documents/upload-limits";
 import type { AdminDocRow } from "@/components/admin/admin-application-ops-panel";
 
 const TERMINAL = new Set(["completed", "rejection_by_uae_authorities", "cancelled"]);

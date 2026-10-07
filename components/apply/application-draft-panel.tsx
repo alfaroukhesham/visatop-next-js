@@ -86,6 +86,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
           onCancelUpload={draft.cancelInFlightUpload}
           uploadPercent={draft.selected.uploadPercent}
           lastUploadErrors={draft.selected.lastUploadErrors}
+          ocrStatus={draft.selected.extractResult?.extraction.status ?? null}
         />
       )}
 

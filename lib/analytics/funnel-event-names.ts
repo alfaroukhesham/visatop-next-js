@@ -1,5 +1,9 @@
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { GUEST_LINK_EVENTS } from "@/lib/analytics/guest-link-events";
+import {
+  DOCUMENT_UPLOAD_CANCELLED,
+  DOCUMENT_UPLOAD_FAILED,
+} from "@/lib/analytics/upload-funnel-event";
 
 export const FUNNEL_CHECKOUT_CREATED = "checkout_created";
 
@@ -10,6 +14,8 @@ const APPLY_PERSISTABLE = Object.values(APPLY_FUNNEL_EVENTS).filter(
 const PERSISTABLE = new Set<string>([
   ...APPLY_PERSISTABLE,
   FUNNEL_CHECKOUT_CREATED,
+  DOCUMENT_UPLOAD_FAILED,
+  DOCUMENT_UPLOAD_CANCELLED,
   ...Object.values(GUEST_LINK_EVENTS),
 ]);
 

@@ -4,7 +4,9 @@ import {
   looksLikeHeicFile,
   looksLikePdfFile,
   prepareClientUploadFile,
+  replaceUploadExtension,
   scaleToMaxEdge,
+  shouldApplyUploadLimitBeforePrepare,
 } from "./client-image-prep";
 
 describe("scaleToMaxEdge", () => {
@@ -32,6 +34,43 @@ describe("looksLikePdfFile / looksLikeHeicFile", () => {
     expect(looksLikeHeicFile(new File(["x"], "IMG.heic", { type: "" }))).toBe(true);
     expect(looksLikeHeicFile(new File(["x"], "a.jpg", { type: "image/heif" }))).toBe(true);
     expect(looksLikeHeicFile(new File(["x"], "a.jpg", { type: "image/jpeg" }))).toBe(false);
+  });
+});
+
+describe("replaceUploadExtension", () => {
+  it("replaces HEIC with jpg instead of appending", () => {
+    expect(replaceUploadExtension("IMG_1234.HEIC", "jpg")).toBe("IMG_1234.jpg");
+    expect(replaceUploadExtension("IMG_1234.heic", "jpg")).toBe("IMG_1234.jpg");
+  });
+
+  it("keeps a jpeg basename when the target is already jpg", () => {
+    expect(replaceUploadExtension("photo.jpg", "jpg")).toBe("photo.jpg");
+    expect(replaceUploadExtension("photo.JPEG", "jpg")).toBe("photo.jpg");
+  });
+
+  it("does not append .jpg when converting then compressing a jpeg name", () => {
+    expect(replaceUploadExtension(replaceUploadExtension("IMG_1234.HEIC", "jpg"), "jpg")).toBe(
+      "IMG_1234.jpg",
+    );
+  });
+
+  it("appends when the name has no extension", () => {
+    expect(replaceUploadExtension("upload", "jpg")).toBe("upload.jpg");
+  });
+});
+
+describe("shouldApplyUploadLimitBeforePrepare", () => {
+  it("applies the 8MB check to PDFs before upload (they are not compressed)", () => {
+    const pdf = new File(["%PDF"], "scan.pdf", { type: "application/pdf" });
+    expect(shouldApplyUploadLimitBeforePrepare(pdf)).toBe(true);
+  });
+
+  it("defers the 8MB check for photos until after convert/compress", () => {
+    const photo = new File([new Uint8Array(12)], "IMG_1234.HEIC", { type: "image/heic" });
+    expect(shouldApplyUploadLimitBeforePrepare(photo)).toBe(false);
+    expect(
+      shouldApplyUploadLimitBeforePrepare(new File([new Uint8Array(12)], "shot.jpg", { type: "image/jpeg" })),
+    ).toBe(false);
   });
 });
 

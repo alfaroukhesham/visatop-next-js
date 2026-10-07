@@ -7,6 +7,8 @@ export type TUploadErrorDataLayerPayload = {
   error_type: string;
   file_type: TUploadErrorFileType;
   size_bucket: TUploadErrorSizeBucket;
+  error_code?: string;
+  http_status?: number;
 };
 
 const ERROR_TYPE_BY_CODE: Record<string, string> = {
@@ -47,11 +49,14 @@ export const sizeBucketFromBytes = (byteLength: number): TUploadErrorSizeBucket 
 export const buildUploadErrorDataLayerPayload = (input: {
   code: string;
   file: { name: string; type: string; size: number };
+  httpStatus?: number;
 }): TUploadErrorDataLayerPayload => ({
   event: "upload_error",
   error_type: dataLayerErrorType(input.code),
   file_type: fileTypeFromUpload(input.file),
   size_bucket: sizeBucketFromBytes(input.file.size),
+  error_code: input.code,
+  ...(input.httpStatus !== undefined ? { http_status: input.httpStatus } : {}),
 });
 
 /** No-op when `window.dataLayer` is missing. Never writes PII. */

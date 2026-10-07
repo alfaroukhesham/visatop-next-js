@@ -4,6 +4,7 @@ import type { FC } from "react";
 import { AlertTriangle, CheckCircle2, FileStack, Loader2 } from "lucide-react";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import type { TDocumentSlot } from "@/lib/apply/document-requirements";
+import { passportSlotOcrNotice } from "@/lib/apply/ocr-customer-copy";
 import { translateDocumentSlot } from "@/lib/apply/document-slot-i18n";
 import { DocumentUploadSlot } from "./document-upload-slot";
 import type { TDocumentUploadSource } from "@/lib/analytics/document-upload-events";
@@ -17,6 +18,7 @@ export interface IDraftDocumentsSectionProps {
   uploadPercent: number | null;
   lastUploadErrors: Partial<Record<DocType, TUploadSlotError | null>>;
   extracting: boolean;
+  ocrStatus?: string | null;
   onUpload: (type: DocType, file: File, source: TDocumentUploadSource) => void;
   onCancelUpload: () => void;
 }
@@ -29,6 +31,7 @@ export const DraftDocumentsSection: FC<IDraftDocumentsSectionProps> = ({
   uploadPercent,
   lastUploadErrors,
   extracting,
+  ocrStatus = null,
   onUpload,
   onCancelUpload,
 }) => {
@@ -56,6 +59,7 @@ export const DraftDocumentsSection: FC<IDraftDocumentsSectionProps> = ({
           lastError={lastUploadErrors[type] ?? null}
           addLater={!isPassport}
           showCaptureGuidance={isPassport}
+          ocrNotice={isPassport ? passportSlotOcrNotice(ocrStatus, extracting, t) : null}
           onUpload={(f, source) => onUpload(type, f, source)}
           onCancelUpload={onCancelUpload}
         />

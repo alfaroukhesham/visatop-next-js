@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { getApplyConfigFromTx } from "@/lib/apply/apply-config";
+import { getApplyConfigFromTx } from "@/lib/apply/apply-config-from-tx";
 import { jsonOk } from "@/lib/api/response";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 

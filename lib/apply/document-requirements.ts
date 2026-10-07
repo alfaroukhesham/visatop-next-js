@@ -1,7 +1,7 @@
 import {
   isReservedDocumentTypeKey,
   humanizeDocumentTypeKey,
-} from "@/lib/admin/catalog/document-type";
+} from "@/lib/admin/catalog/document-type-helpers";
 import {
   slotForDocumentType,
   FLOOR_DOCUMENT_TYPE_KEYS,

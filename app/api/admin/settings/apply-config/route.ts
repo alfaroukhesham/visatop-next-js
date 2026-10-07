@@ -8,11 +8,11 @@ import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import {
   DEFAULT_APPLY_PRICE_BADGES,
-  getApplyConfigFromTx,
   PLATFORM_KEY_APPLY_PRICE_BADGES,
   PLATFORM_KEY_PARTY_ENABLED,
   PLATFORM_KEY_PARTY_MAX_TRAVELERS,
 } from "@/lib/apply/apply-config";
+import { getApplyConfigFromTx } from "@/lib/apply/apply-config-from-tx";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

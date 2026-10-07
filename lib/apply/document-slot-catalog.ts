@@ -1,4 +1,4 @@
-import { DOCUMENT_TYPE } from "@/lib/db/schema/application-document";
+import { DOCUMENT_TYPE } from "@/lib/apply/document-type-constants";
 
 export type TDocSlotRole = "required" | "additional";
 

@@ -29,3 +29,22 @@ export const customerFacingOcrMessage = (
       return null;
   }
 };
+
+/** Passport-slot OCR notice (replaces the leftover banner above Documents). */
+export const passportSlotOcrNotice = (
+  status: string | null | undefined,
+  extracting: boolean,
+  t: TTranslate = englishT,
+): string | null => {
+  if (extracting) return t("ocr.reading");
+  switch (status) {
+    case "succeeded":
+      return t("draft.actionMessages.ocrPartial");
+    case "needs_manual":
+      return t("draft.actionMessages.ocrManual");
+    case "failed":
+      return t("draft.actionMessages.ocrFailed");
+    default:
+      return null;
+  }
+};

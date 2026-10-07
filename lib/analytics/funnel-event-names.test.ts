@@ -14,6 +14,8 @@ describe("isPersistableFunnelEvent", () => {
     expect(isPersistableFunnelEvent(APPLY_FUNNEL_EVENTS.visaListViewed)).toBe(true);
     expect(isPersistableFunnelEvent(APPLY_FUNNEL_EVENTS.purchase)).toBe(false);
     expect(isPersistableFunnelEvent("page_view")).toBe(false);
+    expect(isPersistableFunnelEvent("document_upload_failed")).toBe(true);
+    expect(isPersistableFunnelEvent("document_upload_cancelled")).toBe(true);
     expect(isPersistableFunnelEvent(FUNNEL_CHECKOUT_CREATED)).toBe(true);
     expect(isPersistableFunnelEvent(GUEST_LINK_EVENTS.submittedView)).toBe(true);
   });

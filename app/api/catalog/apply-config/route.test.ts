@@ -5,7 +5,7 @@ vi.mock("next/headers", () => ({
 }));
 
 import * as actorContext from "@/lib/db/actor-context";
-import * as applyConfig from "@/lib/apply/apply-config";
+import * as applyConfig from "@/lib/apply/apply-config-from-tx";
 import { GET } from "./route";
 
 describe("GET /api/catalog/apply-config", () => {

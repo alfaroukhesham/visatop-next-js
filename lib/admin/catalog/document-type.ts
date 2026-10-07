@@ -1,44 +1,23 @@
 import { count, eq } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import {
+  DEFAULT_DOCUMENT_ACCEPT_MIME,
+  DOCUMENT_TYPE_KEY_RE,
+  isReservedDocumentTypeKey,
+  slugifyDocumentTypeLabel,
+  type TCatalogDocumentType,
+} from "@/lib/admin/catalog/document-type-helpers";
 
-export const DOCUMENT_TYPE_KEY_RE = /^[a-z][a-z0-9_]{1,62}$/;
-
-export const DEFAULT_DOCUMENT_ACCEPT_MIME = "image/jpeg,image/png,application/pdf";
-
-export const RESERVED_DOCUMENT_TYPE_KEYS = [
-  "passport_copy",
-  "personal_photo",
-  "supporting",
-  "admin_step_attachment",
-  "outcome_approval",
-  "outcome_authority_rejection",
-] as const;
-
-export type TCatalogDocumentType = {
-  key: string;
-  label: string;
-  description: string;
-  acceptMime: string;
-  pairCount: number;
-};
-
-export const isReservedDocumentTypeKey = (key: string): boolean =>
-  (RESERVED_DOCUMENT_TYPE_KEYS as readonly string[]).includes(key);
-
-export const slugifyDocumentTypeLabel = (label: string): string =>
-  label
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .slice(0, 63);
-
-export const humanizeDocumentTypeKey = (key: string): string => {
-  const text = key.replace(/_/g, " ").trim();
-  if (!text) return key;
-  return text.charAt(0).toUpperCase() + text.slice(1);
-};
+export {
+  DEFAULT_DOCUMENT_ACCEPT_MIME,
+  DOCUMENT_TYPE_KEY_RE,
+  humanizeDocumentTypeKey,
+  isReservedDocumentTypeKey,
+  RESERVED_DOCUMENT_TYPE_KEYS,
+  slugifyDocumentTypeLabel,
+  type TCatalogDocumentType,
+} from "@/lib/admin/catalog/document-type-helpers";
 
 const uniqueKey = (base: string, taken: Set<string>): string => {
   if (!taken.has(base)) return base;

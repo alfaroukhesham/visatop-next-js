@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createDocumentType } from "@/lib/admin/catalog/document-type-mutations";
-import { slugifyDocumentTypeLabel } from "@/lib/admin/catalog/document-type";
+import { slugifyDocumentTypeLabel } from "@/lib/admin/catalog/document-type-helpers";
 
 interface IDocumentRulesNewFormProps {
   canWrite: boolean;

@@ -150,4 +150,27 @@ describe("DocumentUploadSlot", () => {
     expect(specimen).toHaveAttribute("data-clarity-mask", "true");
     expect(specimen).toHaveAttribute("src", "/visa-processing/apply/passport-bio-specimen.svg");
   });
+
+  it("shows a passport OCR notice in the slot and not as a duplicate upload error", () => {
+    wrap(
+      <DocumentUploadSlot
+        label="Passport (bio page)"
+        description="JPEG"
+        currentDoc={doc}
+        docType="passport_copy"
+        applicationId="app-1"
+        uploading={false}
+        uploadPercent={null}
+        lastError={null}
+        showCaptureGuidance
+        ocrNotice="We couldn't read everything. Please enter the remaining details manually."
+        onUpload={() => undefined}
+        onCancelUpload={() => undefined}
+      />,
+    );
+
+    const notices = screen.getAllByText(/couldn't read everything/i);
+    expect(notices).toHaveLength(1);
+    expect(screen.getByRole("status")).toHaveTextContent(/couldn't read everything/i);
+  });
 });

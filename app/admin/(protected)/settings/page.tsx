@@ -7,7 +7,7 @@ import { PartySettings } from "@/components/admin/party-settings";
 import { ApplyPriceBadgeSettings } from "@/components/admin/apply-price-badge-settings";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { withAdminDbActor } from "@/lib/db/actor-context";
-import { getApplyConfigFromTx } from "@/lib/apply/apply-config";
+import { getApplyConfigFromTx } from "@/lib/apply/apply-config-from-tx";
 
 export default async function AdminSettingsPage() {
   const adminUserId = await getAdminUserId();

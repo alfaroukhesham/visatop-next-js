@@ -17,7 +17,7 @@ import {
   type ApplicantProfileProvenance,
 } from "@/lib/ocr/extract-orchestrator";
 
-export const UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
+export { UPLOAD_MAX_BYTES } from "@/lib/documents/upload-limits";
 
 export const UPLOAD_MIME_ALLOWLIST: Record<DocumentType, readonly string[]> = {
   passport_copy: ["image/jpeg", "image/png", "image/heic", "image/heif", "application/pdf"],

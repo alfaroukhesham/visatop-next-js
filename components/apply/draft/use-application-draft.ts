@@ -5,10 +5,8 @@ import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 import type { PublicApplication } from "@/lib/applications/public-application";
-import {
-  slotsForPartyMember,
-  type TPublicPartyMember,
-} from "@/lib/applications/load-party-members";
+import type { TPublicPartyMember } from "@/lib/applications/load-party-members";
+import { slotsForPartyMember } from "@/lib/apply/party-member-slots";
 import {
   resolveDocumentRequirements,
   type TDocumentSlot,
@@ -16,7 +14,10 @@ import {
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
 import { oversizedUploadMessage } from "@/lib/apply/customer-upload-copy";
-import { prepareClientUploadFile } from "@/lib/apply/client-image-prep";
+import {
+  prepareClientUploadFile,
+  shouldApplyUploadLimitBeforePrepare,
+} from "@/lib/apply/client-image-prep";
 import { translateDocumentSlot } from "@/lib/apply/document-slot-i18n";
 import { uploadFormDataWithProgress } from "@/lib/apply/upload-xhr";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
@@ -197,7 +198,7 @@ export function useApplicationDraft(applicationId: string) {
         uploadPercent: null,
         lastUploadErrors: { ...current.lastUploadErrors, [type]: { code } },
       });
-      pushUploadErrorDataLayer(buildUploadErrorDataLayerPayload({ code, file }));
+      pushUploadErrorDataLayer(buildUploadErrorDataLayerPayload({ code, file, httpStatus }));
       trackDocumentUploadAnalytics({
         docType: type,
         applicationId: memberId,
@@ -205,9 +206,14 @@ export function useApplicationDraft(applicationId: string) {
         source,
         failureReason: uploadFailureReason({
           oversized: code === "FILE_TOO_LARGE",
-          network: code === "NETWORK" || code === "TIMEOUT",
+          network: code === "NETWORK",
+          timeout: code === "TIMEOUT",
+          cancelled: code === "CANCELLED",
+          code,
           httpStatus,
         }),
+        httpStatus,
+        errorCode: code,
       });
     },
     [updateMemberState],
@@ -243,13 +249,6 @@ export function useApplicationDraft(applicationId: string) {
           `${APPLY_FUNNEL_EVENTS.ocrReviewRequired}:${memberId}:${res.data.extraction.documentId ?? s}`,
         );
       }
-      if (s === "succeeded") {
-        setActionMsg(tRef.current("draft.actionMessages.ocrPartial"));
-      } else if (s === "needs_manual") {
-        setActionMsg(tRef.current("draft.actionMessages.ocrManual"));
-      } else {
-        setActionMsg(tRef.current("draft.actionMessages.ocrFailed"));
-      }
       await load({ silent: true });
     })();
     extractPromiseRef.current = work;
@@ -268,10 +267,12 @@ export function useApplicationDraft(applicationId: string) {
     async (type: DocType, file: File, source: TDocumentUploadSource = "file") => {
       const memberId = selectedMemberId;
       const current = memberStatesRef.current[memberId] ?? emptyMemberState();
-      const tooLarge = oversizedUploadMessage(file.size, UPLOAD_MAX_BYTES, tRef.current);
-      if (tooLarge) {
-        reportUploadFailure(type, memberId, file, source, "FILE_TOO_LARGE", 413);
-        return;
+      if (shouldApplyUploadLimitBeforePrepare(file)) {
+        const tooLarge = oversizedUploadMessage(file.size, UPLOAD_MAX_BYTES, tRef.current);
+        if (tooLarge) {
+          reportUploadFailure(type, memberId, file, source, "FILE_TOO_LARGE", 413);
+          return;
+        }
       }
 
       uploadAbortRef.current?.abort();
@@ -318,6 +319,18 @@ export function useApplicationDraft(applicationId: string) {
       if (result.kind !== "complete") {
         if (result.kind === "abort") {
           updateMemberState(memberId, { uploading: null, uploadPercent: null });
+          pushUploadErrorDataLayer(
+            buildUploadErrorDataLayerPayload({ code: "CANCELLED", file }),
+          );
+          trackDocumentUploadAnalytics({
+            docType: type,
+            applicationId: memberId,
+            success: false,
+            cancelled: true,
+            source,
+            failureReason: "cancelled",
+            errorCode: "CANCELLED",
+          });
           return;
         }
         reportUploadFailure(
