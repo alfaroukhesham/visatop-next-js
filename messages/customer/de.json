@@ -191,7 +191,7 @@
   "documents": {
     "title": "Dokumente",
     "uploadedBadge": "Dokumente hochgeladen",
-    "uploadRequiredToPay": "Laden Sie eine Passkopie hoch, um zu bezahlen. Angaben können als Nächstes geprüft werden. Unser System liest sie und füllt sie für Sie vor.",
+    "uploadRequiredToPay": "Laden Sie die Pass-Datenseite hoch, um zu bezahlen. Foto und weitere Dateien können später hinzugefügt werden.",
     "additionalDocuments": "Zusätzliche Dokumente",
     "readingPassport": "Reisepass wird gelesen…",
     "additionalMayBeRequired": "VisaTop kann zusätzliche Dokumente zur Finalisierung des Antrags verlangen (z. B. Kontoauszüge, Versicherung). Das VisaTop-Team kontaktiert Sie, sobald der Reisepass eingereicht wurde.",
@@ -206,18 +206,28 @@
     "slots": {
       "passportCopy": {
         "label": "Reisepass (Datenseite)",
-        "description": "JPEG / PNG / einseitiges PDF · max. 8 MB"
+        "description": "JPEG, PNG, HEIC oder einseitiges PDF · max. 8 MB"
       },
       "personalPhoto": {
         "label": "Persönliches Foto",
-        "description": "JPEG oder PNG · max. 8 MB"
+        "description": "JPEG, PNG oder HEIC · max. 8 MB"
       },
       "bankStatement6m": {
         "label": "Kontoauszug der letzten 6 Monate",
         "description": "Ein PDF oder Bild der letzten 6 Monate · JPEG / PNG / PDF · max. 8 MB"
       },
       "genericAcceptHint": "JPEG / PNG / PDF · max. 8 MB"
-    }
+    },
+    "addLater": "Später hinzufügen",
+    "previousFileKept": "Vorherige Datei behalten — neuer Upload fehlgeschlagen",
+    "retry": "Erneut versuchen",
+    "cancelUpload": "Abbrechen",
+    "uploadingPercent": "Hochladen {percent}%",
+    "captureTip1": "Legen Sie den Pass flach, sodass alle vier Ecken im Foto sind.",
+    "captureTip2": "Die beiden maschinenlesbaren Zeilen unten müssen scharf und vollständig sichtbar sein.",
+    "captureTip3": "Vermeiden Sie Reflexe, Schatten und abgeschnittene Ränder.",
+    "privacyNote": "Ihr Foto wird auf dem Weg verschlüsselt und nur zur Bearbeitung dieses Antrags verwendet — nicht für Marketing.",
+    "examplePassportAlt": "Beispiel einer fiktiven Pass-Datenseite als Aufnahmehilfe. Kein echtes Reisedokument."
   },
   "payment": {
     "pageTitle": "Zahlung | Visatop",
@@ -259,7 +269,7 @@
   "pay": {
     "payNowIncomplete": "Bezahlen Sie jetzt, um die Bearbeitung zu starten. Sie können verbleibende Angaben nach der Zahlung ergänzen.",
     "payNowComplete": "Prüfen Sie Ihre Bestellung und bezahlen Sie sicher, um die Bearbeitung zu starten.",
-    "blockedMissingDocs": "Laden Sie Ihre erforderlichen Dokumente hoch, um zu bezahlen."
+    "blockedMissingDocs": "Laden Sie eine Passkopie hoch, um zu bezahlen."
   },
   "track": {
     "pageTitle": "Antrag verfolgen | Visatop",
@@ -567,7 +577,17 @@
     "fileExceedsLimit": "Datei überschreitet das 8-MB-Limit.",
     "uploaded": "Hochgeladen",
     "notUploadedYet": "Noch nicht hochgeladen",
-    "failedHttp": "Upload fehlgeschlagen (HTTP {status})"
+    "failedHttp": "Upload fehlgeschlagen (HTTP {status})",
+    "errors": {
+      "corruptImage": "Diese Datei konnte nicht gelesen werden. Versuchen Sie ein schärferes Foto der Pass-Datenseite.",
+      "unsupportedType": "Verwenden Sie ein JPEG-, PNG- oder HEIC-Foto oder ein einseitiges PDF.",
+      "fileTooLarge": "Datei überschreitet das 8-MB-Limit.",
+      "pdfNotSinglePage": "Das Pass-PDF muss genau eine Seite haben.",
+      "rateLimited": "Zu viele Uploads. Bitte kurz warten und erneut versuchen.",
+      "network": "Upload fehlgeschlagen. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
+      "timeout": "Langsame Verbindung. Versuchen Sie es erneut oder wechseln Sie zu WLAN.",
+      "generic": "Upload fehlgeschlagen. Bitte erneut versuchen."
+    }
   },
   "ocr": {
     "reading": "Reisepass wird gelesen…",

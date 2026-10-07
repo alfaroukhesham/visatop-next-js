@@ -42,7 +42,7 @@ export const ZiinaEmbeddedCheckout: FC<IZiinaEmbeddedCheckoutProps> = ({
   }, [onCompleted, onCanceled, onFailed]);
 
   return (
-    <div className="relative mx-auto w-full max-w-[450px]">
+    <div className="relative mx-auto w-full max-w-[450px]" data-clarity-mask="true">
       <iframe
         ref={iframeRef}
         id="ziina-checkout"

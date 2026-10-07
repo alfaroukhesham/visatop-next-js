@@ -21,6 +21,15 @@ describe("document-slot-catalog", () => {
     ]);
   });
 
+  it("passport and photo accept HEIC stills", () => {
+    const passport = slotForDocumentType(DOCUMENT_TYPE.PASSPORT_COPY);
+    const photo = slotForDocumentType(DOCUMENT_TYPE.PERSONAL_PHOTO);
+    expect(passport?.acceptMime).toMatch(/image\/heic/);
+    expect(photo?.acceptMime).toMatch(/image\/heic/);
+    expect(passport?.acceptMime).toMatch(/application\/pdf/);
+    expect(photo?.acceptMime).not.toMatch(/application\/pdf/);
+  });
+
   it("assignable extras exclude the floor", () => {
     expect(ASSIGNABLE_DOCUMENT_TYPE_KEYS).toEqual([DOCUMENT_TYPE.BANK_STATEMENT_6M]);
     expect(ASSIGNABLE_DOCUMENT_TYPE_KEYS).not.toContain(DOCUMENT_TYPE.PASSPORT_COPY);

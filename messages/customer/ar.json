@@ -191,7 +191,7 @@
   "documents": {
     "title": "المستندات",
     "uploadedBadge": "تم رفع المستندات",
-    "uploadRequiredToPay": "ارفع صورة جواز السفر للدفع. يمكن مراجعة التفاصيل في الخطوة التالية. سيقرأ نظامنا البيانات ويملأها مسبقاً نيابة عنك.",
+    "uploadRequiredToPay": "ارفع صفحة بيانات جواز السفر للدفع. يمكن إضافة الصورة الشخصية والملفات الأخرى لاحقاً.",
     "additionalDocuments": "مستندات إضافية",
     "readingPassport": "جارٍ قراءة جواز السفر…",
     "additionalMayBeRequired": "قد تطلب VisaTop مستندات إضافية لإتمام الطلب (مثل كشوف حساب بنكية، تأمين). سيتواصل معك فريق VisaTop بعد تقديم جواز السفر.",
@@ -206,18 +206,28 @@
     "slots": {
       "passportCopy": {
         "label": "جواز السفر (صفحة البيانات)",
-        "description": "JPEG / PNG / PDF من صفحة واحدة · 8 ميغابايت كحد أقصى"
+        "description": "JPEG أو PNG أو HEIC أو PDF من صفحة واحدة · 8 ميغابايت كحد أقصى"
       },
       "personalPhoto": {
         "label": "صورة شخصية",
-        "description": "JPEG أو PNG · 8 ميغابايت كحد أقصى"
+        "description": "JPEG أو PNG أو HEIC · 8 ميغابايت كحد أقصى"
       },
       "bankStatement6m": {
         "label": "كشف حساب بنكي لآخر 6 أشهر",
         "description": "ملف PDF أو صورة لآخر 6 أشهر · JPEG / PNG / PDF · 8 ميغابايت كحد أقصى"
       },
       "genericAcceptHint": "JPEG / PNG / PDF · 8 ميغابايت كحد أقصى"
-    }
+    },
+    "addLater": "أضف لاحقاً",
+    "previousFileKept": "تم الإبقاء على الملف السابق — فشل الرفع الجديد",
+    "retry": "إعادة المحاولة",
+    "cancelUpload": "إلغاء",
+    "uploadingPercent": "جارٍ الرفع {percent}%",
+    "captureTip1": "ضع جواز السفر بشكل مسطح بحيث تظهر الزوايا الأربع في الصورة.",
+    "captureTip2": "اجعل السطرين المقروءين آلياً في الأسفل واضحين وظاهرين بالكامل.",
+    "captureTip3": "تجنّب الوهج والظلال والقص من الحواف.",
+    "privacyNote": "تُشفَّر صورتك أثناء النقل وتُستخدم فقط لمعالجة هذا الطلب — وليس للتسويق.",
+    "examplePassportAlt": "مثال توضيحي لصفحة بيانات جواز سفر مزيفة لإرشاد التصوير. ليست وثيقة سفر حقيقية."
   },
   "payment": {
     "pageTitle": "الدفع | Visatop",
@@ -259,7 +269,7 @@
   "pay": {
     "payNowIncomplete": "ادفع الآن لبدء المعالجة. يمكنك إضافة التفاصيل المتبقية بعد الدفع.",
     "payNowComplete": "راجع طلبك وادفع بأمان لبدء المعالجة.",
-    "blockedMissingDocs": "ارفع المستندات المطلوبة للدفع."
+    "blockedMissingDocs": "ارفع صورة جواز السفر للدفع."
   },
   "track": {
     "pageTitle": "تتبّع الطلب | Visatop",
@@ -567,7 +577,17 @@
     "fileExceedsLimit": "الملف يتجاوز حد 8MB.",
     "uploaded": "تم الرفع",
     "notUploadedYet": "لم يُرفع بعد",
-    "failedHttp": "فشل الرفع (HTTP {status})"
+    "failedHttp": "فشل الرفع (HTTP {status})",
+    "errors": {
+      "corruptImage": "تعذر قراءة هذا الملف. جرّب صورة أوضح لصفحة بيانات الجواز.",
+      "unsupportedType": "استخدم صورة JPEG أو PNG أو HEIC، أو ملف PDF من صفحة واحدة.",
+      "fileTooLarge": "الملف يتجاوز حد 8 ميغابايت.",
+      "pdfNotSinglePage": "يجب أن يكون ملف PDF للجواز صفحة واحدة فقط.",
+      "rateLimited": "طلبات رفع كثيرة. انتظر قليلاً ثم أعد المحاولة.",
+      "network": "فشل الرفع. تحقق من الاتصال ثم أعد المحاولة.",
+      "timeout": "الاتصال بطيء. أعد المحاولة أو استخدم شبكة Wi-Fi.",
+      "generic": "فشل الرفع. يرجى المحاولة مرة أخرى."
+    }
   },
   "ocr": {
     "reading": "جارٍ قراءة جواز سفرك…",

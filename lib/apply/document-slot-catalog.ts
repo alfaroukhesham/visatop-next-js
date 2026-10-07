@@ -21,21 +21,25 @@ export const DOCUMENT_SLOT_MAX_BYTES = 8 * 1024 * 1024;
 /** Fallback accept hint for catalog extras without a custom description. */
 export const GENERIC_DOCUMENT_ACCEPT_HINT = "JPEG / PNG / PDF · 8MB max";
 
+export const HEIC_ACCEPT_MIME = "image/heic,image/heif,.heic,.heif";
+export const PASSPORT_ACCEPT_MIME = `image/jpeg,image/png,${HEIC_ACCEPT_MIME},application/pdf`;
+export const PHOTO_ACCEPT_MIME = `image/jpeg,image/png,${HEIC_ACCEPT_MIME}`;
+
 export const PASSPORT_SLOT: TDocumentSlot = {
   key: DOCUMENT_TYPE.PASSPORT_COPY,
   label: "Passport (bio page)",
-  description: "JPEG / PNG / single-page PDF · 8MB max",
+  description: "JPEG, PNG, HEIC, or single-page PDF · 8MB max",
   role: "required",
-  acceptMime: "image/jpeg,image/png,application/pdf",
+  acceptMime: PASSPORT_ACCEPT_MIME,
   maxBytes: DOCUMENT_SLOT_MAX_BYTES,
 };
 
 export const PHOTO_SLOT: TDocumentSlot = {
   key: DOCUMENT_TYPE.PERSONAL_PHOTO,
   label: "Personal photo",
-  description: "JPEG or PNG · 8MB max",
+  description: "JPEG, PNG, or HEIC · 8MB max",
   role: "required",
-  acceptMime: "image/jpeg,image/png",
+  acceptMime: PHOTO_ACCEPT_MIME,
   maxBytes: DOCUMENT_SLOT_MAX_BYTES,
 };
 

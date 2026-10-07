@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { customerUploadStateLabel, oversizedUploadMessage } from "./customer-upload-copy";
+import {
+  customerUploadErrorMessage,
+  customerUploadStateLabel,
+  oversizedUploadMessage,
+} from "./customer-upload-copy";
 
 describe("customerUploadStateLabel", () => {
   it("returns Uploaded when a document exists", () => {
@@ -28,5 +32,17 @@ describe("oversizedUploadMessage", () => {
   it("returns null when the file is within the limit", () => {
     expect(oversizedUploadMessage(maxBytes, maxBytes)).toBeNull();
     expect(oversizedUploadMessage(0, maxBytes)).toBeNull();
+  });
+});
+
+describe("customerUploadErrorMessage", () => {
+  it("maps known codes to localised copy", () => {
+    expect(customerUploadErrorMessage("CORRUPT_IMAGE")).toMatch(/couldn't read/i);
+    expect(customerUploadErrorMessage("TIMEOUT")).toMatch(/Wi-Fi/i);
+    expect(customerUploadErrorMessage("UNSUPPORTED_TYPE")).toMatch(/HEIC/i);
+  });
+
+  it("falls back for unknown codes", () => {
+    expect(customerUploadErrorMessage("SOMETHING_ELSE")).toBe("Upload failed. Please try again.");
   });
 });

@@ -46,7 +46,7 @@ export const PhoneCountryField: FC<IPhoneCountryFieldProps> = ({
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2" data-clarity-mask="true">
       <div className="relative w-[5.5rem] shrink-0">
         <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-sm">
           +

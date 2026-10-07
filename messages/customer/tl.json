@@ -191,7 +191,7 @@
   "documents": {
     "title": "Mga dokumento",
     "uploadedBadge": "Na-upload na ang mga dokumento",
-    "uploadRequiredToPay": "I-upload ang kopya ng pasaporte para makapagbayad. Maaaring i-review ang detalye sa susunod. Babasahin at pupunuin agad ng system namin ang detalye para sa iyo.",
+    "uploadRequiredToPay": "I-upload ang bio page ng pasaporte para makapagbayad. Puwedeng idagdag ang litrato at iba pang file sa ibang pagkakataon.",
     "additionalDocuments": "Karagdagang dokumento",
     "readingPassport": "Binabasa ang pasaporte…",
     "additionalMayBeRequired": "Maaaring kailanganin ng VisaTop ang karagdagang dokumento para matapos ang application (hal. bank statement, insurance). Makikipag-ugnayan ang VisaTop team sa iyo kapag naisumite na ang pasaporte.",
@@ -206,18 +206,28 @@
     "slots": {
       "passportCopy": {
         "label": "Pasaporte (bio page)",
-        "description": "JPEG / PNG / single-page PDF · 8MB max"
+        "description": "JPEG, PNG, HEIC, o single-page PDF · 8MB max"
       },
       "personalPhoto": {
         "label": "Personal na litrato",
-        "description": "JPEG o PNG · 8MB max"
+        "description": "JPEG, PNG, o HEIC · 8MB max"
       },
       "bankStatement6m": {
         "label": "Bank statement ng huling 6 na buwan",
         "description": "Isang PDF o larawan ng huling 6 na buwan · JPEG / PNG / PDF · 8MB max"
       },
       "genericAcceptHint": "JPEG / PNG / PDF · 8MB max"
-    }
+    },
+    "addLater": "Idagdag mamaya",
+    "previousFileKept": "Itinago ang dating file — nabigo ang bagong upload",
+    "retry": "Subukan ulit",
+    "cancelUpload": "Kanselahin",
+    "uploadingPercent": "Nag-a-upload {percent}%",
+    "captureTip1": "Ihiga ang pasaporte para makita ang apat na sulok sa litrato.",
+    "captureTip2": "Dapat malinaw at buo ang dalawang machine-readable na linya sa ibaba.",
+    "captureTip3": "Iwasan ang silaw, anino, at putol na gilid.",
+    "privacyNote": "Naka-encrypt ang litrato habang ipinapadala at ginagamit lang para sa application na ito — hindi para sa marketing.",
+    "examplePassportAlt": "Halimbawa ng pekeng passport bio page para sa gabay sa pagkuha ng litrato. Hindi ito tunay na travel document."
   },
   "payment": {
     "pageTitle": "Payment | Visatop",
@@ -259,7 +269,7 @@
   "pay": {
     "payNowIncomplete": "Magbayad na para magsimula ang processing. Puwede mong idagdag ang natitirang detalye pagkatapos magbayad.",
     "payNowComplete": "Suriin ang order mo at magbayad nang secure para magsimula ang processing.",
-    "blockedMissingDocs": "I-upload ang required na dokumento para makapagbayad."
+    "blockedMissingDocs": "I-upload ang kopya ng pasaporte para makapagbayad."
   },
   "track": {
     "pageTitle": "I-track ang application | Visatop",
@@ -567,7 +577,17 @@
     "fileExceedsLimit": "Lumampas ang file sa 8MB limit.",
     "uploaded": "Na-upload na",
     "notUploadedYet": "Hindi pa na-upload",
-    "failedHttp": "Hindi na-upload (HTTP {status})"
+    "failedHttp": "Hindi na-upload (HTTP {status})",
+    "errors": {
+      "corruptImage": "Hindi mabasa ang file. Subukan ang mas malinaw na litrato ng bio page.",
+      "unsupportedType": "Gumamit ng JPEG, PNG, o HEIC na litrato, o single-page PDF.",
+      "fileTooLarge": "Lumampas ang file sa 8MB na limit.",
+      "pdfNotSinglePage": "Dapat isang page lang ang PDF ng pasaporte.",
+      "rateLimited": "Masyadong maraming upload. Maghintay sandali at subukan ulit.",
+      "network": "Nabigo ang upload. Tingnan ang connection at subukan ulit.",
+      "timeout": "Mabagal ang connection. Subukan ulit, o gumamit ng Wi-Fi.",
+      "generic": "Nabigo ang upload. Pakisubukan ulit."
+    }
   },
   "ocr": {
     "reading": "Binabasa ang pasaporte mo…",

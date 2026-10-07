@@ -120,7 +120,17 @@ const nextConfig: NextConfig = {
     "pdfjs-dist",
     "@google/genai",
     "@napi-rs/canvas",
+    "heic-convert",
+    "heic-decode",
+    "libheif-js",
   ],
+  outputFileTracingIncludes: {
+    "/api/applications/*/documents/upload": [
+      "./node_modules/heic-convert/**/*",
+      "./node_modules/heic-decode/**/*",
+      "./node_modules/libheif-js/**/*",
+    ],
+  },
   ...(devTunnelHosts.length > 0
     ? { allowedDevOrigins: devTunnelHosts }
     : {}),

@@ -83,6 +83,9 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
           uploading={draft.selected.uploading}
           extracting={draft.selected.extracting}
           onUpload={(type, file, source) => void draft.onUpload(type, file, source)}
+          onCancelUpload={draft.cancelInFlightUpload}
+          uploadPercent={draft.selected.uploadPercent}
+          lastUploadErrors={draft.selected.lastUploadErrors}
         />
       )}
 

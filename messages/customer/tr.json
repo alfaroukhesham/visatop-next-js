@@ -191,7 +191,7 @@
   "documents": {
     "title": "Belgeler",
     "uploadedBadge": "Belgeler yüklendi",
-    "uploadRequiredToPay": "Ödeme için bir pasaport kopyası yükleyin. Bilgiler bir sonraki adımda incelenebilir. Sistemimiz bunları okuyup sizin için doldurur.",
+    "uploadRequiredToPay": "Ödeme için pasaportun kimlik sayfasını yükleyin. Fotoğraf ve diğer dosyalar sonra eklenebilir.",
     "additionalDocuments": "Ek belgeler",
     "readingPassport": "Pasaport okunuyor…",
     "additionalMayBeRequired": "Başvuruyu tamamlamak için VisaTop ek belgeler isteyebilir (ör. banka ekstreleri, sigorta). Pasaport gönderildikten sonra VisaTop ekibi sizinle iletişime geçecektir.",
@@ -206,18 +206,28 @@
     "slots": {
       "passportCopy": {
         "label": "Pasaport (kimlik sayfası)",
-        "description": "JPEG / PNG / tek sayfalık PDF · en fazla 8 MB"
+        "description": "JPEG, PNG, HEIC veya tek sayfalık PDF · en fazla 8 MB"
       },
       "personalPhoto": {
         "label": "Kişisel fotoğraf",
-        "description": "JPEG veya PNG · en fazla 8 MB"
+        "description": "JPEG, PNG veya HEIC · en fazla 8 MB"
       },
       "bankStatement6m": {
         "label": "Son 6 aya ait banka hesap özeti",
         "description": "Son 6 ayı kapsayan bir PDF veya görsel · JPEG / PNG / PDF · en fazla 8 MB"
       },
       "genericAcceptHint": "JPEG / PNG / PDF · en fazla 8 MB"
-    }
+    },
+    "addLater": "Sonra ekle",
+    "previousFileKept": "Önceki dosya korundu — yeni yükleme başarısız",
+    "retry": "Yeniden dene",
+    "cancelUpload": "İptal",
+    "uploadingPercent": "Yükleniyor {percent}%",
+    "captureTip1": "Pasaportu düz yatırın; dört köşe de fotoğrafta görünsün.",
+    "captureTip2": "Alttaki iki makinece okunabilir satır net ve tam görünsün.",
+    "captureTip3": "Parlama, gölge ve kesik kenarlardan kaçının.",
+    "privacyNote": "Fotoğrafınız aktarımda şifrelenir ve yalnızca bu başvuru için kullanılır — pazarlama için değil.",
+    "examplePassportAlt": "Çekim rehberi için sahte bir pasaport kimlik sayfası örneği. Gerçek bir seyahat belgesi değildir."
   },
   "payment": {
     "pageTitle": "Ödeme | Visatop",
@@ -259,7 +269,7 @@
   "pay": {
     "payNowIncomplete": "İşleme başlamak için şimdi ödeyin. Ödemeden sonra kalan bilgileri ekleyebilirsiniz.",
     "payNowComplete": "Siparişinizi gözden geçirin ve işleme başlamak için güvenle ödeyin.",
-    "blockedMissingDocs": "Ödeme yapmak için gerekli belgelerinizi yükleyin."
+    "blockedMissingDocs": "Ödeme için bir pasaport kopyası yükleyin."
   },
   "track": {
     "pageTitle": "Başvuruyu takip et | Visatop",
@@ -567,7 +577,17 @@
     "fileExceedsLimit": "Dosya 8 MB sınırını aşıyor.",
     "uploaded": "Yüklendi",
     "notUploadedYet": "Henüz yüklenmedi",
-    "failedHttp": "Yükleme başarısız (HTTP {status})"
+    "failedHttp": "Yükleme başarısız (HTTP {status})",
+    "errors": {
+      "corruptImage": "Bu dosya okunamadı. Kimlik sayfasının daha net bir fotoğrafını deneyin.",
+      "unsupportedType": "JPEG, PNG veya HEIC fotoğraf ya da tek sayfalık PDF kullanın.",
+      "fileTooLarge": "Dosya 8 MB sınırını aşıyor.",
+      "pdfNotSinglePage": "Pasaport PDF’i tam olarak bir sayfa olmalıdır.",
+      "rateLimited": "Çok fazla yükleme. Biraz bekleyip yeniden deneyin.",
+      "network": "Yükleme başarısız. Bağlantıyı kontrol edip yeniden deneyin.",
+      "timeout": "Bağlantı yavaş. Yeniden deneyin veya Wi-Fi’ye geçin.",
+      "generic": "Yükleme başarısız. Lütfen yeniden deneyin."
+    }
   },
   "ocr": {
     "reading": "Pasaportunuz okunuyor…",

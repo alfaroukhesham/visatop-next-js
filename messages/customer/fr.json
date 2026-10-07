@@ -191,7 +191,7 @@
   "documents": {
     "title": "Documents",
     "uploadedBadge": "Documents téléversés",
-    "uploadRequiredToPay": "Téléversez une copie de passeport pour payer. Les informations pourront être vérifiées ensuite. Notre système les lira et les préremplira pour vous.",
+    "uploadRequiredToPay": "Téléversez la page d'identité du passeport pour payer. La photo et les autres fichiers peuvent être ajoutés plus tard.",
     "additionalDocuments": "Documents supplémentaires",
     "readingPassport": "Lecture du passeport…",
     "additionalMayBeRequired": "VisaTop peut exiger des documents supplémentaires pour finaliser la demande (p. ex. relevés bancaires, assurance). L'équipe VisaTop vous contactera une fois le passeport soumis.",
@@ -206,18 +206,28 @@
     "slots": {
       "passportCopy": {
         "label": "Passeport (page d'identité)",
-        "description": "JPEG / PNG / PDF d'une page · 8 Mo max"
+        "description": "JPEG, PNG, HEIC ou PDF d'une page · 8 Mo max"
       },
       "personalPhoto": {
         "label": "Photo personnelle",
-        "description": "JPEG ou PNG · 8 Mo max"
+        "description": "JPEG, PNG ou HEIC · 8 Mo max"
       },
       "bankStatement6m": {
         "label": "Relevé de compte des 6 derniers mois",
         "description": "Un PDF ou une image couvrant les 6 derniers mois · JPEG / PNG / PDF · 8 Mo max"
       },
       "genericAcceptHint": "JPEG / PNG / PDF · 8 Mo max"
-    }
+    },
+    "addLater": "Ajouter plus tard",
+    "previousFileKept": "Fichier précédent conservé — le nouvel envoi a échoué",
+    "retry": "Réessayer",
+    "cancelUpload": "Annuler",
+    "uploadingPercent": "Téléversement {percent}%",
+    "captureTip1": "Posez le passeport à plat pour que les quatre coins apparaissent.",
+    "captureTip2": "Les deux lignes lisibles par machine en bas doivent être nettes et entières.",
+    "captureTip3": "Évitez les reflets, les ombres et les bords coupés.",
+    "privacyNote": "Votre photo est chiffrée en transit et utilisée uniquement pour traiter cette demande — jamais pour le marketing.",
+    "examplePassportAlt": "Exemple d'une page d'identité de passeport fictive pour guider la photo. Ce n'est pas un vrai document de voyage."
   },
   "payment": {
     "pageTitle": "Paiement | Visatop",
@@ -259,7 +269,7 @@
   "pay": {
     "payNowIncomplete": "Payez maintenant pour démarrer le traitement. Vous pourrez ajouter les informations restantes après le paiement.",
     "payNowComplete": "Vérifiez votre commande et payez en toute sécurité pour démarrer le traitement.",
-    "blockedMissingDocs": "Téléversez les documents requis pour payer."
+    "blockedMissingDocs": "Téléversez une copie de passeport pour payer."
   },
   "track": {
     "pageTitle": "Suivre ma demande | Visatop",
@@ -567,7 +577,17 @@
     "fileExceedsLimit": "Le fichier dépasse la limite de 8 Mo.",
     "uploaded": "Téléversé",
     "notUploadedYet": "Pas encore téléversé",
-    "failedHttp": "Échec du téléversement (HTTP {status})"
+    "failedHttp": "Échec du téléversement (HTTP {status})",
+    "errors": {
+      "corruptImage": "Impossible de lire ce fichier. Essayez une photo plus nette de la page d'identité.",
+      "unsupportedType": "Utilisez une photo JPEG, PNG ou HEIC, ou un PDF d'une seule page.",
+      "fileTooLarge": "Le fichier dépasse la limite de 8 Mo.",
+      "pdfNotSinglePage": "Le PDF du passeport doit faire exactement une page.",
+      "rateLimited": "Trop de téléversements. Patientez un moment puis réessayez.",
+      "network": "Échec du téléversement. Vérifiez la connexion puis réessayez.",
+      "timeout": "Connexion lente. Réessayez ou passez au Wi-Fi.",
+      "generic": "Échec du téléversement. Veuillez réessayer."
+    }
   },
   "ocr": {
     "reading": "Lecture de votre passeport…",

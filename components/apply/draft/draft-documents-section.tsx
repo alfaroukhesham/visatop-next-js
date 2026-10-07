@@ -7,15 +7,18 @@ import type { TDocumentSlot } from "@/lib/apply/document-requirements";
 import { translateDocumentSlot } from "@/lib/apply/document-slot-i18n";
 import { DocumentUploadSlot } from "./document-upload-slot";
 import type { TDocumentUploadSource } from "@/lib/analytics/document-upload-events";
-import type { DocType, PublicDocument } from "./types";
+import type { DocType, PublicDocument, TUploadSlotError } from "./types";
 
 export interface IDraftDocumentsSectionProps {
   applicationId: string;
   slots: TDocumentSlot[];
   docsByType: Partial<Record<DocType, PublicDocument | null>>;
   uploading: DocType | null;
+  uploadPercent: number | null;
+  lastUploadErrors: Partial<Record<DocType, TUploadSlotError | null>>;
   extracting: boolean;
   onUpload: (type: DocType, file: File, source: TDocumentUploadSource) => void;
+  onCancelUpload: () => void;
 }
 
 export const DraftDocumentsSection: FC<IDraftDocumentsSectionProps> = ({
@@ -23,8 +26,11 @@ export const DraftDocumentsSection: FC<IDraftDocumentsSectionProps> = ({
   slots,
   docsByType,
   uploading,
+  uploadPercent,
+  lastUploadErrors,
   extracting,
   onUpload,
+  onCancelUpload,
 }) => {
   const t = useCustomerT();
   const required = slots.filter((s) => s.role === "required");
@@ -36,17 +42,24 @@ export const DraftDocumentsSection: FC<IDraftDocumentsSectionProps> = ({
   const renderSlot = (slot: TDocumentSlot) => {
     const type = slot.key as DocType;
     const copy = translateDocumentSlot(slot, t);
+    const isPassport = slot.key === "passport_copy";
     return (
-      <DocumentUploadSlot
-        key={slot.key}
-        label={copy.label}
-        description={copy.description}
-        currentDoc={docsByType[type] ?? null}
-        docType={type}
-        applicationId={applicationId}
-        uploading={uploading === type}
-        onUpload={(f, source) => onUpload(type, f, source)}
-      />
+      <div key={slot.key} className={isPassport ? "sm:col-span-2" : undefined}>
+        <DocumentUploadSlot
+          label={copy.label}
+          description={copy.description}
+          currentDoc={docsByType[type] ?? null}
+          docType={type}
+          applicationId={applicationId}
+          uploading={uploading === type}
+          uploadPercent={uploading === type ? uploadPercent : null}
+          lastError={lastUploadErrors[type] ?? null}
+          addLater={!isPassport}
+          showCaptureGuidance={isPassport}
+          onUpload={(f, source) => onUpload(type, f, source)}
+          onCancelUpload={onCancelUpload}
+        />
+      </div>
     );
   };
 

@@ -191,7 +191,7 @@
   "documents": {
     "title": "Documentos",
     "uploadedBadge": "Documentos subidos",
-    "uploadRequiredToPay": "Suba una copia del pasaporte para pagar. Los datos se podrán revisar a continuación. Nuestro sistema los leerá y los rellenará por usted.",
+    "uploadRequiredToPay": "Suba la página de datos del pasaporte para pagar. La foto y los demás archivos se pueden añadir después.",
     "additionalDocuments": "Documentos adicionales",
     "readingPassport": "Leyendo pasaporte…",
     "additionalMayBeRequired": "VisaTop puede requerir documentos adicionales para finalizar la solicitud (p. ej. extractos bancarios, seguro). El equipo de VisaTop se pondrá en contacto con usted una vez enviado el pasaporte.",
@@ -206,18 +206,28 @@
     "slots": {
       "passportCopy": {
         "label": "Pasaporte (página de datos)",
-        "description": "JPEG / PNG / PDF de una página · 8 MB máx."
+        "description": "JPEG, PNG, HEIC o PDF de una sola página · 8 MB máx."
       },
       "personalPhoto": {
         "label": "Foto personal",
-        "description": "JPEG o PNG · 8 MB máx."
+        "description": "JPEG, PNG o HEIC · 8 MB máx."
       },
       "bankStatement6m": {
         "label": "Extracto bancario de los últimos 6 meses",
         "description": "Un PDF o imagen de los últimos 6 meses · JPEG / PNG / PDF · 8 MB máx."
       },
       "genericAcceptHint": "JPEG / PNG / PDF · 8 MB máx."
-    }
+    },
+    "addLater": "Añadir después",
+    "previousFileKept": "Se conservó el archivo anterior — el nuevo envío falló",
+    "retry": "Reintentar",
+    "cancelUpload": "Cancelar",
+    "uploadingPercent": "Subiendo {percent}%",
+    "captureTip1": "Ponga el pasaporte plano para que se vean las cuatro esquinas.",
+    "captureTip2": "Las dos líneas de lectura mecánica de abajo deben verse nítidas y completas.",
+    "captureTip3": "Evite brillos, sombras y bordes recortados.",
+    "privacyNote": "Su foto viaja cifrada y solo se usa para tramitar esta solicitud, nunca para marketing.",
+    "examplePassportAlt": "Ejemplo de una página de pasaporte ficticia para orientar la foto. No es un documento de viaje real."
   },
   "payment": {
     "pageTitle": "Pago | Visatop",
@@ -259,7 +269,7 @@
   "pay": {
     "payNowIncomplete": "Pague ahora para iniciar el procesamiento. Puede añadir los datos restantes después del pago.",
     "payNowComplete": "Revise su pedido y pague de forma segura para iniciar el procesamiento.",
-    "blockedMissingDocs": "Suba los documentos obligatorios para pagar."
+    "blockedMissingDocs": "Suba una copia del pasaporte para pagar."
   },
   "track": {
     "pageTitle": "Consultar solicitud | Visatop",
@@ -567,7 +577,17 @@
     "fileExceedsLimit": "El archivo supera el límite de 8 MB.",
     "uploaded": "Subido",
     "notUploadedYet": "Aún no subido",
-    "failedHttp": "Error al subir (HTTP {status})"
+    "failedHttp": "Error al subir (HTTP {status})",
+    "errors": {
+      "corruptImage": "No pudimos leer ese archivo. Pruebe una foto más nítida de la página de datos.",
+      "unsupportedType": "Use una foto JPEG, PNG o HEIC, o un PDF de una sola página.",
+      "fileTooLarge": "El archivo supera el límite de 8 MB.",
+      "pdfNotSinglePage": "El PDF del pasaporte debe tener exactamente una página.",
+      "rateLimited": "Demasiadas subidas. Espere un momento y vuelva a intentarlo.",
+      "network": "Error al subir. Compruebe la conexión e inténtelo de nuevo.",
+      "timeout": "Conexión lenta. Inténtelo de nuevo o use Wi-Fi.",
+      "generic": "Error al subir. Inténtelo de nuevo."
+    }
   },
   "ocr": {
     "reading": "Leyendo su pasaporte…",

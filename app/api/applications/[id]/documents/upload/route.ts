@@ -5,6 +5,7 @@ import { resolveApplicationAccess } from "@/lib/applications/application-access"
 import { extractClientIp } from "@/lib/applications/client-ip";
 import { consume } from "@/lib/applications/document-rate-limit";
 import {
+  isMimeAllowedForDocument,
   persistUploadedDocument,
   toPublicDocument,
   UPLOAD_MAX_BYTES,
@@ -22,9 +23,12 @@ import {
   CorruptImageError,
   NORMALIZED_CONTENT_TYPE,
 } from "@/lib/documents/normalize-image";
+import { convertHeicToJpegBuffer } from "@/lib/documents/heic-convert-server";
+import { looksLikeHeic } from "@/lib/documents/heic-detect";
 import { normalizePassportUpload } from "@/lib/documents/normalize-passport-upload";
 import { normalizeSupportingUpload } from "@/lib/documents/normalize-supporting-upload";
 import { normalizeImageBuffer } from "@/lib/documents/normalize-image";
+import { resolveUploadContentType } from "@/lib/documents/upload-content-type";
 import {
   CorruptPdfError,
   PdfNotSinglePageError,
@@ -130,12 +134,20 @@ export async function POST(
     });
   }
 
-  const mime = fileEntry.type || "";
+  const declaredMime = fileEntry.type || "";
+  const originalFilename =
+    fileEntry instanceof File && typeof fileEntry.name === "string"
+      ? fileEntry.name.slice(0, 255)
+      : null;
+
+  const bytes = Buffer.from(await fileEntry.arrayBuffer());
+  const mime =
+    resolveUploadContentType(bytes, declaredMime, originalFilename) ?? declaredMime;
   const mimeAllow =
     documentType in UPLOAD_MIME_ALLOWLIST
       ? UPLOAD_MIME_ALLOWLIST[documentType as DocumentType]
       : (["image/jpeg", "image/png", "application/pdf"] as const);
-  if (!mimeAllow.includes(mime)) {
+  if (!isMimeAllowedForDocument(mimeAllow, mime)) {
     return jsonError("UNSUPPORTED_TYPE", "File type is not allowed for this document.", {
       status: 415,
       requestId,
@@ -157,12 +169,6 @@ export async function POST(
     }
   }
 
-  const bytes = Buffer.from(await fileEntry.arrayBuffer());
-  const originalFilename =
-    fileEntry instanceof File && typeof fileEntry.name === "string"
-      ? fileEntry.name.slice(0, 255)
-      : null;
-
   let normalized: {
     bytes: Buffer;
     sha256: string;
@@ -170,8 +176,14 @@ export async function POST(
     byteLength: number;
   };
   try {
+    let workingBytes: Buffer = bytes;
+    let workingType = mime;
+    if (looksLikeHeic(bytes, mime, originalFilename)) {
+      workingBytes = await convertHeicToJpegBuffer(bytes);
+      workingType = "image/jpeg";
+    }
     if (documentType === DOCUMENT_TYPE.PASSPORT_COPY) {
-      const n = await normalizePassportUpload({ bytes, contentType: mime });
+      const n = await normalizePassportUpload({ bytes: workingBytes, contentType: workingType });
       normalized = {
         bytes: n.bytes,
         sha256: n.sha256,
@@ -179,7 +191,7 @@ export async function POST(
         byteLength: n.byteLength,
       };
     } else if (documentType === DOCUMENT_TYPE.PERSONAL_PHOTO) {
-      const n = await normalizeImageBuffer(bytes);
+      const n = await normalizeImageBuffer(workingBytes);
       normalized = {
         bytes: n.bytes,
         sha256: n.sha256,
@@ -187,7 +199,7 @@ export async function POST(
         byteLength: n.byteLength,
       };
     } else {
-      const n = await normalizeSupportingUpload({ bytes, contentType: mime });
+      const n = await normalizeSupportingUpload({ bytes: workingBytes, contentType: workingType });
       normalized = {
         bytes: n.bytes,
         sha256: n.sha256,

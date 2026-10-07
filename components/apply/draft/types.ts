@@ -1,4 +1,5 @@
 import type { PublicApplication } from "@/lib/applications/public-application";
+import { PASSPORT_ACCEPT_MIME, PHOTO_ACCEPT_MIME } from "@/lib/apply/document-slot-catalog";
 import type { Readiness } from "@/lib/documents/validation-readiness";
 
 export type ApplicantProfile = PublicApplication["applicant"];
@@ -44,10 +45,14 @@ export type DocType = "passport_copy" | "personal_photo" | "supporting" | "bank_
 export const UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
 
 export const MIME_BY_TYPE: Record<DocType, string> = {
-  passport_copy: "image/jpeg,image/png,application/pdf",
-  personal_photo: "image/jpeg,image/png",
+  passport_copy: PASSPORT_ACCEPT_MIME,
+  personal_photo: PHOTO_ACCEPT_MIME,
   supporting: "image/jpeg,image/png,application/pdf",
   bank_statement_6m: "image/jpeg,image/png,application/pdf",
+};
+
+export type TUploadSlotError = {
+  code: string;
 };
 
 export const DATE_API_KEYS = new Set(["dateOfBirth", "passportExpiryDate"]);
