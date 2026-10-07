@@ -6,7 +6,7 @@ import { AlertTriangle, Camera, CheckCircle2, FileUp, Loader2 } from "lucide-rea
 import { ClientButton } from "@/components/client/client-button";
 import { ClientField } from "@/components/client/client-field";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
-import { apiHref } from "@/lib/app-href";
+import { apiHref, publicAsset } from "@/lib/app-href";
 import { customerUploadErrorMessage, customerUploadStateLabel } from "@/lib/apply/customer-upload-copy";
 import type { TDocumentUploadSource } from "@/lib/analytics/document-upload-events";
 import { MIME_BY_TYPE, type DocType, type PublicDocument, type TUploadSlotError } from "./types";
@@ -93,7 +93,7 @@ export const DocumentUploadSlot: FC<IDocumentUploadSlotProps> = ({
       {showCaptureGuidance ? (
         <div className="border-secondary/20 bg-muted/40 space-y-3 rounded-xl border p-3">
           <Image
-            src="/apply/passport-bio-specimen.svg"
+            src={publicAsset("/apply/passport-bio-specimen.svg")}
             alt={t("documents.examplePassportAlt")}
             width={640}
             height={420}
