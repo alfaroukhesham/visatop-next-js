@@ -65,8 +65,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
     process.env.DISABLE_WP_LANG_SWITCHER === "true" ||
     process.env.DISABLE_WP_LANG_SWITCHER === "1";
 
-  const cookieStore = await cookies();
-  const requestHeaders = await headers();
+  const [cookieStore, requestHeaders] = await Promise.all([cookies(), headers()]);
   const polylang = wpOrigin.trim().length > 0 ? await fetchPolylangLanguages({ wpOrigin }) : [];
   const knownSlugs = polylang.map((item) => item.slug);
   const locale = resolveCustomerLocale({
