@@ -20,13 +20,27 @@ import {
 export const UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
 
 export const UPLOAD_MIME_ALLOWLIST: Record<DocumentType, readonly string[]> = {
-  passport_copy: ["image/jpeg", "image/png", "application/pdf"],
-  personal_photo: ["image/jpeg", "image/png"],
+  passport_copy: ["image/jpeg", "image/png", "image/heic", "image/heif", "application/pdf"],
+  personal_photo: ["image/jpeg", "image/png", "image/heic", "image/heif"],
   supporting: ["image/jpeg", "image/png", "application/pdf"],
   bank_statement_6m: ["image/jpeg", "image/png", "application/pdf"],
   admin_step_attachment: ["image/jpeg", "image/png", "application/pdf"],
   outcome_approval: ["image/jpeg", "image/png", "application/pdf"],
   outcome_authority_rejection: ["image/jpeg", "image/png", "application/pdf"],
+};
+
+export const isMimeAllowedForDocument = (
+  allowlist: readonly string[],
+  contentType: string,
+): boolean => {
+  if (allowlist.includes(contentType)) return true;
+  if (
+    (contentType === "image/heic" || contentType === "image/heif") &&
+    (allowlist.includes("image/heic") || allowlist.includes("image/heif"))
+  ) {
+    return true;
+  }
+  return false;
 };
 
 export type FrozenCheckoutError = { code: "CHECKOUT_FROZEN" };

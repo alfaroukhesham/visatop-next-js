@@ -16,17 +16,26 @@ import {
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
 import { oversizedUploadMessage } from "@/lib/apply/customer-upload-copy";
+import { prepareClientUploadFile } from "@/lib/apply/client-image-prep";
 import { translateDocumentSlot } from "@/lib/apply/document-slot-i18n";
+import { uploadFormDataWithProgress } from "@/lib/apply/upload-xhr";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { trackDocumentUploadAnalytics, type TDocumentUploadSource } from "@/lib/analytics/document-upload-events";
 import { trackEventOnce } from "@/lib/analytics/gtag-client";
 import { buildOcrReviewParams } from "@/lib/analytics/ocr-review-params";
+import { buildUploadErrorDataLayerPayload, pushUploadErrorDataLayer } from "@/lib/analytics/upload-error-datalayer";
 import { uploadFailureReason } from "@/lib/analytics/upload-failure";
 import {
   buildUploadPresence,
   memberUploadStateFromDraft,
 } from "@/lib/apply/payment-upload-presence";
-import { UPLOAD_MAX_BYTES, type DocType, type ExtractResponse, type PublicDocument } from "./types";
+import {
+  UPLOAD_MAX_BYTES,
+  type DocType,
+  type ExtractResponse,
+  type PublicDocument,
+  type TUploadSlotError,
+} from "./types";
 import { latestByType } from "./utils";
 
 type CatalogNationality = {
@@ -45,6 +54,8 @@ type TMemberState = {
   nationalityName: string;
   docsLoading: boolean;
   uploading: DocType | null;
+  uploadPercent: number | null;
+  lastUploadErrors: Partial<Record<DocType, TUploadSlotError | null>>;
   extracting: boolean;
   extractResult: ExtractResponse | null;
 };
@@ -59,6 +70,8 @@ const emptyMemberState = (): TMemberState => ({
   nationalityName: "",
   docsLoading: true,
   uploading: null,
+  uploadPercent: null,
+  lastUploadErrors: {},
   extracting: false,
   extractResult: null,
 });
@@ -167,6 +180,38 @@ export function useApplicationDraft(applicationId: string) {
   );
 
   const extractPromiseRef = useRef(Promise.resolve());
+  const uploadAbortRef = useRef<AbortController | null>(null);
+
+  const reportUploadFailure = useCallback(
+    (
+      type: DocType,
+      memberId: string,
+      file: File,
+      source: TDocumentUploadSource,
+      code: string,
+      httpStatus?: number,
+    ) => {
+      const current = memberStatesRef.current[memberId] ?? emptyMemberState();
+      updateMemberState(memberId, {
+        uploading: null,
+        uploadPercent: null,
+        lastUploadErrors: { ...current.lastUploadErrors, [type]: { code } },
+      });
+      pushUploadErrorDataLayer(buildUploadErrorDataLayerPayload({ code, file }));
+      trackDocumentUploadAnalytics({
+        docType: type,
+        applicationId: memberId,
+        success: false,
+        source,
+        failureReason: uploadFailureReason({
+          oversized: code === "FILE_TOO_LARGE",
+          network: code === "NETWORK" || code === "TIMEOUT",
+          httpStatus,
+        }),
+      });
+    },
+    [updateMemberState],
+  );
 
   const runExtract = useCallback(async () => {
     const memberId = selectedMemberId;
@@ -215,73 +260,98 @@ export function useApplicationDraft(applicationId: string) {
     await extractPromiseRef.current;
   }, []);
 
+  const cancelInFlightUpload = useCallback(() => {
+    uploadAbortRef.current?.abort();
+  }, []);
+
   const onUpload = useCallback(
     async (type: DocType, file: File, source: TDocumentUploadSource = "file") => {
       const memberId = selectedMemberId;
+      const current = memberStatesRef.current[memberId] ?? emptyMemberState();
       const tooLarge = oversizedUploadMessage(file.size, UPLOAD_MAX_BYTES, tRef.current);
       if (tooLarge) {
-        setActionMsg(tooLarge);
-        trackDocumentUploadAnalytics({
-          docType: type,
-          applicationId: memberId,
-          success: false,
-          source,
-          failureReason: uploadFailureReason({ oversized: true }),
-        });
+        reportUploadFailure(type, memberId, file, source, "FILE_TOO_LARGE", 413);
         return;
       }
+
+      uploadAbortRef.current?.abort();
+      const abort = new AbortController();
+      uploadAbortRef.current = abort;
+
+      updateMemberState(memberId, {
+        uploading: type,
+        uploadPercent: 0,
+        lastUploadErrors: { ...current.lastUploadErrors, [type]: null },
+      });
       setActionMsg(null);
-      updateMemberState(memberId, { uploading: type });
+
+      let prepared = file;
+      try {
+        prepared = await prepareClientUploadFile(file);
+      } catch {
+        prepared = file;
+      }
+      if (abort.signal.aborted) {
+        updateMemberState(memberId, { uploading: null, uploadPercent: null });
+        return;
+      }
+
+      const stillTooLarge = oversizedUploadMessage(prepared.size, UPLOAD_MAX_BYTES, tRef.current);
+      if (stillTooLarge) {
+        reportUploadFailure(type, memberId, file, source, "FILE_TOO_LARGE", 413);
+        return;
+      }
+
       const form = new FormData();
       form.set("documentType", type);
-      form.set("file", file);
-      let res: Response;
-      try {
-        res = await fetch(apiHref(`/applications/${memberId}/documents/upload`), {
-          method: "POST",
-          body: form,
-          credentials: "include",
-        });
-      } catch {
-        updateMemberState(memberId, { uploading: null });
-        setActionMsg(tRef.current("upload.failedHttp", { status: 0 }));
-        trackDocumentUploadAnalytics({
-          docType: type,
-          applicationId: memberId,
-          success: false,
+      form.set("file", prepared);
+
+      const result = await uploadFormDataWithProgress({
+        url: apiHref(`/applications/${memberId}/documents/upload`),
+        formData: form,
+        signal: abort.signal,
+        onProgress: (percent) => {
+          updateMemberState(memberId, { uploadPercent: percent });
+        },
+      });
+
+      if (result.kind !== "complete") {
+        if (result.kind === "abort") {
+          updateMemberState(memberId, { uploading: null, uploadPercent: null });
+          return;
+        }
+        reportUploadFailure(
+          type,
+          memberId,
+          file,
           source,
-          failureReason: uploadFailureReason({ network: true }),
-        });
+          result.kind === "timeout" ? "TIMEOUT" : "NETWORK",
+        );
         return;
       }
-      updateMemberState(memberId, { uploading: null });
-      const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.ok) {
-        const msg =
-          json?.error?.message ??
-          (res.status === 413
-            ? tRef.current("upload.fileExceedsLimit")
-            : tRef.current("upload.failedHttp", { status: res.status }));
-        setActionMsg(msg);
-        trackDocumentUploadAnalytics({
-          docType: type,
-          applicationId: memberId,
-          success: false,
-          source,
-          failureReason: uploadFailureReason({
-            httpStatus: res.status,
-            oversized: res.status === 413,
-          }),
-        });
+
+      const json = result.json as { ok?: boolean; error?: { code?: string; message?: string } } | null;
+      if (result.status < 200 || result.status >= 300 || !json?.ok) {
+        const code =
+          json?.error?.code ??
+          (result.status === 413 ? "FILE_TOO_LARGE" : result.status >= 500 ? "UPLOAD_FAILED" : "UPLOAD_FAILED");
+        reportUploadFailure(type, memberId, file, source, code, result.status);
         return;
       }
+
+      const after = memberStatesRef.current[memberId] ?? emptyMemberState();
+      updateMemberState(memberId, {
+        uploading: null,
+        uploadPercent: null,
+        lastUploadErrors: { ...after.lastUploadErrors, [type]: null },
+      });
       trackDocumentUploadAnalytics({
         docType: type,
         applicationId: memberId,
         success: true,
         source,
       });
-      const slot = memberStatesRef.current[memberId]?.slots.find((s) => s.key === type);
+      const slot = after.slots.find((s) => s.key === type);
       setActionMsg(
         slot
           ? tRef.current("draft.actionMessages.slotUploaded", {
@@ -305,7 +375,7 @@ export function useApplicationDraft(applicationId: string) {
       }
       await load({ silent: true });
     },
-    [selectedMemberId, load, runExtract, updateMemberState],
+    [selectedMemberId, load, runExtract, updateMemberState, reportUploadFailure],
   );
 
   const cancelCheckout = useCallback(async () => {
@@ -384,6 +454,7 @@ export function useApplicationDraft(applicationId: string) {
     selectedMember,
     selected,
     onUpload,
+    cancelInFlightUpload,
     runExtract,
     waitForPassportExtract,
     passport: primaryState?.passport ?? null,

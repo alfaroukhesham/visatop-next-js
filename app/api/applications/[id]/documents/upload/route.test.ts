@@ -57,6 +57,10 @@ vi.mock("@/lib/documents/normalize-passport-upload", () => ({
   })),
 }));
 
+vi.mock("@/lib/documents/heic-convert-server", () => ({
+  convertHeicToJpegBuffer: vi.fn(async (bytes: Buffer) => bytes),
+}));
+
 vi.mock("@/lib/documents/normalize-supporting-upload", () => ({
   normalizeSupportingUpload: vi.fn(async () => ({
     bytes: Buffer.from("jpg-supporting"),
@@ -189,6 +193,32 @@ describe("POST /api/applications/[id]/documents/upload", () => {
     expect(res.status).toBe(413);
     const body = await res.json();
     expect(body.error.code).toBe("FILE_TOO_LARGE");
+  });
+
+  it("accepts HEIC passports and converts before normalize", async () => {
+    const { convertHeicToJpegBuffer } = await import("@/lib/documents/heic-convert-server");
+    const { normalizePassportUpload } = await import("@/lib/documents/normalize-passport-upload");
+    vi.mocked(resolveApplicationAccess).mockResolvedValue({
+      ok: true,
+      access: { kind: "user", userId: "u1", isGuest: false },
+    });
+    vi.mocked(persistUploadedDocument).mockResolvedValue({
+      ok: true,
+      document: makeDocRow(),
+      replacedPriorId: null,
+      wasIdempotent: false,
+    });
+    const form = new FormData();
+    form.set("documentType", "passport_copy");
+    form.set("file", new File(["heic-bytes"], "passport.heic", { type: "image/heic" }));
+    const res = await POST(buildRequest(form), {
+      params: Promise.resolve({ id: "app-1" }),
+    });
+    expect(res.status).toBe(201);
+    expect(convertHeicToJpegBuffer).toHaveBeenCalled();
+    expect(normalizePassportUpload).toHaveBeenCalledWith(
+      expect.objectContaining({ contentType: "image/jpeg" }),
+    );
   });
 
   it("rejects disallowed mime for personal_photo with 415", async () => {

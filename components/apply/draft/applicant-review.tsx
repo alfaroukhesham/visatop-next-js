@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { DATE_API_KEYS, type ApplicantProfile, type ApplicantProfileFieldKey, type ExtractResponse } from "./types";
 import { PhoneCountryField, type TPhoneNationalityOption } from "./phone-country-field";
 
+import { nonEmptyPrefillKeys } from "@/lib/apply/prefill-keys";
 import { applicantFieldValue, applyDateMask } from "./utils";
 
 const APPLICANT_ROWS_WITHOUT_PHONE: Array<{
@@ -152,7 +153,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
 }) => {
   const t = useCustomerT();
   const router = useRouter();
-  const prefilled = new Set<string>(Object.keys(extraction?.prefill ?? {}));
+  const prefilled = nonEmptyPrefillKeys(extraction?.prefill ?? null);
 
   const initial: Record<string, string> = {};
   for (const r of APPLICANT_ROWS) initial[r.apiKey] = applicantFieldValue(applicant, r.key, guestEmail);
@@ -338,7 +339,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
         <p className="text-muted-foreground bg-muted rounded px-3 py-2 text-xs">{t("draft.fieldsLockedPayment")}</p>
       )}
 
-      <dl className="grid gap-3 sm:grid-cols-2">
+      <dl className="grid gap-3 sm:grid-cols-2" data-clarity-mask="true">
         {APPLICANT_ROWS_WITHOUT_PHONE.map((r) => {
           const isMissing = !APPLY_STEP3_VALIDATION_DISABLED && missing.includes(r.key);
           const wasOcr = prefilled.has(r.key);

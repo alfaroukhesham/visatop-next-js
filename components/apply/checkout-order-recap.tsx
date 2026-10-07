@@ -312,7 +312,7 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
           ) : service ? (
             <>
               <p className="font-heading text-foreground text-base font-bold leading-snug">{serviceTitle(service, t)}</p>
-              <dl className="text-muted-foreground mt-3 space-y-1.5 text-sm">
+              <dl className="text-muted-foreground mt-3 space-y-1.5 text-sm" data-clarity-mask="true">
                 <div className="flex flex-wrap gap-x-2 gap-y-0.5">
                   <dt className="sr-only">{t("payment.nameLabel")}</dt>
                   <dd>

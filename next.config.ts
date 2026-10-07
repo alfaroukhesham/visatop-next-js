@@ -120,11 +120,29 @@ const nextConfig: NextConfig = {
     "pdfjs-dist",
     "@google/genai",
     "@napi-rs/canvas",
+    "heic-convert",
+    "heic-decode",
+    "libheif-js",
   ],
+  // Combine PR #19 (PDF worker) and PR #20 (HEIC WASM) tracing includes.
+  // Do not overwrite one object with the other.
   // pdfjs Node "fake worker" does `import("./pdf.worker.mjs")`. Standalone tracing
   // otherwise copies only `pdf.mjs` (serverExternalPackages) and valid PDFs 400.
+  // heic-decode / libheif-js are transitive. Under pnpm they live in
+  // node_modules/.pnpm/<pkg>@<ver>/..., not as top-level node_modules/<pkg>.
   outputFileTracingIncludes: {
     "/*": ["./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"],
+    "/api/applications/*/documents/upload": [
+      "./node_modules/heic-convert/**/*",
+      "./node_modules/heic-decode/**/*",
+      "./node_modules/libheif-js/**/*",
+      "./node_modules/.pnpm/heic-convert@*/node_modules/heic-convert/**/*",
+      "./node_modules/.pnpm/heic-decode@*/node_modules/heic-decode/**/*",
+      "./node_modules/.pnpm/heic-decode@*/node_modules/libheif-js/**/*",
+      "./node_modules/.pnpm/libheif-js@*/node_modules/libheif-js/**/*",
+      "./node_modules/.pnpm/jpeg-js@*/node_modules/jpeg-js/**/*",
+      "./node_modules/.pnpm/pngjs@*/node_modules/pngjs/**/*",
+    ],
   },
   ...(devTunnelHosts.length > 0
     ? { allowedDevOrigins: devTunnelHosts }

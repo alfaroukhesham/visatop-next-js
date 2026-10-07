@@ -191,7 +191,7 @@
   "documents": {
     "title": "Documents",
     "uploadedBadge": "Documents uploaded",
-    "uploadRequiredToPay": "Upload a passport copy to pay. Details can be reviewed next. Our system will read and prefill the details for you.",
+    "uploadRequiredToPay": "Upload a passport bio page to pay. Photo and other files can be added later.",
     "additionalDocuments": "Additional documents",
     "readingPassport": "Reading passport…",
     "additionalMayBeRequired": "Additional documents may be required by VisaTop to finalize the application (e.g. bank statements, insurance). The VisaTop team will contact you once the passport has been submitted.",
@@ -203,14 +203,24 @@
     "chooseFileAria": "Choose a file: {label}",
     "uploading": "Uploading…",
     "continueAfterUpload": "You can continue to payment. Remaining files can be added now or after — we will follow up if anything is missing.",
+    "addLater": "Add later",
+    "previousFileKept": "Previous file kept — new upload failed",
+    "retry": "Retry",
+    "cancelUpload": "Cancel",
+    "uploadingPercent": "Uploading {percent}%",
+    "captureTip1": "Lay the passport flat so all four corners are in the photo.",
+    "captureTip2": "Keep the two machine-readable lines at the bottom sharp and fully visible.",
+    "captureTip3": "Avoid glare, shadows, and cropped edges.",
+    "privacyNote": "Your photo is encrypted in transit and used only to process this application — never for marketing.",
+    "examplePassportAlt": "Example of a fake passport identity page for camera guidance. Not a real travel document.",
     "slots": {
       "passportCopy": {
         "label": "Passport (bio page)",
-        "description": "JPEG / PNG / single-page PDF · 8MB max"
+        "description": "JPEG, PNG, HEIC, or single-page PDF · 8MB max"
       },
       "personalPhoto": {
         "label": "Personal photo",
-        "description": "JPEG or PNG · 8MB max"
+        "description": "JPEG, PNG, or HEIC · 8MB max"
       },
       "bankStatement6m": {
         "label": "Last 6 months bank account statement",
@@ -261,7 +271,7 @@
   "pay": {
     "payNowIncomplete": "Pay now to start processing. You can add remaining details after payment.",
     "payNowComplete": "Review your order and pay securely to begin processing.",
-    "blockedMissingDocs": "Upload your required documents to pay."
+    "blockedMissingDocs": "Upload a passport copy to pay."
   },
   "track": {
     "pageTitle": "Track application | Visatop",
@@ -570,7 +580,17 @@
     "fileExceedsLimit": "File exceeds 8MB limit.",
     "uploaded": "Uploaded",
     "notUploadedYet": "Not uploaded yet",
-    "failedHttp": "Upload failed (HTTP {status})"
+    "failedHttp": "Upload failed (HTTP {status})",
+    "errors": {
+      "corruptImage": "We couldn't read that file. Try a clearer photo of the passport bio page.",
+      "unsupportedType": "Use a JPEG, PNG, HEIC photo, or a single-page PDF.",
+      "fileTooLarge": "File exceeds 8MB limit.",
+      "pdfNotSinglePage": "Passport PDF must be exactly one page.",
+      "rateLimited": "Too many uploads. Wait a moment and try again.",
+      "network": "Upload failed. Check your connection and try again.",
+      "timeout": "Slow connection. Try again, or switch to Wi-Fi.",
+      "generic": "Upload failed. Please try again."
+    }
   },
   "ocr": {
     "reading": "Reading your passport…",

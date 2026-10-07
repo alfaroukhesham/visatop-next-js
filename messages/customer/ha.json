@@ -191,7 +191,7 @@
   "documents": {
     "title": "Takardu",
     "uploadedBadge": "An loda takardu",
-    "uploadRequiredToPay": "Loda kwafin fasfo don biya. Ana iya duba cikakkun bayanai a gaba. Tsarinmu zai karanta su ya cika su a gare ku.",
+    "uploadRequiredToPay": "Loda shafin bayanan fasfo don biya. Ana iya ƙara hoto da sauran fayiloli daga baya.",
     "additionalDocuments": "Ƙarin takardu",
     "readingPassport": "Ana karanta fasfo…",
     "additionalMayBeRequired": "VisaTop na iya buƙatar ƙarin takardu don kammala nema (misali bayanan banki, inshora). Ƙungiyar VisaTop za ta tuntube ku bayan an gabatar da fasfo.",
@@ -206,18 +206,28 @@
     "slots": {
       "passportCopy": {
         "label": "Fasfo (shafin bayanai)",
-        "description": "JPEG / PNG / PDF na shafi ɗaya · 8MB mafi yawa"
+        "description": "JPEG, PNG, HEIC, ko PDF na shafi ɗaya · 8MB mafi yawa"
       },
       "personalPhoto": {
         "label": "Hoton kai",
-        "description": "JPEG ko PNG · 8MB mafi yawa"
+        "description": "JPEG, PNG, ko HEIC · 8MB mafi yawa"
       },
       "bankStatement6m": {
         "label": "Bayanan asusun banki na watanni 6 da suka wuce",
         "description": "PDF ko hoto ɗaya na watanni 6 da suka wuce · JPEG / PNG / PDF · 8MB mafi yawa"
       },
       "genericAcceptHint": "JPEG / PNG / PDF · 8MB mafi yawa"
-    }
+    },
+    "addLater": "Ƙara daga baya",
+    "previousFileKept": "An kiyaye tsohon fayil — sabon lodawa ta gaza",
+    "retry": "Sake gwadawa",
+    "cancelUpload": "Soke",
+    "uploadingPercent": "Ana lodawa {percent}%",
+    "captureTip1": "Kwance fasfo a fili don dukkan kusurwoyi hudu su fito a hoto.",
+    "captureTip2": "Tabbatar layukan biyu da na'ura ke karantawa a ƙasa sun fito a fili kuma a cikin hoto.",
+    "captureTip3": "Ka guje wa haske, inuwa, da yanke gefuna.",
+    "privacyNote": "Hotonku yana tafiya a ɓoye kuma ana amfani da shi kawai don wannan aikace-aikacen — ba don talla ba.",
+    "examplePassportAlt": "Misalin shafin bayanan fasfo na karya don jagorar daukar hoto. Ba takardar tafiya ta gaskiya ba ce."
   },
   "payment": {
     "pageTitle": "Biya | Visatop",
@@ -261,7 +271,7 @@
   "pay": {
     "payNowIncomplete": "Biya yanzu don fara sarrafawa. Za ku iya ƙara sauran cikakkun bayanai bayan biya.",
     "payNowComplete": "Duba odar ku kuma biya cikin aminci don fara sarrafawa.",
-    "blockedMissingDocs": "Loda takardun da ake buƙata don biya."
+    "blockedMissingDocs": "Loda kwafin fasfo don biya."
   },
   "track": {
     "pageTitle": "Bibiyi nema | Visatop",
@@ -570,7 +580,17 @@
     "fileExceedsLimit": "Fayil ya wuce iyakar 8MB.",
     "uploaded": "An loda",
     "notUploadedYet": "Ba a loda ba tukuna",
-    "failedHttp": "Lodawa ta gaza (HTTP {status})"
+    "failedHttp": "Lodawa ta gaza (HTTP {status})",
+    "errors": {
+      "corruptImage": "Ba a iya karanta wannan fayil ba. Gwada hoto mai kyau na shafin bayanan fasfo.",
+      "unsupportedType": "Yi amfani da hoto JPEG, PNG, ko HEIC, ko PDF na shafi ɗaya.",
+      "fileTooLarge": "Fayil ya wuce iyaka na 8MB.",
+      "pdfNotSinglePage": "PDF ɗin fasfo dole ya kasance shafi ɗaya kawai.",
+      "rateLimited": "An yi lodawa da yawa. Jira kadan sannan ka sake gwadawa.",
+      "network": "Lodawa ta gaza. Duba haɗin kai sannan ka sake gwadawa.",
+      "timeout": "Haɗin kai yana jinkiri. Sake gwadawa, ko yi amfani da Wi-Fi.",
+      "generic": "Lodawa ta gaza. Da fatan za a sake gwadawa."
+    }
   },
   "ocr": {
     "reading": "Ana karanta fasfon ku…",

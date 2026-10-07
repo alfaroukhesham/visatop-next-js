@@ -40,6 +40,7 @@ const ApplyApplicationPage = async ({ params }: Props) => {
         currentStep={3}
         applicationId={id}
         hasSelectedVisa
+        contentFirstOnMobile
         visaSummary={<CheckoutOrderRecap application={toPublicApplication(row, undefined, t)} members={members} />}
         contentClassName="theme-client-rise mx-auto w-full max-w-4xl space-y-8"
       >

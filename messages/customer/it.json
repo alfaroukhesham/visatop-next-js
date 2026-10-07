@@ -191,7 +191,7 @@
   "documents": {
     "title": "Documenti",
     "uploadedBadge": "Documenti caricati",
-    "uploadRequiredToPay": "Carichi una copia del passaporto per pagare. I dati potranno essere verificati dopo. Il nostro sistema li leggerà e li precompilerà per lei.",
+    "uploadRequiredToPay": "Carichi la pagina dati del passaporto per pagare. Foto e altri file si possono aggiungere dopo.",
     "additionalDocuments": "Documenti aggiuntivi",
     "readingPassport": "Lettura passaporto…",
     "additionalMayBeRequired": "VisaTop potrebbe richiedere documenti aggiuntivi per finalizzare la domanda (es. estratti conto, assicurazione). Il team VisaTop la contatterà una volta inviato il passaporto.",
@@ -206,18 +206,28 @@
     "slots": {
       "passportCopy": {
         "label": "Passaporto (pagina dati)",
-        "description": "JPEG / PNG / PDF di una pagina · max 8 MB"
+        "description": "JPEG, PNG, HEIC o PDF di una sola pagina · 8 MB max"
       },
       "personalPhoto": {
         "label": "Foto personale",
-        "description": "JPEG o PNG · max 8 MB"
+        "description": "JPEG, PNG o HEIC · 8 MB max"
       },
       "bankStatement6m": {
         "label": "Estratto conto degli ultimi 6 mesi",
         "description": "Un PDF o un'immagine degli ultimi 6 mesi · JPEG / PNG / PDF · max 8 MB"
       },
       "genericAcceptHint": "JPEG / PNG / PDF · max 8 MB"
-    }
+    },
+    "addLater": "Aggiungi dopo",
+    "previousFileKept": "File precedente conservato — il nuovo caricamento non è riuscito",
+    "retry": "Riprova",
+    "cancelUpload": "Annulla",
+    "uploadingPercent": "Caricamento {percent}%",
+    "captureTip1": "Posi il passaporto in piano così che si vedano i quattro angoli.",
+    "captureTip2": "Le due righe a lettura ottica in basso devono essere nitide e complete.",
+    "captureTip3": "Eviti riflessi, ombre e bordi tagliati.",
+    "privacyNote": "La foto viaggia cifrata e serve solo a elaborare questa domanda, non per il marketing.",
+    "examplePassportAlt": "Esempio di pagina dati di un passaporto fittizio per guidare lo scatto. Non è un documento di viaggio reale."
   },
   "payment": {
     "pageTitle": "Pagamento | Visatop",
@@ -261,7 +271,7 @@
   "pay": {
     "payNowIncomplete": "Paga ora per avviare l'elaborazione. Può aggiungere i dati rimanenti dopo il pagamento.",
     "payNowComplete": "Verifichi l'ordine e paghi in modo sicuro per avviare l'elaborazione.",
-    "blockedMissingDocs": "Carichi i documenti obbligatori per pagare."
+    "blockedMissingDocs": "Carichi una copia del passaporto per pagare."
   },
   "track": {
     "pageTitle": "Monitora domanda | Visatop",
@@ -570,7 +580,17 @@
     "fileExceedsLimit": "Il file supera il limite di 8 MB.",
     "uploaded": "Caricato",
     "notUploadedYet": "Non ancora caricato",
-    "failedHttp": "Caricamento non riuscito (HTTP {status})"
+    "failedHttp": "Caricamento non riuscito (HTTP {status})",
+    "errors": {
+      "corruptImage": "Impossibile leggere il file. Provi una foto più nitida della pagina dati.",
+      "unsupportedType": "Usi una foto JPEG, PNG o HEIC, oppure un PDF di una sola pagina.",
+      "fileTooLarge": "Il file supera il limite di 8 MB.",
+      "pdfNotSinglePage": "Il PDF del passaporto deve avere esattamente una pagina.",
+      "rateLimited": "Troppi caricamenti. Attenda un momento e riprovi.",
+      "network": "Caricamento non riuscito. Controlli la connessione e riprovi.",
+      "timeout": "Connessione lenta. Riprovi o passi al Wi-Fi.",
+      "generic": "Caricamento non riuscito. Riprovi."
+    }
   },
   "ocr": {
     "reading": "Lettura passaporto…",

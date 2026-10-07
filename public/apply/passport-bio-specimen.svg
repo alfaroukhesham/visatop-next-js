@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-labelledby="specimenTitle specimenDesc">
+  <title id="specimenTitle">Example passport bio page (specimen)</title>
+  <desc id="specimenDesc">A clearly fake illustrated passport identity page for capture guidance. Not a real travel document.</desc>
+  <rect width="640" height="420" rx="18" fill="#e8eef2"/>
+  <rect x="16" y="16" width="608" height="388" rx="12" fill="#f7fafc" stroke="#1f4f6b" stroke-width="3"/>
+  <rect x="16" y="16" width="608" height="64" rx="12" fill="#1f4f6b"/>
+  <rect x="16" y="52" width="608" height="28" fill="#1f4f6b"/>
+  <text x="320" y="42" text-anchor="middle" fill="#f7d774" font-family="ui-sans-serif, system-ui, sans-serif" font-size="15" font-weight="700" letter-spacing="2">REPUBLIC OF EXAMPLE</text>
+  <text x="320" y="62" text-anchor="middle" fill="#ffffff" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12" letter-spacing="3">PASSPORT · PASSEPORT · SPECIMEN</text>
+  <rect x="36" y="96" width="132" height="168" rx="6" fill="#d7e3ea" stroke="#5d7d8d" stroke-width="2"/>
+  <circle cx="102" cy="154" r="28" fill="#8aa4b3"/>
+  <ellipse cx="102" cy="220" rx="44" ry="32" fill="#8aa4b3"/>
+  <text x="102" y="250" text-anchor="middle" fill="#1f4f6b" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" font-weight="700">PHOTO</text>
+  <g fill="#012031" font-family="ui-sans-serif, system-ui, sans-serif">
+    <text x="188" y="118" font-size="10" fill="#5d7d8d">Surname / Nom</text>
+    <text x="188" y="138" font-size="18" font-weight="700">EXAMPLE</text>
+    <text x="188" y="166" font-size="10" fill="#5d7d8d">Given names / Prénoms</text>
+    <text x="188" y="186" font-size="18" font-weight="700">JANE SAMPLE</text>
+    <text x="188" y="214" font-size="10" fill="#5d7d8d">Nationality</text>
+    <text x="188" y="232" font-size="14" font-weight="700">EXAMPLE</text>
+    <text x="360" y="214" font-size="10" fill="#5d7d8d">Sex</text>
+    <text x="360" y="232" font-size="14" font-weight="700">F</text>
+    <text x="430" y="214" font-size="10" fill="#5d7d8d">Date of birth</text>
+    <text x="430" y="232" font-size="14" font-weight="700">01 JAN 1990</text>
+    <text x="188" y="260" font-size="10" fill="#5d7d8d">Passport No.</text>
+    <text x="188" y="278" font-size="16" font-weight="700">X00000000</text>
+    <text x="360" y="260" font-size="10" fill="#5d7d8d">Date of expiry</text>
+    <text x="360" y="278" font-size="14" font-weight="700">01 JAN 2030</text>
+  </g>
+  <g fill="#1f4f6b" font-family="ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" font-size="13">
+    <text x="36" y="330">P&lt;EXAMPLE&lt;&lt;JANE&lt;SAMPLE&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</text>
+    <text x="36" y="352">X00000000&lt;0EXAMPLE9001011F3001011&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;00</text>
+  </g>
+  <g transform="rotate(-18 320 210)" opacity="0.28">
+    <text x="320" y="220" text-anchor="middle" fill="#c2410c" font-family="ui-sans-serif, system-ui, sans-serif" font-size="42" font-weight="800" letter-spacing="6">SPECIMEN</text>
+  </g>
+  <text x="320" y="386" text-anchor="middle" fill="#5d7d8d" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11">Not a real travel document · For camera guidance only</text>
+</svg>

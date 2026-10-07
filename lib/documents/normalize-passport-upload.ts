@@ -1,3 +1,5 @@
+import { convertHeicToJpegBuffer } from "@/lib/documents/heic-convert-server";
+import { looksLikeHeic } from "@/lib/documents/heic-detect";
 import {
   CorruptImageError,
   normalizeImageBuffer,
@@ -9,6 +11,8 @@ import { CorruptPdfError, renderSinglePagePdfToPng } from "./passport-pdf";
 export const PASSPORT_ALLOWED_MIME = new Set([
   "image/jpeg",
   "image/png",
+  "image/heic",
+  "image/heif",
   "application/pdf",
 ] as const);
 
@@ -34,9 +38,20 @@ export type NormalizedPassportUpload = NormalizedImage & {
 export async function normalizePassportUpload(
   input: PassportUploadInput,
 ): Promise<NormalizedPassportUpload> {
-  if (!PASSPORT_ALLOWED_MIME.has(input.contentType as never)) {
+  const heicInput = looksLikeHeic(input.bytes, input.contentType);
+  if (!PASSPORT_ALLOWED_MIME.has(input.contentType as never) && !heicInput) {
     // Route-level guard should have caught this; defensive throw.
     throw new Error(`Unsupported passport content type: ${input.contentType}`);
+  }
+
+  if (heicInput) {
+    const jpegBytes = await convertHeicToJpegBuffer(input.bytes);
+    const normalized = await normalizeImageBuffer(jpegBytes);
+    return {
+      ...normalized,
+      sourceContentType: input.contentType || "image/heic",
+      renderedFromPdf: false,
+    };
   }
 
   if (input.contentType === "application/pdf") {
