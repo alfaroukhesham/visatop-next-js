@@ -157,10 +157,17 @@ export async function persistUploadedDocument(
     await tx
       .delete(applicationDocumentBlob)
       .where(eq(applicationDocumentBlob.documentId, prior.id));
-    await tx
+    const marked = await tx
       .update(applicationDocument)
       .set({ status: DOCUMENT_STATUS.DELETED })
-      .where(eq(applicationDocument.id, prior.id));
+      .where(eq(applicationDocument.id, prior.id))
+      .returning({
+        id: applicationDocument.id,
+        status: applicationDocument.status,
+      });
+    if (marked.length !== 1) {
+      throw new Error("persistUploadedDocument: failed to mark prior document deleted");
+    }
     replacedPriorId = prior.id;
   }
 

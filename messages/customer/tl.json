@@ -254,7 +254,9 @@
     "badges": {
       "allFeesIncluded": "Kasama ang lahat ng bayad",
       "noHiddenCharges": "Walang nakatagong singil"
-    }
+    },
+    "termsAgree": "Sumasang-ayon ako sa {link} ng VisaTop",
+    "termsLink": "Mga Tuntunin ng Paggamit"
   },
   "pay": {
     "payNowIncomplete": "Magbayad na para magsimula ang processing. Puwede mong idagdag ang natitirang detalye pagkatapos magbayad.",
@@ -470,7 +472,8 @@
       "paymentNotCompleted": "Hindi natapos ang bayad. Puwede mong subukan ulit sa form sa ibaba, o kanselahin at i-reset para magsimula ulit.",
       "sessionUnavailable": "Hindi na-restore ang payment session na ito. Kanselahin at i-reset, tapos subukan ulit.",
       "sdkFailed": "Hindi na-initialize ang Paddle SDK",
-      "failedDot": "Hindi natuloy ang checkout."
+      "failedDot": "Hindi natuloy ang checkout.",
+      "termsRequired": "Pakisang-ayunan ang Mga Tuntunin ng Paggamit ng VisaTop bago magbayad."
     }
   },
   "expert": {

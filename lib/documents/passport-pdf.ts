@@ -20,8 +20,12 @@ if (!("ImageData" in g)) g.ImageData = NapiImageData;
 if (!("Image" in g)) g.Image = NapiImage;
 
 const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+// Side-effect import: sets `globalThis.pdfjsWorker` and makes Next file tracing
+// copy `pdf.worker.mjs` into standalone output (Docker otherwise 400s valid PDFs).
+await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
 
 import { MAX_RASTER_EDGE_PX } from "./normalize-image";
+import { logger } from "@/lib/logger";
 
 const DPI_SCALE_MAX = 4; // Cap scale factor; §5.6 controls final size downstream.
 
@@ -65,9 +69,11 @@ export async function renderSinglePagePdfToPng(input: Buffer): Promise<RenderedP
       useSystemFonts: false,
     }).promise;
   } catch (err) {
-    throw new CorruptPdfError(
-      err instanceof Error ? `CORRUPT_PDF: ${err.message}` : "CORRUPT_PDF",
-    );
+    const message = err instanceof Error ? err.message : "CORRUPT_PDF";
+    if (/fake worker|Cannot find module.*pdf\.worker/i.test(message)) {
+      logger.error({ err }, "pdfjs worker missing from runtime; mapping to CORRUPT_IMAGE");
+    }
+    throw new CorruptPdfError(`CORRUPT_PDF: ${message}`);
   }
 
   try {
