@@ -274,6 +274,7 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
 
   const passportDoc = view.docsByType.passport_copy ?? null;
   const laterSlots = view.slots.filter((slot) => slot.key !== "passport_copy");
+  const otherDocsUploaded = laterSlots.some((slot) => view.docsByType[slot.key as DocType]);
   const isLast = ordered[ordered.length - 1]?.applicationId === travellerId;
 
   return (
@@ -347,15 +348,14 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
             type="button"
             disabled={view.uploading !== null}
             onClick={() => {
-              const uploaded = laterSlots.some((slot) => view.docsByType[slot.key as DocType]);
-              const eventName = uploaded
+              const eventName = otherDocsUploaded
                 ? APPLY_FUNNEL_EVENTS.otherDocsUploaded
                 : APPLY_FUNNEL_EVENTS.otherDocsSkipped;
               trackEventOnce(eventName, { application_id: travellerId }, `${eventName}:${travellerId}`);
               void confirmAndGo({ screen: "other", travellerId });
             }}
           >
-            {t("common.continue")}
+            {otherDocsUploaded ? t("common.continue") : t("wizard.skipForNow")}
           </ClientButton>
         </>
       ) : null}
