@@ -232,6 +232,13 @@
       "when": 1782260000000,
       "tag": "0032_apply_wizard_cursor",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1782270000000,
+      "tag": "0033_analytics_funnel_event_metadata",
+      "breakpoints": true
     }
   ]
 }

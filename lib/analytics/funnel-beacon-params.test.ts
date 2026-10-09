@@ -30,6 +30,24 @@ describe("funnelIdsFromTrackParams", () => {
       serviceId: "svc-9",
     });
   });
+
+  it("reads upload failure fields that match the Google tag event", () => {
+    expect(
+      funnelIdsFromTrackParams({
+        application_id: "app-1",
+        error_code: "PDF_NOT_SINGLE_PAGE",
+        http_status: 400,
+        failure_reason: "upload_rejected",
+      }),
+    ).toEqual({
+      applicationId: "app-1",
+      nationalityCode: undefined,
+      serviceId: undefined,
+      errorCode: "PDF_NOT_SINGLE_PAGE",
+      httpStatus: 400,
+      reason: "upload_rejected",
+    });
+  });
 });
 
 describe("persistableUploadFunnelEventName", () => {

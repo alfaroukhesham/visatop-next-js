@@ -97,4 +97,19 @@ describe("POST /api/analytics/events", () => {
     );
     expect(res.status).toBe(200);
   });
+
+  it("accepts upload failure fields on document_upload_failed", async () => {
+    const res = await POST(
+      post({
+        eventId: "11111111-1111-4111-8111-111111111111",
+        eventName: "document_upload_failed",
+        sessionId: "22222222-2222-4222-8222-222222222222",
+        applicationId: "app-1",
+        errorCode: "PDF_NOT_SINGLE_PAGE",
+        httpStatus: 400,
+        reason: "upload_rejected",
+      }),
+    );
+    expect(res.status).toBe(200);
+  });
 });

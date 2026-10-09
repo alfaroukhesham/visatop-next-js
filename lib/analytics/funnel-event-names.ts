@@ -1,4 +1,9 @@
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
+import {
+  sanitizeFunnelErrorCode,
+  sanitizeFunnelHttpStatus,
+  sanitizeFunnelReason,
+} from "@/lib/analytics/funnel-event-metadata";
 import { GUEST_LINK_EVENTS } from "@/lib/analytics/guest-link-events";
 import {
   DOCUMENT_UPLOAD_CANCELLED,
@@ -33,7 +38,8 @@ const SESSION_ID_RE = /^[A-Za-z0-9:_-]{8,80}$/;
 const EVENT_ID_RE = /^[A-Za-z0-9:_-]{8,80}$/;
 const OPTIONAL_ID_RE = /^[A-Za-z0-9:_-]{1,80}$/;
 
-const FAILURE_REASON_RE = /^(timeout|cancelled|file_type|too_large|network|server)$/;
+const FAILURE_REASON_RE =
+  /^(timeout|cancelled|file_type|too_large|network|server|corrupt_file|pdf_not_single_page|rate_limited)$/;
 
 export type TBeaconPayload = {
   eventId: string;
@@ -43,6 +49,9 @@ export type TBeaconPayload = {
   nationalityCode?: string | null;
   serviceId?: string | null;
   failureReason?: string | null;
+  errorCode?: string;
+  httpStatus?: number;
+  reason?: string;
 };
 
 export type TParseBeaconResult =
@@ -57,6 +66,11 @@ const FORBIDDEN_KEYS = new Set([
   "passportNumber",
   "phone",
   "address",
+  "filename",
+  "fileName",
+  "file_name",
+  "originalFilename",
+  "original_filename",
 ]);
 
 export const parseBeaconPayload = (raw: unknown): TParseBeaconResult => {
@@ -99,6 +113,9 @@ export const parseBeaconPayload = (raw: unknown): TParseBeaconResult => {
   }
   const failureRaw = typeof rec.failureReason === "string" ? rec.failureReason.trim() : "";
   const failureReason = FAILURE_REASON_RE.test(failureRaw) ? failureRaw : null;
+  const errorCode = sanitizeFunnelErrorCode(rec.errorCode ?? rec.error_code);
+  const httpStatus = sanitizeFunnelHttpStatus(rec.httpStatus ?? rec.http_status);
+  const reason = sanitizeFunnelReason(rec.reason ?? rec.failure_reason ?? failureReason);
   return {
     ok: true,
     data: {
@@ -109,6 +126,9 @@ export const parseBeaconPayload = (raw: unknown): TParseBeaconResult => {
       nationalityCode,
       serviceId,
       failureReason,
+      ...(errorCode ? { errorCode } : {}),
+      ...(httpStatus !== undefined ? { httpStatus } : {}),
+      ...(reason ? { reason } : {}),
     },
   };
 };
