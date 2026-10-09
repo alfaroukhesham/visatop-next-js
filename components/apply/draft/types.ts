@@ -28,6 +28,7 @@ export type ExtractResponse = {
       passportExpiryDate?: string | null;
     };
     ocrMissingFields: string[];
+    ocrNeedsReviewFields?: string[];
     submissionMissingFields: string[];
   };
   validation: {
@@ -53,6 +54,7 @@ export const MIME_BY_TYPE: Record<DocType, string> = {
 
 export type TUploadSlotError = {
   code: string;
+  retryAfterSeconds?: number;
 };
 
 export const DATE_API_KEYS = new Set(["dateOfBirth", "passportExpiryDate"]);

@@ -81,8 +81,8 @@ export function trackPageView(pathname: string, search: string): void {
 }
 
 /**
- * Google Ads Checkout Completed (`AW-17767633830/THfyCPCPh-wcEKanophC`).
- * Prod Host only; no-op if gtag.js was not loaded. Once per transaction id.
+ * Google Ads Checkout Completed. Prod host only; no-op if gtag.js was not loaded.
+ * send_to comes from NEXT_PUBLIC_GADS_CHECKOUT_CONVERSION_SEND_TO only.
  */
 export const trackGadsCheckoutConversion = (input: TGadsCheckoutConversionInput): void => {
   if (typeof window === "undefined") return;

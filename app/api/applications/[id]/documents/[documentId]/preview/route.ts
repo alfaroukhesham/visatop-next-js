@@ -1,15 +1,12 @@
 /**
  * Streams a document blob for inline preview. Allowed when the requester has
  * access to the application AND the blob is `uploaded_temp` or `retained`
- * (spec §10.4). Guest requests share the UPLOAD_PREVIEW rate-limit bucket
- * with uploads.
+ * (spec §10.4). Preview reads are not rate-limited — only upload writes are.
  */
 import { headers } from "next/headers";
 
 import { jsonError } from "@/lib/api/response";
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
-import { extractClientIp } from "@/lib/applications/client-ip";
-import { consume } from "@/lib/applications/document-rate-limit";
 import {
   asciiFilename,
   loadDocumentForStream,
@@ -39,20 +36,6 @@ export async function GET(
       return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
     }
     return jsonError("FORBIDDEN", "Missing resume session", { status: 403, requestId });
-  }
-
-  if (access.access.kind === "guest") {
-    const ip = extractClientIp(hdrs);
-    const decision = consume("UPLOAD_PREVIEW", { ip, applicationId });
-    if (!decision.ok) {
-      return jsonError("RATE_LIMITED", "Too many upload/preview requests.", {
-        status: 429,
-        requestId,
-        headers: {
-          "Retry-After": String(Math.ceil(decision.retryAfterMs / 1000)),
-        },
-      });
-    }
   }
 
   const loader = async (tx: Parameters<Parameters<typeof withSystemDbActor>[0]>[0]) =>

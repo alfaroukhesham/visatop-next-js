@@ -7,11 +7,11 @@ import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { cn } from "@/lib/utils";
 
 const STEPS = [
-  { id: "trip", labelKey: "steps.trip" },
-  { id: "documents", labelKey: "steps.documents" },
-  { id: "details", labelKey: "steps.details" },
-  { id: "pay", labelKey: "steps.pay" },
-  { id: "finish", labelKey: "steps.finish" },
+  { id: "trip", labelKey: "steps.trip", shortKey: "steps.tripShort" },
+  { id: "documents", labelKey: "steps.documents", shortKey: "steps.documentsShort" },
+  { id: "details", labelKey: "steps.details", shortKey: "steps.detailsShort" },
+  { id: "pay", labelKey: "steps.pay", shortKey: "steps.payShort" },
+  { id: "finish", labelKey: "steps.finish", shortKey: "steps.finishShort" },
 ] as const;
 
 type TRailPhase = "trip" | "documents" | "details" | "pay" | "finish";
@@ -62,11 +62,12 @@ export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
           const state = index < activeIndex ? "completed" : index === activeIndex ? "active" : "future";
           const href = hrefForPhase(s.id, applicationId);
           const isLink = Boolean(href) && state !== "future";
-          const labelText = t(s.labelKey);
+          const labelText = t(s.shortKey);
+          const fullLabel = t(s.labelKey);
           const marker = (
             <span
               className={cn(
-                "flex size-6 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold transition-colors sm:size-7",
+                "flex size-11 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold transition-colors",
                 state === "completed" && "border-secondary bg-secondary text-white",
                 state === "active" && "border-secondary bg-accent text-secondary ring-2 ring-secondary/10",
                 state === "future" && "border-border bg-muted text-muted-foreground",
@@ -79,11 +80,13 @@ export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
           const label = (
             <span
               className={cn(
-                "truncate text-[11px] font-bold sm:text-xs",
+                "text-[11px] font-bold leading-tight sm:text-xs",
+                state === "active" ? "whitespace-normal" : "truncate",
                 state === "future" ? "text-muted-foreground" : "text-secondary",
               )}
             >
-              {labelText}
+              <span className="sm:hidden">{state === "active" ? fullLabel : labelText}</span>
+              <span className="hidden sm:inline">{fullLabel}</span>
             </span>
           );
           return (
@@ -91,15 +94,16 @@ export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
               {isLink ? (
                 <Link
                   href={href!}
-                  className="flex min-w-0 items-center gap-1.5 sm:gap-2"
+                  className="flex min-h-11 min-w-0 items-center gap-1.5 sm:gap-2"
                   aria-current={state === "active" ? "step" : undefined}
+                  aria-label={fullLabel}
                 >
                   {marker}
                   {label}
                 </Link>
               ) : (
                 <div
-                  className="flex min-w-0 items-center gap-1.5 sm:gap-2"
+                  className="flex min-h-11 min-w-0 items-center gap-1.5 sm:gap-2"
                   aria-current={state === "active" ? "step" : undefined}
                 >
                   {marker}

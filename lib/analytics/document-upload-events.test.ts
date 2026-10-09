@@ -58,6 +58,63 @@ describe("trackDocumentUploadAnalytics first-party funnel", () => {
     expect(failed).not.toHaveProperty("fileName");
   });
 
+  it("keeps corrupt, multi-page PDF, and rate-limit reasons distinct", () => {
+    trackDocumentUploadAnalytics({
+      docType: "passport_copy",
+      applicationId: "app-1",
+      success: false,
+      failureReason: "corrupt_file",
+      httpStatus: 400,
+      errorCode: "CORRUPT_IMAGE",
+    });
+    trackDocumentUploadAnalytics({
+      docType: "passport_copy",
+      applicationId: "app-1",
+      success: false,
+      failureReason: "pdf_not_single_page",
+      httpStatus: 400,
+      errorCode: "PDF_NOT_SINGLE_PAGE",
+    });
+    trackDocumentUploadAnalytics({
+      docType: "passport_copy",
+      applicationId: "app-1",
+      success: false,
+      failureReason: "rate_limited",
+      httpStatus: 429,
+      errorCode: "RATE_LIMITED",
+    });
+    const failed = beaconBodies().filter((b) => b.eventName === "document_upload_failed");
+    expect(failed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          errorCode: "CORRUPT_IMAGE",
+          httpStatus: 400,
+          reason: "corrupt_file",
+        }),
+        expect.objectContaining({
+          errorCode: "PDF_NOT_SINGLE_PAGE",
+          httpStatus: 400,
+          reason: "pdf_not_single_page",
+        }),
+        expect.objectContaining({
+          errorCode: "RATE_LIMITED",
+          httpStatus: 429,
+          reason: "rate_limited",
+        }),
+      ]),
+    );
+  });
+
+  it("beacons bank statement uploads like other documents", () => {
+    trackDocumentUploadAnalytics({
+      docType: "bank_statement_6m",
+      applicationId: "app-1",
+      success: true,
+      source: "file",
+    });
+    expect(beaconBodies().some((b) => b.eventName === "bank_statement_uploaded")).toBe(true);
+  });
+
   it("beacons cancelled reason on document_upload_cancelled", () => {
     trackDocumentUploadAnalytics({
       docType: "passport_copy",

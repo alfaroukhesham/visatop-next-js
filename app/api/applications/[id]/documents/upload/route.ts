@@ -161,11 +161,16 @@ export async function POST(
     const ip = extractClientIp(hdrs);
     const decision = consume("UPLOAD_PREVIEW", { ip, applicationId });
     if (!decision.ok) {
-      return jsonError("RATE_LIMITED", "Too many upload/preview requests.", {
+      const retryAfterSeconds = Math.max(1, Math.ceil(decision.retryAfterMs / 1000));
+      return jsonError("RATE_LIMITED", "Too many uploads. Try again later.", {
         status: 429,
         requestId,
+        details: {
+          retryAfterSeconds,
+          retryAfterMs: decision.retryAfterMs,
+        },
         headers: {
-          "Retry-After": String(Math.ceil(decision.retryAfterMs / 1000)),
+          "Retry-After": String(retryAfterSeconds),
         },
       });
     }

@@ -4,7 +4,9 @@ export const DOCUMENT_UPLOAD_FAILED = "document_upload_failed";
 export const DOCUMENT_UPLOAD_CANCELLED = "document_upload_cancelled";
 
 const isTrackedUploadDocType = (docType: string): boolean =>
-  docType === "passport_copy" || docType === "personal_photo";
+  docType === "passport_copy" ||
+  docType === "personal_photo" ||
+  docType === "bank_statement_6m";
 
 export const persistableUploadFunnelEventName = (
   docType: string,
@@ -13,6 +15,7 @@ export const persistableUploadFunnelEventName = (
   if (!success) return null;
   if (docType === "passport_copy") return APPLY_FUNNEL_EVENTS.passportUploaded;
   if (docType === "personal_photo") return APPLY_FUNNEL_EVENTS.photoUploaded;
+  if (docType === "bank_statement_6m") return APPLY_FUNNEL_EVENTS.bankStatementUploaded;
   return null;
 };
 

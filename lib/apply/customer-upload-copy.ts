@@ -21,8 +21,11 @@ export const UPLOAD_ERROR_MESSAGE_KEYS: Record<string, string> = {
 export const customerUploadStateLabel = (hasDoc: boolean, t: TTranslate = englishT): string =>
   hasDoc ? t("upload.uploaded") : t("upload.notUploadedYet");
 
-export const customerUploadErrorMessage = (code: string, t: TTranslate = englishT): string =>
-  t(UPLOAD_ERROR_MESSAGE_KEYS[code] ?? UPLOAD_ERROR_MESSAGE_KEYS.UPLOAD_FAILED);
+export const customerUploadErrorMessage = (
+  code: string,
+  t: TTranslate = englishT,
+  vars?: TCustomerMessageVars,
+): string => t(UPLOAD_ERROR_MESSAGE_KEYS[code] ?? UPLOAD_ERROR_MESSAGE_KEYS.UPLOAD_FAILED, vars);
 
 export const oversizedUploadMessage = (
   byteLength: number,

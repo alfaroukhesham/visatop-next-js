@@ -514,7 +514,12 @@
     "trip": "Trip",
     "details": "Details",
     "pay": "Pay",
-    "finish": "Finish"
+    "finish": "Finish",
+    "tripShort": "Reise",
+    "documentsShort": "Docs",
+    "detailsShort": "Infos",
+    "payShort": "Zahlen",
+    "finishShort": "Fertig"
   },
   "common": {
     "continue": "Weiter",

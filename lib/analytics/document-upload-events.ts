@@ -44,6 +44,8 @@ export const trackDocumentUploadAnalytics = (input: {
   trackEvent(APPLY_FUNNEL_EVENTS.passportUploadFailed, {
     application_id: input.applicationId,
     failureReason: closedReason,
-    error_code: closedReason,
+    failure_reason: input.failureReason,
+    error_code: input.errorCode ?? closedReason,
+    http_status: input.httpStatus,
   });
 };

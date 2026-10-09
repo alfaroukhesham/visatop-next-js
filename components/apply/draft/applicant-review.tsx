@@ -11,7 +11,7 @@ import { apiHref } from "@/lib/app-href";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { trackEventOnce } from "@/lib/analytics/gtag-client";
 import { APPLY_STEP3_VALIDATION_DISABLED } from "@/lib/apply/apply-flow-config";
-import { emptyOcrReviewFields } from "@/lib/apply/ocr-review-fields";
+import { reviewHighlightFields, type TApplicantFieldMeta } from "@/lib/apply/ocr-review-fields";
 import { paymentReviewNavState } from "@/lib/apply/payment-review-nav";
 import { parseDobInputToIsoUtc, type Readiness } from "@/lib/documents/validation-readiness";
 import { cn } from "@/lib/utils";
@@ -133,6 +133,8 @@ export interface IApplicantReviewProps {
   destination?: "payment" | "next";
   onFinished?: () => void;
   onReplacePassport?: () => void;
+  onPrevious?: () => void;
+  fieldMeta?: TApplicantFieldMeta | null;
 }
 
 export const ApplicantReview: FC<IApplicantReviewProps> = ({
@@ -156,6 +158,8 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
   destination = "payment",
   onFinished,
   onReplacePassport,
+  onPrevious,
+  fieldMeta = null,
 }) => {
   const t = useCustomerT();
   const router = useRouter();
@@ -166,17 +170,27 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
   if (!applicant.nationality) initial.applicantNationality = nationalityName;
 
   const [values, setValues] = useState<Record<string, string>>(initial);
+  const [editedKeys, setEditedKeys] = useState<Set<string>>(() => new Set());
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const dirty = APPLICANT_ROWS.some((r) => (values[r.apiKey] ?? "") !== (initial[r.apiKey] ?? ""));
-  const ocrHighlightFields = emptyOcrReviewFields(extraction?.ocrMissingFields, {
-    fullName: values.fullName,
-    dateOfBirth: values.dateOfBirth,
-    nationality: values.applicantNationality,
-    passportNumber: values.passportNumber,
-    passportExpiryDate: values.passportExpiryDate,
+  const ocrHighlightFields = reviewHighlightFields({
+    ocrMissingFields: extraction?.ocrMissingFields,
+    ocrNeedsReviewFields: extraction?.ocrNeedsReviewFields,
+    fieldMeta,
+    valuesByApplicantKey: {
+      fullName: values.fullName,
+      dateOfBirth: values.dateOfBirth,
+      nationality: values.applicantNationality,
+      passportNumber: values.passportNumber,
+      passportExpiryDate: values.passportExpiryDate,
+      placeOfBirth: values.placeOfBirth,
+      profession: values.profession,
+      address: values.address,
+    },
+    locallyEdited: editedKeys,
   });
   const showOcrHighlightHint = ocrHighlightFields.length > 0;
 
@@ -207,14 +221,15 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
     router.push(paymentPath);
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-    setSaveMsg(null);
-    setSaveError(null);
+  const persistPatch = async (
+    current: Record<string, string>,
+    opts: { navigate: boolean },
+  ): Promise<boolean> => {
+    const baseline = initial;
     const patch: Record<string, string> = {};
     for (const r of APPLICANT_ROWS) {
-      const v = values[r.apiKey] ?? "";
-      if (v === (initial[r.apiKey] ?? "")) continue;
+      const v = current[r.apiKey] ?? "";
+      if (v === (baseline[r.apiKey] ?? "")) continue;
       if (r.apiKey === "dateOfBirth" || r.apiKey === "passportExpiryDate") {
         const trimmed = v.trim();
         if (trimmed === "") {
@@ -225,11 +240,12 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
         } else {
           const iso = parseDobInputToIsoUtc(trimmed);
           if (!iso) {
-            setSaveError(
-              r.apiKey === "dateOfBirth" ? t("draft.dateOfBirthInvalid") : t("draft.passportExpiryInvalid"),
-            );
-            setSaving(false);
-            return;
+            if (opts.navigate) {
+              setSaveError(
+                r.apiKey === "dateOfBirth" ? t("draft.dateOfBirthInvalid") : t("draft.passportExpiryInvalid"),
+              );
+            }
+            return false;
           }
           patch[r.apiKey] = iso;
         }
@@ -238,33 +254,45 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
       }
     }
     if (Object.keys(patch).length === 0) {
-      setSaving(false);
-      setSaveMsg(t("draft.noChangesToSave"));
-      return;
+      if (opts.navigate) setSaveMsg(t("draft.noChangesToSave"));
+      return true;
+    }
+    if (opts.navigate) {
+      setSaving(true);
+      setSaveMsg(null);
+      setSaveError(null);
     }
     const res = await fetchApiEnvelope<{ application: unknown }>(
       apiHref(`/applications/${applicationId}/profile`),
       { method: "PATCH", body: JSON.stringify(patch) },
     );
-    setSaving(false);
+    if (opts.navigate) setSaving(false);
     if (!res.ok) {
-      const details = res.error.details as { fieldErrors?: Record<string, string[]> } | undefined;
-      const fieldErrs = details?.fieldErrors;
-      if (fieldErrs && typeof fieldErrs === "object" && Object.keys(fieldErrs).length > 0) {
-        const issues = Object.entries(fieldErrs)
-          .map(([k, v]) => {
-            const row = APPLICANT_ROWS.find((r) => r.apiKey === k);
-            return `${row ? t(row.labelKey) : k}: ${Array.isArray(v) ? v[0] : v}`;
-          })
-          .join(" | ");
-        setSaveError(t("draft.validationFailedPrefix", { issues }));
-      } else {
-        setSaveError(res.error.message);
+      if (opts.navigate) {
+        const details = res.error.details as { fieldErrors?: Record<string, string[]> } | undefined;
+        const fieldErrs = details?.fieldErrors;
+        if (fieldErrs && typeof fieldErrs === "object" && Object.keys(fieldErrs).length > 0) {
+          const issues = Object.entries(fieldErrs)
+            .map(([k, v]) => {
+              const row = APPLICANT_ROWS.find((r) => r.apiKey === k);
+              return `${row ? t(row.labelKey) : k}: ${Array.isArray(v) ? v[0] : v}`;
+            })
+            .join(" | ");
+          setSaveError(t("draft.validationFailedPrefix", { issues }));
+        } else {
+          setSaveError(res.error.message);
+        }
       }
-      return;
+      return false;
     }
-    setSaveMsg(t("draft.changesSaved"));
+    if (opts.navigate) setSaveMsg(t("draft.changesSaved"));
     onSaved();
+    return true;
+  };
+
+  const handleSave = async () => {
+    const ok = await persistPatch(values, { navigate: true });
+    if (!ok) return;
     if (destination === "next") {
       onFinished?.();
       return;
@@ -273,6 +301,16 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
       void goToPayment();
     }
   };
+
+  useEffect(() => {
+    if (!dirty || locked) return;
+    const snapshot = values;
+    const timer = window.setTimeout(() => {
+      void persistPatch(snapshot, { navigate: false });
+    }, 700);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- persistPatch is recreated each render
+  }, [dirty, locked, values, applicationId]);
 
   const readinessLabel = buildReadinessLabel(readiness, paymentReadiness, t);
   const isSecondary = !documentsReady;
@@ -380,7 +418,11 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
         </p>
       ) : null}
       {onReplacePassport ? (
-        <button type="button" className="text-link text-sm underline" onClick={onReplacePassport}>
+        <button
+          type="button"
+          className="text-link inline-flex min-h-11 items-center text-sm underline"
+          onClick={onReplacePassport}
+        >
           {t("wizard.replacePassport")}
         </button>
       ) : null}
@@ -419,10 +461,14 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
                       ? applyDateMask(e.target.value)
                       : e.target.value;
                     setValues((prev) => ({ ...prev, [r.apiKey]: v }));
+                    setEditedKeys((prev) => new Set(prev).add(r.key));
+                  }}
+                  onBlur={() => {
+                    if (!locked && dirty) void persistPatch(values, { navigate: false });
                   }}
                   invalid={(isMissing && !values[r.apiKey]) || isOcrHighlight}
                   aria-describedby={isOcrHighlight ? "ocr-review-hint" : undefined}
-                  className={["rounded-xl", locked ? "cursor-not-allowed opacity-70" : ""].join(" ")}
+                  className={["min-h-11 h-11 rounded-xl", locked ? "cursor-not-allowed opacity-70" : ""].join(" ")}
                 />
               </dd>
             </div>
@@ -449,7 +495,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
         <DoubleDecision
           className="max-w-md"
           dismissLabel={t("draft.previous")}
-          onDismiss={() => router.back()}
+          onDismiss={() => (onPrevious ? onPrevious() : router.back())}
           confirmLabel={
             locked
               ? undefined

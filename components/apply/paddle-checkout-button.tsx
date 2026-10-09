@@ -214,7 +214,8 @@ export function PaddleCheckoutButton({
   return (
     <ClientButton
       onClick={handleCheckout}
-      disabled={disabled || isInitializing}
+      disabled={disabled || isInitializing || !termsAccepted}
+      aria-disabled={disabled || isInitializing || !termsAccepted}
       className="h-12 w-full text-lg font-bold shadow-lg transition-all hover:shadow-xl"
     >
       {isInitializing ? (

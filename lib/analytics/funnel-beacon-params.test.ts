@@ -56,6 +56,9 @@ describe("persistableUploadFunnelEventName", () => {
     expect(persistableUploadFunnelEventName("passport_copy", false)).toBeNull();
     expect(persistableUploadFunnelEventName("personal_photo", true)).toBe("photo_uploaded");
     expect(persistableUploadFunnelEventName("personal_photo", false)).toBeNull();
+    expect(persistableUploadFunnelEventName("bank_statement_6m", true)).toBe(
+      "bank_statement_uploaded",
+    );
     expect(persistableUploadFunnelEventName("supporting", true)).toBeNull();
   });
 });

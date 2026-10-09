@@ -1,6 +1,3 @@
-/** Google Ads Checkout Completed event — AW-17767633830/THfyCPCPh-wcEKanophC */
-export const DEFAULT_GADS_CHECKOUT_CONVERSION_SEND_TO = "AW-17767633830/THfyCPCPh-wcEKanophC";
-
 export const GADS_CHECKOUT_CONVERSION_STORAGE_PREFIX = "vt_gads_checkout:";
 
 export type TGadsCheckoutConversionParams = {
@@ -16,11 +13,14 @@ export type TGadsCheckoutConversionInput = {
   currency?: string;
 };
 
-/** Empty string disables the Checkout Completed conversion. */
+/**
+ * Checkout Completed send_to comes only from env. There is no hardcoded Ads
+ * label in the client bundle — staging must not inherit a production conversion.
+ */
 export const getGadsCheckoutConversionSendTo = (): string => {
   const raw = process.env.NEXT_PUBLIC_GADS_CHECKOUT_CONVERSION_SEND_TO;
-  if (raw === "") return "";
-  return raw?.trim() || DEFAULT_GADS_CHECKOUT_CONVERSION_SEND_TO;
+  if (!raw) return "";
+  return raw.trim();
 };
 
 export const gadsCheckoutConversionStorageKey = (transactionId: string): string =>

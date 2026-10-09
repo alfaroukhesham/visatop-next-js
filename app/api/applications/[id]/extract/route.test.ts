@@ -29,9 +29,15 @@ vi.mock("@/lib/ocr/extract-orchestrator", async () => {
   };
 });
 
-vi.mock("@/lib/ocr/gemini-passport", () => ({
-  extractPassport: vi.fn(),
-}));
+vi.mock("@/lib/ocr/gemini-passport", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/ocr/gemini-passport")>(
+    "@/lib/ocr/gemini-passport",
+  );
+  return {
+    ...actual,
+    extractPassport: vi.fn(),
+  };
+});
 
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
 import {

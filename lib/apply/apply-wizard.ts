@@ -132,6 +132,21 @@ export const nextApplyScreen = (
   return steps[index + 1]!;
 };
 
+/** Explicit previous step href — never the bare application URL (resume would bounce). */
+export const previousApplyScreen = (
+  members: TApplyWizardMember[],
+  current: TResolvedApplyScreen,
+): TResolvedApplyScreen | { screen: "home"; travellerId: null } => {
+  const steps = wizardStepsForMembers(members);
+  if (current.screen === "payment") {
+    const last = steps[steps.length - 1];
+    return last ?? { screen: "ready", travellerId: null };
+  }
+  const index = stepIndex(steps, current.screen, current.travellerId);
+  if (index <= 0) return { screen: "home", travellerId: null };
+  return steps[index - 1]!;
+};
+
 export const cursorIsAhead = (
   members: TApplyWizardMember[],
   previous: TApplyWizardCursor | null,
@@ -150,6 +165,16 @@ export const applyWizardHref = (applicationId: string, screen: TResolvedApplyScr
   params.set("screen", screen.screen);
   if (screen.travellerId) params.set("traveller", screen.travellerId);
   return `/apply/applications/${id}?${params.toString()}`;
+};
+
+export const applyPreviousHref = (
+  applicationId: string,
+  members: TApplyWizardMember[],
+  current: TResolvedApplyScreen,
+): string => {
+  const prev = previousApplyScreen(members, current);
+  if (prev.screen === "home") return "/";
+  return applyWizardHref(applicationId, prev);
 };
 
 /** Screen an unpaid application is sitting on, from the last confirmed cursor. */

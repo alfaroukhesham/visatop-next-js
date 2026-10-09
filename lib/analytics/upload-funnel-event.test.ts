@@ -15,6 +15,9 @@ describe("uploadAnalyticsEventName", () => {
     expect(uploadAnalyticsEventName({ docType: "personal_photo", outcome: "success" })).toBe(
       APPLY_FUNNEL_EVENTS.photoUploaded,
     );
+    expect(uploadAnalyticsEventName({ docType: "bank_statement_6m", outcome: "success" })).toBe(
+      APPLY_FUNNEL_EVENTS.bankStatementUploaded,
+    );
   });
 
   it("maps passport/photo failure and cancel to distinct first-party events", () => {
@@ -28,6 +31,6 @@ describe("uploadAnalyticsEventName", () => {
 
   it("does not emit upload analytics for supporting slots", () => {
     expect(uploadAnalyticsEventName({ docType: "supporting", outcome: "failed" })).toBeNull();
-    expect(persistableUploadFunnelEventName("bank_statement_6m", true)).toBeNull();
+    expect(persistableUploadFunnelEventName("supporting", true)).toBeNull();
   });
 });

@@ -43,7 +43,7 @@ export function ApplicationDraftPanel({ applicationId }: { applicationId: string
       />
 
       <p className="text-muted-foreground text-center text-xs">
-        <Link href="/" className="text-link hover:underline">
+        <Link href="/" className="text-link inline-flex min-h-11 items-center hover:underline">
           {t("draft.startAnotherDraft")}
         </Link>
       </p>

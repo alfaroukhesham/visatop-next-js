@@ -514,7 +514,12 @@
     "trip": "Trip",
     "details": "Details",
     "pay": "Pay",
-    "finish": "Finish"
+    "finish": "Finish",
+    "tripShort": "यात्रा",
+    "documentsShort": "दस्ता.",
+    "detailsShort": "जानकारी",
+    "payShort": "भुगतान",
+    "finishShort": "पूर्ण"
   },
   "common": {
     "continue": "जारी रखें",

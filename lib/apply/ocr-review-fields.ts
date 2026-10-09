@@ -30,3 +30,38 @@ export const emptyOcrReviewFields = (
     (key) => missing.has(key) && isEmptyValue(valuesByApplicantKey[key]),
   );
 };
+
+export type TApplicantFieldMeta = Partial<
+  Record<string, { source?: string; needsReview?: boolean }>
+>;
+
+const ALL_HIGHLIGHT_KEYS = [
+  ...OCR_REVIEW_FIELD_KEYS,
+  "placeOfBirth",
+  "profession",
+  "address",
+] as const;
+
+/** Highlight OCR-filled fields and still-empty missing ones, including after reload. */
+export const reviewHighlightFields = (input: {
+  ocrMissingFields?: readonly string[] | null;
+  ocrNeedsReviewFields?: readonly string[] | null;
+  fieldMeta?: TApplicantFieldMeta | null;
+  valuesByApplicantKey: Record<string, string | null | undefined>;
+  locallyEdited?: ReadonlySet<string>;
+}): string[] => {
+  const keys = new Set<string>();
+  for (const key of emptyOcrReviewFields(input.ocrMissingFields, input.valuesByApplicantKey)) {
+    keys.add(key);
+  }
+  for (const key of input.ocrNeedsReviewFields ?? []) {
+    if (ALL_HIGHLIGHT_KEYS.includes(key as (typeof ALL_HIGHLIGHT_KEYS)[number])) keys.add(key);
+  }
+  for (const [key, meta] of Object.entries(input.fieldMeta ?? {})) {
+    if (meta?.needsReview || (meta?.source === "ocr" && meta.needsReview !== false)) {
+      keys.add(key);
+    }
+  }
+  for (const key of input.locallyEdited ?? []) keys.delete(key);
+  return [...keys];
+};
