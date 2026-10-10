@@ -129,4 +129,13 @@ describe("checkout conversion call sites", () => {
       tracker.indexOf('window.gtag("event", "conversion"'),
     );
   });
+
+  it("keeps checkout Ads send_to out of the staging image build secret", () => {
+    const workflow = readFileSync(join(root, ".github/workflows/deploy.yml"), "utf8");
+    expect(workflow).toContain("STAGING_BUILD_ENV");
+    expect(workflow).toContain("PROD_BUILD_ENV");
+    expect(workflow).toMatch(
+      /NEXT_PUBLIC_GADS_CHECKOUT_CONVERSION_SEND_TO must be unset in STAGING_BUILD_ENV/,
+    );
+  });
 });

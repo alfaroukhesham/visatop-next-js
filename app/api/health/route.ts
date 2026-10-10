@@ -1,3 +1,7 @@
+/**
+ * Liveness for `scripts/blue-green-deploy.sh` `wait_healthy`.
+ * Must stay DB-free so a new color can pass health before serving traffic.
+ */
 import { headers } from "next/headers";
 import { jsonOk } from "@/lib/api/response";
 

@@ -1,9 +1,9 @@
 /**
  * Runtime gate for third-party marketing tags (Google tag / Ads / Meta Pixel).
  *
- * Staging and prod can share the same Docker image (`alfarouk1995/visatop-next`),
- * so a build-time `NEXT_PUBLIC_*` flag cannot separate them. This check uses the
- * request Host at render time and fails closed.
+ * Staging (`visatop-next-demo`) and prod (`visatop-next`) are separate images
+ * with separate build secrets. This Host check is defense in depth so a
+ * staging hostname never loads pixels even if a prod ID were baked. Fails closed.
  *
  * GTM-T6D7X53B is not loaded on checkout: the container has Clarity `ytynrsf6c5`
  * and Google tag `AW-17767633830`, but it has no conversion label

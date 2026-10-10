@@ -3,10 +3,12 @@
  *
  * MVP implementation uses in-process counters: each Node process keeps a map
  * of `bucket:key -> timestamp[]`. On serverless (multiple instances / cold
- * starts) limits are **best-effort per instance** — the spec numbers are
- * targets, not globally exact. Stretch upgrade path: swap the backing store
- * for Redis/Upstash/KV with atomic INCR + EXPIRE, keeping the public API
- * (`consume` / `inspect` / `resetAllForTests`) unchanged.
+ * starts) and during blue-green overlap (two colors for ~90s drain) limits
+ * are **best-effort per instance** — the spec numbers are targets, not
+ * globally exact. Counters are not shared across slots; nothing 5xxs. Stretch
+ * upgrade path: swap the backing store for Redis/Upstash/KV with atomic INCR
+ * + EXPIRE, keeping the public API (`consume` / `inspect` /
+ * `resetAllForTests`) unchanged.
  *
  * Dual counters: every `consume` accepts ({ ip, applicationId }). A request
  * is rejected if **either** bucket is at its limit — the stricter counter
