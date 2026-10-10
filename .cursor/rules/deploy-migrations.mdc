@@ -1,0 +1,33 @@
+---
+description: Blue-green deploys with migrations before the proxy flip
+alwaysApply: true
+---
+
+# Blue-green deploy
+
+Staging and production cut over on this host with `dev/scripts/blue-green-deploy.sh`. Caddy owns the host ports. App containers join the `visatop_edge` network and do not publish those ports. Edge nginx stays pointed at `:3000` and `:3001`.
+
+| Environment | Slots | Proxy port | Env file | Database host must contain |
+| --- | --- | --- | --- | --- |
+| Staging | `visatop-next-demo-blue`, `visatop-next-demo-green` | 3001 | `/root/visatop/.env.staging` | `weathered-resonance` |
+| Production | `visatop-next-blue`, `visatop-next-green` | 3000 | `/root/visatop/.env` | `snowy-cake` |
+
+```bash
+dev/scripts/blue-green-deploy.sh deploy staging alfarouk1995/visatop-next-demo:sha-<gitsha>
+dev/scripts/blue-green-deploy.sh deploy production alfarouk1995/visatop-next:sha-<gitsha>
+dev/scripts/blue-green-deploy.sh rollback staging
+dev/scripts/blue-green-deploy.sh rollback production
+```
+
+- Drain is **90 seconds** (`docker stop -t 90` on the slot that just lost traffic).
+- Do not `docker rm -f` the live slot, and do not publish host ports 3000 or 3001 from the app.
+- Image tags are `sha-<gitsha>`. Do not deploy `:latest`.
+- The script checks the database host, runs `drizzle-kit migrate` for that sha, starts the idle slot, and flips the proxy only after local and public URLs return 200. A failed migrate or health check leaves the live slot in place.
+- Rollback starts the previous slot and flips back. Only the last slot is kept.
+- Check staging and production separately. A current staging database does not clear production.
+- Ship schema changes expand-contract: add nullable columns or new tables, deploy code that works with both shapes, then drop or rename in a later release. The draining slot still serves traffic against the new schema for 90 seconds.
+- `--skip-migrate` is an emergency override. Do not use it unless the user explicitly asks.
+
+Drizzle will not reapply a journal row whose `when` is older than the latest applied `created_at`. If that history row is missing, confirm the objects exist before treating the database as current.
+
+GitHub Actions (`.github/workflows/deploy.yml`) builds the image and runs this script. Pushes to `main` deploy staging after CI. Production is a manual run and should require a reviewer on the `production` environment.

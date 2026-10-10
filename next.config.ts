@@ -17,7 +17,8 @@ const EXPLICIT_ALLOWED_DEV_ORIGINS: string[] = [
   // Droplet + domains (for dev assets / HMR when accessed via reverse proxy)
   "138.68.184.84",
   "visatop.com",
-  "www.visatop.com"
+  "www.visatop.com",
+  "app-staging.visatop.com",
 ];
 
 function collectAllowedDevOriginsFromEnv(): string[] {
@@ -143,6 +144,15 @@ const nextConfig: NextConfig = {
       "./node_modules/.pnpm/jpeg-js@*/node_modules/jpeg-js/**/*",
       "./node_modules/.pnpm/pngjs@*/node_modules/pngjs/**/*",
     ],
+  },
+  experimental: {
+    serverActions: {
+      allowedOrigins: [
+        "visatop.com",
+        "www.visatop.com",
+        "app-staging.visatop.com",
+      ],
+    },
   },
   ...(devTunnelHosts.length > 0
     ? { allowedDevOrigins: devTunnelHosts }

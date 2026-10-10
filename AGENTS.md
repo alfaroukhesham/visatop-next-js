@@ -11,6 +11,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Workflow rules
 
+- **Blue-green deploys:** Cut staging and production over with `scripts/blue-green-deploy.sh`. Caddy owns host ports 3000 and 3001. The previous container drains for **90 seconds**. Do not `docker rm -f` a live app container or publish those ports from the app. Migrations run before the proxy flip. See `.cursor/rules/deploy-migrations.mdc`.
 - **Do NOT commit docs until approved:** Specs, design docs, and implementation plans must NOT be committed to git until the user has explicitly reviewed and approved them. Write them to disk first, ask for review, and only commit after receiving confirmation.
 - **Customer + admin together:** New features must plan both the apply/track surface and the admin controls that drive it. Catalog, document rules, prices, limits, and ops-editable copy are admin-controlled — do not hardcode country lists, SKU classifiers, or static blog/SEO/dial maps. See `.cursor/rules/visa-admin-and-customer-together.mdc`. Passport + personal photo stay a locked code floor.
 
