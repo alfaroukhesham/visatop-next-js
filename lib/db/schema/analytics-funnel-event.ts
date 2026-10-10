@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { index, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { application } from "./applications";
 
 export const analyticsFunnelEvent = pgTable(
@@ -15,6 +15,7 @@ export const analyticsFunnelEvent = pgTable(
     applicationId: text("application_id").references(() => application.id, { onDelete: "set null" }),
     nationalityCode: text("nationality_code"),
     serviceId: text("service_id"),
+    metadata: jsonb("metadata"),
     source: text("source").notNull(),
     failureReason: text("failure_reason"),
   },

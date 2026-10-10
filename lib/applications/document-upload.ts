@@ -12,10 +12,6 @@ import { evaluateApplicationReadiness } from "@/lib/applications/evaluate-readin
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { serverFunnelEventId } from "@/lib/analytics/funnel-event-names";
 import { recordFunnelEvent } from "@/lib/analytics/record-funnel-event";
-import {
-  clearOcrSourcedProfileFields,
-  type ApplicantProfileProvenance,
-} from "@/lib/ocr/extract-orchestrator";
 
 export { UPLOAD_MAX_BYTES } from "@/lib/documents/upload-limits";
 
@@ -72,7 +68,9 @@ const recordDocumentFunnelEvent = async (
       ? APPLY_FUNNEL_EVENTS.passportUploaded
       : documentType === "personal_photo"
         ? APPLY_FUNNEL_EVENTS.photoUploaded
-        : null;
+        : documentType === "bank_statement_6m"
+          ? APPLY_FUNNEL_EVENTS.bankStatementUploaded
+          : null;
   if (!eventName) return;
   await recordFunnelEvent(tx, {
     eventId: serverFunnelEventId(applicationId, eventName),
@@ -209,13 +207,9 @@ export async function persistUploadedDocument(
   });
 
   if (input.documentType === "passport_copy") {
-    const provenance = (app.applicantProfileProvenanceJson ?? {}) as ApplicantProfileProvenance;
-    const cleared = clearOcrSourcedProfileFields(provenance);
     await tx
       .update(application)
       .set({
-        ...cleared.updates,
-        applicantProfileProvenanceJson: cleared.provenance as never,
         passportExtractionStatus: EXTRACTION_STATUS.NOT_STARTED,
         passportExtractionUpdatedAt: null,
         passportExtractionStartedAt: null,

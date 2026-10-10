@@ -2,10 +2,7 @@
  * @vitest-environment jsdom
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  DEFAULT_GADS_CHECKOUT_CONVERSION_SEND_TO,
-  resetGadsCheckoutConversionClaims,
-} from "@/lib/analytics/gads-checkout-conversion";
+import { resetGadsCheckoutConversionClaims } from "@/lib/analytics/gads-checkout-conversion";
 import {
   trackApplyPaymentCompleted,
   trackGadsCheckoutConversion,
@@ -33,9 +30,12 @@ const setHostname = (hostname: string): void => {
 const conversionCalls = (gtag: ReturnType<typeof vi.fn>): unknown[][] =>
   gtag.mock.calls.filter((call) => call[0] === "event" && call[1] === "conversion");
 
+const TEST_SEND_TO = "AW-TEST/label";
+
 beforeEach(() => {
   resetGadsCheckoutConversionClaims();
   sessionStorage.clear();
+  process.env.NEXT_PUBLIC_GADS_CHECKOUT_CONVERSION_SEND_TO = TEST_SEND_TO;
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
   window.gtag = vi.fn();
   setHostname("visatop.com");
@@ -60,7 +60,7 @@ describe("trackGadsCheckoutConversion", () => {
         "event",
         "conversion",
         {
-          send_to: DEFAULT_GADS_CHECKOUT_CONVERSION_SEND_TO,
+          send_to: TEST_SEND_TO,
           value: 169,
           currency: "USD",
           transaction_id: "app_123",
@@ -129,7 +129,7 @@ describe("trackApplyPaymentCompleted", () => {
         "event",
         "conversion",
         {
-          send_to: DEFAULT_GADS_CHECKOUT_CONVERSION_SEND_TO,
+          send_to: TEST_SEND_TO,
           value: 169,
           currency: "USD",
           transaction_id: "app_123",

@@ -5,10 +5,12 @@ describe("uploadFailureReason", () => {
   it("buckets recoverable failures without message text", () => {
     expect(uploadFailureReason({ oversized: true })).toBe("file_too_large");
     expect(uploadFailureReason({ httpStatus: 413 })).toBe("file_too_large");
-    expect(uploadFailureReason({ httpStatus: 415 })).toBe("upload_rejected");
+    expect(uploadFailureReason({ httpStatus: 415 })).toBe("file_type");
     expect(uploadFailureReason({ httpStatus: 400, errorCode: "PDF_NOT_SINGLE_PAGE" })).toBe(
-      "upload_rejected",
+      "pdf_not_single_page",
     );
+    expect(uploadFailureReason({ httpStatus: 400, errorCode: "CORRUPT_IMAGE" })).toBe("corrupt_file");
+    expect(uploadFailureReason({ httpStatus: 429, errorCode: "RATE_LIMITED" })).toBe("rate_limited");
     expect(uploadFailureReason({ httpStatus: 503 })).toBe("server_error");
     expect(uploadFailureReason({ network: true })).toBe("network_error");
     expect(uploadFailureReason({ timeout: true })).toBe("timeout");

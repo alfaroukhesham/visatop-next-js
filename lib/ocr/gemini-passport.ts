@@ -4,7 +4,10 @@ import {
   resolvePromptVersion,
 } from "@/lib/gemini/client";
 
+import { assessPassportImageQuality } from "./image-quality";
+import { mrzCheckDigitsValid, mrzVisualAgrees, parseTd3Line2 } from "./mrz-check";
 import {
+  listFilledOcrFields,
   listMissingOcrFields,
   OCR_RAW_STRING_MAX,
   OCR_SCHEMA_VERSION,
@@ -26,10 +29,14 @@ Fields (strings or null; dates must be YYYY-MM-DD):
 - passportExpiryDate(YYYY-MM-DD or null)
 - profession        (string or null)   // usually null — not on passport bio page
 - address           (string or null)   // usually null — not on passport bio page
+- mrzLine1          (44-char TD3 line 1 or null)
+- mrzLine2          (44-char TD3 line 2 or null)
 
 Rules:
 - Read the machine-readable zone (MRZ) + visual zone; prefer MRZ for passport
   number and dates when they agree.
+- Copy MRZ lines exactly (44 characters, < for filler). If the MRZ is missing
+  or unreadable, set mrzLine1 and mrzLine2 to null.
 - If a field is unreadable or absent, return null for that field.
 - Never hallucinate values. Never include any keys other than those listed.
 - Output MUST be valid JSON, no trailing comma, no leading key name.
@@ -64,6 +71,8 @@ export type ExtractPassportInput = {
   overallTimeoutMs?: number;
   /** Override for dependency-injection in tests. */
   callModel?: CallModelFn;
+  /** Tests of JSON parsing skip the raster quality gate. */
+  skipImageQuality?: boolean;
 };
 
 export type CallModelFn = (args: {
@@ -244,7 +253,8 @@ async function runPassportOcrAttempt(
   }
 
   const missingFields = listMissingOcrFields(parsed.result);
-  if (missingFields.length === 0) {
+  const confidence = ocrReadConfidence(parsed.result);
+  if (missingFields.length === 0 && confidence === "high") {
     const outcome: OcrAttemptOutcome = {
       attempt,
       status: "succeeded",
@@ -290,11 +300,43 @@ async function runPassportOcrAttempt(
  * as required fields are present; otherwise falls through to attempt 2 or
  * ends in `needs_manual` / `failed` per spec §6.2.
  */
+export function ocrReadConfidence(result: OcrResult | null): "high" | "low" {
+  if (!result) return "low";
+  if (listMissingOcrFields(result).length > 0) return "low";
+  if (!mrzCheckDigitsValid(result.mrzLine1, result.mrzLine2)) return "low";
+  const parsed = parseTd3Line2(result.mrzLine2 ?? "");
+  if (!parsed) return "low";
+  if (
+    !mrzVisualAgrees(parsed, {
+      passportNumber: result.passportNumber,
+      dateOfBirth: result.dateOfBirth,
+      passportExpiryDate: result.passportExpiryDate,
+    })
+  ) {
+    return "low";
+  }
+  return "high";
+}
+
 export async function extractPassport(
   input: ExtractPassportInput,
 ): Promise<ExtractPassportResult> {
   const modelId = resolveGeminiModelId();
   const promptVersion = resolvePromptVersion();
+  if (!input.skipImageQuality) {
+    const quality = await assessPassportImageQuality(input.imageBytes);
+    if (!quality.ok) {
+      return {
+        status: "needs_manual",
+        attempts: [],
+        finalResult: null,
+        missingFields: [...listMissingOcrFields(null)],
+        provider: "gemini",
+        model: modelId,
+        promptVersion,
+      };
+    }
+  }
   const call = input.callModel ?? defaultCallModel;
   const budgetMs = input.overallTimeoutMs ?? 25_000;
   const deadline = Date.now() + budgetMs;
@@ -316,10 +358,11 @@ export async function extractPassport(
   const lastValid = [...attempts].reverse().find((a) => a.result !== null);
   const finalResult = lastValid?.result ?? null;
   const missingFields = listMissingOcrFields(finalResult);
+  const confidence = ocrReadConfidence(finalResult);
 
   const anySchemaValid = attempts.some((a) => a.result !== null);
   const status: ExtractPassportResult["status"] =
-    missingFields.length === 0 && finalResult
+    missingFields.length === 0 && finalResult && confidence === "high"
       ? "succeeded"
       : anySchemaValid
         ? "needs_manual"
@@ -335,3 +378,5 @@ export async function extractPassport(
     promptVersion,
   };
 }
+
+export { listFilledOcrFields };

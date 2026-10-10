@@ -3,36 +3,33 @@
  *
  * MVP implementation uses in-process counters: each Node process keeps a map
  * of `bucket:key -> timestamp[]`. On serverless (multiple instances / cold
- * starts) limits are **best-effort per instance** — the spec numbers are
- * targets, not globally exact. Stretch upgrade path: swap the backing store
- * for Redis/Upstash/KV with atomic INCR + EXPIRE, keeping the public API
- * (`consume` / `inspect` / `resetAllForTests`) unchanged.
+ * starts) and during blue-green overlap (two colors for ~90s drain) limits
+ * are **best-effort per instance** — the spec numbers are targets, not
+ * globally exact. Counters are not shared across slots; nothing 5xxs. Stretch
+ * upgrade path: swap the backing store for Redis/Upstash/KV with atomic INCR
+ * + EXPIRE, keeping the public API (`consume` / `inspect` /
+ * `resetAllForTests`) unchanged.
  *
- * Design notes:
- * - Dual counters per spec: every `consume` accepts ({ ip, applicationId }).
- *   A request is rejected if **either** bucket is at its limit — the strict
- *   counter wins, matching spec §13 "dual counters".
- * - Window is a **sliding 1-hour window**: we retain timestamps within the
- *   last `windowMs` ms and reject when `count >= limit`.
- * - `UPLOAD_PREVIEW` shares a bucket — upload and preview of one guest are
- *   counted together (spec §11 preview + §13).
- * - `EXTRACT` has its own bucket.
- * - Only guest traffic should call this. Logged-in sessions bypass it.
+ * Dual counters: every `consume` accepts ({ ip, applicationId }). A request
+ * is rejected if **either** bucket is at its limit — the stricter counter
+ * wins. Preview/download GETs must not call `consume` (views are not writes).
  */
 
 export type RateLimitBucket = "UPLOAD_PREVIEW" | "EXTRACT";
 
 export type RateLimitConfig = {
-  /** Max hits per (scope, key) within `windowMs`. */
+  /** Max hits per application (draft) within `windowMs`. */
   limit: number;
+  /** Max hits per IP within `windowMs` (burst across drafts). */
+  ipLimit: number;
   /** Sliding window in ms. */
   windowMs: number;
 };
 
-/** Locked MVP numbers (spec §13). */
+/** Generous write limits so retries + replacements do not lock a guest out. */
 export const RATE_LIMITS: Record<RateLimitBucket, RateLimitConfig> = {
-  UPLOAD_PREVIEW: { limit: 20, windowMs: 60 * 60 * 1000 },
-  EXTRACT: { limit: 10, windowMs: 60 * 60 * 1000 },
+  UPLOAD_PREVIEW: { limit: 40, ipLimit: 80, windowMs: 60 * 60 * 1000 },
+  EXTRACT: { limit: 15, ipLimit: 30, windowMs: 60 * 60 * 1000 },
 };
 
 export type RateLimitDecision =
@@ -62,11 +59,17 @@ function scopeKey(bucket: RateLimitBucket, scope: "ip" | "applicationId", value:
 }
 
 function prune(arr: number[], cutoff: number): number[] {
-  // Most common case: no eviction needed.
   if (arr.length === 0 || arr[0] >= cutoff) return arr;
   let i = 0;
   while (i < arr.length && arr[i] < cutoff) i++;
   return arr.slice(i);
+}
+
+export function formatRetryAfterWait(retryAfterMs: number): string {
+  const seconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
+  if (seconds < 90) return "about a minute";
+  const minutes = Math.ceil(seconds / 60);
+  return `${minutes} minute${minutes === 1 ? "" : "s"}`;
 }
 
 /**
@@ -81,6 +84,7 @@ export function inspect(
   ipCount: number;
   applicationIdCount: number;
   limit: number;
+  ipLimit: number;
   windowMs: number;
 } {
   const cfg = RATE_LIMITS[bucket];
@@ -94,6 +98,7 @@ export function inspect(
     ipCount: ipArr.length,
     applicationIdCount: appArr.length,
     limit: cfg.limit,
+    ipLimit: cfg.ipLimit,
     windowMs: cfg.windowMs,
   };
 }
@@ -116,7 +121,7 @@ export function consume(
   const ipArr = prune(counters.get(ipK) ?? [], cutoff);
   const appArr = prune(counters.get(appK) ?? [], cutoff);
 
-  if (ipArr.length >= cfg.limit) {
+  if (ipArr.length >= cfg.ipLimit) {
     counters.set(ipK, ipArr);
     const oldest = ipArr[0];
     return {
@@ -142,7 +147,7 @@ export function consume(
   counters.set(ipK, ipArr);
   counters.set(appK, appArr);
 
-  const remaining = Math.min(cfg.limit - ipArr.length, cfg.limit - appArr.length);
+  const remaining = Math.min(cfg.ipLimit - ipArr.length, cfg.limit - appArr.length);
   return { ok: true, remaining, retryAfterMs: 0 };
 }
 

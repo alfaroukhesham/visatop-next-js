@@ -12,6 +12,7 @@ export const APPLY_FUNNEL_EVENTS = {
   /** Kept alongside passport_upload_succeeded so older reports still match. */
   passportUploaded: "passport_uploaded",
   photoUploaded: "photo_uploaded",
+  bankStatementUploaded: "bank_statement_uploaded",
   otherDocsSkipped: "other_docs_skipped",
   otherDocsUploaded: "other_docs_uploaded",
   detailsReviewViewed: "details_review_viewed",

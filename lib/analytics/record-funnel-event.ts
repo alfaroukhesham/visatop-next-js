@@ -1,5 +1,6 @@
 import { analyticsFunnelEvent } from "@/lib/db/schema";
 import type { DbTransaction } from "@/lib/db";
+import { funnelEventMetadataFromFields } from "@/lib/analytics/funnel-event-metadata";
 import { isPersistableFunnelEvent, shouldSkipClientFunnelPersist } from "@/lib/analytics/funnel-event-names";
 import { isForeignKeyViolation, isUniqueViolation } from "@/lib/db/pg-errors";
 import { logger } from "@/lib/logger";
@@ -12,6 +13,9 @@ export type TRecordFunnelEventInput = {
   nationalityCode?: string | null;
   serviceId?: string | null;
   failureReason?: string | null;
+  errorCode?: string | null;
+  httpStatus?: number | null;
+  reason?: string | null;
   source: "client" | "server";
   occurredAt?: Date;
 };
@@ -34,7 +38,12 @@ const insertRow = async (
       applicationId: input.applicationId ?? null,
       nationalityCode: input.nationalityCode ?? null,
       serviceId: input.serviceId ?? null,
-      failureReason: input.failureReason ?? null,
+      failureReason: input.failureReason ?? input.reason ?? null,
+      metadata: funnelEventMetadataFromFields({
+        errorCode: input.errorCode,
+        httpStatus: input.httpStatus,
+        reason: input.reason ?? input.failureReason,
+      }),
       source: input.source,
       occurredAt: input.occurredAt ?? new Date(),
     })

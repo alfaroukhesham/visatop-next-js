@@ -5,6 +5,7 @@ import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withClientDbActor, withSystemDbActor } from "@/lib/db/actor-context";
 import { application } from "@/lib/db/schema";
+import { markManualProfileFields, type ApplicantProfileProvenance } from "@/lib/ocr/extract-orchestrator";
 import { toPublicApplication } from "@/lib/applications/public-application";
 import { readCustomerLocaleFromCookieHeader } from "@/lib/i18n/customer-locale";
 import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
@@ -69,7 +70,19 @@ export async function PATCH(
   }
 
   const doUpdate = async (tx: DbTransaction) => {
-    await tx.update(application).set(updates).where(eq(application.id, applicationId));
+    const existing = await tx
+      .select({ provenance: application.applicantProfileProvenanceJson })
+      .from(application)
+      .where(eq(application.id, applicationId))
+      .limit(1);
+    const provenance = markManualProfileFields(
+      (existing[0]?.provenance ?? {}) as ApplicantProfileProvenance,
+      Object.keys(updates),
+    );
+    await tx
+      .update(application)
+      .set({ ...updates, applicantProfileProvenanceJson: provenance as never })
+      .where(eq(application.id, applicationId));
 
     await evaluateApplicationReadiness(tx, applicationId);
 

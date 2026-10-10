@@ -28,6 +28,9 @@ export type TFunnelBeaconParams = {
   nationalityCode?: string | number | boolean | null;
   serviceId?: string | number | boolean | null;
   failureReason?: string | number | boolean | null;
+  errorCode?: string | number | boolean | null;
+  httpStatus?: string | number | boolean | null;
+  reason?: string | number | boolean | null;
 };
 
 const asOptionalString = (value: string | number | boolean | null | undefined): string | undefined => {
@@ -46,6 +49,13 @@ export const sendFunnelBeacon = (
   if (!isPersistableFunnelEvent(eventName)) return;
   const eventId = randomId();
   const sessionId = getOrCreateAnalyticsSessionId();
+  const httpStatus =
+    typeof params?.httpStatus === "number" &&
+    Number.isInteger(params.httpStatus) &&
+    params.httpStatus >= 100 &&
+    params.httpStatus <= 599
+      ? params.httpStatus
+      : undefined;
   const body = {
     eventId,
     eventName,
@@ -54,6 +64,9 @@ export const sendFunnelBeacon = (
     nationalityCode: asOptionalString(params?.nationalityCode),
     serviceId: asOptionalString(params?.serviceId),
     failureReason: asOptionalString(params?.failureReason),
+    errorCode: asOptionalString(params?.errorCode),
+    httpStatus,
+    reason: asOptionalString(params?.reason) ?? asOptionalString(params?.failureReason),
   };
   try {
     void fetch(apiHref("analytics/events"), {

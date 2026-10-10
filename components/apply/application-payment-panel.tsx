@@ -9,6 +9,7 @@ import { DraftPaymentSection } from "@/components/apply/draft/draft-payment-sect
 import { useApplicationDraft } from "@/components/apply/draft/use-application-draft";
 import { ClientButton } from "@/components/client/client-button";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
+import { applyPreviousHref, type TApplyWizardMember } from "@/lib/apply/apply-wizard";
 import { computeValidation, type Readiness } from "@/lib/documents/validation-readiness";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
@@ -31,7 +32,17 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
   const setDraftActionMsg = draft.setActionMsg;
   const setDraftCountdown = draft.setCountdown;
 
-  const documentsPath = `/apply/applications/${encodeURIComponent(applicationId)}`;
+  const wizardMembers: TApplyWizardMember[] = draft.members
+    .slice()
+    .sort((a, b) => a.travelerIndex - b.travelerIndex)
+    .map((member) => ({
+      applicationId: member.applicationId,
+      hasPassport: Boolean(draft.memberStates[member.applicationId]?.docsByType.passport_copy),
+    }));
+  const documentsPath = applyPreviousHref(applicationId, wizardMembers, {
+    screen: "payment",
+    travellerId: null,
+  });
   const submittedPath = `/apply/applications/${encodeURIComponent(applicationId)}/submitted`;
   const paidRef = useRef(false);
   const pollCleanupRef = useRef<(() => void) | null>(null);
@@ -251,7 +262,7 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
       </div>
 
       <p className="text-muted-foreground text-center text-xs">
-        <Link href="/" className="text-link hover:underline">
+        <Link href="/" className="text-link inline-flex min-h-11 items-center hover:underline">
           {t("draft.startAnotherDraft")}
         </Link>
       </p>

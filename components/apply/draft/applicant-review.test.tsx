@@ -73,4 +73,36 @@ describe("ApplicantReview OCR highlight", () => {
     renderReview([]);
     expect(screen.queryByText(/Please fill these in/i)).not.toBeInTheDocument();
   });
+
+  it("highlights reader-filled fields from persisted provenance after reload", () => {
+    render(
+      <CustomerI18nProvider locale="en" messages={en} fallback={en}>
+        <ApplicantReview
+          applicationId="app-1"
+          nationalityCode="IN"
+          nationalityName="Indian"
+          nationalities={[{ code: "IN", name: "Indian", dialCode: "91" }]}
+          applicant={applicant}
+          guestEmail={null}
+          extraction={extraction([])}
+          fieldMeta={{
+            fullName: { source: "ocr", needsReview: true },
+            nationality: { source: "ocr", needsReview: true },
+            passportNumber: { source: "ocr", needsReview: true },
+          }}
+          readiness="blocked_validation"
+          paymentReadiness="ready"
+          missing={["dateOfBirth", "passportExpiryDate"]}
+          documentsReady
+          passportUploaded
+          extractPending={false}
+          waitForPassportExtract={async () => undefined}
+          locked={false}
+          onSaved={() => undefined}
+        />
+      </CustomerI18nProvider>,
+    );
+    expect(screen.getByText(/Please fill these in/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("e.g. John Smith")).toHaveAttribute("aria-invalid", "true");
+  });
 });

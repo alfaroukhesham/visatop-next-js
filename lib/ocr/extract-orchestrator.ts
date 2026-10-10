@@ -53,8 +53,13 @@ export type ApplicantProfileSnapshot = {
 
 export type ProvenanceSource = "ocr" | "manual";
 
+export type ApplicantFieldProvenance = {
+  source: ProvenanceSource;
+  needsReview?: boolean;
+};
+
 export type ApplicantProfileProvenance = Partial<
-  Record<keyof ApplicantProfileSnapshot, { source: ProvenanceSource }>
+  Record<keyof ApplicantProfileSnapshot, ApplicantFieldProvenance>
 >;
 
 const LEASE_ACQUIRABLE_STATES = [
@@ -264,11 +269,14 @@ export function clearOcrSourcedProfileFields(
   return { updates, provenance: next };
 }
 
+const isBlank = (value: string | null | undefined): boolean =>
+  value === null || value === undefined || value.trim() === "";
+
 /**
- * Apply OCR → profile with manual-precedence rules (spec §6.4). Fields marked
- * `source = 'manual'` are never overwritten. Null/empty OCR values are
- * ignored. Returns only the mutations that should be applied, plus the new
- * merged provenance JSON. Pure helper — no DB access.
+ * Apply OCR → profile. Never overwrite a non-empty current value or a field
+ * the customer already edited (`source = manual`). Empty OCR values are
+ * ignored. New fills are flagged `needsReview` so the review screen can
+ * highlight them after reload.
  */
 export function mergeOcrIntoProfile(
   current: ApplicantProfileSnapshot,
@@ -300,16 +308,43 @@ export function mergeOcrIntoProfile(
     if (existingProv?.source === "manual") continue;
 
     const currentValue = current[col];
-    if (currentValue === trimmed) {
-      provenance[col] = { source: "ocr" };
+    if (!isBlank(currentValue)) {
+      if (existingProv?.source === "ocr") {
+        provenance[col] = { source: "ocr", needsReview: existingProv.needsReview !== false };
+      }
       continue;
     }
 
     updates[col as keyof ProfileUpdateDelta["updates"]] = trimmed;
-    provenance[col] = { source: "ocr" };
+    provenance[col] = { source: "ocr", needsReview: true };
   }
 
   return { updates, provenance };
+}
+
+const PROFILE_PATCH_TO_COLUMN: Record<string, keyof ApplicantProfileSnapshot> = {
+  fullName: "fullName",
+  dateOfBirth: "dateOfBirth",
+  placeOfBirth: "placeOfBirth",
+  applicantNationality: "applicantNationality",
+  passportNumber: "passportNumber",
+  passportExpiryDate: "passportExpiryDate",
+  profession: "profession",
+  address: "address",
+};
+
+/** Mark customer-edited profile keys as manual so a later OCR cannot clobber them. */
+export function markManualProfileFields(
+  current: ApplicantProfileProvenance,
+  patchedKeys: readonly string[],
+): ApplicantProfileProvenance {
+  const next: ApplicantProfileProvenance = { ...current };
+  for (const key of patchedKeys) {
+    const col = PROFILE_PATCH_TO_COLUMN[key];
+    if (!col) continue;
+    next[col] = { source: "manual", needsReview: false };
+  }
+  return next;
 }
 
 /**
@@ -352,6 +387,44 @@ export async function finalizeExtraction(
   return rows.length > 0;
 }
 
+export function publicFieldMetaFromProvenance(
+  v: unknown,
+): Partial<
+  Record<
+    | "fullName"
+    | "dateOfBirth"
+    | "placeOfBirth"
+    | "nationality"
+    | "passportNumber"
+    | "passportExpiryDate"
+    | "profession"
+    | "address",
+    { source: ProvenanceSource; needsReview: boolean }
+  >
+> {
+  const prov = normalizeProvenance(v);
+  const toPublic: Record<string, string> = {
+    fullName: "fullName",
+    dateOfBirth: "dateOfBirth",
+    placeOfBirth: "placeOfBirth",
+    applicantNationality: "nationality",
+    passportNumber: "passportNumber",
+    passportExpiryDate: "passportExpiryDate",
+    profession: "profession",
+    address: "address",
+  };
+  const out: ReturnType<typeof publicFieldMetaFromProvenance> = {};
+  for (const [col, pub] of Object.entries(toPublic)) {
+    const meta = prov[col as keyof ApplicantProfileSnapshot];
+    if (!meta) continue;
+    out[pub as keyof typeof out] = {
+      source: meta.source,
+      needsReview: meta.source === "ocr" ? meta.needsReview !== false : false,
+    };
+  }
+  return out;
+}
+
 function normalizeProvenance(v: unknown): ApplicantProfileProvenance {
   if (!v || typeof v !== "object") return {};
   const out: ApplicantProfileProvenance = {};
@@ -359,7 +432,11 @@ function normalizeProvenance(v: unknown): ApplicantProfileProvenance {
     if (!raw || typeof raw !== "object") continue;
     const source = (raw as { source?: unknown }).source;
     if (source === "ocr" || source === "manual") {
-      out[k as keyof ApplicantProfileSnapshot] = { source };
+      const needsReview = (raw as { needsReview?: unknown }).needsReview;
+      out[k as keyof ApplicantProfileSnapshot] = {
+        source,
+        ...(typeof needsReview === "boolean" ? { needsReview } : {}),
+      };
     }
   }
   return out;

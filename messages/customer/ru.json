@@ -514,7 +514,12 @@
     "trip": "Trip",
     "details": "Details",
     "pay": "Pay",
-    "finish": "Finish"
+    "finish": "Finish",
+    "tripShort": "Поездка",
+    "documentsShort": "Док.",
+    "detailsShort": "Данные",
+    "payShort": "Оплата",
+    "finishShort": "Готово"
   },
   "common": {
     "continue": "Продолжить",

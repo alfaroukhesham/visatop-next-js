@@ -514,7 +514,12 @@
     "trip": "Trip",
     "details": "Details",
     "pay": "Pay",
-    "finish": "Finish"
+    "finish": "Finish",
+    "tripShort": "Biyahe",
+    "documentsShort": "Docs",
+    "detailsShort": "Impo",
+    "payShort": "Bayad",
+    "finishShort": "Tapos"
   },
   "common": {
     "continue": "Ituloy",

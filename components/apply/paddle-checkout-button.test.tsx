@@ -47,7 +47,6 @@ describe("PaddleCheckoutButton terms gate", () => {
   });
 
   it("does not call checkout when Terms are unticked", async () => {
-    const user = userEvent.setup();
     const onTermsRejected = vi.fn();
     render(
       <PaddleCheckoutButton
@@ -56,9 +55,9 @@ describe("PaddleCheckoutButton terms gate", () => {
         onTermsRejected={onTermsRejected}
       />,
     );
-    await user.click(screen.getByRole("button", { name: /pay & submit/i }));
-    expect(onTermsRejected).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: /pay & submit/i })).toBeDisabled();
     expect(fetch).not.toHaveBeenCalled();
+    expect(onTermsRejected).not.toHaveBeenCalled();
   });
 
   it("POSTs termsAccepted: true once Terms are ticked", async () => {

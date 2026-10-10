@@ -22,6 +22,8 @@ on:
 # DEPLOY_HOST, DEPLOY_USER, STAGING_BUILD_ENV, PROD_BUILD_ENV.
 # STAGING_BUILD_ENV and PROD_BUILD_ENV are the dotenv files passed as the
 # image build secret (NEXT_PUBLIC_* is baked in). Runtime env stays on the server.
+# Put NEXT_PUBLIC_GADS_CHECKOUT_CONVERSION_SEND_TO only in PROD_BUILD_ENV
+# (visatop.com checkout Ads). Leave it unset in STAGING_BUILD_ENV.
 # Protect the production environment with a required reviewer.
 
 jobs:
@@ -62,8 +64,15 @@ jobs:
         run: |
           if [[ "$ENVIRONMENT" == "production" ]]; then
             printf '%s\n' "$PROD_BUILD_ENV" > "$RUNNER_TEMP/build.env"
+            if ! grep -Eq '^[[:space:]]*NEXT_PUBLIC_GADS_CHECKOUT_CONVERSION_SEND_TO=.+' "$RUNNER_TEMP/build.env"; then
+              echo "warning: NEXT_PUBLIC_GADS_CHECKOUT_CONVERSION_SEND_TO is missing from PROD_BUILD_ENV; checkout Ads conversions will not fire" >&2
+            fi
           else
             printf '%s\n' "$STAGING_BUILD_ENV" > "$RUNNER_TEMP/build.env"
+            if grep -Eq '^[[:space:]]*NEXT_PUBLIC_GADS_CHECKOUT_CONVERSION_SEND_TO=.+' "$RUNNER_TEMP/build.env"; then
+              echo "error: NEXT_PUBLIC_GADS_CHECKOUT_CONVERSION_SEND_TO must be unset in STAGING_BUILD_ENV" >&2
+              exit 1
+            fi
           fi
           test -s "$RUNNER_TEMP/build.env"
 

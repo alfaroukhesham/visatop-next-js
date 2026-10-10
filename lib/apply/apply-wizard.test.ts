@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   abandonStopFromCursor,
+  applyPreviousHref,
   applyWizardHref,
   cursorIsAhead,
   nextApplyScreen,
   parseApplyWizardQuery,
+  previousApplyScreen,
   resolveApplyScreen,
   type TApplyWizardMember,
 } from "@/lib/apply/apply-wizard";
@@ -83,6 +85,30 @@ describe("resolveApplyScreen", () => {
         requested: { screen: "passport", travellerId: "b" },
       }),
     ).toEqual({ screen: "passport", travellerId: "a" });
+  });
+});
+
+describe("previousApplyScreen", () => {
+  it("sends payment back to details, not the bare application url", () => {
+    const one: TApplyWizardMember[] = [{ applicationId: "a", hasPassport: true }];
+    expect(previousApplyScreen(one, { screen: "payment", travellerId: null })).toEqual({
+      screen: "details",
+      travellerId: "a",
+    });
+    expect(applyPreviousHref("a", one, { screen: "payment", travellerId: null })).toBe(
+      "/apply/applications/a?screen=details&traveller=a",
+    );
+  });
+
+  it("walks details back to other documents with an explicit screen", () => {
+    const one: TApplyWizardMember[] = [{ applicationId: "a", hasPassport: true }];
+    expect(previousApplyScreen(one, { screen: "details", travellerId: "a" })).toEqual({
+      screen: "other",
+      travellerId: "a",
+    });
+    expect(applyPreviousHref("a", one, { screen: "details", travellerId: "a" })).toContain(
+      "screen=other",
+    );
   });
 });
 

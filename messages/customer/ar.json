@@ -514,7 +514,12 @@
     "trip": "Trip",
     "details": "Details",
     "pay": "Pay",
-    "finish": "Finish"
+    "finish": "Finish",
+    "tripShort": "الرحلة",
+    "documentsShort": "مستندات",
+    "detailsShort": "بيانات",
+    "payShort": "دفع",
+    "finishShort": "إنهاء"
   },
   "common": {
     "continue": "متابعة",

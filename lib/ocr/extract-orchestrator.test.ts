@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   clearOcrSourcedProfileFields,
+  markManualProfileFields,
   mergeOcrIntoProfile,
   type ApplicantProfileSnapshot,
   type ApplicantProfileProvenance,
@@ -48,8 +49,8 @@ describe("mergeOcrIntoProfile", () => {
     );
     expect(delta.updates.fullName).toBe("Ada Lovelace");
     expect(delta.updates.applicantNationality).toBe("British");
-    expect(delta.provenance.fullName).toEqual({ source: "ocr" });
-    expect(delta.provenance.applicantNationality).toEqual({ source: "ocr" });
+    expect(delta.provenance.fullName).toEqual({ source: "ocr", needsReview: true });
+    expect(delta.provenance.applicantNationality).toEqual({ source: "ocr", needsReview: true });
   });
 
   it("does NOT overwrite fields marked manual (spec §6.4)", () => {
@@ -68,7 +69,7 @@ describe("mergeOcrIntoProfile", () => {
     expect(delta.updates.fullName).toBeUndefined();
     expect(delta.updates.passportNumber).toBe("P1");
     expect(delta.provenance.fullName).toEqual({ source: "manual" });
-    expect(delta.provenance.passportNumber).toEqual({ source: "ocr" });
+    expect(delta.provenance.passportNumber).toEqual({ source: "ocr", needsReview: true });
   });
 
   it("skips null/empty OCR values without downgrading provenance", () => {
@@ -87,17 +88,30 @@ describe("mergeOcrIntoProfile", () => {
     expect(delta.provenance.passportNumber).toEqual({ source: "ocr" });
   });
 
-  it("can re-apply OCR on top of prior OCR-sourced values (second run overwrites)", () => {
+  it("does not overwrite a non-empty field on a later OCR run", () => {
     const provenance: ApplicantProfileProvenance = {
-      fullName: { source: "ocr" },
+      fullName: { source: "ocr", needsReview: true },
     };
     const delta = mergeOcrIntoProfile(
       { ...EMPTY_PROFILE, fullName: "First Guess" },
       provenance,
-      ocr({ fullName: "Second Guess" }),
+      ocr({ fullName: "Second Guess", passportNumber: "P9" }),
     );
-    expect(delta.updates.fullName).toBe("Second Guess");
-    expect(delta.provenance.fullName).toEqual({ source: "ocr" });
+    expect(delta.updates.fullName).toBeUndefined();
+    expect(delta.updates.passportNumber).toBe("P9");
+    expect(delta.provenance.fullName).toEqual({ source: "ocr", needsReview: true });
+    expect(delta.provenance.passportNumber).toEqual({ source: "ocr", needsReview: true });
+  });
+
+  it("never overwrites customer-typed values even without provenance yet", () => {
+    const delta = mergeOcrIntoProfile(
+      { ...EMPTY_PROFILE, profession: "Engineer", address: "1 Main St" },
+      {},
+      ocr({ profession: "OCR Job", address: "OCR Addr", fullName: "Ada" }),
+    );
+    expect(delta.updates.profession).toBeUndefined();
+    expect(delta.updates.address).toBeUndefined();
+    expect(delta.updates.fullName).toBe("Ada");
   });
 
   it("returns no updates when ocr result is null", () => {
@@ -117,5 +131,16 @@ describe("clearOcrSourcedProfileFields", () => {
     expect(delta.updates.passportNumber).toBeUndefined();
     expect(delta.provenance.fullName).toBeUndefined();
     expect(delta.provenance.passportNumber).toEqual({ source: "manual" });
+  });
+});
+
+describe("markManualProfileFields", () => {
+  it("flags patched keys as manual and not needing review", () => {
+    const next = markManualProfileFields(
+      { fullName: { source: "ocr", needsReview: true } },
+      ["fullName", "profession"],
+    );
+    expect(next.fullName).toEqual({ source: "manual", needsReview: false });
+    expect(next.profession).toEqual({ source: "manual", needsReview: false });
   });
 });

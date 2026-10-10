@@ -8,6 +8,7 @@ import { ClientField } from "@/components/client/client-field";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { apiHref, publicAsset } from "@/lib/app-href";
 import { customerUploadErrorMessage, customerUploadStateLabel } from "@/lib/apply/customer-upload-copy";
+import { formatRetryAfterWait } from "@/lib/applications/document-rate-limit";
 import type { TDocumentUploadSource } from "@/lib/analytics/document-upload-events";
 import { MIME_BY_TYPE, type DocType, type PublicDocument, type TUploadSlotError } from "./types";
 
@@ -54,7 +55,17 @@ export const DocumentUploadSlot: FC<IDocumentUploadSlotProps> = ({
   const lastFileRef = useRef<File | null>(null);
   const lastSourceRef = useRef<TDocumentUploadSource>("file");
   const cameraFacing = docType === "personal_photo" ? "user" : "environment";
-  const errorMessage = lastError ? customerUploadErrorMessage(lastError.code, t) : null;
+  const errorMessage = lastError
+    ? customerUploadErrorMessage(
+        lastError.code,
+        t,
+        lastError.code === "RATE_LIMITED"
+          ? {
+              wait: formatRetryAfterWait((lastError.retryAfterSeconds ?? 60) * 1000),
+            }
+          : undefined,
+      )
+    : null;
 
   useEffect(() => {
     if (!lastError) return;
@@ -119,7 +130,7 @@ export const DocumentUploadSlot: FC<IDocumentUploadSlotProps> = ({
       {showPhotoGuidance ? (
         <div className="border-secondary/20 bg-muted/40 space-y-3 rounded-xl border p-3">
           <div
-            className="border-secondary/40 mx-auto size-28 rounded-full border-2 border-dashed"
+            className="border-secondary/40 mx-auto h-32 w-24 rounded-[50%] border-2 border-dashed"
             aria-hidden
           />
           <ul className="text-muted-foreground list-disc space-y-1 ps-4 text-xs leading-relaxed">
@@ -167,7 +178,7 @@ export const DocumentUploadSlot: FC<IDocumentUploadSlotProps> = ({
             href={apiHref(`/applications/${applicationId}/documents/${currentDoc.id}/preview`)}
             target="_blank"
             rel="noreferrer"
-            className="text-link text-xs hover:underline"
+            className="text-link inline-flex min-h-11 items-center text-xs hover:underline"
             data-clarity-mask="true"
           >
             {t("documents.preview")}

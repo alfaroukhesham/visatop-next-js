@@ -203,12 +203,16 @@ export function useApplicationDraft(applicationId: string) {
       source: TDocumentUploadSource,
       code: string,
       httpStatus?: number,
+      retryAfterSeconds?: number,
     ) => {
       const current = memberStatesRef.current[memberId] ?? emptyMemberState();
       updateMemberState(memberId, {
         uploading: null,
         uploadPercent: null,
-        lastUploadErrors: { ...current.lastUploadErrors, [type]: { code } },
+        lastUploadErrors: {
+          ...current.lastUploadErrors,
+          [type]: { code, ...(retryAfterSeconds ? { retryAfterSeconds } : {}) },
+        },
       });
       pushUploadErrorDataLayer(buildUploadErrorDataLayerPayload({ code, file, httpStatus }));
       trackDocumentUploadAnalytics({
@@ -358,12 +362,16 @@ export function useApplicationDraft(applicationId: string) {
         return;
       }
 
-      const json = result.json as { ok?: boolean; error?: { code?: string; message?: string } } | null;
+      const json = result.json as {
+        ok?: boolean;
+        error?: { code?: string; message?: string; details?: { retryAfterSeconds?: number } };
+      } | null;
       if (result.status < 200 || result.status >= 300 || !json?.ok) {
         const code =
           json?.error?.code ??
           (result.status === 413 ? "FILE_TOO_LARGE" : result.status >= 500 ? "UPLOAD_FAILED" : "UPLOAD_FAILED");
-        reportUploadFailure(type, memberId, file, source, code, result.status);
+        const retryAfterSeconds = json?.error?.details?.retryAfterSeconds;
+        reportUploadFailure(type, memberId, file, source, code, result.status, retryAfterSeconds);
         return;
       }
 

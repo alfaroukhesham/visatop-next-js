@@ -514,7 +514,12 @@
     "trip": "Trip",
     "details": "Details",
     "pay": "Pay",
-    "finish": "Finish"
+    "finish": "Finish",
+    "tripShort": "Viaggio",
+    "documentsShort": "Docs",
+    "detailsShort": "Dati",
+    "payShort": "Paga",
+    "finishShort": "Fine"
   },
   "common": {
     "continue": "Continua",

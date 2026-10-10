@@ -113,4 +113,44 @@ describe("recordFunnelEvent", () => {
     expect(result).toEqual({ stored: true, reason: "invalid_application" });
     expect(attempts).toBe(2);
   });
+
+  it("stores upload failure fields on the funnel row metadata", async () => {
+    const values = vi.fn(() => ({
+      then(resolve: (value: unknown) => unknown) {
+        return Promise.resolve(resolve("awaited-without-on-conflict"));
+      },
+      onConflictDoNothing: vi.fn(() => ({
+        returning: async () => [{ eventId: "evt-fail-1" }],
+      })),
+    }));
+    const inner = {
+      insert: vi.fn(() => ({ values })),
+    };
+    const tx = {
+      transaction: vi.fn(async (fn: (sp: typeof inner) => Promise<unknown>) => fn(inner)),
+      insert: inner.insert,
+    };
+    const result = await recordFunnelEvent(tx as never, {
+      eventId: "evt-fail-1",
+      eventName: "document_upload_failed",
+      sessionId: "sid-1",
+      applicationId: "app-1",
+      source: "client",
+      errorCode: "PDF_NOT_SINGLE_PAGE",
+      httpStatus: 400,
+      reason: "upload_rejected",
+    });
+    expect(result).toEqual({ stored: true, reason: "stored" });
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventName: "document_upload_failed",
+        applicationId: "app-1",
+        metadata: {
+          error_code: "PDF_NOT_SINGLE_PAGE",
+          http_status: 400,
+          reason: "upload_rejected",
+        },
+      }),
+    );
+  });
 });

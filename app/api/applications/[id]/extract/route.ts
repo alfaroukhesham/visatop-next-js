@@ -38,7 +38,7 @@ import {
   type ApplicantProfile,
   type ValidationResult,
 } from "@/lib/documents/validation-readiness";
-import { extractPassport, type ExtractPassportResult } from "@/lib/ocr/gemini-passport";
+import { extractPassport, listFilledOcrFields, type ExtractPassportResult } from "@/lib/ocr/gemini-passport";
 import { GeminiNotConfiguredError } from "@/lib/gemini/client";
 import type { OcrResult } from "@/lib/ocr/schema";
 import {
@@ -60,6 +60,7 @@ type ExtractResponsePayload = {
     documentId: string;
     prefill: OcrPrefill;
     ocrMissingFields: string[];
+    ocrNeedsReviewFields: string[];
     submissionMissingFields: string[];
     validation: ValidationResult;
   };
@@ -278,6 +279,7 @@ export async function POST(
           documentId: lease.documentId,
           prefill: snapshotToPrefill(mergedSnapshot, null),
           ocrMissingFields: [],
+          ocrNeedsReviewFields: [],
           submissionMissingFields: validation.requiredFieldsMissing.slice(),
           validation,
         },
@@ -458,6 +460,9 @@ export async function POST(
       documentId: lease.documentId,
       prefill: snapshotToPrefill(mergedSnapshot, ocrResult.finalResult),
       ocrMissingFields: ocrResult.missingFields.slice(),
+      ocrNeedsReviewFields: [
+        ...new Set([...listFilledOcrFields(ocrResult.finalResult), ...ocrResult.missingFields]),
+      ],
       submissionMissingFields: validation.requiredFieldsMissing.slice(),
       validation,
     },

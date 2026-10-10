@@ -7,8 +7,9 @@ import { ClientButton } from "@/components/client/client-button";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { tagClarityApplyScreen } from "@/lib/analytics/clarity-apply-screen";
-import { trackEventOnce, trackPageView } from "@/lib/analytics/gtag-client";
+import { trackEventOnce } from "@/lib/analytics/gtag-client";
 import {
+  applyPreviousHref,
   applyWizardHref,
   nextApplyScreen,
   parseApplyWizardQuery,
@@ -17,6 +18,7 @@ import {
   type TApplyWizardMember,
   type TApplyWizardStep,
 } from "@/lib/apply/apply-wizard";
+import { ocrStatusForDraftUi, passportSlotOcrNotice } from "@/lib/apply/ocr-customer-copy";
 import { translateDocumentSlot } from "@/lib/apply/document-slot-i18n";
 import type { TDocumentSlot } from "@/lib/apply/document-requirements";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
@@ -168,10 +170,6 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
   useEffect(() => {
     if (resolved.screen === "payment") return;
     tagClarityApplyScreen(resolved.screen);
-    const search = window.location.search.startsWith("?")
-      ? window.location.search.slice(1)
-      : window.location.search;
-    trackPageView(window.location.pathname, search);
     if (resolved.screen === "ready") {
       trackEventOnce(
         APPLY_FUNNEL_EVENTS.docsReadyViewed,
@@ -186,7 +184,7 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
         `${APPLY_FUNNEL_EVENTS.detailsReviewViewed}:${resolved.travellerId}`,
       );
     }
-  }, [applicationId, resolved, resolvedKey]);
+  }, [applicationId, resolvedKey, resolved.screen, resolved.travellerId]);
 
   const confirmAndGo = async (current: TApplyWizardStep) => {
     const next = nextApplyScreen(wizardMembers, current);
@@ -266,6 +264,15 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
         >
           {t("common.continue")}
         </ClientButton>
+        <ClientButton
+          variant="outline"
+          brand="white"
+          className="h-12 w-full"
+          type="button"
+          onClick={() => router.push(applyPreviousHref(applicationId, wizardMembers, resolved))}
+        >
+          {t("common.previous")}
+        </ClientButton>
       </section>
     );
   }
@@ -302,6 +309,14 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
             stackActions
             onUpload={(file, source) => onUpload("passport_copy", file, source)}
             onCancelUpload={onCancelUpload}
+            ocrNotice={passportSlotOcrNotice(
+              ocrStatusForDraftUi(
+                view.extractResult?.extraction.status,
+                view.app.passportExtraction.status,
+              ),
+              view.extracting,
+              t,
+            )}
           />
           <ClientButton
             brand="cta"
@@ -311,6 +326,15 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
             onClick={() => void confirmAndGo({ screen: "passport", travellerId })}
           >
             {t("common.continue")}
+          </ClientButton>
+          <ClientButton
+            variant="outline"
+            brand="white"
+            className="h-12 w-full"
+            type="button"
+            onClick={() => router.push(applyPreviousHref(applicationId, wizardMembers, resolved))}
+          >
+            {t("common.previous")}
           </ClientButton>
         </>
       ) : null}
@@ -356,6 +380,15 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
             }}
           >
             {otherDocsUploaded ? t("common.continue") : t("wizard.skipForNow")}
+          </ClientButton>
+          <ClientButton
+            variant="outline"
+            brand="white"
+            className="h-12 w-full"
+            type="button"
+            onClick={() => router.push(applyPreviousHref(applicationId, wizardMembers, resolved))}
+          >
+            {t("common.previous")}
           </ClientButton>
         </>
       ) : null}
@@ -410,6 +443,10 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
           onReplacePassport={() =>
             router.push(applyWizardHref(applicationId, { screen: "passport", travellerId }))
           }
+          onPrevious={() =>
+            router.push(applyPreviousHref(applicationId, wizardMembers, resolved))
+          }
+          fieldMeta={view.app.applicantFieldMeta}
         />
       ) : null}
     </section>

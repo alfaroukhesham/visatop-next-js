@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   __resetRateLimiterForTests,
   consume,
+  formatRetryAfterWait,
   inspect,
   RATE_LIMITS,
 } from "./document-rate-limit";
@@ -40,18 +41,33 @@ describe("document-rate-limit consume", () => {
   });
 
   it("rejects when ip scope exceeds even if applicationId is fresh", () => {
-    const { limit } = RATE_LIMITS.UPLOAD_PREVIEW;
+    const { ipLimit } = RATE_LIMITS.UPLOAD_PREVIEW;
     const now = 1_000_000;
-    for (let i = 0; i < limit; i++) {
-      consume("UPLOAD_PREVIEW", { ip: IP, applicationId: APP }, now + i);
+    for (let i = 0; i < ipLimit; i++) {
+      consume("UPLOAD_PREVIEW", { ip: IP, applicationId: `app-${i}` }, now + i);
     }
     const blocked = consume(
       "UPLOAD_PREVIEW",
       { ip: IP, applicationId: OTHER_APP },
-      now + limit,
+      now + ipLimit,
     );
     expect(blocked.ok).toBe(false);
     if (!blocked.ok) expect(blocked.scope).toBe("ip");
+  });
+
+  it("allows more writes per IP than per draft", () => {
+    const { limit, ipLimit } = RATE_LIMITS.UPLOAD_PREVIEW;
+    expect(ipLimit).toBeGreaterThan(limit);
+    const now = 1_000_000;
+    for (let i = 0; i < limit; i++) {
+      consume("UPLOAD_PREVIEW", { ip: IP, applicationId: APP }, now + i);
+    }
+    const otherDraft = consume(
+      "UPLOAD_PREVIEW",
+      { ip: IP, applicationId: OTHER_APP },
+      now + limit,
+    );
+    expect(otherDraft.ok).toBe(true);
   });
 
   it("rejects when applicationId scope exceeds even if ip rotates", () => {
@@ -144,5 +160,12 @@ describe("document-rate-limit inspect", () => {
     expect(first.applicationIdCount).toBe(1);
     expect(second.ipCount).toBe(1);
     expect(second.applicationIdCount).toBe(1);
+  });
+});
+
+describe("formatRetryAfterWait", () => {
+  it("names minutes so the lockout is not 'a moment'", () => {
+    expect(formatRetryAfterWait(46 * 60 * 1000)).toBe("46 minutes");
+    expect(formatRetryAfterWait(30_000)).toBe("about a minute");
   });
 });

@@ -1,6 +1,7 @@
 import type { InferSelectModel } from "drizzle-orm";
 import type { application } from "@/lib/db/schema";
 import { computeClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
+import { publicFieldMetaFromProvenance } from "@/lib/ocr/extract-orchestrator";
 import { minorUnitsToMajor } from "@/lib/pricing/format-minor-units";
 
 type ApplicationRow = InferSelectModel<typeof application>;
@@ -61,6 +62,7 @@ export function toPublicApplication(
       address: row.address,
       phone: row.phone,
     },
+    applicantFieldMeta: publicFieldMetaFromProvenance(row.applicantProfileProvenanceJson),
 
     passportExtraction: {
       status: row.passportExtractionStatus,
