@@ -23,7 +23,10 @@
     "continue": "Ituloy",
     "invalidLinkTitle": "Invalid o expired na ang resume link na ito",
     "invalidLinkCta": "I-track ang application mo",
-    "pageTitle": "Ituloy ang application | Visatop"
+    "pageTitle": "Ituloy ang application | Visatop",
+    "continueTitle": "Ituloy ang application mo",
+    "continueBody": "Buksan ang naka-save mong draft para ituloy kung saan ka tumigil.",
+    "continueCta": "Ituloy"
   },
   "header": {
     "loginRegister": "Login / Register",
@@ -586,6 +589,19 @@
       "cta": "Ituloy",
       "oneTraveler": "1 traveler",
       "manyTravelers": "{count} na traveler"
+    },
+    "uploadFailed": {
+      "subject": "May nakitang problema sa pag-upload ng dokumento mo",
+      "eyebrow": "Nandito kami para tumulong",
+      "greeting": "Hello,",
+      "body": "Napansin namin na sinusubukan mong mag-upload ng dokumento at may nangyaring mali. Masaya kaming tumulong: sagutin lang ang email na ito at sabihin kung ano ang naranasan mo, o i-message kami sa WhatsApp para sa live na suporta.",
+      "whatsappCta": "Live na support sa WhatsApp"
+    },
+    "uploadResolved": {
+      "subject": "Matagumpay nang na-upload ang dokumento mo",
+      "eyebrow": "Ayos na",
+      "greeting": "Hello,",
+      "body": "Nakikita namin na nalampasan mo na ang isyu at matagumpay nang na-upload ang dokumento mo. Nandito kami kung kailangan mo ng tulong: sagutin ang email na ito o i-message kami sa WhatsApp."
     }
   },
   "upload": {

@@ -64,6 +64,23 @@ describe("parseBeaconPayload", () => {
     expect(parsed.data.httpStatus).toBeUndefined();
   });
 
+  it("accepts session_auth failureReason for 403 resume-session rejects", () => {
+    const parsed = parseBeaconPayload({
+      eventId: "11111111-1111-4111-8111-111111111111",
+      eventName: "passport_upload_failed",
+      sessionId: "22222222-2222-4222-8222-222222222222",
+      applicationId: "app-1",
+      failureReason: "session_auth",
+      errorCode: "FORBIDDEN",
+      httpStatus: 403,
+    });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.data.failureReason).toBe("session_auth");
+    expect(parsed.data.errorCode).toBe("FORBIDDEN");
+    expect(parsed.data.httpStatus).toBe(403);
+  });
+
   it("keeps cancel reason on document_upload_cancelled", () => {
     const parsed = parseBeaconPayload({
       eventId: "11111111-1111-4111-8111-111111111111",

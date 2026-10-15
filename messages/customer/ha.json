@@ -23,7 +23,10 @@
     "continue": "Ci gaba",
     "invalidLinkTitle": "Wannan hanyar haɗi ta ci gaba ba ta da inganci ko ta ƙare",
     "invalidLinkCta": "Bibiyi neman ku",
-    "pageTitle": "Ci gaba da nema | Visatop"
+    "pageTitle": "Ci gaba da nema | Visatop",
+    "continueTitle": "Ci gaba da neman ku",
+    "continueBody": "Buɗe daftarin da kuka adana don ci gaba daga inda kuka tsaya.",
+    "continueCta": "Ci gaba"
   },
   "header": {
     "loginRegister": "Shiga / Yi rijista",
@@ -586,6 +589,19 @@
       "cta": "Ci gaba",
       "oneTraveler": "Mafiya tafiya 1",
       "manyTravelers": "Mafiya tafiya {count}"
+    },
+    "uploadFailed": {
+      "subject": "Mun lura da matsala yayin loda takardar ku",
+      "eyebrow": "Muna nan don taimako",
+      "greeting": "Sannu,",
+      "body": "Mun lura kuna ƙoƙarin loda takarda kuma wani abu ya tafi ba daidai ba. Muna farin cikin taimaka muku: kawai ku amsa wannan imel ɗin da abin da kuke fuskanta, ko ku tuntuɓe mu a WhatsApp don taimako kai tsaye.",
+      "whatsappCta": "Taimako kai tsaye ta WhatsApp"
+    },
+    "uploadResolved": {
+      "subject": "An loda takardar ku cikin nasara",
+      "eyebrow": "Komai ya yi",
+      "greeting": "Sannu,",
+      "body": "Mun ga kun shawo kan matsalar kuma an loda takardar ku cikin nasara. Muna nan a kowane lokaci idan kuna buƙatar taimako: ku amsa wannan imel ɗin ko ku tuntuɓe mu a WhatsApp."
     }
   },
   "upload": {

@@ -67,14 +67,19 @@ export async function POST(req: Request) {
       : [];
     const partyHashes = partyIds.length
       ? await tx
-          .select({ id: applicationParty.id, resumeTokenHash: applicationParty.resumeTokenHash })
+          .select({
+            id: applicationParty.id,
+            resumeTokenHash: applicationParty.resumeTokenHash,
+            previousResumeTokenHash: applicationParty.previousResumeTokenHash,
+            previousResumeTokenExpiresAt: applicationParty.previousResumeTokenExpiresAt,
+          })
           .from(applicationParty)
           .where(inArray(applicationParty.id, partyIds))
       : [];
     return { items: result.items, hasMore: result.hasMore, services, nationalities, partyHashes };
   });
 
-  const partyHashById = new Map(partyHashes.map((p) => [p.id, p.resumeTokenHash]));
+  const partyHashById = new Map(partyHashes.map((p) => [p.id, p]));
   const t = createCustomerT(readCustomerLocaleFromCookieHeader(hdrs.get("cookie")));
 
   const applications = rows.map((row) =>
@@ -86,7 +91,15 @@ export async function POST(req: Request) {
       },
       {
         cookiePlain,
-        partyResumeTokenHash: row.partyId ? (partyHashById.get(row.partyId) ?? null) : null,
+        partyResumeTokenHash: row.partyId
+          ? (partyHashById.get(row.partyId)?.resumeTokenHash ?? null)
+          : null,
+        partyPreviousResumeTokenHash: row.partyId
+          ? (partyHashById.get(row.partyId)?.previousResumeTokenHash ?? null)
+          : null,
+        partyPreviousResumeTokenExpiresAt: row.partyId
+          ? (partyHashById.get(row.partyId)?.previousResumeTokenExpiresAt ?? null)
+          : null,
       },
       t,
     ),

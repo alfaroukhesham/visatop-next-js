@@ -23,7 +23,10 @@
     "continue": "Continue",
     "invalidLinkTitle": "This resume link is invalid or expired",
     "invalidLinkCta": "Track your application",
-    "pageTitle": "Resume application | Visatop"
+    "pageTitle": "Resume application | Visatop",
+    "continueTitle": "Continue your application",
+    "continueBody": "Open your saved draft to pick up where you left off.",
+    "continueCta": "Continue"
   },
   "header": {
     "loginRegister": "Login / Register",
@@ -603,6 +606,19 @@
       "cta": "Continue",
       "oneTraveler": "1 traveler",
       "manyTravelers": "{count} travelers"
+    },
+    "uploadFailed": {
+      "subject": "We noticed a problem uploading your document",
+      "eyebrow": "We're here to help",
+      "greeting": "Hello,",
+      "body": "We noticed you were trying to upload a document and something went wrong. We're happy to help: just reply to this email with what you're facing, or reach us on WhatsApp for live support.",
+      "whatsappCta": "WhatsApp live support"
+    },
+    "uploadResolved": {
+      "subject": "Your document uploaded successfully",
+      "eyebrow": "You're all set",
+      "greeting": "Hello,",
+      "body": "We can see you got past the issue and your document uploaded successfully. We're here anytime if you need help: just reply to this email or reach us on WhatsApp."
     }
   },
   "upload": {

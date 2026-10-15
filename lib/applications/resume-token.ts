@@ -19,3 +19,28 @@ export function verifyResumeToken(plainToken: string, storedHash: string): boole
     return false;
   }
 }
+
+export type TGuestResumeTokenState = {
+  resumeTokenHash: string | null | undefined;
+  previousResumeTokenHash?: string | null;
+  previousResumeTokenExpiresAt?: Date | null;
+};
+
+/** Current hash, or previous hash still inside its grace window. */
+export const guestResumeTokenMatches = (
+  plainToken: string,
+  state: TGuestResumeTokenState,
+  now: Date = new Date(),
+): boolean => {
+  if (state.resumeTokenHash && verifyResumeToken(plainToken, state.resumeTokenHash)) {
+    return true;
+  }
+  if (
+    !state.previousResumeTokenHash ||
+    !state.previousResumeTokenExpiresAt ||
+    state.previousResumeTokenExpiresAt.getTime() <= now.getTime()
+  ) {
+    return false;
+  }
+  return verifyResumeToken(plainToken, state.previousResumeTokenHash);
+};

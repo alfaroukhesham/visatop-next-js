@@ -23,7 +23,10 @@
     "continue": "Continuar",
     "invalidLinkTitle": "Este enlace de reanudación no es válido o ha caducado",
     "invalidLinkCta": "Consultar su solicitud",
-    "pageTitle": "Reanudar solicitud | Visatop"
+    "pageTitle": "Reanudar solicitud | Visatop",
+    "continueTitle": "Continúe su solicitud",
+    "continueBody": "Abra su borrador guardado para retomar donde lo dejó.",
+    "continueCta": "Continuar"
   },
   "header": {
     "loginRegister": "Iniciar sesión / Registrarse",
@@ -586,6 +589,19 @@
       "cta": "Continuar",
       "oneTraveler": "1 viajero",
       "manyTravelers": "{count} viajeros"
+    },
+    "uploadFailed": {
+      "subject": "Hemos detectado un problema al subir su documento",
+      "eyebrow": "Estamos aquí para ayudar",
+      "greeting": "Hola,",
+      "body": "Hemos visto que intentaba subir un documento y algo ha fallado. Estaremos encantados de ayudar: responda a este correo con lo que le está ocurriendo, o escríbanos por WhatsApp para asistencia en directo.",
+      "whatsappCta": "Asistencia en directo por WhatsApp"
+    },
+    "uploadResolved": {
+      "subject": "Su documento se ha subido correctamente",
+      "eyebrow": "Todo listo",
+      "greeting": "Hola,",
+      "body": "Vemos que ha superado el problema y que su documento se ha subido correctamente. Estamos aquí si necesita ayuda: responda a este correo o escríbanos por WhatsApp."
     }
   },
   "upload": {

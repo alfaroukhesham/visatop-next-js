@@ -47,6 +47,9 @@ export const application = pgTable(
     draftExpiresAt: timestamp("draft_expires_at"),
     /** SHA-256 hex of guest resume token; null for signed-in drafts. */
     resumeTokenHash: text("resume_token_hash"),
+    /** Prior guest resume hash; valid until `previousResumeTokenExpiresAt`. */
+    previousResumeTokenHash: text("previous_resume_token_hash"),
+    previousResumeTokenExpiresAt: timestamp("previous_resume_token_expires_at"),
 
     // Applicant profile (populated by OCR + manual edits; see spec §6.4 provenance).
     fullName: text("full_name"),
@@ -110,6 +113,7 @@ export const application = pgTable(
     index("application_fulfillmentStatus_idx").on(t.fulfillmentStatus),
     index("application_draftExpiresAt_idx").on(t.draftExpiresAt),
     index("application_resumeTokenHash_idx").on(t.resumeTokenHash),
+    index("application_previousResumeTokenHash_idx").on(t.previousResumeTokenHash),
     index("application_passportExtractionStatus_idx").on(t.passportExtractionStatus),
     index("application_passportExtractionLeaseExpiresAt_idx").on(
       t.passportExtractionLeaseExpiresAt,

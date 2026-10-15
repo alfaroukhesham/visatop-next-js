@@ -1,6 +1,9 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { generateResumeToken } from "@/lib/applications/resume-token";
+import {
+  generateResumeToken,
+  guestResumeTokenMatches,
+} from "@/lib/applications/resume-token";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { application, applicationParty } from "@/lib/db/schema";
 
@@ -100,11 +103,126 @@ export const verifyResumeEmailLink = (
   return { ok: true, partyId: data.partyId, primaryApplicationId: data.primaryApplicationId };
 };
 
+export const RESUME_TOKEN_GRACE_MS = 30 * 60 * 1000;
+
 export type TConsumeResumeEmailLinkResult =
-  | { ok: true; plainToken: string; maxAgeSeconds: number; primaryApplicationId: string }
+  | {
+      ok: true;
+      plainToken: string;
+      maxAgeSeconds: number;
+      primaryApplicationId: string;
+      rotated: boolean;
+    }
   | { ok: false };
 
-export const consumeResumeEmailLink = async (signedToken: string): Promise<TConsumeResumeEmailLinkResult> => {
+export type TGuestResumeRedeemPlan =
+  | { action: "reuse"; plainToken: string }
+  | { action: "rotate" };
+
+export const planGuestResumeRedeem = (input: {
+  incomingPlain: string | null;
+  currentHash: string | null;
+  previousHash: string | null;
+  previousExpiresAt: Date | null;
+  now?: Date;
+}): TGuestResumeRedeemPlan => {
+  const now = input.now ?? new Date();
+  if (
+    input.incomingPlain &&
+    guestResumeTokenMatches(
+      input.incomingPlain,
+      {
+        resumeTokenHash: input.currentHash,
+        previousResumeTokenHash: input.previousHash,
+        previousResumeTokenExpiresAt: input.previousExpiresAt,
+      },
+      now,
+    )
+  ) {
+    return { action: "reuse", plainToken: input.incomingPlain };
+  }
+  return { action: "rotate" };
+};
+
+export type TLockedGuestResumeParty = {
+  id: string;
+  draftExpiresAt: Date | null;
+  paymentStatus: string;
+  resumeTokenHash: string | null;
+  previousResumeTokenHash: string | null;
+  previousResumeTokenExpiresAt: Date | null;
+};
+
+export type TRedeemLockedGuestResumePartyResult =
+  | {
+      ok: true;
+      plainToken: string;
+      maxAgeSeconds: number;
+      primaryApplicationId: string;
+      nextHash: string;
+      previousHash: string | null;
+      previousExpiresAt: Date | null;
+      rotated: boolean;
+    }
+  | { ok: false };
+
+/** Pure redeem decision used by POST /api/apply/resume. GET never calls this. */
+export const redeemLockedGuestResumeParty = (input: {
+  party: TLockedGuestResumeParty;
+  memberIds: Set<string>;
+  primaryApplicationId: string;
+  incomingPlain: string | null;
+  now?: Date;
+  generateToken?: () => { plainToken: string; hash: string };
+}): TRedeemLockedGuestResumePartyResult => {
+  const now = input.now ?? new Date();
+  if (!input.memberIds.has(input.primaryApplicationId)) return { ok: false };
+  if (input.party.draftExpiresAt && input.party.draftExpiresAt < now) return { ok: false };
+  if (!RESUMABLE_PAYMENT_STATUSES.has(input.party.paymentStatus)) return { ok: false };
+
+  const maxAgeSeconds = input.party.draftExpiresAt
+    ? Math.max(0, Math.floor((input.party.draftExpiresAt.getTime() - now.getTime()) / 1000))
+    : RESUME_EMAIL_LINK_MAX_TTL_SEC;
+
+  const plan = planGuestResumeRedeem({
+    incomingPlain: input.incomingPlain,
+    currentHash: input.party.resumeTokenHash,
+    previousHash: input.party.previousResumeTokenHash,
+    previousExpiresAt: input.party.previousResumeTokenExpiresAt,
+    now,
+  });
+
+  if (plan.action === "reuse") {
+    if (!input.party.resumeTokenHash) return { ok: false };
+    return {
+      ok: true,
+      plainToken: plan.plainToken,
+      maxAgeSeconds,
+      primaryApplicationId: input.primaryApplicationId,
+      nextHash: input.party.resumeTokenHash,
+      previousHash: input.party.previousResumeTokenHash,
+      previousExpiresAt: input.party.previousResumeTokenExpiresAt,
+      rotated: false,
+    };
+  }
+
+  const { plainToken, hash } = (input.generateToken ?? generateResumeToken)();
+  return {
+    ok: true,
+    plainToken,
+    maxAgeSeconds,
+    primaryApplicationId: input.primaryApplicationId,
+    nextHash: hash,
+    previousHash: input.party.resumeTokenHash,
+    previousExpiresAt: new Date(now.getTime() + RESUME_TOKEN_GRACE_MS),
+    rotated: true,
+  };
+};
+
+export const consumeResumeEmailLink = async (
+  signedToken: string,
+  incomingPlain?: string | null,
+): Promise<TConsumeResumeEmailLinkResult> => {
   const verified = verifyResumeEmailLink(signedToken);
   if (!verified.ok) return { ok: false };
 
@@ -122,31 +240,43 @@ export const consumeResumeEmailLink = async (signedToken: string): Promise<TCons
       .from(application)
       .where(eq(application.partyId, party.id));
     const memberIds = new Set(members.map((m) => m.id));
-    if (!memberIds.has(verified.primaryApplicationId)) return { ok: false };
 
-    const now = new Date();
-    if (party.draftExpiresAt && party.draftExpiresAt < now) return { ok: false };
-    if (!RESUMABLE_PAYMENT_STATUSES.has(party.paymentStatus)) return { ok: false };
+    const redeemed = redeemLockedGuestResumeParty({
+      party,
+      memberIds,
+      primaryApplicationId: verified.primaryApplicationId,
+      incomingPlain: incomingPlain ?? null,
+    });
+    if (!redeemed.ok) return { ok: false };
 
-    const { plainToken, hash } = generateResumeToken();
-    await tx
-      .update(applicationParty)
-      .set({ resumeTokenHash: hash, updatedAt: now })
-      .where(eq(applicationParty.id, party.id));
-    await tx
-      .update(application)
-      .set({ resumeTokenHash: hash, updatedAt: now })
-      .where(eq(application.partyId, party.id));
-
-    const maxAgeSeconds = party.draftExpiresAt
-      ? Math.max(0, Math.floor((party.draftExpiresAt.getTime() - now.getTime()) / 1000))
-      : RESUME_EMAIL_LINK_MAX_TTL_SEC;
+    if (redeemed.rotated) {
+      const now = new Date();
+      await tx
+        .update(applicationParty)
+        .set({
+          resumeTokenHash: redeemed.nextHash,
+          previousResumeTokenHash: redeemed.previousHash,
+          previousResumeTokenExpiresAt: redeemed.previousExpiresAt,
+          updatedAt: now,
+        })
+        .where(eq(applicationParty.id, party.id));
+      await tx
+        .update(application)
+        .set({
+          resumeTokenHash: redeemed.nextHash,
+          previousResumeTokenHash: redeemed.previousHash,
+          previousResumeTokenExpiresAt: redeemed.previousExpiresAt,
+          updatedAt: now,
+        })
+        .where(eq(application.partyId, party.id));
+    }
 
     return {
       ok: true,
-      plainToken,
-      maxAgeSeconds,
-      primaryApplicationId: verified.primaryApplicationId,
+      plainToken: redeemed.plainToken,
+      maxAgeSeconds: redeemed.maxAgeSeconds,
+      primaryApplicationId: redeemed.primaryApplicationId,
+      rotated: redeemed.rotated,
     };
   });
 };

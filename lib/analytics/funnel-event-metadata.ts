@@ -10,6 +10,7 @@ export const FUNNEL_UPLOAD_REASONS = [
   "corrupt_file",
   "pdf_not_single_page",
   "rate_limited",
+  "session_auth",
 ] as const;
 
 export type TFunnelUploadReason = (typeof FUNNEL_UPLOAD_REASONS)[number];
@@ -43,6 +44,7 @@ export const sanitizeFunnelReason = (raw: unknown): TFunnelUploadReason | undefi
   if (value === "network") return "network_error";
   if (value === "server") return "server_error";
   if (value === "corrupt_image") return "corrupt_file";
+  if (value === "forbidden" || value === "unauthorized") return "session_auth";
   return REASONS.has(value) ? (value as TFunnelUploadReason) : undefined;
 };
 

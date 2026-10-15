@@ -23,7 +23,10 @@
     "continue": "Weiter",
     "invalidLinkTitle": "Dieser Wiederaufnahme-Link ist ungültig oder abgelaufen",
     "invalidLinkCta": "Antrag verfolgen",
-    "pageTitle": "Antrag fortsetzen | Visatop"
+    "pageTitle": "Antrag fortsetzen | Visatop",
+    "continueTitle": "Antrag fortsetzen",
+    "continueBody": "Öffnen Sie Ihren gespeicherten Entwurf, um dort weiterzumachen, wo Sie aufgehört haben.",
+    "continueCta": "Weiter"
   },
   "header": {
     "loginRegister": "Anmelden / Registrieren",
@@ -586,6 +589,19 @@
       "cta": "Weiter",
       "oneTraveler": "1 Reisende/r",
       "manyTravelers": "{count} Reisende"
+    },
+    "uploadFailed": {
+      "subject": "Beim Hochladen Ihres Dokuments ist ein Problem aufgetreten",
+      "eyebrow": "Wir sind für Sie da",
+      "greeting": "Hallo,",
+      "body": "Wir haben gesehen, dass Sie ein Dokument hochladen wollten und etwas schiefgelaufen ist. Wir helfen gerne: Antworten Sie einfach auf diese E-Mail und schildern Sie uns das Problem, oder erreichen Sie uns per WhatsApp für Live-Support.",
+      "whatsappCta": "WhatsApp-Live-Support"
+    },
+    "uploadResolved": {
+      "subject": "Ihr Dokument wurde erfolgreich hochgeladen",
+      "eyebrow": "Alles erledigt",
+      "greeting": "Hallo,",
+      "body": "Wir sehen, dass Sie das Problem überwunden haben und Ihr Dokument erfolgreich hochgeladen wurde. Wir sind jederzeit für Sie da: Antworten Sie auf diese E-Mail oder erreichen Sie uns per WhatsApp."
     }
   },
   "upload": {

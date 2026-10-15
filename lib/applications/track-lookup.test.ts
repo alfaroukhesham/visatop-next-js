@@ -93,6 +93,20 @@ describe("canContinueTrackRow", () => {
       canContinueTrackRow({ cookiePlain: plainToken, rowHash: hash, paymentStatus: "failed" }),
     ).toBe(false);
   });
+
+  it("returns true when the cookie matches a previous hash still in grace", () => {
+    const previous = generateResumeToken();
+    const current = generateResumeToken();
+    expect(
+      canContinueTrackRow({
+        cookiePlain: previous.plainToken,
+        rowHash: current.hash,
+        previousHash: previous.hash,
+        previousExpiresAt: new Date(Date.now() + 60_000),
+        paymentStatus: "unpaid",
+      }),
+    ).toBe(true);
+  });
 });
 
 describe("mapTrackLookupRow", () => {

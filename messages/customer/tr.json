@@ -23,7 +23,10 @@
     "continue": "Devam et",
     "invalidLinkTitle": "Bu devam bağlantısı geçersiz veya süresi dolmuş",
     "invalidLinkCta": "Başvurunuzu takip edin",
-    "pageTitle": "Başvuruya devam | Visatop"
+    "pageTitle": "Başvuruya devam | Visatop",
+    "continueTitle": "Başvurunuza devam edin",
+    "continueBody": "Kaldığınız yerden devam etmek için kaydedilmiş taslağınızı açın.",
+    "continueCta": "Devam et"
   },
   "header": {
     "loginRegister": "Giriş / Kayıt",
@@ -586,6 +589,19 @@
       "cta": "Devam et",
       "oneTraveler": "1 yolcu",
       "manyTravelers": "{count} yolcu"
+    },
+    "uploadFailed": {
+      "subject": "Belgenizi yüklerken bir sorun olduğunu fark ettik",
+      "eyebrow": "Yardım için buradayız",
+      "greeting": "Merhaba,",
+      "body": "Bir belge yüklemeye çalıştığınızı ve bir şeylerin ters gittiğini fark ettik. Yardım etmekten memnuniyet duyarız: yaşadığınız sorunu bu e-postayı yanıtlayarak yazın veya canlı destek için WhatsApp’tan bize ulaşın.",
+      "whatsappCta": "WhatsApp canlı destek"
+    },
+    "uploadResolved": {
+      "subject": "Belgeniz başarıyla yüklendi",
+      "eyebrow": "Her şey tamam",
+      "greeting": "Merhaba,",
+      "body": "Sorunu aştığınızı ve belgenizin başarıyla yüklendiğini görüyoruz. Yardıma ihtiyacınız olursa her zaman buradayız: bu e-postayı yanıtlayın veya WhatsApp’tan bize ulaşın."
     }
   },
   "upload": {
