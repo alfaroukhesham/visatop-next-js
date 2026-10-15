@@ -105,6 +105,25 @@ describe("trackDocumentUploadAnalytics first-party funnel", () => {
     );
   });
 
+  it("beacons session_auth instead of file_type for HTTP 403", () => {
+    trackDocumentUploadAnalytics({
+      docType: "passport_copy",
+      applicationId: "app-1",
+      success: false,
+      source: "file",
+      failureReason: "session_auth",
+      httpStatus: 403,
+      errorCode: "FORBIDDEN",
+    });
+    const failed = beaconBodies().find((b) => b.eventName === "passport_upload_failed");
+    expect(failed).toMatchObject({
+      failureReason: "session_auth",
+      errorCode: "FORBIDDEN",
+      httpStatus: 403,
+    });
+    expect(failed?.failureReason).not.toBe("file_type");
+  });
+
   it("beacons bank statement uploads like other documents", () => {
     trackDocumentUploadAnalytics({
       docType: "bank_statement_6m",

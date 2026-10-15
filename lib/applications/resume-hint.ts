@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, gt, or } from "drizzle-orm";
 import { readResumeTokenFromRequestCookies } from "@/lib/applications/resume-cookie";
 import { hashResumeToken } from "@/lib/applications/resume-token";
 import type { DbTransaction } from "@/lib/db";
@@ -68,10 +68,19 @@ const resolveResumeHintSource = async (
   tx: DbTransaction,
   hash: string,
 ): Promise<TResumeHintSource | null> => {
+  const now = new Date();
   const [party] = await tx
     .select()
     .from(applicationParty)
-    .where(eq(applicationParty.resumeTokenHash, hash))
+    .where(
+      or(
+        eq(applicationParty.resumeTokenHash, hash),
+        and(
+          eq(applicationParty.previousResumeTokenHash, hash),
+          gt(applicationParty.previousResumeTokenExpiresAt, now),
+        ),
+      ),
+    )
     .limit(1);
 
   if (party) {
@@ -99,7 +108,15 @@ const resolveResumeHintSource = async (
   const [app] = await tx
     .select()
     .from(application)
-    .where(eq(application.resumeTokenHash, hash))
+    .where(
+      or(
+        eq(application.resumeTokenHash, hash),
+        and(
+          eq(application.previousResumeTokenHash, hash),
+          gt(application.previousResumeTokenExpiresAt, now),
+        ),
+      ),
+    )
     .limit(1);
   if (!app) return null;
 

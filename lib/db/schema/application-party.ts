@@ -17,6 +17,8 @@ export const applicationParty = pgTable(
       .references(() => nationality.code),
     catalogCurrency: text("catalog_currency").default("USD").notNull(),
     resumeTokenHash: text("resume_token_hash"),
+    previousResumeTokenHash: text("previous_resume_token_hash"),
+    previousResumeTokenExpiresAt: timestamp("previous_resume_token_expires_at"),
     draftExpiresAt: timestamp("draft_expires_at"),
     paymentStatus: text("payment_status").notNull(),
     /** Last document/details screen the customer confirmed. No personal data. */
@@ -28,6 +30,7 @@ export const applicationParty = pgTable(
   (t) => [
     index("application_party_resumeTokenHash_idx").on(t.resumeTokenHash),
     uniqueIndex("application_party_resume_token_hash_uidx").on(t.resumeTokenHash),
+    index("application_party_previousResumeTokenHash_idx").on(t.previousResumeTokenHash),
     index("application_party_guestEmail_idx").on(t.guestEmail),
   ],
 );

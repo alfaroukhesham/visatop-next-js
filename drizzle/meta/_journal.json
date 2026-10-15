@@ -239,6 +239,13 @@
       "when": 1782270000000,
       "tag": "0033_analytics_funnel_event_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1782280000000,
+      "tag": "0034_guest_resume_grace_and_upload_failure_alerts",
+      "breakpoints": true
     }
   ]
 }

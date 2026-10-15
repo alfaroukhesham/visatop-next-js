@@ -14,7 +14,7 @@ import { auth } from "@/lib/auth";
 import { readResumeTokenFromRequestCookies } from "@/lib/applications/resume-cookie";
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
 import { toPublicDocument } from "@/lib/applications/document-upload";
-import { verifyResumeToken } from "@/lib/applications/resume-token";
+import { guestResumeTokenMatches } from "@/lib/applications/resume-token";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { isForeignKeyViolation } from "@/lib/db/pg-errors";
@@ -118,7 +118,7 @@ export async function POST(
         .where(eq(application.id, applicationId))
         .limit(1);
       const app = apps[0];
-      if (!app?.resumeTokenHash || !verifyResumeToken(token, app.resumeTokenHash) || !app.isGuest) {
+      if (!app?.isGuest || !guestResumeTokenMatches(token, app)) {
         return null;
       }
       const inserted = await tx

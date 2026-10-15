@@ -23,7 +23,10 @@
     "continue": "Continuer",
     "invalidLinkTitle": "Ce lien de reprise est invalide ou expiré",
     "invalidLinkCta": "Suivre ma demande",
-    "pageTitle": "Reprendre la demande | Visatop"
+    "pageTitle": "Reprendre la demande | Visatop",
+    "continueTitle": "Poursuivre votre demande",
+    "continueBody": "Ouvrez votre brouillon enregistré pour reprendre là où vous vous étiez arrêté.",
+    "continueCta": "Continuer"
   },
   "header": {
     "loginRegister": "Connexion / Inscription",
@@ -586,6 +589,19 @@
       "cta": "Continuer",
       "oneTraveler": "1 voyageur",
       "manyTravelers": "{count} voyageurs"
+    },
+    "uploadFailed": {
+      "subject": "Nous avons remarqué un problème lors de l'envoi de votre document",
+      "eyebrow": "Nous sommes là pour vous aider",
+      "greeting": "Bonjour,",
+      "body": "Nous avons remarqué que vous essayiez d'envoyer un document et que quelque chose n'a pas fonctionné. Nous sommes heureux de vous aider : répondez simplement à cet e-mail pour nous expliquer la situation, ou contactez-nous sur WhatsApp pour une assistance en direct.",
+      "whatsappCta": "Assistance WhatsApp en direct"
+    },
+    "uploadResolved": {
+      "subject": "Votre document a bien été envoyé",
+      "eyebrow": "Tout est en ordre",
+      "greeting": "Bonjour,",
+      "body": "Nous voyons que vous avez dépassé le problème et que votre document a bien été envoyé. Nous restons disponibles : répondez à cet e-mail ou contactez-nous sur WhatsApp."
     }
   },
   "upload": {

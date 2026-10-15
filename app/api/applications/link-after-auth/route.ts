@@ -13,7 +13,7 @@ import {
 } from "@/lib/applications/guest-link-intent";
 import { consumeGuestLinkRateLimit } from "@/lib/applications/guest-link-rate-limit";
 import { readResumeTokenFromRequestCookies } from "@/lib/applications/resume-cookie";
-import { verifyResumeToken } from "@/lib/applications/resume-token";
+import { guestResumeTokenMatches } from "@/lib/applications/resume-token";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { application, auditLog } from "@/lib/db/schema";
 
@@ -128,7 +128,7 @@ export async function POST(req: Request) {
       if (!resumePlain) {
         return { kind: "resume_required" } as const;
       }
-      if (!row.resumeTokenHash || !verifyResumeToken(resumePlain, row.resumeTokenHash)) {
+      if (!guestResumeTokenMatches(resumePlain, row)) {
         return { kind: "resume_mismatch" } as const;
       }
     }

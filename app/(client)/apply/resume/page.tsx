@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { apiHref } from "@/lib/app-href";
+import { ResumeRedeemForm } from "@/components/apply/resume-redeem-form";
 import { CUSTOMER_LOCALE_COOKIE, parseCustomerLocale } from "@/lib/i18n/customer-locale";
 import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 
@@ -28,10 +27,18 @@ interface IApplyResumePageProps {
 const ApplyResumePage = async ({ searchParams }: IApplyResumePageProps) => {
   const params = await searchParams;
   const t = createCustomerT(await readResumeLocale());
+  const signedToken = params.t?.trim() ?? "";
 
-  if (params.t?.trim() && !params.invalid) {
-    const qs = new URLSearchParams({ t: params.t.trim() });
-    redirect(apiHref(`apply/resume?${qs.toString()}`));
+  if (signedToken && !params.invalid) {
+    return (
+      <div className="mx-auto flex max-w-lg flex-col gap-4 px-4 py-16">
+        <h1 className="font-heading text-center text-lg font-semibold">
+          {t("resume.continueTitle")}
+        </h1>
+        <p className="text-muted-foreground text-center text-sm">{t("resume.continueBody")}</p>
+        <ResumeRedeemForm token={signedToken} ctaLabel={t("resume.continueCta")} />
+      </div>
+    );
   }
 
   return (

@@ -39,7 +39,7 @@ const EVENT_ID_RE = /^[A-Za-z0-9:_-]{8,80}$/;
 const OPTIONAL_ID_RE = /^[A-Za-z0-9:_-]{1,80}$/;
 
 const FAILURE_REASON_RE =
-  /^(timeout|cancelled|file_type|too_large|network|server|corrupt_file|pdf_not_single_page|rate_limited)$/;
+  /^(timeout|cancelled|file_type|too_large|network|server|corrupt_file|pdf_not_single_page|rate_limited|session_auth|rejected)$/;
 
 export type TBeaconPayload = {
   eventId: string;

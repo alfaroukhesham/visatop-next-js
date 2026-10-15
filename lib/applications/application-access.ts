@@ -15,7 +15,7 @@
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { readResumeTokenFromRequestCookies } from "@/lib/applications/resume-cookie";
-import { verifyResumeToken } from "@/lib/applications/resume-token";
+import { guestResumeTokenMatches } from "@/lib/applications/resume-token";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { application } from "@/lib/db/schema";
 
@@ -65,6 +65,8 @@ export async function resolveApplicationAccess(
         .select({
           id: application.id,
           resumeTokenHash: application.resumeTokenHash,
+          previousResumeTokenHash: application.previousResumeTokenHash,
+          previousResumeTokenExpiresAt: application.previousResumeTokenExpiresAt,
           isGuest: application.isGuest,
         })
         .from(application)
@@ -72,10 +74,10 @@ export async function resolveApplicationAccess(
         .limit(1);
       const row = rows[0];
       if (!row) return { present: false, verified: false } as const;
-      if (!row.resumeTokenHash || !row.isGuest) {
+      if (!row.isGuest) {
         return { present: true, verified: false } as const;
       }
-      if (!verifyResumeToken(token, row.resumeTokenHash)) {
+      if (!guestResumeTokenMatches(token, row)) {
         return { present: true, verified: false } as const;
       }
       return { present: true, verified: true } as const;

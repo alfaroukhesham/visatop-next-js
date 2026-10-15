@@ -10,6 +10,7 @@ export type MailgunSendTextInput = {
   text: string;
   /** Optional HTML body (multipart/alternative). */
   html?: string;
+  replyTo?: string;
   attachments?: { filename: string; contentType: string; bytes: Buffer }[];
 };
 
@@ -38,6 +39,9 @@ export async function mailgunSendText(input: MailgunSendTextInput): Promise<{ ok
   form.set("text", input.text);
   if (input.html) {
     form.set("html", input.html);
+  }
+  if (input.replyTo?.trim()) {
+    form.set("h:Reply-To", input.replyTo.trim());
   }
 
   for (const a of input.attachments ?? []) {

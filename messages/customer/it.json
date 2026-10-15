@@ -23,7 +23,10 @@
     "continue": "Continua",
     "invalidLinkTitle": "Questo link di ripresa non è valido o è scaduto",
     "invalidLinkCta": "Monitori la sua domanda",
-    "pageTitle": "Riprendi domanda | Visatop"
+    "pageTitle": "Riprendi domanda | Visatop",
+    "continueTitle": "Continui la sua domanda",
+    "continueBody": "Apri la bozza salvata per riprendere da dove hai lasciato.",
+    "continueCta": "Continua"
   },
   "header": {
     "loginRegister": "Accedi / Registrati",
@@ -586,6 +589,19 @@
       "cta": "Continua",
       "oneTraveler": "1 viaggiatore",
       "manyTravelers": "{count} viaggiatori"
+    },
+    "uploadFailed": {
+      "subject": "Abbiamo notato un problema durante il caricamento del documento",
+      "eyebrow": "Siamo qui per aiutarti",
+      "greeting": "Ciao,",
+      "body": "Abbiamo notato che stavi cercando di caricare un documento e qualcosa è andato storto. Siamo felici di aiutarti: rispondi a questa email descrivendo il problema, oppure contattaci su WhatsApp per assistenza in tempo reale.",
+      "whatsappCta": "Assistenza live su WhatsApp"
+    },
+    "uploadResolved": {
+      "subject": "Il documento è stato caricato con successo",
+      "eyebrow": "Tutto a posto",
+      "greeting": "Ciao,",
+      "body": "Vediamo che hai superato il problema e che il documento è stato caricato con successo. Siamo qui se hai bisogno di aiuto: rispondi a questa email o contattaci su WhatsApp."
     }
   },
   "upload": {

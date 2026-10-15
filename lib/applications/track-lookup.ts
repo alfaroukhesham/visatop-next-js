@@ -7,7 +7,7 @@ import { computeClientApplicationTracking } from "@/lib/applications/user-facing
 import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 
 const defaultTrackLookupT = createCustomerT("en");
-import { verifyResumeToken } from "@/lib/applications/resume-token";
+import { guestResumeTokenMatches } from "@/lib/applications/resume-token";
 
 type ApplicationRow = InferSelectModel<typeof application>;
 
@@ -18,13 +18,19 @@ const RESUMABLE_TRACK_PAYMENT_STATUSES = new Set(["unpaid", "checkout_created"])
 export type TCanContinueTrackRowInput = {
   cookiePlain: string | null;
   rowHash: string | null;
+  previousHash?: string | null;
+  previousExpiresAt?: Date | null;
   paymentStatus: string;
 };
 
 export const canContinueTrackRow = (input: TCanContinueTrackRowInput): boolean => {
-  if (!input.cookiePlain || !input.rowHash) return false;
+  if (!input.cookiePlain) return false;
   if (!RESUMABLE_TRACK_PAYMENT_STATUSES.has(input.paymentStatus)) return false;
-  return verifyResumeToken(input.cookiePlain, input.rowHash);
+  return guestResumeTokenMatches(input.cookiePlain, {
+    resumeTokenHash: input.rowHash,
+    previousResumeTokenHash: input.previousHash ?? null,
+    previousResumeTokenExpiresAt: input.previousExpiresAt ?? null,
+  });
 };
 
 export function normalizeEmailInput(raw: string): string | null {
@@ -205,15 +211,25 @@ export function mapTrackLookupRow(
     fulfillmentStatus: string;
     adminAttentionRequired: boolean;
     resumeTokenHash?: string | null;
+    previousResumeTokenHash?: string | null;
+    previousResumeTokenExpiresAt?: Date | null;
   },
   names: { serviceName: string | null; nationalityName: string },
-  opts: { cookiePlain?: string | null; partyResumeTokenHash?: string | null } = {},
+  opts: {
+    cookiePlain?: string | null;
+    partyResumeTokenHash?: string | null;
+    partyPreviousResumeTokenHash?: string | null;
+    partyPreviousResumeTokenExpiresAt?: Date | null;
+  } = {},
   t: (key: string) => string = defaultTrackLookupT,
 ): TrackLookupDisplayRow {
   const rowHash = opts.partyResumeTokenHash ?? row.resumeTokenHash ?? null;
   const canContinue = canContinueTrackRow({
     cookiePlain: opts.cookiePlain ?? null,
     rowHash,
+    previousHash: opts.partyPreviousResumeTokenHash ?? row.previousResumeTokenHash ?? null,
+    previousExpiresAt:
+      opts.partyPreviousResumeTokenExpiresAt ?? row.previousResumeTokenExpiresAt ?? null,
     paymentStatus: row.paymentStatus,
   });
 

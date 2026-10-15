@@ -8,6 +8,8 @@ export const PASSPORT_FAILURE_CODES = [
   "corrupt_file",
   "pdf_not_single_page",
   "rate_limited",
+  "session_auth",
+  "rejected",
 ] as const;
 
 export type TPassportFailureCode = (typeof PASSPORT_FAILURE_CODES)[number];
@@ -18,6 +20,7 @@ export type TUploadFailureReason =
   | "corrupt_file"
   | "pdf_not_single_page"
   | "rate_limited"
+  | "session_auth"
   | "upload_rejected"
   | "server_error"
   | "network_error"
@@ -27,7 +30,9 @@ export type TUploadFailureReason =
 
 export const passportFailureCode = (reason: TUploadFailureReason): TPassportFailureCode => {
   if (reason === "file_too_large") return "too_large";
-  if (reason === "file_type" || reason === "upload_rejected") return "file_type";
+  if (reason === "file_type") return "file_type";
+  if (reason === "session_auth") return "session_auth";
+  if (reason === "upload_rejected") return "rejected";
   if (reason === "corrupt_file") return "corrupt_file";
   if (reason === "pdf_not_single_page") return "pdf_not_single_page";
   if (reason === "rate_limited") return "rate_limited";
@@ -55,6 +60,14 @@ export const uploadFailureReason = (input: {
   if (code === "PDF_NOT_SINGLE_PAGE") return "pdf_not_single_page";
   if (code === "RATE_LIMITED" || input.httpStatus === 429) return "rate_limited";
   if (code === "UNSUPPORTED_TYPE" || input.httpStatus === 415) return "file_type";
+  if (
+    code === "FORBIDDEN" ||
+    code === "UNAUTHORIZED" ||
+    input.httpStatus === 401 ||
+    input.httpStatus === 403
+  ) {
+    return "session_auth";
+  }
   if (input.httpStatus !== undefined && input.httpStatus >= 500) return "server_error";
   if (input.httpStatus !== undefined && input.httpStatus >= 400) return "upload_rejected";
   return "upload_failed";

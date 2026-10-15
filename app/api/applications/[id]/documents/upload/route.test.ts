@@ -8,6 +8,28 @@ vi.mock("next/headers", () => ({
     }),
 }));
 
+vi.mock("next/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/server")>();
+  return {
+    ...actual,
+    after: (fn: () => void) => {
+      fn();
+    },
+  };
+});
+
+const uploadOutcomeEmails = vi.hoisted(() => ({
+  sendDocumentUploadFailureEmails: vi.fn().mockResolvedValue(undefined),
+  sendDocumentUploadResolvedEmails: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@/lib/email/send-document-upload-outcome-emails", () => ({
+  sendDocumentUploadFailureEmails: (...args: unknown[]) =>
+    uploadOutcomeEmails.sendDocumentUploadFailureEmails(...args),
+  sendDocumentUploadResolvedEmails: (...args: unknown[]) =>
+    uploadOutcomeEmails.sendDocumentUploadResolvedEmails(...args),
+}));
+
 vi.mock("@/lib/applications/application-access", () => ({
   resolveApplicationAccess: vi.fn(),
 }));
@@ -117,6 +139,8 @@ describe("POST /api/applications/[id]/documents/upload", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     __resetRateLimiterForTests();
+    uploadOutcomeEmails.sendDocumentUploadFailureEmails.mockResolvedValue(undefined);
+    uploadOutcomeEmails.sendDocumentUploadResolvedEmails.mockResolvedValue(undefined);
   });
 
   it("returns 403 when access resolver reports forbidden", async () => {
@@ -133,6 +157,16 @@ describe("POST /api/applications/[id]/documents/upload", () => {
     expect(res.status).toBe(403);
     const body = await res.json();
     expect(body.error.code).toBe("FORBIDDEN");
+    expect(uploadOutcomeEmails.sendDocumentUploadFailureEmails).toHaveBeenCalledWith(
+      expect.objectContaining({
+        applicationId: "app-1",
+        documentType: "passport_copy",
+        errorCode: "FORBIDDEN",
+        httpStatus: 403,
+        fileName: "a.jpg",
+      }),
+    );
+    expect(uploadOutcomeEmails.sendDocumentUploadResolvedEmails).not.toHaveBeenCalled();
   });
 
   it("returns 404 when access resolver reports not_found", async () => {
@@ -261,6 +295,33 @@ describe("POST /api/applications/[id]/documents/upload", () => {
     expect(body.data.document.sha256).toBe("sha-passport");
     expect(body.data.replaced).toBe(false);
     expect(body.data.idempotent).toBe(false);
+    expect(uploadOutcomeEmails.sendDocumentUploadResolvedEmails).toHaveBeenCalledWith(
+      expect.objectContaining({
+        applicationId: "app-1",
+        documentType: "passport_copy",
+      }),
+    );
+    expect(uploadOutcomeEmails.sendDocumentUploadFailureEmails).not.toHaveBeenCalled();
+  });
+
+  it("returns 201 for a guest resume session so resume-link then upload succeeds", async () => {
+    vi.mocked(resolveApplicationAccess).mockResolvedValue({
+      ok: true,
+      access: { kind: "guest", userId: null, isGuest: true },
+    });
+    vi.mocked(persistUploadedDocument).mockResolvedValue({
+      ok: true,
+      document: makeDocRow(),
+      replacedPriorId: null,
+      wasIdempotent: false,
+    });
+    const form = new FormData();
+    form.set("documentType", "passport_copy");
+    form.set("file", new File(["jpegbytes"], "passport.jpg", { type: "image/jpeg" }));
+    const res = await POST(buildRequest(form), {
+      params: Promise.resolve({ id: "app-1" }),
+    });
+    expect(res.status).toBe(201);
   });
 
   it("returns 200 on idempotent same-sha re-upload", async () => {

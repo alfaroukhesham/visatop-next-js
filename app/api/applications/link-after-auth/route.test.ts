@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const resumeTokenTest = vi.hoisted(() => ({
-  verifyResumeToken: vi.fn(),
+  guestResumeTokenMatches: vi.fn(),
 }));
 
 vi.mock("@/lib/applications/resume-token", () => ({
-  verifyResumeToken: (plain: string, hash: string) => resumeTokenTest.verifyResumeToken(plain, hash),
+  guestResumeTokenMatches: (...args: unknown[]) =>
+    resumeTokenTest.guestResumeTokenMatches(...args),
 }));
 
 vi.mock("next/headers", () => ({
@@ -93,8 +94,8 @@ describe("POST /api/applications/link-after-auth", () => {
       secret: "01234567890123456789012345678901",
       nowSec: Math.floor(Date.now() / 1000),
     });
-    resumeTokenTest.verifyResumeToken.mockReset();
-    resumeTokenTest.verifyResumeToken.mockReturnValue(true);
+    resumeTokenTest.guestResumeTokenMatches.mockReset();
+    resumeTokenTest.guestResumeTokenMatches.mockReturnValue(true);
   });
 
   it("returns 503 when kill switch is false", async () => {
@@ -196,7 +197,7 @@ describe("POST /api/applications/link-after-auth", () => {
     vi.mocked(auth.api.getSession).mockResolvedValue({
       user: { id: "user-1", email: "a@test.com" },
     } as never);
-    resumeTokenTest.verifyResumeToken.mockReturnValue(false);
+    resumeTokenTest.guestResumeTokenMatches.mockReturnValue(false);
     withSystemMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
       return fn(txMock([baseGuestRow()]));
     });

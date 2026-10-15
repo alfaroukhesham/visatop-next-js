@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { verifyResumeToken } from "@/lib/applications/resume-token";
+import { guestResumeTokenMatches } from "@/lib/applications/resume-token";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { application } from "@/lib/db/schema";
 
@@ -19,8 +19,8 @@ export async function loadGuestApplicationRowByResumeCookie(
       .where(eq(application.id, applicationId))
       .limit(1);
     const row = rows[0];
-    if (!row?.resumeTokenHash) return null;
-    if (!verifyResumeToken(resumePlain, row.resumeTokenHash)) return null;
+    if (!row) return null;
+    if (!guestResumeTokenMatches(resumePlain, row)) return null;
     if (!row.isGuest) return null;
     return row;
   });
