@@ -8,6 +8,7 @@ import {
   comboboxScrollSpacerPx,
   comboboxScrollTopInsetPx,
   computeComboboxListPosition,
+  isInternalListScrollEvent,
   scrollDeltaToVisualViewportTop,
   shouldPreferBelowList,
   type IAnchorRect,
@@ -83,6 +84,21 @@ describe("comboboxScrollTopInsetPx", () => {
 
   it("still pads when the header offset is zero", () => {
     expect(comboboxScrollTopInsetPx(0)).toBe(COMBOBOX_LIST_VIEWPORT_TOP_PADDING_PX);
+  });
+});
+
+describe("isInternalListScrollEvent", () => {
+  it("ignores scroll events from the listbox so inner scrolling cannot reposition the page", () => {
+    const child = { id: "child" };
+    const list = { id: "list", contains: (n: unknown) => n === child };
+    const outside = { id: "win" };
+    const eventFrom = (target: object) => ({ type: "scroll", target }) as unknown as Event;
+    expect(isInternalListScrollEvent(eventFrom(list), list as unknown as EventTarget)).toBe(true);
+    expect(isInternalListScrollEvent(eventFrom(child), list as unknown as EventTarget)).toBe(true);
+    expect(isInternalListScrollEvent(eventFrom(outside), list as unknown as EventTarget)).toBe(false);
+    expect(
+      isInternalListScrollEvent({ type: "resize", target: list } as unknown as Event, list as unknown as EventTarget),
+    ).toBe(false);
   });
 });
 

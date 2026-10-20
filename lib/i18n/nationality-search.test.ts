@@ -52,4 +52,36 @@ describe("filterNationalityOptions", () => {
   it("filters a longer Latin query in English", () => {
     expect(filterNationalityOptions(OPTIONS, "Niger", "en").map((n) => n.code)).toEqual(["NG"]);
   });
+
+  it("ranks English prefix and word-prefix matches above mid-word matches", () => {
+    const pool = [
+      { code: "US", name: "United States" },
+      { code: "AL", name: "Albania" },
+      { code: "NG", name: "Nigeria" },
+      { code: "IN", name: "India" },
+      { code: "NE", name: "Niger" },
+      { code: "AM", name: "Armenia" },
+    ];
+    expect(filterNationalityOptions(pool, "ni", "en").map((n) => n.code)).toEqual([
+      "NG",
+      "NE",
+      "US",
+      "AL",
+      "AM",
+    ]);
+  });
+
+  it("ranks Arabic ني prefix matches (ignoring leading ال) above mid-word matches", () => {
+    const pool = [
+      { code: "AL", name: "Albania" },
+      { code: "KE", name: "Kenya" },
+      { code: "BJ", name: "Benin" },
+      { code: "NG", name: "Nigeria" },
+      { code: "AM", name: "Armenia" },
+      { code: "NE", name: "Niger" },
+    ];
+    const codes = filterNationalityOptions(pool, "ني", "ar").map((n) => n.code);
+    expect(codes.slice(0, 2)).toEqual(["NG", "NE"]);
+    expect(codes).toEqual(["NG", "NE", "AL", "KE", "BJ", "AM"]);
+  });
 });

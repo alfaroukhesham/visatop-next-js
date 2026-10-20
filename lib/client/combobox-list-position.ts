@@ -222,17 +222,35 @@ export const scrollOptionIntoContainer = (option: HTMLElement, container: HTMLEl
   }
 };
 
-export const subscribeViewportChange = (onChange: () => void): (() => void) => {
-  window.addEventListener("scroll", onChange, true);
-  window.addEventListener("resize", onChange);
+export const isInternalListScrollEvent = (
+  event: Event | undefined,
+  list: EventTarget | null | undefined,
+): boolean => {
+  if (!event || event.type !== "scroll" || !list) return false;
+  const t = event.target;
+  if (!t) return false;
+  if (t === list) return true;
+  const contains = (list as { contains?: (node: unknown) => boolean }).contains;
+  if (typeof contains !== "function") return false;
+  try {
+    return Boolean(contains.call(list, t));
+  } catch {
+    return false;
+  }
+};
+
+export const subscribeViewportChange = (onChange: (event?: Event) => void): (() => void) => {
+  const handle = (event: Event) => onChange(event);
+  window.addEventListener("scroll", handle, true);
+  window.addEventListener("resize", handle);
   const vv = window.visualViewport;
-  vv?.addEventListener("resize", onChange);
-  vv?.addEventListener("scroll", onChange);
+  vv?.addEventListener("resize", handle);
+  vv?.addEventListener("scroll", handle);
   return () => {
-    window.removeEventListener("scroll", onChange, true);
-    window.removeEventListener("resize", onChange);
-    vv?.removeEventListener("resize", onChange);
-    vv?.removeEventListener("scroll", onChange);
+    window.removeEventListener("scroll", handle, true);
+    window.removeEventListener("resize", handle);
+    vv?.removeEventListener("resize", handle);
+    vv?.removeEventListener("scroll", handle);
   };
 };
 
