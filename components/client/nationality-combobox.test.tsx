@@ -6,13 +6,15 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CustomerI18nProvider } from "@/components/client/customer-i18n-provider";
 import { NationalityCombobox } from "@/components/client/nationality-combobox";
-import { getEnglishCustomerMessages } from "@/lib/i18n/load-customer-catalog";
+import { getCustomerI18nBundle, getEnglishCustomerMessages } from "@/lib/i18n/load-customer-catalog";
 
 const en = getEnglishCustomerMessages();
 
 const NATIONALITIES = [
   { code: "IN", name: "India" },
   { code: "KE", name: "Kenya" },
+  { code: "NG", name: "Nigeria" },
+  { code: "AE", name: "United Arab Emirates" },
   { code: "US", name: "United States" },
 ];
 
@@ -173,5 +175,29 @@ describe("NationalityCombobox visual viewport", () => {
     expect(maxHeight).toBe(260);
     expect(maxHeight).toBeGreaterThan(0);
     expect(maxHeight).toBeLessThanOrEqual(400);
+  });
+
+  it("matches Arabic nationality names in the AR locale", async () => {
+    installVisualViewport({ width: 390, height: 400, offsetTop: 0 });
+    const ar = getCustomerI18nBundle("ar");
+    const user = userEvent.setup();
+    render(
+      <CustomerI18nProvider locale="ar" messages={ar.messages} fallback={ar.fallback}>
+        <NationalityCombobox
+          nationalities={NATIONALITIES}
+          valueCode={null}
+          onSelectCode={() => undefined}
+        />
+      </CustomerI18nProvider>,
+    );
+
+    const input = screen.getByRole("combobox");
+    await user.click(input);
+    await user.type(input, "ني");
+    expect(await screen.findByRole("option", { name: /نيجيريا/ })).toBeVisible();
+
+    await user.clear(input);
+    await user.type(input, "الإم");
+    expect(await screen.findByRole("option", { name: /إمارات|الامارات|الإمارات/ })).toBeVisible();
   });
 });

@@ -4,6 +4,7 @@ export const COMBOBOX_LIST_MIN_HEIGHT_PX = 96;
 export const COMBOBOX_LIST_MAX_HEIGHT_PX = 22 * 16;
 export const COMBOBOX_LIST_VIEWPORT_TOP_PADDING_PX = 12;
 export const COMBOBOX_PREFER_BELOW_MAX_WIDTH_PX = 768;
+export const WP_SHELL_HEADER_HEIGHT_VAR = "--wp-shell-header-height";
 
 export interface IViewportBox {
   offsetTop: number;
@@ -122,6 +123,35 @@ export const readVisualViewportBox = (): IViewportBox => {
   };
 };
 
+export const comboboxScrollTopInsetPx = (headerOffsetPx: number): number =>
+  Math.max(0, headerOffsetPx) + COMBOBOX_LIST_VIEWPORT_TOP_PADDING_PX;
+
+export const readStickyHeaderOffsetPx = (): number => {
+  if (typeof window === "undefined" || typeof document === "undefined") return 0;
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(WP_SHELL_HEADER_HEIGHT_VAR);
+  const parsed = Number.parseFloat(raw);
+  const fromVar = Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+
+  const vvTop = window.visualViewport?.offsetTop ?? 0;
+  let measured = 0;
+  const nodes = document.querySelectorAll("iframe, header");
+  for (const node of nodes) {
+    const el = node as HTMLElement;
+    const pos = getComputedStyle(el).position;
+    if (pos !== "fixed" && pos !== "sticky") continue;
+    const r = el.getBoundingClientRect();
+    if (r.height <= 0 || r.width <= 0) continue;
+    if (r.top <= vvTop + 8 && r.bottom > vvTop) {
+      measured = Math.max(measured, r.bottom - vvTop);
+    }
+  }
+  return Math.max(fromVar, measured);
+};
+
+export const applyComboboxScrollMargin = (anchor: HTMLElement, insetPx: number): void => {
+  anchor.style.scrollMarginTop = `${Math.max(0, Math.round(insetPx))}px`;
+};
+
 export const scrollDeltaToVisualViewportTop = ({
   anchorTop,
   viewportOffsetTop,
@@ -151,12 +181,15 @@ export const scrollOverflowAncestors = (anchor: HTMLElement, deltaY: number): vo
 };
 
 export const scrollAnchorToVisualViewportTop = (anchor: HTMLElement): void => {
+  const inset = comboboxScrollTopInsetPx(readStickyHeaderOffsetPx());
+  applyComboboxScrollMargin(anchor, inset);
   const apply = (): void => {
     const viewport = readVisualViewportBox();
     const r = anchor.getBoundingClientRect();
     const delta = scrollDeltaToVisualViewportTop({
       anchorTop: r.top,
       viewportOffsetTop: viewport.offsetTop,
+      padding: inset,
     });
     scrollOverflowAncestors(anchor, delta);
   };
@@ -165,6 +198,7 @@ export const scrollAnchorToVisualViewportTop = (anchor: HTMLElement): void => {
   const remaining = scrollDeltaToVisualViewportTop({
     anchorTop: after.top,
     viewportOffsetTop: readVisualViewportBox().offsetTop,
+    padding: inset,
   });
   if (Math.abs(remaining) >= 8) {
     scrollOverflowAncestors(anchor, remaining);

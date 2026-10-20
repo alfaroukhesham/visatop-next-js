@@ -14,10 +14,12 @@ import {
 import { createPortal } from "react-dom";
 import { ChevronDown, Globe } from "lucide-react";
 import { ClientInput } from "@/components/client/client-input";
-import { useCustomerT } from "@/components/client/customer-i18n-provider";
+import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
 import { iso2FlagEmoji } from "@/lib/apply/display-names";
 import {
   COMBOBOX_LIST_GAP_PX,
+  COMBOBOX_LIST_VIEWPORT_TOP_PADDING_PX,
+  WP_SHELL_HEADER_HEIGHT_VAR,
   comboboxScrollSpacerPx,
   computeComboboxListPosition,
   isVisualViewportRelativeFixedPosition,
@@ -30,6 +32,10 @@ import {
   unmountComboboxScrollSpacer,
   type IComboboxListPosition,
 } from "@/lib/client/combobox-list-position";
+import {
+  filterNationalityOptions,
+  nationalityLocalizedName,
+} from "@/lib/i18n/nationality-search";
 import { cn } from "@/lib/utils";
 
 export type NationalityOption = { code: string; name: string };
@@ -69,6 +75,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
   onFirstInteraction,
 }) => {
   const t = useCustomerT();
+  const locale = useCustomerLocale();
   const resolvedPlaceholder = placeholder ?? t("common.nationalityDefaultPlaceholder");
   const reactId = useId();
   const listId = `${reactId}-listbox`;
@@ -79,7 +86,8 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
     [nationalities, valueCode],
   );
 
-  const closedLabel = selected ? selected.name : "";
+  const labelFor = (n: NationalityOption) => nationalityLocalizedName(n.code, n.name, locale);
+  const closedLabel = selected ? labelFor(selected) : "";
   const selectedFlag = selected ? iso2FlagEmoji(selected.code) : "";
 
   const [open, setOpen] = useState(false);
@@ -103,12 +111,9 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
   const inputValue = open ? draftQuery || closedLabel : closedLabel;
 
   const filtered = useMemo(() => {
-    const q = (open ? draftQuery : "").trim().toLowerCase();
-    if (!q) return nationalities;
-    return nationalities.filter(
-      (n) => n.name.toLowerCase().includes(q) || n.code.toLowerCase().includes(q),
-    );
-  }, [nationalities, draftQuery, open]);
+    if (!open) return nationalities;
+    return filterNationalityOptions(nationalities, draftQuery, locale);
+  }, [nationalities, draftQuery, open, locale]);
 
   const activeIndex =
     filtered.length === 0 ? 0 : Math.min(highlight, Math.max(0, filtered.length - 1));
@@ -262,7 +267,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
         id={listId}
         role="listbox"
         className="overflow-auto overscroll-contain py-1"
-        style={{ maxHeight: listPos.maxHeight }}
+        style={{ maxHeight: listPos.maxHeight, touchAction: "pan-y", WebkitOverflowScrolling: "touch" }}
       >
         {filtered.map((n, i) => {
           const flag = iso2FlagEmoji(n.code);
@@ -285,7 +290,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
                     {flag}
                   </span>
                 ) : null}
-                <span className="min-w-0 font-medium">{n.name}</span>
+                <span className="min-w-0 font-medium">{labelFor(n)}</span>
               </button>
             </li>
           );
@@ -332,7 +337,14 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
       : null;
 
   return (
-    <div ref={wrapRef} className={cn("relative w-full", open && "z-[100]", className)}>
+    <div
+      ref={wrapRef}
+      className={cn("relative w-full", open && "z-[100]", className)}
+      data-combobox-query={open ? draftQuery : undefined}
+      style={{
+        scrollMarginTop: `calc(var(${WP_SHELL_HEADER_HEIGHT_VAR}, 0px) + ${COMBOBOX_LIST_VIEWPORT_TOP_PADDING_PX}px)`,
+      }}
+    >
       <div className="relative">
         {selectedFlag && !open ? (
           <span
