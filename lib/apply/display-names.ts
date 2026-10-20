@@ -3,7 +3,7 @@ const REGIONAL_INDICATOR_A = 0x1f1e6;
 const UNKNOWN_NATIONALITY_LABEL = "that nationality";
 
 /** Catalog codes that are not ISO 3166-1 alpha-2 but still need a real flag. */
-const FLAG_ISO2_ALIASES: Record<string, string> = {
+export const FLAG_ISO2_ALIASES: Record<string, string> = {
   AB: "AG",
 };
 

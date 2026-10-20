@@ -4,7 +4,9 @@ import {
   COMBOBOX_LIST_GAP_PX,
   COMBOBOX_LIST_MAX_HEIGHT_PX,
   COMBOBOX_LIST_MIN_HEIGHT_PX,
+  COMBOBOX_LIST_VIEWPORT_TOP_PADDING_PX,
   comboboxScrollSpacerPx,
+  comboboxScrollTopInsetPx,
   computeComboboxListPosition,
   scrollDeltaToVisualViewportTop,
   shouldPreferBelowList,
@@ -71,6 +73,16 @@ describe("comboboxScrollSpacerPx", () => {
     );
     expect(px).toBeGreaterThanOrEqual(640);
     expect(px).toBeGreaterThan(COMBOBOX_LIST_MIN_HEIGHT_PX);
+  });
+});
+
+describe("comboboxScrollTopInsetPx", () => {
+  it("adds breathing room below a measured sticky header", () => {
+    expect(comboboxScrollTopInsetPx(117)).toBe(117 + COMBOBOX_LIST_VIEWPORT_TOP_PADDING_PX);
+  });
+
+  it("still pads when the header offset is zero", () => {
+    expect(comboboxScrollTopInsetPx(0)).toBe(COMBOBOX_LIST_VIEWPORT_TOP_PADDING_PX);
   });
 });
 
