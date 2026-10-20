@@ -5,6 +5,7 @@ export const COMBOBOX_LIST_MAX_HEIGHT_PX = 22 * 16;
 export const COMBOBOX_LIST_VIEWPORT_TOP_PADDING_PX = 12;
 export const COMBOBOX_PREFER_BELOW_MAX_WIDTH_PX = 768;
 export const WP_SHELL_HEADER_HEIGHT_VAR = "--wp-shell-header-height";
+export const WP_SHELL_FOOTER_HEIGHT_VAR = "--wp-shell-footer-height";
 
 export interface IViewportBox {
   offsetTop: number;
@@ -87,6 +88,12 @@ export interface IComputeComboboxListPositionInput {
    * offset so CSS `top`/`left` match that coordinate space.
    */
   subtractVisualOffset?: boolean;
+  /**
+   * Top edge of overlapping bottom chrome (WP footer iframe, sticky footer)
+   * in the same coordinate space as `top` / `viewport`. Ignored when it sits
+   * at or below the visual-viewport bottom.
+   */
+  footerTop?: number;
 }
 
 export const shouldPreferBelowList = (viewportWidth: number): boolean =>
@@ -137,6 +144,7 @@ export const readStickyHeaderOffsetPx = (): number => {
   const nodes = document.querySelectorAll("iframe, header");
   for (const node of nodes) {
     const el = node as HTMLElement;
+    if (el.getAttribute("data-wp-shell") === "footer") continue;
     const pos = getComputedStyle(el).position;
     if (pos !== "fixed" && pos !== "sticky") continue;
     const r = el.getBoundingClientRect();
@@ -146,6 +154,54 @@ export const readStickyHeaderOffsetPx = (): number => {
     }
   }
   return Math.max(fromVar, measured);
+};
+
+const WP_FOOTER_SELECTORS = [
+  'iframe[data-wp-shell="footer"]',
+  'iframe[title="WP Footer"]',
+  "[data-e2e-footer]",
+  "[data-wp-shell-footer]",
+  "footer",
+].join(",");
+
+const footerTopFromRect = (el: HTMLElement, vvTop: number, vvBottom: number): number | null => {
+  if (el.getAttribute("data-wp-shell") === "header") return null;
+  if (el.getAttribute("title") === "WP Header") return null;
+  const r = el.getBoundingClientRect();
+  if (r.height <= 0 || r.width <= 0) return null;
+  if (r.top >= vvBottom - 2 || r.bottom <= vvTop + 8) return null;
+  const pos = getComputedStyle(el).position;
+  const pinnedToBottom =
+    (pos === "fixed" || pos === "sticky") && r.bottom >= vvBottom - 24 && r.top > vvTop + 48;
+  const occupiesBottom = r.bottom > vvBottom - 80 && r.top > vvTop + 80 && r.height >= 64;
+  if (!pinnedToBottom && !occupiesBottom) return null;
+  return r.top;
+};
+
+/**
+ * Layout-viewport Y of overlapping bottom chrome (the WP footer iframe on
+ * staging is in-flow, ~400px tall, and paints over the nationality list).
+ * Returns the visual-viewport bottom when no footer intersects.
+ */
+export const readViewportFooterTopPx = (viewport: IViewportBox): number => {
+  const vvTop = viewport.offsetTop;
+  const vvBottom = viewport.offsetTop + viewport.height;
+  if (typeof document === "undefined") return vvBottom;
+
+  let footerTop = Infinity;
+  const seen = new Set<Element>();
+  const consider = (el: Element) => {
+    if (seen.has(el)) return;
+    seen.add(el);
+    const top = footerTopFromRect(el as HTMLElement, vvTop, vvBottom);
+    if (top == null) return;
+    footerTop = Math.min(footerTop, top);
+  };
+
+  for (const el of document.querySelectorAll(WP_FOOTER_SELECTORS)) consider(el);
+  for (const el of document.querySelectorAll("iframe")) consider(el);
+
+  return Number.isFinite(footerTop) ? footerTop : vvBottom;
 };
 
 export const applyComboboxScrollMargin = (anchor: HTMLElement, insetPx: number): void => {
@@ -264,6 +320,7 @@ export const computeComboboxListPosition = ({
   viewport,
   preferBelow = true,
   subtractVisualOffset = false,
+  footerTop,
 }: IComputeComboboxListPositionInput): IComboboxListPosition => {
   const originY = subtractVisualOffset ? viewport.offsetTop : 0;
   const originX = subtractVisualOffset ? viewport.offsetLeft : 0;
@@ -278,7 +335,11 @@ export const computeComboboxListPosition = ({
   const anchorBottom = anchor.bottom - originY;
   const anchorLeft = anchor.left - originX;
 
-  const spaceBelow = vpBottom - pad - (anchorBottom + gap);
+  const footerEdge =
+    typeof footerTop === "number" && Number.isFinite(footerTop) ? footerTop : vpBottom;
+  const collisionBottom = Math.min(vpBottom, footerEdge);
+
+  const spaceBelow = collisionBottom - pad - (anchorBottom + gap);
   const spaceAbove = anchorTop - gap - (vpTop + pad);
 
   const placement: TComboboxListPlacement = preferBelow
@@ -296,7 +357,7 @@ export const computeComboboxListPosition = ({
     // Never clamp `top` upward — that is what parked the list on top of the
     // input / the heading. Stay glued under the anchor and shrink height.
     top = anchorBottom + gap;
-    maxHeight = Math.max(0, Math.min(COMBOBOX_LIST_MAX_HEIGHT_PX, vpBottom - pad - top));
+    maxHeight = Math.max(0, Math.min(COMBOBOX_LIST_MAX_HEIGHT_PX, collisionBottom - pad - top));
   } else {
     maxHeight = Math.max(0, Math.min(COMBOBOX_LIST_MAX_HEIGHT_PX, spaceAbove));
     top = anchorTop - gap - maxHeight;

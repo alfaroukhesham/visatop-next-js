@@ -711,6 +711,8 @@ export function WpShellFrame(props: {
             "--wp-shell-header-height",
             `${Math.ceil(lastGoodHeightRef.current)}px`,
           );
+        } else if (props.kind === "footer" && Number.isFinite(h) && h > 0) {
+          document.documentElement.style.setProperty("--wp-shell-footer-height", `${Math.ceil(h)}px`);
         }
       }
     };
@@ -753,6 +755,7 @@ export function WpShellFrame(props: {
     <iframe
       ref={iframeRef}
       title={props.kind === "header" ? "WP Header" : "WP Footer"}
+      data-wp-shell={props.kind}
       srcDoc={srcDoc}
       sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
       style={{

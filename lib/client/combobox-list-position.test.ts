@@ -281,4 +281,52 @@ describe("computeComboboxListPosition", () => {
     expect(pos.width).toBe(350);
     assertFullyInside(pos, vp, false);
   });
+
+  it("caps below-list height to a WP footer occupying the visual viewport", () => {
+    const vp = viewport({ width: 390, height: 844, offsetTop: 0 });
+    const footerTop = 421;
+    const pos = computeComboboxListPosition({
+      anchor: rect({ top: 129, bottom: 187, left: 16, width: 358 }),
+      viewport: vp,
+      preferBelow: true,
+      footerTop,
+    });
+    expect(pos.placement).toBe("below");
+    expect(pos.mode).toBe("inline");
+    expect(pos.top).toBe(187 + COMBOBOX_LIST_GAP_PX);
+    expect(pos.top + pos.maxHeight).toBeLessThanOrEqual(footerTop - COMBOBOX_LIST_COLLISION_PADDING_PX + 0.5);
+    expect(pos.maxHeight).toBeLessThan(COMBOBOX_LIST_MAX_HEIGHT_PX);
+    expect(pos.maxHeight).toBeGreaterThan(80);
+    assertFullyInside(pos, vp, false);
+  });
+
+  it("uses the nearer of the visual-viewport bottom and the footer when the keyboard is open", () => {
+    const vp = viewport({ width: 390, height: 500, offsetTop: 0, layoutHeight: 844 });
+    const footerTop = 421;
+    const pos = computeComboboxListPosition({
+      anchor: rect({ top: 129, bottom: 187, left: 16, width: 358 }),
+      viewport: vp,
+      preferBelow: true,
+      footerTop,
+    });
+    expect(pos.placement).toBe("below");
+    expect(pos.top).toBe(187 + COMBOBOX_LIST_GAP_PX);
+    expect(pos.top + pos.maxHeight).toBeLessThanOrEqual(footerTop - COMBOBOX_LIST_COLLISION_PADDING_PX + 0.5);
+    expect(pos.top + pos.maxHeight).toBeLessThanOrEqual(500 - COMBOBOX_LIST_COLLISION_PADDING_PX + 0.5);
+    assertFullyInside(pos, vp, false);
+  });
+
+  it("ignores a footer that sits below the visual viewport", () => {
+    const vp = viewport({ width: 390, height: 500, offsetTop: 0, layoutHeight: 844 });
+    const pos = computeComboboxListPosition({
+      anchor: rect({ top: 72, bottom: 136, left: 16, width: 358 }),
+      viewport: vp,
+      preferBelow: true,
+      footerTop: 720,
+    });
+    expect(pos.maxHeight).toBe(
+      Math.min(COMBOBOX_LIST_MAX_HEIGHT_PX, 500 - COMBOBOX_LIST_COLLISION_PADDING_PX - (136 + COMBOBOX_LIST_GAP_PX)),
+    );
+    assertFullyInside(pos, vp, false);
+  });
 });

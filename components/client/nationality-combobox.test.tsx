@@ -258,6 +258,65 @@ describe("NationalityCombobox visual viewport", () => {
     expect(list.scrollTop).toBe(400);
   });
 
+  it("caps list maxHeight so a WP footer iframe cannot cover the options", async () => {
+    installVisualViewport({ width: 390, height: 844, offsetTop: 0 });
+    Object.defineProperty(window, "innerHeight", { configurable: true, value: 844 });
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+    const footer = document.createElement("iframe");
+    footer.title = "WP Footer";
+    footer.setAttribute("data-wp-shell", "footer");
+    footer.setAttribute("data-e2e-footer", "true");
+    document.body.appendChild(footer);
+
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      if (this === footer || this.getAttribute?.("data-wp-shell") === "footer") {
+        return {
+          x: 0,
+          y: 421,
+          top: 421,
+          left: 0,
+          bottom: 821,
+          right: 390,
+          width: 390,
+          height: 400,
+          toJSON: () => ({}),
+        } as DOMRect;
+      }
+      if (this.querySelector?.('input[role="combobox"]')) {
+        return ANCHOR as DOMRect;
+      }
+      return {
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        bottom: 0,
+        right: 0,
+        width: 0,
+        height: 0,
+        toJSON: () => ({}),
+      } as DOMRect;
+    });
+
+    const user = userEvent.setup();
+    wrap(
+      <NationalityCombobox
+        nationalities={NATIONALITIES}
+        valueCode={null}
+        onSelectCode={() => undefined}
+      />,
+    );
+    await user.click(screen.getByRole("combobox"));
+    const list = await screen.findByRole("listbox");
+    const positioned = list.style.maxHeight ? list : list.parentElement!;
+    const maxHeight = Number.parseFloat(positioned.style.maxHeight);
+    expect(maxHeight).toBeGreaterThan(0);
+    expect(ANCHOR.bottom + 8 + maxHeight).toBeLessThanOrEqual(421 - 8 + 0.5);
+    footer.remove();
+  });
+
   it("matches Arabic nationality names in the AR locale", async () => {
     installVisualViewport({ width: 390, height: 400, offsetTop: 0 });
     const ar = getCustomerI18nBundle("ar");

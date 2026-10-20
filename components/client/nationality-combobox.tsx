@@ -25,6 +25,7 @@ import {
   isInternalListScrollEvent,
   isVisualViewportRelativeFixedPosition,
   mountComboboxScrollSpacer,
+  readViewportFooterTopPx,
   readVisualViewportBox,
   scrollAnchorToVisualViewportTop,
   scrollOptionIntoContainer,
@@ -132,11 +133,14 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
     const viewport = readVisualViewportBox();
     const hasTouch = typeof window !== "undefined" && "ontouchend" in window;
     const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+    const subtractVisualOffset = isVisualViewportRelativeFixedPosition(ua, hasTouch);
+    const footerTopClient = readViewportFooterTopPx(viewport);
     const next = computeComboboxListPosition({
       anchor: { top: r.top, left: r.left, bottom: r.bottom, width: r.width, height: r.height },
       viewport,
       preferBelow: shouldPreferBelowList(viewport.width || window.innerWidth),
-      subtractVisualOffset: isVisualViewportRelativeFixedPosition(ua, hasTouch),
+      subtractVisualOffset,
+      footerTop: subtractVisualOffset ? footerTopClient - viewport.offsetTop : footerTopClient,
     });
     setListPos((prev) => {
       if (
