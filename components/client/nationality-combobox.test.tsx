@@ -110,16 +110,13 @@ describe("NationalityCombobox visual viewport", () => {
     await user.type(input, "Ken");
 
     const list = await screen.findByRole("listbox");
-    const top = Number.parseFloat(list.style.top || list.parentElement?.style.top || "0");
-    const maxHeight = Number.parseFloat(
-      list.style.maxHeight || list.parentElement?.style.maxHeight || "0",
-    );
     const positioned = list.style.top ? list : list.parentElement;
     expect(positioned).toBeTruthy();
+    expect(positioned!.style.top).toBe("100%");
     expect(Number.parseFloat(positioned!.style.maxHeight)).toBeGreaterThan(0);
     expect(Number.parseFloat(positioned!.style.maxHeight)).toBeLessThanOrEqual(400);
-    expect(top).toBeGreaterThanOrEqual(136);
-    expect(top + maxHeight).toBeLessThanOrEqual(400);
+    expect(positioned!.getAttribute("data-list-mode")).toBe("inline");
+    expect(positioned!.getAttribute("data-placement")).toBe("below");
     expect(screen.getByRole("option", { name: /kenya/i })).toBeVisible();
   });
 
@@ -129,6 +126,34 @@ describe("NationalityCombobox visual viewport", () => {
       configurable: true,
       value:
         "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    });
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      if (this.querySelector?.('input[role="combobox"]')) {
+        return {
+          x: 16,
+          y: 360,
+          top: 360,
+          left: 16,
+          bottom: 424,
+          right: 374,
+          width: 358,
+          height: 64,
+          toJSON: () => ({}),
+        } as DOMRect;
+      }
+      return {
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        bottom: 0,
+        right: 0,
+        width: 0,
+        height: 0,
+        toJSON: () => ({}),
+      } as DOMRect;
     });
     const user = userEvent.setup();
     wrap(
@@ -142,10 +167,11 @@ describe("NationalityCombobox visual viewport", () => {
     await user.click(screen.getByRole("combobox"));
     const list = await screen.findByRole("listbox");
     const positioned = list.style.top ? list : list.parentElement!;
-    const top = Number.parseFloat(positioned.style.top);
     const maxHeight = Number.parseFloat(positioned.style.maxHeight);
-    expect(top).toBeLessThan(400);
-    expect(top).toBeGreaterThan(0);
-    expect(top + maxHeight).toBeLessThanOrEqual(400);
+    expect(positioned.style.top).toBe("100%");
+    expect(positioned.getAttribute("data-list-mode")).toBe("inline");
+    expect(maxHeight).toBe(260);
+    expect(maxHeight).toBeGreaterThan(0);
+    expect(maxHeight).toBeLessThanOrEqual(400);
   });
 });

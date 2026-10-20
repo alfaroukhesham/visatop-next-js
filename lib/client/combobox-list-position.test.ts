@@ -4,6 +4,7 @@ import {
   COMBOBOX_LIST_GAP_PX,
   COMBOBOX_LIST_MAX_HEIGHT_PX,
   COMBOBOX_LIST_MIN_HEIGHT_PX,
+  comboboxScrollSpacerPx,
   computeComboboxListPosition,
   scrollDeltaToVisualViewportTop,
   shouldPreferBelowList,
@@ -43,9 +44,8 @@ const assertFullyInside = (
 ) => {
   const box = cssViewport(vp, subtractVisualOffset);
   const pad = COMBOBOX_LIST_COLLISION_PADDING_PX;
-  const extent = pos.mode === "sheet" ? (pos.height ?? pos.maxHeight) : pos.maxHeight;
   expect(pos.top).toBeGreaterThanOrEqual(box.top + pad - 0.5);
-  expect(pos.top + extent).toBeLessThanOrEqual(box.bottom - pad + 0.5);
+  expect(pos.top + pos.maxHeight).toBeLessThanOrEqual(box.bottom - pad + 0.5);
   expect(pos.left).toBeGreaterThanOrEqual(box.left + pad - 0.5);
   expect(pos.left + pos.width).toBeLessThanOrEqual(box.right - pad + 0.5);
   expect(pos.maxHeight).toBeGreaterThan(0);
@@ -61,6 +61,16 @@ describe("shouldPreferBelowList", () => {
   it("allows flip on desktop widths", () => {
     expect(shouldPreferBelowList(768)).toBe(false);
     expect(shouldPreferBelowList(1280)).toBe(false);
+  });
+});
+
+describe("comboboxScrollSpacerPx", () => {
+  it("adds room to scroll the input above a keyboard-sized occlusion", () => {
+    const px = comboboxScrollSpacerPx(
+      viewport({ width: 360, height: 333, offsetTop: 0, layoutHeight: 640 }),
+    );
+    expect(px).toBeGreaterThanOrEqual(640);
+    expect(px).toBeGreaterThan(COMBOBOX_LIST_MIN_HEIGHT_PX);
   });
 });
 
@@ -183,19 +193,41 @@ describe("computeComboboxListPosition", () => {
     assertFullyInside(pos, vp, false);
   });
 
-  it("pins to the visual viewport bottom on mobile instead of flipping to the top", () => {
-    const vp = viewport({ width: 390, height: 400, offsetTop: 0, layoutHeight: 844 });
+  it("stays attached below the input on mobile even when space below is tight", () => {
+    const vp = viewport({ width: 390, height: 400, offsetTop: 0 });
     const pos = computeComboboxListPosition({
       anchor: rect({ top: 340, bottom: 390, left: 16, width: 358 }),
       viewport: vp,
       preferBelow: true,
     });
     expect(pos.placement).toBe("below");
-    expect(pos.mode).toBe("sheet");
-    expect(pos.top).toBe(COMBOBOX_LIST_COLLISION_PADDING_PX);
-    expect(pos.height).toBe(400 - COMBOBOX_LIST_COLLISION_PADDING_PX * 2);
-    expect(pos.maxHeight).toBeGreaterThanOrEqual(COMBOBOX_LIST_MIN_HEIGHT_PX);
-    assertFullyInside(pos, vp, false);
+    expect(pos.mode).toBe("inline");
+    expect(pos.top).toBe(390 + COMBOBOX_LIST_GAP_PX);
+    expect(pos.top).toBeGreaterThanOrEqual(390);
+  });
+
+  it("never overlaps the input when preferBelow", () => {
+    const vp = viewport({ width: 360, height: 320, offsetTop: 0 });
+    const pos = computeComboboxListPosition({
+      anchor: rect({ top: 200, bottom: 280, left: 12, width: 336 }),
+      viewport: vp,
+      preferBelow: true,
+    });
+    expect(pos.top).toBeGreaterThanOrEqual(280 + COMBOBOX_LIST_GAP_PX - 0.5);
+    expect(pos.placement).toBe("below");
+  });
+
+  it("does not park a short list at the visual-viewport bottom (that covers the heading)", () => {
+    const vp = viewport({ width: 390, height: 400, offsetTop: 0, layoutHeight: 844 });
+    const pos = computeComboboxListPosition({
+      anchor: rect({ top: 360, bottom: 424, left: 16, width: 358 }),
+      viewport: vp,
+      preferBelow: true,
+    });
+    expect(pos.mode).toBe("inline");
+    expect(pos.placement).toBe("below");
+    expect(pos.top).toBe(424 + COMBOBOX_LIST_GAP_PX);
+    expect(pos.top).toBeGreaterThan(360);
   });
 
   it("clamps horizontally so a wide list stays inside the visual viewport", () => {

@@ -24,18 +24,57 @@ export interface IAnchorRect {
 
 export type TComboboxListPlacement = "below" | "above";
 
-export type TComboboxListMode = "attached" | "sheet";
+export type TComboboxListMode = "inline" | "attached";
 
 export interface IComboboxListPosition {
   top: number;
   left: number;
   width: number;
   maxHeight: number;
-  /** Sheet frame height (visual viewport minus padding). Only for `mode: "sheet"`. */
-  height?: number;
   placement: TComboboxListPlacement;
   mode: TComboboxListMode;
 }
+
+export const COMBOBOX_SCROLL_SPACER_ATTR = "data-combobox-keyboard-spacer";
+
+export const keyboardOcclusionPx = (viewport: IViewportBox): number => {
+  const layoutHeight = viewport.layoutHeight ?? viewport.offsetTop + viewport.height;
+  return Math.max(0, layoutHeight - viewport.height);
+};
+
+export const comboboxScrollSpacerPx = (viewport: IViewportBox): number => {
+  const layoutHeight = viewport.layoutHeight ?? viewport.offsetTop + viewport.height;
+  return (
+    layoutHeight +
+    COMBOBOX_LIST_MIN_HEIGHT_PX +
+    COMBOBOX_LIST_GAP_PX +
+    COMBOBOX_LIST_COLLISION_PADDING_PX * 2
+  );
+};
+
+export const mountComboboxScrollSpacer = (heightPx: number): HTMLElement | null => {
+  if (typeof document === "undefined") return null;
+  document.querySelector(`[${COMBOBOX_SCROLL_SPACER_ATTR}]`)?.remove();
+  const el = document.createElement("div");
+  el.setAttribute(COMBOBOX_SCROLL_SPACER_ATTR, "");
+  el.setAttribute("aria-hidden", "true");
+  const px = Math.max(0, Math.round(heightPx));
+  el.style.cssText = [
+    "display:block",
+    "width:100%",
+    `height:${px}px`,
+    "flex-shrink:0",
+    "pointer-events:none",
+    "overflow:hidden",
+  ].join(";");
+  document.body.appendChild(el);
+  return el;
+};
+
+export const unmountComboboxScrollSpacer = (): void => {
+  if (typeof document === "undefined") return;
+  document.querySelector(`[${COMBOBOX_SCROLL_SPACER_ATTR}]`)?.remove();
+};
 
 export interface IComputeComboboxListPositionInput {
   anchor: IAnchorRect;
@@ -93,23 +132,45 @@ export const scrollDeltaToVisualViewportTop = ({
   padding?: number;
 }): number => anchorTop - viewportOffsetTop - padding;
 
-export const scrollAnchorToVisualViewportTop = (anchor: HTMLElement): void => {
-  const viewport = readVisualViewportBox();
-  const r = anchor.getBoundingClientRect();
-  const delta = scrollDeltaToVisualViewportTop({
-    anchorTop: r.top,
-    viewportOffsetTop: viewport.offsetTop,
-  });
-  if (Math.abs(delta) >= 1) {
-    window.scrollBy({ top: delta, left: 0, behavior: "instant" });
+export const scrollOverflowAncestors = (anchor: HTMLElement, deltaY: number): void => {
+  if (typeof window === "undefined" || Math.abs(deltaY) < 1) return;
+  let remaining = deltaY;
+  let parent: HTMLElement | null = anchor.parentElement;
+  while (parent && Math.abs(remaining) >= 1) {
+    const maxScroll = parent.scrollHeight - parent.clientHeight;
+    if (maxScroll > 1) {
+      const before = parent.scrollTop;
+      parent.scrollTop = before + remaining;
+      remaining -= parent.scrollTop - before;
+    }
+    parent = parent.parentElement;
   }
+  if (Math.abs(remaining) >= 1) {
+    window.scrollBy({ top: remaining, left: 0, behavior: "instant" });
+  }
+};
+
+export const scrollAnchorToVisualViewportTop = (anchor: HTMLElement): void => {
+  const apply = (): void => {
+    const viewport = readVisualViewportBox();
+    const r = anchor.getBoundingClientRect();
+    const delta = scrollDeltaToVisualViewportTop({
+      anchorTop: r.top,
+      viewportOffsetTop: viewport.offsetTop,
+    });
+    scrollOverflowAncestors(anchor, delta);
+  };
+  apply();
   const after = anchor.getBoundingClientRect();
   const remaining = scrollDeltaToVisualViewportTop({
     anchorTop: after.top,
     viewportOffsetTop: readVisualViewportBox().offsetTop,
   });
-  if (Math.abs(remaining) >= 8 && typeof anchor.scrollIntoView === "function") {
-    anchor.scrollIntoView({ block: "start", inline: "nearest", behavior: "instant" });
+  if (Math.abs(remaining) >= 8) {
+    scrollOverflowAncestors(anchor, remaining);
+    if (typeof anchor.scrollIntoView === "function") {
+      anchor.scrollIntoView({ block: "start", inline: "nearest", behavior: "instant" });
+    }
   }
 };
 
@@ -168,66 +229,29 @@ export const computeComboboxListPosition = ({
   const spaceBelow = vpBottom - pad - (anchorBottom + gap);
   const spaceAbove = anchorTop - gap - (vpTop + pad);
 
-  let placement: TComboboxListPlacement;
-  let pinToViewportBottom = false;
-  if (preferBelow) {
-    placement = "below";
-    pinToViewportBottom = spaceBelow < COMBOBOX_LIST_MIN_HEIGHT_PX;
-  } else {
-    placement = spaceBelow >= spaceAbove ? "below" : "above";
-  }
+  const placement: TComboboxListPlacement = preferBelow
+    ? "below"
+    : spaceBelow >= spaceAbove
+      ? "below"
+      : "above";
 
   let width = Math.min(anchor.width, Math.max(0, viewport.width - pad * 2));
   let left = anchorLeft;
   let maxHeight: number;
   let top: number;
 
-  if (pinToViewportBottom) {
-    const originYSheet = subtractVisualOffset ? viewport.offsetTop : 0;
-    maxHeight = Math.max(
-      0,
-      Math.min(COMBOBOX_LIST_MAX_HEIGHT_PX, viewport.height * 0.45, viewport.height - pad * 2),
-    );
-    const frameTop = viewport.offsetTop + pad - originYSheet;
-    const frameHeight = Math.max(0, viewport.height - pad * 2);
-    width = Math.max(0, viewport.width - pad * 2);
-    left = vpLeft + pad;
-    const minLeft = vpLeft + pad;
-    let maxLeft = vpRight - pad - width;
-    if (maxLeft < minLeft) {
-      width = Math.max(0, vpRight - pad - minLeft);
-      maxLeft = minLeft;
-    }
-    left = clamp(left, minLeft, maxLeft);
-    return {
-      top: frameTop,
-      left,
-      width,
-      maxHeight,
-      height: frameHeight,
-      placement,
-      mode: "sheet",
-    };
-  } else if (placement === "below") {
-    maxHeight = Math.max(0, Math.min(COMBOBOX_LIST_MAX_HEIGHT_PX, spaceBelow));
+  if (placement === "below") {
+    // Never clamp `top` upward — that is what parked the list on top of the
+    // input / the heading. Stay glued under the anchor and shrink height.
     top = anchorBottom + gap;
+    maxHeight = Math.max(0, Math.min(COMBOBOX_LIST_MAX_HEIGHT_PX, vpBottom - pad - top));
   } else {
     maxHeight = Math.max(0, Math.min(COMBOBOX_LIST_MAX_HEIGHT_PX, spaceAbove));
     top = anchorTop - gap - maxHeight;
+    const minTop = vpTop + pad;
+    top = Math.max(minTop, top);
+    maxHeight = Math.max(0, Math.min(maxHeight, anchorTop - gap - top));
   }
-
-  if (maxHeight <= 0) {
-    maxHeight = Math.max(0, viewport.height - pad * 2);
-    top = vpTop + pad;
-  }
-
-  const minTop = vpTop + pad;
-  let maxTop = vpBottom - pad - maxHeight;
-  if (maxTop < minTop) {
-    maxHeight = Math.max(0, vpBottom - pad - minTop);
-    maxTop = vpBottom - pad - maxHeight;
-  }
-  top = clamp(top, minTop, maxTop);
 
   const minLeft = vpLeft + pad;
   let maxLeft = vpRight - pad - width;
@@ -237,5 +261,12 @@ export const computeComboboxListPosition = ({
   }
   left = clamp(left, minLeft, maxLeft);
 
-  return { top, left, width, maxHeight, placement, mode: "attached" };
+  return {
+    top,
+    left,
+    width,
+    maxHeight,
+    placement,
+    mode: preferBelow ? "inline" : "attached",
+  };
 };

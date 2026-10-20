@@ -17,13 +17,17 @@ import { ClientInput } from "@/components/client/client-input";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { iso2FlagEmoji } from "@/lib/apply/display-names";
 import {
+  COMBOBOX_LIST_GAP_PX,
+  comboboxScrollSpacerPx,
   computeComboboxListPosition,
   isVisualViewportRelativeFixedPosition,
+  mountComboboxScrollSpacer,
   readVisualViewportBox,
   scrollAnchorToVisualViewportTop,
   scrollOptionIntoContainer,
   shouldPreferBelowList,
   subscribeViewportChange,
+  unmountComboboxScrollSpacer,
   type IComboboxListPosition,
 } from "@/lib/client/combobox-list-position";
 import { cn } from "@/lib/utils";
@@ -45,11 +49,12 @@ interface INationalityComboboxProps {
 }
 
 /**
- * Searchable nationality combobox. The results list is portaled to `document.body`
- * so page ancestors with `overflow: hidden` (home hero) or a persistent
- * `transform` (`theme-client-rise` fill-mode) cannot clip it. Position is computed
- * against `visualViewport` so iOS Safari's on-screen keyboard cannot push the
- * list off-screen.
+ * Searchable nationality combobox. On mobile the results list is `position:
+ * absolute; top: 100%` under the input so it cannot cover the field or the
+ * heading above it. Desktop still portals a `position: fixed` list to
+ * `document.body` (home hero overflow / `theme-client-rise` transform). Height
+ * is computed against `visualViewport` so iOS Safari's keyboard cannot push the
+ * list off-screen; the list scrolls internally.
  */
 export const NationalityCombobox: FC<INationalityComboboxProps> = ({
   id: idProp,
@@ -128,6 +133,29 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
       }),
     );
   }, []);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      unmountComboboxScrollSpacer();
+      return;
+    }
+    const reveal = () => {
+      const viewport = readVisualViewportBox();
+      if (shouldPreferBelowList(viewport.width || window.innerWidth)) {
+        mountComboboxScrollSpacer(comboboxScrollSpacerPx(viewport));
+      }
+      if (wrapRef.current) scrollAnchorToVisualViewportTop(wrapRef.current);
+    };
+    reveal();
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    vv?.addEventListener("resize", reveal);
+    window.addEventListener("resize", reveal);
+    return () => {
+      vv?.removeEventListener("resize", reveal);
+      window.removeEventListener("resize", reveal);
+      unmountComboboxScrollSpacer();
+    };
+  }, [open]);
 
   useLayoutEffect(() => {
     if (!showPortal) return;
@@ -225,88 +253,86 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
   };
 
   const hero = size === "hero";
+  const inlineList = Boolean(listPos && listPos.mode === "inline");
 
-  const portalContent =
-    typeof document !== "undefined" &&
-    showPortal &&
-    listPos &&
-    createPortal(
+  const listInner =
+    showList && listPos ? (
+      <ul
+        ref={listboxRef}
+        id={listId}
+        role="listbox"
+        className="overflow-auto overscroll-contain py-1"
+        style={{ maxHeight: listPos.maxHeight }}
+      >
+        {filtered.map((n, i) => {
+          const flag = iso2FlagEmoji(n.code);
+          return (
+            <li key={n.code} role="presentation">
+              <button
+                type="button"
+                role="option"
+                aria-selected={i === activeIndex}
+                className={cn(
+                  "hover:bg-accent hover:text-accent-foreground flex w-full items-center gap-2 px-4 py-3 text-left text-sm transition-colors",
+                  i === activeIndex && "bg-accent text-accent-foreground",
+                )}
+                onMouseEnter={() => setHighlight(i)}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => pick(n.code)}
+              >
+                {flag ? (
+                  <span className="w-6 shrink-0 text-base leading-none" aria-hidden>
+                    {flag}
+                  </span>
+                ) : null}
+                <span className="min-w-0 font-medium">{n.name}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    ) : showEmpty ? (
+      <p id={listId} className="text-muted-foreground px-4 py-3 text-sm" role="status">
+        {t("common.noCountryMatch")}
+      </p>
+    ) : null;
+
+  const dropdownShell =
+    showPortal && listPos && listInner ? (
       <div
         ref={portalRef}
         data-placement={listPos.placement}
         data-list-mode={listPos.mode}
         className={cn(
-          "pointer-events-none fixed z-[100]",
-          listPos.mode === "sheet"
-            ? "flex flex-col justify-end"
-            : "border-border bg-popover text-popover-foreground pointer-events-auto overflow-hidden rounded-[10px] border shadow-lg",
+          "border-border bg-popover text-popover-foreground pointer-events-auto z-[100] overflow-hidden rounded-[10px] border shadow-lg",
+          inlineList ? "absolute inset-x-0" : "fixed",
         )}
-        style={{
-          top: listPos.top,
-          left: listPos.left,
-          width: listPos.width,
-          height: listPos.mode === "sheet" ? listPos.height : undefined,
-          maxHeight: listPos.mode === "sheet" ? listPos.height : listPos.maxHeight,
-        }}
+        style={
+          inlineList
+            ? {
+                top: "100%",
+                marginTop: COMBOBOX_LIST_GAP_PX,
+                maxHeight: listPos.maxHeight,
+              }
+            : {
+                top: listPos.top,
+                left: listPos.left,
+                width: listPos.width,
+                maxHeight: listPos.maxHeight,
+              }
+        }
       >
-        {showList ? (
-          <ul
-            ref={listboxRef}
-            id={listId}
-            role="listbox"
-            className={cn(
-              "pointer-events-auto overflow-auto overscroll-contain py-1",
-              listPos.mode === "sheet" &&
-                "border-border bg-popover text-popover-foreground rounded-[10px] border shadow-lg",
-            )}
-            style={{ maxHeight: listPos.maxHeight }}
-          >
-            {filtered.map((n, i) => {
-              const flag = iso2FlagEmoji(n.code);
-              return (
-                <li key={n.code} role="presentation">
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={i === activeIndex}
-                    className={cn(
-                      "hover:bg-accent hover:text-accent-foreground flex w-full items-center gap-2 px-4 py-3 text-left text-sm transition-colors",
-                      i === activeIndex && "bg-accent text-accent-foreground",
-                    )}
-                    onMouseEnter={() => setHighlight(i)}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => pick(n.code)}
-                  >
-                    {flag ? (
-                      <span className="w-6 shrink-0 text-base leading-none" aria-hidden>
-                        {flag}
-                      </span>
-                    ) : null}
-                    <span className="min-w-0 font-medium">{n.name}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <p
-            id={listId}
-            className={cn(
-              "text-muted-foreground pointer-events-auto px-4 py-3 text-sm",
-              listPos.mode === "sheet" &&
-                "border-border bg-popover rounded-[10px] border shadow-lg",
-            )}
-            role="status"
-          >
-            {t("common.noCountryMatch")}
-          </p>
-        )}
-      </div>,
-      document.body,
-    );
+        {listInner}
+      </div>
+    ) : null;
+
+  const portalContent =
+    !inlineList && typeof document !== "undefined" && dropdownShell
+      ? createPortal(dropdownShell, document.body)
+      : null;
 
   return (
-    <div ref={wrapRef} className={cn("relative w-full", className)}>
+    <div ref={wrapRef} className={cn("relative w-full", open && "z-[100]", className)}>
       <div className="relative">
         {selectedFlag && !open ? (
           <span
@@ -366,7 +392,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
           aria-hidden
         />
       </div>
-      {portalContent}
+      {inlineList ? dropdownShell : portalContent}
     </div>
   );
 };

@@ -47,7 +47,7 @@ const Home = async () => {
       <JsonLdScript id="visatop-home-jsonld" data={buildHomePageJsonLd({ locale })} />
       <ClientAppHeader hideWhenSignedOut />
 
-      <div className="relative flex-1 overflow-hidden">
+      <div className="relative flex-1 overflow-x-hidden">
         <div
           className="pointer-events-none absolute inset-x-0 top-0 h-[min(52vh,520px)] bg-[radial-gradient(ellipse_90%_80%_at_0%_0%,rgba(252,205,100,0.22),transparent_55%)]"
           aria-hidden
