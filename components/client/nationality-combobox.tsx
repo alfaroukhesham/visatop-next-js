@@ -22,6 +22,7 @@ import {
   WP_SHELL_HEADER_HEIGHT_VAR,
   comboboxScrollSpacerPx,
   computeComboboxListPosition,
+  isInternalListScrollEvent,
   isVisualViewportRelativeFixedPosition,
   mountComboboxScrollSpacer,
   readVisualViewportBox,
@@ -98,6 +99,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
   const listboxRef = useRef<HTMLUListElement>(null);
   const firstInteractionRef = useRef(false);
   const resyncTimersRef = useRef<number[]>([]);
+  const revealActiveOnKeyboardRef = useRef(false);
   const [listPos, setListPos] = useState<IComboboxListPosition | null>(null);
 
   const selectedIndex = useMemo(() => {
@@ -122,21 +124,34 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
   const showEmpty = open && filtered.length === 0 && draftQuery.trim().length > 0;
   const showPortal = showList || showEmpty;
 
-  const syncListPosition = useCallback(() => {
+  const syncListPosition = useCallback((event?: Event) => {
+    if (isInternalListScrollEvent(event, listboxRef.current)) return;
     const el = wrapRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
     const viewport = readVisualViewportBox();
     const hasTouch = typeof window !== "undefined" && "ontouchend" in window;
     const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
-    setListPos(
-      computeComboboxListPosition({
-        anchor: { top: r.top, left: r.left, bottom: r.bottom, width: r.width, height: r.height },
-        viewport,
-        preferBelow: shouldPreferBelowList(viewport.width || window.innerWidth),
-        subtractVisualOffset: isVisualViewportRelativeFixedPosition(ua, hasTouch),
-      }),
-    );
+    const next = computeComboboxListPosition({
+      anchor: { top: r.top, left: r.left, bottom: r.bottom, width: r.width, height: r.height },
+      viewport,
+      preferBelow: shouldPreferBelowList(viewport.width || window.innerWidth),
+      subtractVisualOffset: isVisualViewportRelativeFixedPosition(ua, hasTouch),
+    });
+    setListPos((prev) => {
+      if (
+        prev &&
+        prev.top === next.top &&
+        prev.left === next.left &&
+        prev.width === next.width &&
+        prev.maxHeight === next.maxHeight &&
+        prev.placement === next.placement &&
+        prev.mode === next.mode
+      ) {
+        return prev;
+      }
+      return next;
+    });
   }, []);
 
   useLayoutEffect(() => {
@@ -169,13 +184,74 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
   }, [showPortal, syncListPosition, draftQuery, filtered.length]);
 
   useLayoutEffect(() => {
-    if (!showPortal) return;
+    if (!showPortal || !revealActiveOnKeyboardRef.current) return;
+    revealActiveOnKeyboardRef.current = false;
     const selectedEl = portalRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
     const listEl = listboxRef.current;
     if (selectedEl && listEl) {
       scrollOptionIntoContainer(selectedEl, listEl);
     }
-  }, [showPortal, activeIndex, listPos]);
+  }, [showPortal, activeIndex]);
+
+  useEffect(() => {
+    const el = listboxRef.current;
+    if (!el || !showList) return;
+    let lastPointerY: number | null = null;
+    const applyDelta = (delta: number, event: Event) => {
+      const max = el.scrollHeight - el.clientHeight;
+      if (max <= 1) return;
+      const next = Math.max(0, Math.min(max, el.scrollTop + delta));
+      if (next === el.scrollTop) return;
+      event.preventDefault();
+      event.stopPropagation();
+      el.scrollTop = next;
+    };
+    const onWheel = (event: WheelEvent) => {
+      event.stopPropagation();
+      applyDelta(event.deltaY, event);
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      lastPointerY = event.clientY;
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (lastPointerY == null) return;
+      if (event.pointerType === "mouse" && event.buttons === 0) return;
+      event.stopPropagation();
+      const delta = lastPointerY - event.clientY;
+      lastPointerY = event.clientY;
+      applyDelta(delta, event);
+    };
+    const onPointerUp = () => {
+      lastPointerY = null;
+    };
+    const onTouchStart = (event: TouchEvent) => {
+      lastPointerY = event.touches[0]?.clientY ?? lastPointerY;
+    };
+    const onTouchMove = (event: TouchEvent) => {
+      event.stopPropagation();
+      const y = event.touches[0]?.clientY;
+      if (lastPointerY == null || y == null) return;
+      const delta = lastPointerY - y;
+      lastPointerY = y;
+      applyDelta(delta, event);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("pointerdown", onPointerDown);
+    el.addEventListener("pointermove", onPointerMove);
+    el.addEventListener("pointerup", onPointerUp);
+    el.addEventListener("pointercancel", onPointerUp);
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("pointerdown", onPointerDown);
+      el.removeEventListener("pointermove", onPointerMove);
+      el.removeEventListener("pointerup", onPointerUp);
+      el.removeEventListener("pointercancel", onPointerUp);
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+    };
+  }, [showList, listPos?.maxHeight]);
 
   useEffect(() => {
     return () => {
@@ -228,9 +304,11 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
     if (!open) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
+      revealActiveOnKeyboardRef.current = true;
       setHighlight((h) => (filtered.length === 0 ? 0 : Math.min(filtered.length - 1, h + 1)));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
+      revealActiveOnKeyboardRef.current = true;
       setHighlight((h) => Math.max(0, h - 1));
     } else if (e.key === "Enter") {
       e.preventDefault();
@@ -266,23 +344,35 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
         ref={listboxRef}
         id={listId}
         role="listbox"
-        className="overflow-auto overscroll-contain py-1"
-        style={{ maxHeight: listPos.maxHeight, touchAction: "pan-y", WebkitOverflowScrolling: "touch" }}
+        className="overflow-auto overscroll-contain py-1 select-none"
+        style={{
+          maxHeight: listPos.maxHeight,
+          touchAction: "pan-y",
+          WebkitOverflowScrolling: "touch",
+          overscrollBehavior: "contain",
+        }}
+        onScroll={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
       >
         {filtered.map((n, i) => {
           const flag = iso2FlagEmoji(n.code);
           return (
-            <li key={n.code} role="presentation">
-              <button
-                type="button"
+            <li key={n.code} role="presentation" style={{ touchAction: "pan-y" }}>
+              <div
                 role="option"
+                tabIndex={-1}
                 aria-selected={i === activeIndex}
                 className={cn(
-                  "hover:bg-accent hover:text-accent-foreground flex w-full items-center gap-2 px-4 py-3 text-left text-sm transition-colors",
+                  "hover:bg-accent hover:text-accent-foreground flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-left text-sm transition-colors",
                   i === activeIndex && "bg-accent text-accent-foreground",
                 )}
+                style={{ touchAction: "pan-y" }}
                 onMouseEnter={() => setHighlight(i)}
-                onMouseDown={(e) => e.preventDefault()}
+                onPointerDown={(e) => {
+                  if (e.pointerType === "touch") return;
+                  e.preventDefault();
+                }}
                 onClick={() => pick(n.code)}
               >
                 {flag ? (
@@ -291,7 +381,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
                   </span>
                 ) : null}
                 <span className="min-w-0 font-medium">{labelFor(n)}</span>
-              </button>
+              </div>
             </li>
           );
         })}
@@ -309,7 +399,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
         data-placement={listPos.placement}
         data-list-mode={listPos.mode}
         className={cn(
-          "border-border bg-popover text-popover-foreground pointer-events-auto z-[100] overflow-hidden rounded-[10px] border shadow-lg",
+          "border-border bg-popover text-popover-foreground pointer-events-auto z-[100] rounded-[10px] border shadow-lg",
           inlineList ? "absolute inset-x-0" : "fixed",
         )}
         style={

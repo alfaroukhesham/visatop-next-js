@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -24,6 +24,7 @@ const NATIONALITIES = [
   { code: "KW", name: "Kuwait" },
   { code: "LB", name: "Lebanon" },
   { code: "MA", name: "Morocco" },
+  { code: "NE", name: "Niger" },
   { code: "NG", name: "Nigeria" },
   { code: "PK", name: "Pakistan" },
   { code: "QA", name: "Qatar" },
@@ -38,14 +39,27 @@ const NATIONALITIES = [
 
 const layoutHeightFor = (width: number): number => (width <= 360 ? 640 : 844);
 
-const mockNationalities = async (page: Page) => {
+const SCROLL_NATIONALITIES: Array<{ code: string; name: string }> = [];
+for (let i = 0; SCROLL_NATIONALITIES.length < 194; i += 1) {
+  const code = `${String.fromCharCode(65 + (i % 26))}${String.fromCharCode(65 + Math.floor(i / 26) % 26)}`;
+  if (code === "AE") continue;
+  SCROLL_NATIONALITIES.push({
+    code,
+    name: `Nationality ${String(SCROLL_NATIONALITIES.length).padStart(3, "0")} Label`,
+  });
+}
+
+const mockNationalities = async (
+  page: Page,
+  nationalities: Array<{ code: string; name: string }> = NATIONALITIES,
+) => {
   await page.route("**/catalog/nationalities**", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
         ok: true,
-        data: { nationalities: NATIONALITIES },
+        data: { nationalities },
         meta: { requestId: "e2e-nationality-combobox" },
       }),
     });
@@ -229,9 +243,15 @@ const typeIntoCombobox = async (page: Page, text: string) => {
   }, text);
 };
 
-const openHome = async (page: Page, width: number, layoutHeight: number, locale: string) => {
+const openHome = async (
+  page: Page,
+  width: number,
+  layoutHeight: number,
+  locale: string,
+  nationalities: Array<{ code: string; name: string }> = NATIONALITIES,
+) => {
   await page.setViewportSize({ width, height: layoutHeight });
-  await mockNationalities(page);
+  await mockNationalities(page, nationalities);
   const home = locale === "en" ? CLIENT_HOME_PATH : `${CLIENT_HOME_PATH}?locale=${locale}`;
   await page.goto(home, { waitUntil: "domcontentloaded" });
   const combobox = page.getByRole("combobox");
@@ -296,7 +316,9 @@ test.describe("nationality combobox header offset and keyboard", () => {
           await typeIntoCombobox(page, typed);
           await expect(page.getByRole("listbox")).toBeVisible();
           if (locale === "ar") {
-            await expect(page.getByRole("option", { name: /نيجيريا/ })).toBeVisible();
+            const names = await page.getByRole("option").allTextContents();
+            expect(names.slice(0, 2).join(" ")).toMatch(/نيجيريا/);
+            expect(names.slice(0, 2).join(" ")).toMatch(/النيجر/);
           } else {
             await expect(page.getByRole("option", { name: /kenya/i })).toBeVisible();
           }
@@ -322,6 +344,64 @@ test.describe("nationality combobox header offset and keyboard", () => {
   }
 });
 
+const pause = async (page: Page, ms: number) => {
+  await page.evaluate((wait) => new Promise((resolve) => setTimeout(resolve, wait)), ms);
+};
+
+const listScrollState = (list: Locator) =>
+  list.evaluate((el) => ({
+    scrollTop: el.scrollTop,
+    scrollHeight: el.scrollHeight,
+    clientHeight: el.clientHeight,
+    overflowY: getComputedStyle(el).overflowY,
+  }));
+
+const touchDragList = async (page: Page, list: Locator, distancePx: number) => {
+  await list.evaluate((el, dy) => {
+    const rect = el.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const startY = rect.top + Math.min(48, rect.height / 3);
+    const endY = startY - dy;
+    const fire = (type: string, y: number, extra: PointerEventInit = {}) => {
+      el.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          pointerId: 1,
+          pointerType: "touch",
+          isPrimary: true,
+          clientX: x,
+          clientY: y,
+          buttons: type === "pointerup" ? 0 : 1,
+          pressure: type === "pointerup" ? 0 : 1,
+          ...extra,
+        }),
+      );
+    };
+    fire("pointerdown", startY);
+    const steps = 12;
+    for (let i = 1; i <= steps; i += 1) {
+      fire("pointermove", startY + ((endY - startY) * i) / steps);
+    }
+    fire("pointerup", endY);
+  }, distancePx);
+};
+
+const wheelList = async (page: Page, list: Locator, deltaY: number) => {
+  await list.evaluate((el, dy) => {
+    el.dispatchEvent(
+      new WheelEvent("wheel", {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        deltaY: dy,
+        deltaMode: 0,
+      }),
+    );
+  }, deltaY);
+};
+
 test.describe("nationality combobox Arabic search and inner scroll", () => {
   test("AR locale matches الإمارات after typing الإم", async ({ page }) => {
     const combobox = await openHome(page, 390, 844, "ar");
@@ -334,30 +414,67 @@ test.describe("nationality combobox Arabic search and inner scroll", () => {
     await assertOpenLayout(page, "ar");
   });
 
-  test("inner listbox scrolls by wheel", async ({ page }) => {
-    const combobox = await openHome(page, 390, 844, "en");
-    await simulateKeyboardVisualViewport(page, 500);
-    await combobox.tap().catch(async () => {
-      await combobox.click();
-    });
-    const list = page.getByRole("listbox");
-    await expect(list).toBeVisible();
-    await expect
-      .poll(async () =>
-        list.evaluate((el) => ({
-          overflowY: getComputedStyle(el).overflowY,
-          scrollHeight: el.scrollHeight,
-          clientHeight: el.clientHeight,
-        })),
-      )
-      .toMatchObject({ overflowY: expect.stringMatching(/auto|scroll/) });
+  for (const width of WIDTHS) {
+    for (const locale of LOCALES) {
+      for (const visualHeight of [null, 500] as const) {
+        const keyboardLabel = visualHeight ? `keyboard visual ${visualHeight}` : "no keyboard";
+        test(`${width} ${locale} ${keyboardLabel} list stays scrolled after touch drag and wheel`, async ({
+          page,
+        }, testInfo) => {
+          const layoutHeight = layoutHeightFor(width);
+          const combobox = await openHome(page, width, layoutHeight, locale, SCROLL_NATIONALITIES);
+          if (visualHeight) await simulateKeyboardVisualViewport(page, visualHeight);
+          await combobox.tap().catch(async () => {
+            await combobox.click();
+          });
+          const list = page.getByRole("listbox");
+          await expect(list).toBeVisible();
+          await expect
+            .poll(async () => {
+              const state = await listScrollState(list);
+              return (
+                /auto|scroll/.test(state.overflowY) &&
+                state.scrollHeight - state.clientHeight > 400 &&
+                state.clientHeight > 80
+              );
+            })
+            .toBe(true);
 
-    const before = await list.evaluate((el) => el.scrollTop);
-    await list.evaluate((el) => {
-      el.scrollTop = 80;
-      el.dispatchEvent(new WheelEvent("wheel", { deltaY: 120, bubbles: true }));
-    });
-    const after = await list.evaluate((el) => el.scrollTop);
-    expect(after).toBeGreaterThan(before);
-  });
+          const pageYBefore = await page.evaluate(() => window.scrollY);
+          const beforeTouch = await listScrollState(list);
+          await touchDragList(page, list, 180);
+          await pause(page, 500);
+          const afterTouch = await listScrollState(list);
+          expect(afterTouch.scrollTop, `touch drag did not stick ${JSON.stringify({ beforeTouch, afterTouch })}`).toBeGreaterThan(
+            beforeTouch.scrollTop + 24,
+          );
+
+          const beforeWheel = afterTouch.scrollTop;
+          await wheelList(page, list, 240);
+          await pause(page, 500);
+          const afterWheel = await listScrollState(list);
+          expect(afterWheel.scrollTop, `wheel did not stick ${JSON.stringify(afterWheel)}`).toBeGreaterThan(beforeWheel + 24);
+          await expect(list).toBeVisible();
+          const pageYAfter = await page.evaluate(() => window.scrollY);
+          expect(Math.abs(pageYAfter - pageYBefore)).toBeLessThan(24);
+
+          const assigned = 400;
+          await list.evaluate((el, top) => {
+            el.scrollTop = top;
+          }, assigned);
+          await pause(page, 500);
+          const held = await list.evaluate((el) => el.scrollTop);
+          expect(held, "assigned scrollTop snapped back").toBeGreaterThan(assigned - 40);
+
+          if (
+            width === 390 &&
+            visualHeight === 500 &&
+            (testInfo.project.name === "chromium" || testInfo.project.name === "mobile-safari")
+          ) {
+            await saveShot(page, `after-390-${locale}-list-scrolled`);
+          }
+        });
+      }
+    }
+  }
 });
