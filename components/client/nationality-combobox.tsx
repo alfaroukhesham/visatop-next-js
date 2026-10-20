@@ -93,11 +93,16 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
   const selectedFlag = selected ? iso2FlagEmoji(selected.code) : "";
 
   const [open, setOpen] = useState(false);
-  const [draftQuery, setDraftQuery] = useState("");
+  // null = show the committed label (and do not filter). "" = user cleared the
+  // field. A non-empty string is the active filter. `draftQuery || closedLabel`
+  // treated "" as "not editing" and forced the selected name back on Backspace.
+  const [draftQuery, setDraftQuery] = useState<string | null>(null);
   const [highlight, setHighlight] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const portalRef = useRef<HTMLDivElement>(null);
   const listboxRef = useRef<HTMLUListElement>(null);
+  const selectCommittedLabelRef = useRef(false);
   const firstInteractionRef = useRef(false);
   const resyncTimersRef = useRef<number[]>([]);
   const revealActiveOnKeyboardRef = useRef(false);
@@ -109,20 +114,18 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
     return idx >= 0 ? idx : 0;
   }, [nationalities, valueCode]);
 
-  // While the list is open with no typed query, keep showing the selected label
-  // but do not use it as a filter — otherwise changing country requires deleting the name.
-  const inputValue = open ? draftQuery || closedLabel : closedLabel;
+  const inputValue = open && draftQuery !== null ? draftQuery : closedLabel;
 
   const filtered = useMemo(() => {
     if (!open) return nationalities;
-    return filterNationalityOptions(nationalities, draftQuery, locale);
+    return filterNationalityOptions(nationalities, draftQuery ?? "", locale);
   }, [nationalities, draftQuery, open, locale]);
 
   const activeIndex =
     filtered.length === 0 ? 0 : Math.min(highlight, Math.max(0, filtered.length - 1));
 
   const showList = open && filtered.length > 0;
-  const showEmpty = open && filtered.length === 0 && draftQuery.trim().length > 0;
+  const showEmpty = open && filtered.length === 0 && (draftQuery ?? "").trim().length > 0;
   const showPortal = showList || showEmpty;
 
   const syncListPosition = useCallback((event?: Event) => {
@@ -186,6 +189,14 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
     syncListPosition();
     return subscribeViewportChange(syncListPosition);
   }, [showPortal, syncListPosition, draftQuery, filtered.length]);
+
+  useLayoutEffect(() => {
+    if (!open || draftQuery !== null || !selectCommittedLabelRef.current) return;
+    selectCommittedLabelRef.current = false;
+    const el = inputRef.current;
+    if (!el || !el.value) return;
+    el.select();
+  }, [open, draftQuery, inputValue]);
 
   useLayoutEffect(() => {
     if (!showPortal || !revealActiveOnKeyboardRef.current) return;
@@ -271,21 +282,22 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
       if (wrapRef.current?.contains(target)) return;
       if (portalRef.current?.contains(target)) return;
       setOpen(false);
-      setDraftQuery("");
+      setDraftQuery(null);
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
   const openList = useCallback(
-    (query = "") => {
+    (query: string | null = null) => {
       if (!firstInteractionRef.current) {
         firstInteractionRef.current = true;
         onFirstInteraction?.();
       }
       setOpen(true);
       setDraftQuery(query);
-      setHighlight(query.trim() ? 0 : selectedIndex);
+      setHighlight(query != null && query.trim() ? 0 : selectedIndex);
+      if (query == null) selectCommittedLabelRef.current = true;
     },
     [onFirstInteraction, selectedIndex],
   );
@@ -293,7 +305,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
   const pick = useCallback(
     (code: string) => {
       setOpen(false);
-      setDraftQuery("");
+      setDraftQuery(null);
       onSelectCode(code);
     },
     [onSelectCode],
@@ -320,11 +332,11 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
       if (row) pick(row.code);
     } else if (e.key === "Escape") {
       setOpen(false);
-      setDraftQuery("");
+      setDraftQuery(null);
     }
   };
 
-  const revealAnchorThenOpen = (query?: string) => {
+  const revealAnchorThenOpen = (query: string | null = null) => {
     const resync = () => {
       if (wrapRef.current) scrollAnchorToVisualViewportTop(wrapRef.current);
       syncListPosition();
@@ -434,7 +446,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
     <div
       ref={wrapRef}
       className={cn("relative w-full", open && "z-[100]", className)}
-      data-combobox-query={open ? draftQuery : undefined}
+      data-combobox-query={open ? (draftQuery ?? "") : undefined}
       style={{
         scrollMarginTop: `calc(var(${WP_SHELL_HEADER_HEIGHT_VAR}, 0px) + ${COMBOBOX_LIST_VIEWPORT_TOP_PADDING_PX}px)`,
       }}
@@ -460,6 +472,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
           />
         )}
         <ClientInput
+          ref={inputRef}
           id={id}
           type="text"
           role="combobox"
@@ -473,15 +486,12 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
           onChange={(e) => {
             openList(e.target.value);
           }}
-          onFocus={(e) => {
-            revealAnchorThenOpen();
-            e.currentTarget.select();
+          onFocus={() => {
+            if (!open) revealAnchorThenOpen();
           }}
           onClick={(e) => {
-            if (!open) {
-              revealAnchorThenOpen();
-              e.currentTarget.select();
-            }
+            if (!open) revealAnchorThenOpen();
+            if (draftQuery === null) e.currentTarget.select();
           }}
           onKeyDown={onKeyDown}
           className={cn(
