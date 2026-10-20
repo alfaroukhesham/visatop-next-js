@@ -8,19 +8,33 @@ import {
   useMemo,
   useRef,
   useState,
+  type FC,
+  type KeyboardEvent,
 } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Globe } from "lucide-react";
 import { ClientInput } from "@/components/client/client-input";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { iso2FlagEmoji } from "@/lib/apply/display-names";
+import {
+  COMBOBOX_LIST_GAP_PX,
+  comboboxScrollSpacerPx,
+  computeComboboxListPosition,
+  isVisualViewportRelativeFixedPosition,
+  mountComboboxScrollSpacer,
+  readVisualViewportBox,
+  scrollAnchorToVisualViewportTop,
+  scrollOptionIntoContainer,
+  shouldPreferBelowList,
+  subscribeViewportChange,
+  unmountComboboxScrollSpacer,
+  type IComboboxListPosition,
+} from "@/lib/client/combobox-list-position";
 import { cn } from "@/lib/utils";
 
 export type NationalityOption = { code: string; name: string };
 
-type ListPosition = { top: number; left: number; width: number };
-
-type NationalityComboboxProps = {
+interface INationalityComboboxProps {
   id?: string;
   nationalities: NationalityOption[];
   valueCode: string | null;
@@ -32,9 +46,17 @@ type NationalityComboboxProps = {
   className?: string;
   inputClassName?: string;
   onFirstInteraction?: () => void;
-};
+}
 
-export function NationalityCombobox({
+/**
+ * Searchable nationality combobox. On mobile the results list is `position:
+ * absolute; top: 100%` under the input so it cannot cover the field or the
+ * heading above it. Desktop still portals a `position: fixed` list to
+ * `document.body` (home hero overflow / `theme-client-rise` transform). Height
+ * is computed against `visualViewport` so iOS Safari's keyboard cannot push the
+ * list off-screen; the list scrolls internally.
+ */
+export const NationalityCombobox: FC<INationalityComboboxProps> = ({
   id: idProp,
   nationalities,
   valueCode,
@@ -45,7 +67,7 @@ export function NationalityCombobox({
   className,
   inputClassName,
   onFirstInteraction,
-}: NationalityComboboxProps) {
+}) => {
   const t = useCustomerT();
   const resolvedPlaceholder = placeholder ?? t("common.nationalityDefaultPlaceholder");
   const reactId = useId();
@@ -65,8 +87,10 @@ export function NationalityCombobox({
   const [highlight, setHighlight] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
   const portalRef = useRef<HTMLDivElement>(null);
+  const listboxRef = useRef<HTMLUListElement>(null);
   const firstInteractionRef = useRef(false);
-  const [listPos, setListPos] = useState<ListPosition | null>(null);
+  const resyncTimersRef = useRef<number[]>([]);
+  const [listPos, setListPos] = useState<IComboboxListPosition | null>(null);
 
   const selectedIndex = useMemo(() => {
     if (!valueCode) return 0;
@@ -76,7 +100,7 @@ export function NationalityCombobox({
 
   // While the list is open with no typed query, keep showing the selected label
   // but do not use it as a filter — otherwise changing country requires deleting the name.
-  const inputValue = open ? (draftQuery || closedLabel) : closedLabel;
+  const inputValue = open ? draftQuery || closedLabel : closedLabel;
 
   const filtered = useMemo(() => {
     const q = (open ? draftQuery : "").trim().toLowerCase();
@@ -97,38 +121,73 @@ export function NationalityCombobox({
     const el = wrapRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    setListPos({ top: r.bottom + 8, left: r.left, width: r.width });
+    const viewport = readVisualViewportBox();
+    const hasTouch = typeof window !== "undefined" && "ontouchend" in window;
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+    setListPos(
+      computeComboboxListPosition({
+        anchor: { top: r.top, left: r.left, bottom: r.bottom, width: r.width, height: r.height },
+        viewport,
+        preferBelow: shouldPreferBelowList(viewport.width || window.innerWidth),
+        subtractVisualOffset: isVisualViewportRelativeFixedPosition(ua, hasTouch),
+      }),
+    );
   }, []);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      unmountComboboxScrollSpacer();
+      return;
+    }
+    const reveal = () => {
+      const viewport = readVisualViewportBox();
+      if (shouldPreferBelowList(viewport.width || window.innerWidth)) {
+        mountComboboxScrollSpacer(comboboxScrollSpacerPx(viewport));
+      }
+      if (wrapRef.current) scrollAnchorToVisualViewportTop(wrapRef.current);
+    };
+    reveal();
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    vv?.addEventListener("resize", reveal);
+    window.addEventListener("resize", reveal);
+    return () => {
+      vv?.removeEventListener("resize", reveal);
+      window.removeEventListener("resize", reveal);
+      unmountComboboxScrollSpacer();
+    };
+  }, [open]);
 
   useLayoutEffect(() => {
     if (!showPortal) return;
     syncListPosition();
-    const onScrollOrResize = () => syncListPosition();
-    window.addEventListener("scroll", onScrollOrResize, true);
-    window.addEventListener("resize", onScrollOrResize);
-    return () => {
-      window.removeEventListener("scroll", onScrollOrResize, true);
-      window.removeEventListener("resize", onScrollOrResize);
-    };
+    return subscribeViewportChange(syncListPosition);
   }, [showPortal, syncListPosition, draftQuery, filtered.length]);
 
   useLayoutEffect(() => {
     if (!showPortal) return;
-    const selectedEl = portalRef.current?.querySelector('[aria-selected="true"]');
-    if (selectedEl && typeof selectedEl.scrollIntoView === "function") {
-      selectedEl.scrollIntoView({ block: "nearest" });
+    const selectedEl = portalRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
+    const listEl = listboxRef.current;
+    if (selectedEl && listEl) {
+      scrollOptionIntoContainer(selectedEl, listEl);
     }
   }, [showPortal, activeIndex, listPos]);
 
   useEffect(() => {
+    return () => {
+      resyncTimersRef.current.forEach((id) => window.clearTimeout(id));
+      resyncTimersRef.current = [];
+    };
+  }, []);
+
+  useEffect(() => {
     if (!open) return;
-    function onDoc(e: MouseEvent) {
-      const t = e.target as Node;
-      if (wrapRef.current?.contains(t)) return;
-      if (portalRef.current?.contains(t)) return;
+    const onDoc = (e: globalThis.MouseEvent) => {
+      const target = e.target as Node;
+      if (wrapRef.current?.contains(target)) return;
+      if (portalRef.current?.contains(target)) return;
       setOpen(false);
       setDraftQuery("");
-    }
+    };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
@@ -155,7 +214,7 @@ export function NationalityCombobox({
     [onSelectCode],
   );
 
-  function onKeyDown(e: React.KeyboardEvent) {
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (!open && (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ")) {
       e.preventDefault();
       openList();
@@ -176,64 +235,104 @@ export function NationalityCombobox({
       setOpen(false);
       setDraftQuery("");
     }
-  }
+  };
+
+  const revealAnchorThenOpen = (query?: string) => {
+    const resync = () => {
+      if (wrapRef.current) scrollAnchorToVisualViewportTop(wrapRef.current);
+      syncListPosition();
+    };
+    if (wrapRef.current) scrollAnchorToVisualViewportTop(wrapRef.current);
+    openList(query);
+    requestAnimationFrame(() => {
+      resync();
+      requestAnimationFrame(resync);
+    });
+    resyncTimersRef.current.forEach((id) => window.clearTimeout(id));
+    resyncTimersRef.current = [80, 250].map((ms) => window.setTimeout(resync, ms) as unknown as number);
+  };
 
   const hero = size === "hero";
+  const inlineList = Boolean(listPos && listPos.mode === "inline");
 
-  const portalContent =
-    typeof document !== "undefined" &&
-    showPortal &&
-    listPos &&
-    createPortal(
+  const listInner =
+    showList && listPos ? (
+      <ul
+        ref={listboxRef}
+        id={listId}
+        role="listbox"
+        className="overflow-auto overscroll-contain py-1"
+        style={{ maxHeight: listPos.maxHeight }}
+      >
+        {filtered.map((n, i) => {
+          const flag = iso2FlagEmoji(n.code);
+          return (
+            <li key={n.code} role="presentation">
+              <button
+                type="button"
+                role="option"
+                aria-selected={i === activeIndex}
+                className={cn(
+                  "hover:bg-accent hover:text-accent-foreground flex w-full items-center gap-2 px-4 py-3 text-left text-sm transition-colors",
+                  i === activeIndex && "bg-accent text-accent-foreground",
+                )}
+                onMouseEnter={() => setHighlight(i)}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => pick(n.code)}
+              >
+                {flag ? (
+                  <span className="w-6 shrink-0 text-base leading-none" aria-hidden>
+                    {flag}
+                  </span>
+                ) : null}
+                <span className="min-w-0 font-medium">{n.name}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    ) : showEmpty ? (
+      <p id={listId} className="text-muted-foreground px-4 py-3 text-sm" role="status">
+        {t("common.noCountryMatch")}
+      </p>
+    ) : null;
+
+  const dropdownShell =
+    showPortal && listPos && listInner ? (
       <div
         ref={portalRef}
-        className="border-border bg-popover text-popover-foreground pointer-events-auto fixed z-[100] max-h-[min(22rem,calc(100dvh-2rem))] overflow-hidden rounded-[10px] border shadow-lg"
-        style={{
-          top: listPos.top,
-          left: listPos.left,
-          width: listPos.width,
-        }}
-      >
-        {showList ? (
-          <ul id={listId} role="listbox" className="max-h-[min(22rem,calc(100dvh-2rem))] overflow-auto py-1">
-            {filtered.map((n, i) => {
-              const flag = iso2FlagEmoji(n.code);
-              return (
-                <li key={n.code} role="presentation">
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={i === activeIndex}
-                    className={cn(
-                      "hover:bg-accent hover:text-accent-foreground flex w-full items-center gap-2 px-4 py-3 text-left text-sm transition-colors",
-                      i === activeIndex && "bg-accent text-accent-foreground",
-                    )}
-                    onMouseEnter={() => setHighlight(i)}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => pick(n.code)}
-                  >
-                    {flag ? (
-                      <span className="w-6 shrink-0 text-base leading-none" aria-hidden>
-                        {flag}
-                      </span>
-                    ) : null}
-                    <span className="min-w-0 font-medium">{n.name}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <p id={listId} className="text-muted-foreground px-4 py-3 text-sm" role="status">
-            {t("common.noCountryMatch")}
-          </p>
+        data-placement={listPos.placement}
+        data-list-mode={listPos.mode}
+        className={cn(
+          "border-border bg-popover text-popover-foreground pointer-events-auto z-[100] overflow-hidden rounded-[10px] border shadow-lg",
+          inlineList ? "absolute inset-x-0" : "fixed",
         )}
-      </div>,
-      document.body,
-    );
+        style={
+          inlineList
+            ? {
+                top: "100%",
+                marginTop: COMBOBOX_LIST_GAP_PX,
+                maxHeight: listPos.maxHeight,
+              }
+            : {
+                top: listPos.top,
+                left: listPos.left,
+                width: listPos.width,
+                maxHeight: listPos.maxHeight,
+              }
+        }
+      >
+        {listInner}
+      </div>
+    ) : null;
+
+  const portalContent =
+    !inlineList && typeof document !== "undefined" && dropdownShell
+      ? createPortal(dropdownShell, document.body)
+      : null;
 
   return (
-    <div ref={wrapRef} className={cn("relative w-full", className)}>
+    <div ref={wrapRef} className={cn("relative w-full", open && "z-[100]", className)}>
       <div className="relative">
         {selectedFlag && !open ? (
           <span
@@ -269,12 +368,12 @@ export function NationalityCombobox({
             openList(e.target.value);
           }}
           onFocus={(e) => {
-            openList();
+            revealAnchorThenOpen();
             e.currentTarget.select();
           }}
           onClick={(e) => {
             if (!open) {
-              openList();
+              revealAnchorThenOpen();
               e.currentTarget.select();
             }
           }}
@@ -293,7 +392,7 @@ export function NationalityCombobox({
           aria-hidden
         />
       </div>
-      {portalContent}
+      {inlineList ? dropdownShell : portalContent}
     </div>
   );
-}
+};
