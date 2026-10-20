@@ -90,7 +90,7 @@ describe("GET /api/applications/[id]/documents/[documentId]/preview", () => {
     expect(res.headers.get("content-type")).toBe("image/jpeg");
     expect(res.headers.get("cache-control")).toBe("private, no-store");
     expect(res.headers.get("x-content-type-options")).toBe("nosniff");
-    expect(res.headers.get("content-disposition")).toContain("inline");
+    expect(res.headers.get("content-disposition")).toContain('inline; filename="passport.jpg"');
     const received = Buffer.from(await res.arrayBuffer());
     expect(received.toString()).toBe("JPEG_BYTES");
   });

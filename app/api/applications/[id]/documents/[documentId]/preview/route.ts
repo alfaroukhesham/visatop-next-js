@@ -8,7 +8,7 @@ import { headers } from "next/headers";
 import { jsonError } from "@/lib/api/response";
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
 import {
-  asciiFilename,
+  filenameForStoredDocument,
   loadDocumentForStream,
 } from "@/lib/applications/document-fetch";
 import { withClientDbActor, withSystemDbActor } from "@/lib/db/actor-context";
@@ -51,7 +51,7 @@ export async function GET(
   }
 
   const contentType = doc.contentType ?? "application/octet-stream";
-  const filename = asciiFilename(doc.originalFilename, "document");
+  const filename = filenameForStoredDocument(doc.originalFilename, contentType, "document");
   return new Response(new Uint8Array(doc.bytes), {
     status: 200,
     headers: {

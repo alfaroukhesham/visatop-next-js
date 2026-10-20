@@ -13,7 +13,7 @@ import {
   type DocumentType,
 } from "@/lib/db/schema";
 import { formatIsoDateAsDdMmYyyy } from "@/lib/documents/validation-readiness";
-import { asciiFilename } from "@/lib/applications/document-fetch";
+import { filenameForStoredDocument } from "@/lib/applications/document-fetch";
 import { formatMinorUnitsAmount } from "@/lib/pricing/format-minor-units";
 
 /** Document types the customer may upload on the apply flow (step 3). */
@@ -122,23 +122,13 @@ export function customerExportZipBasename(referenceNumber: string | null, applic
 
 export function zipEntryNameForDocument(doc: CustomerExportDocument, index = 0): string {
   const type = doc.documentType || "document";
-  const base = asciiFilename(doc.originalFilename, doc.id.slice(0, 8));
-  const extFromName = base.includes(".") ? "" : extensionFromContentType(doc.contentType);
+  const filename = filenameForStoredDocument(
+    doc.originalFilename,
+    doc.contentType,
+    doc.id.slice(0, 8),
+  );
   const suffix = index > 0 ? `-${index + 1}` : "";
-  return `documents/${type}${suffix}-${base}${extFromName}`;
-}
-
-function extensionFromContentType(contentType: string | null): string {
-  switch (contentType) {
-    case "image/jpeg":
-      return ".jpg";
-    case "image/png":
-      return ".png";
-    case "application/pdf":
-      return ".pdf";
-    default:
-      return "";
-  }
+  return `documents/${type}${suffix}-${filename}`;
 }
 
 type DocumentRowFromDb = {

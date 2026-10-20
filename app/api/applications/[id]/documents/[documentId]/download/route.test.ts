@@ -78,9 +78,32 @@ describe("GET /api/applications/[id]/documents/[documentId]/download", () => {
       params: Promise.resolve({ id: "app-1", documentId: "doc-1" }),
     });
     expect(res.status).toBe(200);
-    expect(res.headers.get("content-disposition")).toContain("attachment");
+    expect(res.headers.get("content-disposition")).toContain('attachment; filename="proof.pdf"');
     expect(res.headers.get("content-type")).toBe("application/pdf");
     const received = Buffer.from(await res.arrayBuffer());
     expect(received.toString()).toBe("PDFBYTES");
+  });
+
+  it("downloads a passport JPEG under a .jpg name when the upload was a PDF", async () => {
+    vi.mocked(resolveApplicationAccess).mockResolvedValue({
+      ok: true,
+      access: { kind: "user", userId: "u1", isGuest: false },
+    });
+    const bytes = Buffer.from("JPEG");
+    vi.mocked(loadDocumentForStream).mockResolvedValue({
+      id: "doc-1",
+      documentType: "passport_copy",
+      status: "retained",
+      contentType: "image/jpeg",
+      byteLength: bytes.byteLength,
+      originalFilename: "passport.pdf",
+      bytes,
+    });
+    const res = await GET(req(), {
+      params: Promise.resolve({ id: "app-1", documentId: "doc-1" }),
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/jpeg");
+    expect(res.headers.get("content-disposition")).toContain('filename="passport.jpg"');
   });
 });
