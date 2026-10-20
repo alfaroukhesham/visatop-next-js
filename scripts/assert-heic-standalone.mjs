@@ -85,11 +85,14 @@ const pnpmConvert = existsSync(pnpmRoot)
       .filter(Boolean)
   : [];
 
-const convertEntry = hashedDirs[0]
-  ? hashedDirs[0]
-  : pnpmConvert[0]
-    ? path.dirname(pnpmConvert[0])
-    : null;
+const hoistedConvert = path.join(standalone, "node_modules", "heic-convert");
+const convertEntry = existsSync(path.join(hoistedConvert, "package.json"))
+  ? hoistedConvert
+  : hashedDirs[0]
+    ? hashedDirs[0]
+    : pnpmConvert[0]
+      ? path.dirname(pnpmConvert[0])
+      : null;
 
 if (!convertEntry) {
   console.error(

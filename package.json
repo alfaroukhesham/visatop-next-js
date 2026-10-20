@@ -16,7 +16,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node scripts/copy-heic-standalone.mjs",
     "start": "next start",
     "lint": "eslint",
     "react-doctor": "react-doctor . --verbose --diff",

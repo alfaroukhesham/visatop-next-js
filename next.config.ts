@@ -134,12 +134,14 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/*": ["./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"],
     "/api/applications/*/documents/upload": [
+      // Only the real package directories. Nested globs like
+      // `.pnpm/heic-convert@*/node_modules/heic-decode/**` point at pnpm
+      // symlinks; Next `mkdir`s those paths and races with ENOENT (build
+      // still succeeds, then assert-heic-standalone fails). `pnpm run build`
+      // copies the decoder via scripts/copy-heic-standalone.mjs afterward.
       "./node_modules/heic-convert/**/*",
-      "./node_modules/heic-decode/**/*",
-      "./node_modules/libheif-js/**/*",
       "./node_modules/.pnpm/heic-convert@*/node_modules/heic-convert/**/*",
       "./node_modules/.pnpm/heic-decode@*/node_modules/heic-decode/**/*",
-      "./node_modules/.pnpm/heic-decode@*/node_modules/libheif-js/**/*",
       "./node_modules/.pnpm/libheif-js@*/node_modules/libheif-js/**/*",
       "./node_modules/.pnpm/jpeg-js@*/node_modules/jpeg-js/**/*",
       "./node_modules/.pnpm/pngjs@*/node_modules/pngjs/**/*",
