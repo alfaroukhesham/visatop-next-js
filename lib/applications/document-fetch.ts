@@ -76,7 +76,37 @@ export function asciiFilename(s: string | null | undefined, fallback: string): s
   return (
     s
       .replace(/[^\x20-\x7E]/g, "_")
-      .replace(/["\\\r\n]/g, "_")
+      .replace(/["\\\r\n/]/g, "_")
       .slice(0, 120) || fallback
   );
 }
+
+const EXTENSION_BY_CONTENT_TYPE: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "application/pdf": ".pdf",
+  "image/heic": ".heic",
+  "image/heif": ".heic",
+};
+
+/**
+ * Filename whose extension matches the bytes we actually stored.
+ * Passport PDFs are persisted as JPEG, so an upload named `passport.pdf`
+ * must download as `passport.jpg` or Preview treats the file as damaged.
+ */
+export const filenameForStoredDocument = (
+  originalFilename: string | null | undefined,
+  contentType: string | null | undefined,
+  fallback: string,
+): string => {
+  const mime = contentType?.split(";")[0]?.trim().toLowerCase() ?? "";
+  const storedExt = EXTENSION_BY_CONTENT_TYPE[mime] ?? "";
+  const raw = originalFilename?.trim() || fallback;
+  if (!storedExt) return asciiFilename(raw, fallback);
+  const stemSource = raw.replace(/\.[^.\\/]+$/, "");
+  const stem = (asciiFilename(stemSource, fallback).replace(/\.+$/, "") || fallback).slice(
+    0,
+    120 - storedExt.length,
+  );
+  return `${stem}${storedExt}`;
+};

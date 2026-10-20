@@ -6,6 +6,7 @@ import {
   escapeCsvCell,
   formatServiceTypeForExport,
   zipEntryNameForDocument,
+  zipEntryNamesForDocuments,
   type CustomerExportDocument,
 } from "./customer-export";
 
@@ -95,5 +96,56 @@ describe("zipEntryNameForDocument", () => {
       bytes: Buffer.from("x"),
     };
     expect(zipEntryNameForDocument(doc)).toBe("documents/passport_copy-scan.jpg");
+  });
+
+  it("names a stored JPEG with .jpg when the upload was a PDF", () => {
+    const doc: CustomerExportDocument = {
+      id: "doc-1",
+      documentType: "passport_copy",
+      status: "retained",
+      contentType: "image/jpeg",
+      originalFilename: "passport.pdf",
+      createdAt: new Date(),
+      bytes: Buffer.from("x"),
+    };
+    expect(zipEntryNameForDocument(doc)).toBe("documents/passport_copy-passport.jpg");
+  });
+
+  it("keeps .pdf when the stored bytes are a PDF", () => {
+    const doc: CustomerExportDocument = {
+      id: "doc-2",
+      documentType: "bank_statement_6m",
+      status: "retained",
+      contentType: "application/pdf",
+      originalFilename: "statement.pdf",
+      createdAt: new Date(),
+      bytes: Buffer.from("x"),
+    };
+    expect(zipEntryNameForDocument(doc)).toBe("documents/bank_statement_6m-statement.pdf");
+  });
+});
+
+const exportDoc = (overrides: Partial<CustomerExportDocument>): CustomerExportDocument => ({
+  id: "doc-1",
+  documentType: "supporting",
+  status: "retained",
+  contentType: "image/jpeg",
+  originalFilename: "notes.pdf",
+  createdAt: new Date(),
+  bytes: Buffer.from("x"),
+  ...overrides,
+});
+
+describe("zipEntryNamesForDocuments", () => {
+  it("keeps both supporting files when rewritten names would match", () => {
+    const names = zipEntryNamesForDocuments([
+      exportDoc({ id: "a", originalFilename: "2-notes.pdf", contentType: "image/jpeg" }),
+      exportDoc({ id: "b", originalFilename: "notes.jpg", contentType: "image/jpeg" }),
+    ]);
+    expect(names).toEqual([
+      "documents/supporting-2-notes.jpg",
+      "documents/supporting-2-notes-2.jpg",
+    ]);
+    expect(new Set(names).size).toBe(names.length);
   });
 });
