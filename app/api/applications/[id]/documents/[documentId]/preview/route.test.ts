@@ -94,4 +94,25 @@ describe("GET /api/applications/[id]/documents/[documentId]/preview", () => {
     const received = Buffer.from(await res.arrayBuffer());
     expect(received.toString()).toBe("JPEG_BYTES");
   });
+
+  it("previews a stored JPEG under a .jpg name when the upload was a PDF", async () => {
+    vi.mocked(resolveApplicationAccess).mockResolvedValue({
+      ok: true,
+      access: { kind: "user", userId: "u1", isGuest: false },
+    });
+    const bytes = Buffer.from("JPEG_BYTES");
+    vi.mocked(loadDocumentForStream).mockResolvedValue({
+      id: "doc-1",
+      documentType: "passport_copy",
+      status: "uploaded_temp",
+      contentType: "image/jpeg",
+      byteLength: bytes.byteLength,
+      originalFilename: "passport.pdf",
+      bytes,
+    });
+    const res = await GET(req(), {
+      params: Promise.resolve({ id: "app-1", documentId: "doc-1" }),
+    });
+    expect(res.headers.get("content-disposition")).toContain('inline; filename="passport.jpg"');
+  });
 });

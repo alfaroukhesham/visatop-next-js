@@ -131,6 +131,41 @@ export function zipEntryNameForDocument(doc: CustomerExportDocument, index = 0):
   return `documents/${type}${suffix}-${filename}`;
 }
 
+/** One ZIP path per document. A later file never overwrites an earlier path. */
+export function zipEntryNamesForDocuments(docs: CustomerExportDocument[]): string[] {
+  const supportingSeen = new Map<string, number>();
+  const used = new Set<string>();
+  return docs.map((doc) => {
+    const index =
+      doc.documentType === DOCUMENT_TYPE.SUPPORTING
+        ? (supportingSeen.get(doc.documentType) ?? 0)
+        : 0;
+    if (doc.documentType === DOCUMENT_TYPE.SUPPORTING) {
+      supportingSeen.set(doc.documentType, index + 1);
+    }
+    return uniqueZipEntryName(zipEntryNameForDocument(doc, index), used);
+  });
+}
+
+function uniqueZipEntryName(name: string, used: Set<string>): string {
+  if (!used.has(name)) {
+    used.add(name);
+    return name;
+  }
+  const slash = name.lastIndexOf("/");
+  const dot = name.lastIndexOf(".");
+  const ext = dot > slash ? name.slice(dot) : "";
+  const stem = ext ? name.slice(0, -ext.length) : name;
+  let n = 2;
+  let candidate = `${stem}-${n}${ext}`;
+  while (used.has(candidate)) {
+    n += 1;
+    candidate = `${stem}-${n}${ext}`;
+  }
+  used.add(candidate);
+  return candidate;
+}
+
 type DocumentRowFromDb = {
   id: string;
   documentType: string | null;
@@ -271,22 +306,24 @@ export async function loadCustomerExportPayload(
     })),
   ];
 
-  for (const doc of selectCustomerExportDocuments(docRows)) {
+  const documents = selectCustomerExportDocuments(docRows);
+  const entryNames = zipEntryNamesForDocuments(documents);
+  documents.forEach((doc, i) => {
     profileRows.push({
       label: `Document: ${doc.documentType}`,
-      value: doc.originalFilename ?? doc.id,
+      value: entryNames[i] ?? doc.id,
     });
     profileRows.push({
       label: `Document status: ${doc.documentType}`,
       value: doc.status ?? "",
     });
-  }
+  });
 
   return {
     applicationId: app.id,
     referenceNumber: app.referenceNumber,
     profileRows,
-    documents: selectCustomerExportDocuments(docRows),
+    documents,
   };
 }
 
@@ -298,17 +335,11 @@ export async function buildCustomerExportZip(payload: CustomerExportPayload): Pr
 
   root.file("application-data.csv", buildCustomerExportCsv(payload.profileRows));
 
-  const supportingSeen = new Map<string, number>();
-  for (const doc of payload.documents) {
-    const index =
-      doc.documentType === DOCUMENT_TYPE.SUPPORTING
-        ? supportingSeen.get(doc.documentType) ?? 0
-        : 0;
-    if (doc.documentType === DOCUMENT_TYPE.SUPPORTING) {
-      supportingSeen.set(doc.documentType, index + 1);
-    }
-    root.file(zipEntryNameForDocument(doc, index), doc.bytes);
-  }
+  zipEntryNamesForDocuments(payload.documents).forEach((entryName, i) => {
+    const doc = payload.documents[i];
+    if (!doc) return;
+    root.file(entryName, doc.bytes);
+  });
 
   return Buffer.from(await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" }));
 }

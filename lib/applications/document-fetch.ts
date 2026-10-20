@@ -76,7 +76,7 @@ export function asciiFilename(s: string | null | undefined, fallback: string): s
   return (
     s
       .replace(/[^\x20-\x7E]/g, "_")
-      .replace(/["\\\r\n]/g, "_")
+      .replace(/["\\\r\n/]/g, "_")
       .slice(0, 120) || fallback
   );
 }
