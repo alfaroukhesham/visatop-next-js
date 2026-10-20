@@ -8,19 +8,29 @@ import {
   useMemo,
   useRef,
   useState,
+  type FC,
+  type KeyboardEvent,
 } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Globe } from "lucide-react";
 import { ClientInput } from "@/components/client/client-input";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { iso2FlagEmoji } from "@/lib/apply/display-names";
+import {
+  computeComboboxListPosition,
+  isVisualViewportRelativeFixedPosition,
+  readVisualViewportBox,
+  scrollAnchorToVisualViewportTop,
+  scrollOptionIntoContainer,
+  shouldPreferBelowList,
+  subscribeViewportChange,
+  type IComboboxListPosition,
+} from "@/lib/client/combobox-list-position";
 import { cn } from "@/lib/utils";
 
 export type NationalityOption = { code: string; name: string };
 
-type ListPosition = { top: number; left: number; width: number };
-
-type NationalityComboboxProps = {
+interface INationalityComboboxProps {
   id?: string;
   nationalities: NationalityOption[];
   valueCode: string | null;
@@ -32,9 +42,16 @@ type NationalityComboboxProps = {
   className?: string;
   inputClassName?: string;
   onFirstInteraction?: () => void;
-};
+}
 
-export function NationalityCombobox({
+/**
+ * Searchable nationality combobox. The results list is portaled to `document.body`
+ * so page ancestors with `overflow: hidden` (home hero) or a persistent
+ * `transform` (`theme-client-rise` fill-mode) cannot clip it. Position is computed
+ * against `visualViewport` so iOS Safari's on-screen keyboard cannot push the
+ * list off-screen.
+ */
+export const NationalityCombobox: FC<INationalityComboboxProps> = ({
   id: idProp,
   nationalities,
   valueCode,
@@ -45,7 +62,7 @@ export function NationalityCombobox({
   className,
   inputClassName,
   onFirstInteraction,
-}: NationalityComboboxProps) {
+}) => {
   const t = useCustomerT();
   const resolvedPlaceholder = placeholder ?? t("common.nationalityDefaultPlaceholder");
   const reactId = useId();
@@ -65,8 +82,10 @@ export function NationalityCombobox({
   const [highlight, setHighlight] = useState(0);
   const wrapRef = useRef<HTMLDivElement>(null);
   const portalRef = useRef<HTMLDivElement>(null);
+  const listboxRef = useRef<HTMLUListElement>(null);
   const firstInteractionRef = useRef(false);
-  const [listPos, setListPos] = useState<ListPosition | null>(null);
+  const resyncTimersRef = useRef<number[]>([]);
+  const [listPos, setListPos] = useState<IComboboxListPosition | null>(null);
 
   const selectedIndex = useMemo(() => {
     if (!valueCode) return 0;
@@ -76,7 +95,7 @@ export function NationalityCombobox({
 
   // While the list is open with no typed query, keep showing the selected label
   // but do not use it as a filter — otherwise changing country requires deleting the name.
-  const inputValue = open ? (draftQuery || closedLabel) : closedLabel;
+  const inputValue = open ? draftQuery || closedLabel : closedLabel;
 
   const filtered = useMemo(() => {
     const q = (open ? draftQuery : "").trim().toLowerCase();
@@ -97,38 +116,50 @@ export function NationalityCombobox({
     const el = wrapRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    setListPos({ top: r.bottom + 8, left: r.left, width: r.width });
+    const viewport = readVisualViewportBox();
+    const hasTouch = typeof window !== "undefined" && "ontouchend" in window;
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+    setListPos(
+      computeComboboxListPosition({
+        anchor: { top: r.top, left: r.left, bottom: r.bottom, width: r.width, height: r.height },
+        viewport,
+        preferBelow: shouldPreferBelowList(viewport.width || window.innerWidth),
+        subtractVisualOffset: isVisualViewportRelativeFixedPosition(ua, hasTouch),
+      }),
+    );
   }, []);
 
   useLayoutEffect(() => {
     if (!showPortal) return;
     syncListPosition();
-    const onScrollOrResize = () => syncListPosition();
-    window.addEventListener("scroll", onScrollOrResize, true);
-    window.addEventListener("resize", onScrollOrResize);
-    return () => {
-      window.removeEventListener("scroll", onScrollOrResize, true);
-      window.removeEventListener("resize", onScrollOrResize);
-    };
+    return subscribeViewportChange(syncListPosition);
   }, [showPortal, syncListPosition, draftQuery, filtered.length]);
 
   useLayoutEffect(() => {
     if (!showPortal) return;
-    const selectedEl = portalRef.current?.querySelector('[aria-selected="true"]');
-    if (selectedEl && typeof selectedEl.scrollIntoView === "function") {
-      selectedEl.scrollIntoView({ block: "nearest" });
+    const selectedEl = portalRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
+    const listEl = listboxRef.current;
+    if (selectedEl && listEl) {
+      scrollOptionIntoContainer(selectedEl, listEl);
     }
   }, [showPortal, activeIndex, listPos]);
 
   useEffect(() => {
+    return () => {
+      resyncTimersRef.current.forEach((id) => window.clearTimeout(id));
+      resyncTimersRef.current = [];
+    };
+  }, []);
+
+  useEffect(() => {
     if (!open) return;
-    function onDoc(e: MouseEvent) {
-      const t = e.target as Node;
-      if (wrapRef.current?.contains(t)) return;
-      if (portalRef.current?.contains(t)) return;
+    const onDoc = (e: globalThis.MouseEvent) => {
+      const target = e.target as Node;
+      if (wrapRef.current?.contains(target)) return;
+      if (portalRef.current?.contains(target)) return;
       setOpen(false);
       setDraftQuery("");
-    }
+    };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
@@ -155,7 +186,7 @@ export function NationalityCombobox({
     [onSelectCode],
   );
 
-  function onKeyDown(e: React.KeyboardEvent) {
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (!open && (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ")) {
       e.preventDefault();
       openList();
@@ -176,7 +207,22 @@ export function NationalityCombobox({
       setOpen(false);
       setDraftQuery("");
     }
-  }
+  };
+
+  const revealAnchorThenOpen = (query?: string) => {
+    const resync = () => {
+      if (wrapRef.current) scrollAnchorToVisualViewportTop(wrapRef.current);
+      syncListPosition();
+    };
+    if (wrapRef.current) scrollAnchorToVisualViewportTop(wrapRef.current);
+    openList(query);
+    requestAnimationFrame(() => {
+      resync();
+      requestAnimationFrame(resync);
+    });
+    resyncTimersRef.current.forEach((id) => window.clearTimeout(id));
+    resyncTimersRef.current = [80, 250].map((ms) => window.setTimeout(resync, ms) as unknown as number);
+  };
 
   const hero = size === "hero";
 
@@ -187,15 +233,34 @@ export function NationalityCombobox({
     createPortal(
       <div
         ref={portalRef}
-        className="border-border bg-popover text-popover-foreground pointer-events-auto fixed z-[100] max-h-[min(22rem,calc(100dvh-2rem))] overflow-hidden rounded-[10px] border shadow-lg"
+        data-placement={listPos.placement}
+        data-list-mode={listPos.mode}
+        className={cn(
+          "pointer-events-none fixed z-[100]",
+          listPos.mode === "sheet"
+            ? "flex flex-col justify-end"
+            : "border-border bg-popover text-popover-foreground pointer-events-auto overflow-hidden rounded-[10px] border shadow-lg",
+        )}
         style={{
           top: listPos.top,
           left: listPos.left,
           width: listPos.width,
+          height: listPos.mode === "sheet" ? listPos.height : undefined,
+          maxHeight: listPos.mode === "sheet" ? listPos.height : listPos.maxHeight,
         }}
       >
         {showList ? (
-          <ul id={listId} role="listbox" className="max-h-[min(22rem,calc(100dvh-2rem))] overflow-auto py-1">
+          <ul
+            ref={listboxRef}
+            id={listId}
+            role="listbox"
+            className={cn(
+              "pointer-events-auto overflow-auto overscroll-contain py-1",
+              listPos.mode === "sheet" &&
+                "border-border bg-popover text-popover-foreground rounded-[10px] border shadow-lg",
+            )}
+            style={{ maxHeight: listPos.maxHeight }}
+          >
             {filtered.map((n, i) => {
               const flag = iso2FlagEmoji(n.code);
               return (
@@ -224,7 +289,15 @@ export function NationalityCombobox({
             })}
           </ul>
         ) : (
-          <p id={listId} className="text-muted-foreground px-4 py-3 text-sm" role="status">
+          <p
+            id={listId}
+            className={cn(
+              "text-muted-foreground pointer-events-auto px-4 py-3 text-sm",
+              listPos.mode === "sheet" &&
+                "border-border bg-popover rounded-[10px] border shadow-lg",
+            )}
+            role="status"
+          >
             {t("common.noCountryMatch")}
           </p>
         )}
@@ -269,12 +342,12 @@ export function NationalityCombobox({
             openList(e.target.value);
           }}
           onFocus={(e) => {
-            openList();
+            revealAnchorThenOpen();
             e.currentTarget.select();
           }}
           onClick={(e) => {
             if (!open) {
-              openList();
+              revealAnchorThenOpen();
               e.currentTarget.select();
             }
           }}
@@ -296,4 +369,4 @@ export function NationalityCombobox({
       {portalContent}
     </div>
   );
-}
+};
