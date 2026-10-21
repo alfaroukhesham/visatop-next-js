@@ -1,16 +1,18 @@
 /** @vitest-environment jsdom */
 
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CustomerI18nProvider } from "@/components/client/customer-i18n-provider";
 import { NationalityCombobox } from "@/components/client/nationality-combobox";
 import { getCustomerI18nBundle, getEnglishCustomerMessages } from "@/lib/i18n/load-customer-catalog";
+import { nationalityLocalizedName } from "@/lib/i18n/nationality-search";
 
 const en = getEnglishCustomerMessages();
 
 const NATIONALITIES = [
+  { code: "EG", name: "Egypt" },
   { code: "IN", name: "India" },
   { code: "KE", name: "Kenya" },
   { code: "NG", name: "Nigeria" },
@@ -339,5 +341,154 @@ describe("NationalityCombobox visual viewport", () => {
     await user.clear(input);
     await user.type(input, "الإم");
     expect(await screen.findByRole("option", { name: /إمارات|الامارات|الإمارات/ })).toBeVisible();
+  });
+});
+
+const SelectedHarness = ({
+  locale = "en",
+  initialCode = "EG",
+}: {
+  locale?: "en" | "ar";
+  initialCode?: string | null;
+}) => {
+  const [code, setCode] = useState(initialCode);
+  const bundle = locale === "ar" ? getCustomerI18nBundle("ar") : { messages: en, fallback: en };
+  return (
+    <CustomerI18nProvider locale={locale} messages={bundle.messages} fallback={bundle.fallback}>
+      <NationalityCombobox
+        nationalities={NATIONALITIES}
+        valueCode={code}
+        onSelectCode={setCode}
+      />
+    </CustomerI18nProvider>
+  );
+};
+
+const renderSelected = (props?: { locale?: "en" | "ar"; initialCode?: string | null }) =>
+  render(<SelectedHarness {...props} />);
+
+const expectAllSelected = (input: HTMLInputElement) => {
+  expect(input.value.length).toBeGreaterThan(0);
+  expect(input.selectionStart).toBe(0);
+  expect(input.selectionEnd).toBe(input.value.length);
+};
+
+describe("NationalityCombobox edit after selection", () => {
+  beforeEach(() => {
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      if (this.querySelector?.('input[role="combobox"]')) {
+        return ANCHOR as DOMRect;
+      }
+      return {
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        bottom: 0,
+        right: 0,
+        width: 0,
+        height: 0,
+        toJSON: () => ({}),
+      } as DOMRect;
+    });
+    vi.spyOn(window, "scrollBy").mockImplementation(() => undefined);
+    HTMLElement.prototype.scrollIntoView = vi.fn();
+    installVisualViewport({ width: 390, height: 400, offsetTop: 0 });
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it("selects all of the selected label on focus so the next keystroke can replace it", async () => {
+    const user = userEvent.setup();
+    renderSelected();
+    const input = screen.getByRole("combobox") as HTMLInputElement;
+    expect(input).toHaveValue("Egypt");
+
+    await user.click(input);
+    await screen.findByRole("listbox");
+    expect(input).toHaveValue("Egypt");
+    expectAllSelected(input);
+    expect(screen.getByRole("option", { name: /kenya/i })).toBeVisible();
+  });
+
+  it("lets Backspace and Delete clear the selected label instead of restoring it", async () => {
+    const user = userEvent.setup();
+    renderSelected();
+    const input = screen.getByRole("combobox") as HTMLInputElement;
+
+    await user.click(input);
+    await screen.findByRole("listbox");
+    expectAllSelected(input);
+    await user.keyboard("{Backspace}");
+    expect(input).toHaveValue("");
+    expect(screen.getByRole("option", { name: /kenya/i })).toBeVisible();
+
+    await user.keyboard("{Escape}");
+    expect(input).toHaveValue("Egypt");
+
+    await user.click(input);
+    await screen.findByRole("listbox");
+    expectAllSelected(input);
+    await user.keyboard("{Delete}");
+    expect(input).toHaveValue("");
+  });
+
+  it("replaces the selected label when typing instead of appending", async () => {
+    const user = userEvent.setup();
+    renderSelected();
+    const input = screen.getByRole("combobox") as HTMLInputElement;
+
+    await user.click(input);
+    await screen.findByRole("listbox");
+    expectAllSelected(input);
+    await user.keyboard("Nig");
+    expect(input).toHaveValue("Nig");
+    expect(input).not.toHaveValue("EgyptNig");
+    expect(await screen.findByRole("option", { name: /nigeria/i })).toBeVisible();
+    expect(screen.queryByRole("option", { name: /kenya/i })).not.toBeInTheDocument();
+  });
+
+  it("keeps the selected country if the list closes without a new pick", async () => {
+    const user = userEvent.setup();
+    renderSelected();
+    const input = screen.getByRole("combobox") as HTMLInputElement;
+
+    await user.click(input);
+    await screen.findByRole("listbox");
+    await user.keyboard("Nig");
+    expect(await screen.findByRole("option", { name: /nigeria/i })).toBeVisible();
+    await user.keyboard("{Escape}");
+    expect(input).toHaveValue("Egypt");
+
+    await user.click(input);
+    await screen.findByRole("listbox");
+    await user.keyboard("Ke");
+    expect(await screen.findByRole("option", { name: /kenya/i })).toBeVisible();
+    await user.click(document.body);
+    expect(input).toHaveValue("Egypt");
+  });
+
+  it("replaces an Arabic selected label and restores it on blur", async () => {
+    const user = userEvent.setup();
+    renderSelected({ locale: "ar" });
+    const egyptAr = nationalityLocalizedName("EG", "Egypt", "ar");
+    const input = screen.getByRole("combobox") as HTMLInputElement;
+    expect(input).toHaveValue(egyptAr);
+
+    await user.click(input);
+    await screen.findByRole("listbox");
+    expectAllSelected(input);
+    await user.keyboard("ني");
+    expect(input).toHaveValue("ني");
+    expect(input.value.startsWith(egyptAr)).toBe(false);
+    expect(await screen.findByRole("option", { name: /نيجيريا/ })).toBeVisible();
+
+    await user.keyboard("{Escape}");
+    expect(input).toHaveValue(egyptAr);
   });
 });
