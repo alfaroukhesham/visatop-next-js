@@ -6,7 +6,7 @@ import type { ImportCatalogScope } from "./purge-catalog-outside-sheet-scope";
 export type ImportPriceUpsert = {
   nationalityCode: string;
   serviceId: string;
-  currency: "USD" | "AED";
+  currency: "USD" | "AED" | "NGN";
   amountMinor: bigint;
   source: string;
 };

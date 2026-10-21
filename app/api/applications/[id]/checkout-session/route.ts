@@ -4,6 +4,8 @@ import { resolveApplicationAccess } from "@/lib/applications/application-access"
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { resolveZiinaCheckoutSession } from "@/lib/payments/ziina-checkout-session";
 import { scheduleZiinaPaidSideEffects } from "@/lib/payments/ziina-payment-side-effects";
+import { resolveFincraCheckoutSession } from "@/lib/payments/fincra-checkout-session";
+import { scheduleFincraPaidSideEffects } from "@/lib/payments/fincra-payment-side-effects";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,11 +20,18 @@ export const GET = async (req: Request, ctx: { params: Promise<{ id: string }> }
     return jsonError("UNAUTHORIZED", "Cannot access application", { status, requestId });
   }
 
-  const resolved = await withSystemDbActor((tx) =>
-    resolveZiinaCheckoutSession(tx, applicationId, requestId),
-  );
+  const resolved = await withSystemDbActor(async (tx) => {
+    const fincra = await resolveFincraCheckoutSession(tx, applicationId, requestId);
+    if (fincra.session.kind !== "none") return { source: "fincra" as const, ...fincra };
+    const ziina = await resolveZiinaCheckoutSession(tx, applicationId, requestId);
+    return { source: "ziina" as const, ...ziina };
+  });
   if (resolved.firstPaidApplicationId) {
-    scheduleZiinaPaidSideEffects(resolved.firstPaidApplicationId, requestId);
+    if (resolved.source === "fincra") {
+      scheduleFincraPaidSideEffects(resolved.firstPaidApplicationId, requestId);
+    } else {
+      scheduleZiinaPaidSideEffects(resolved.firstPaidApplicationId, requestId);
+    }
   }
   return jsonOk(resolved.session, { requestId });
 };

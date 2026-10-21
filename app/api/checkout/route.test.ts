@@ -14,6 +14,8 @@ vi.mock("@/lib/payments/resolve-payment-provider", () => ({
   getActivePaymentProvider: vi.fn(() => "ziina"),
   assertPaddleServerConfigured: vi.fn(),
   getZiinaServerConfig: vi.fn(),
+  getFincraServerConfig: vi.fn(),
+  isFincraEnabled: vi.fn(() => false),
 }));
 
 vi.mock("@/lib/db/actor-context", () => ({

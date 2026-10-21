@@ -14,6 +14,7 @@ type TAppPoll = {
   paymentStatus: string;
   chargedAmountMajor?: number | null;
   chargedCurrency?: string | null;
+  checkoutOffer?: { provider?: string } | null;
 };
 
 interface ICheckoutReturnClientProps {
@@ -69,7 +70,7 @@ export const CheckoutReturnClient: FC<ICheckoutReturnClientProps> = ({ applicati
             paymentCompletedFired.current = true;
             trackApplyPaymentCompleted({
               applicationId,
-              paymentProvider: "ziina",
+              paymentProvider: res.data.application.checkoutOffer?.provider ?? "ziina",
               value: res.data.application.chargedAmountMajor ?? undefined,
               currency: res.data.application.chargedCurrency ?? undefined,
             });

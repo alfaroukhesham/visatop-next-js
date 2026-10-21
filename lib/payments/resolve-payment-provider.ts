@@ -1,6 +1,7 @@
 import { getAppOrigin } from "@/lib/app-url";
 
 export type ActivePaymentProvider = "paddle" | "ziina";
+export type CheckoutPaymentProvider = ActivePaymentProvider | "fincra";
 
 /** Ziina webhook source IPs (docs.ziina.com/api-reference/webhook/index). */
 export const ZIINA_WEBHOOK_SOURCE_IPS = new Set<string>([
@@ -57,6 +58,57 @@ export function requireCheckoutAppOrigin(): string {
 export function isHttpsOrigin(origin: string): boolean {
   return origin.trim().toLowerCase().startsWith("https://");
 }
+
+export type FincraFeeBearer = "business" | "customer";
+
+export type FincraServerConfig = {
+  apiBaseUrl: string;
+  secretKey: string;
+  publicKey: string;
+  businessId: string;
+  webhookSecret: string;
+  feeBearer: FincraFeeBearer;
+};
+
+const envFlagOn = (raw: string | undefined): boolean => {
+  const v = raw?.trim().toLowerCase();
+  return v === "true" || v === "1";
+};
+
+export const isFincraEnabled = (): boolean => envFlagOn(process.env.FINCRA_ENABLED);
+
+export const fincraMissingEnvNames = (): string[] => {
+  const names = [
+    "FINCRA_API_BASE_URL",
+    "FINCRA_SECRET_KEY",
+    "FINCRA_PUBLIC_KEY",
+    "FINCRA_BUSINESS_ID",
+    "FINCRA_WEBHOOK_SECRET",
+  ];
+  return names.filter((n) => !process.env[n]?.trim());
+};
+
+export const parseFincraFeeBearer = (raw: string | undefined): FincraFeeBearer => {
+  const v = raw?.trim().toLowerCase();
+  if (v === "customer") return "customer";
+  return "business";
+};
+
+export const getFincraServerConfig = (): FincraServerConfig => {
+  const missing = fincraMissingEnvNames();
+  if (missing.length > 0) {
+    throw new Error(`Fincra is not configured (missing ${missing.join(", ")})`);
+  }
+  const apiBaseUrl = process.env.FINCRA_API_BASE_URL!.trim().replace(/\/$/, "");
+  return {
+    apiBaseUrl,
+    secretKey: process.env.FINCRA_SECRET_KEY!.trim(),
+    publicKey: process.env.FINCRA_PUBLIC_KEY!.trim(),
+    businessId: process.env.FINCRA_BUSINESS_ID!.trim(),
+    webhookSecret: process.env.FINCRA_WEBHOOK_SECRET!.trim(),
+    feeBearer: parseFincraFeeBearer(process.env.FINCRA_FEE_BEARER),
+  };
+};
 
 function shouldAllowInsecureLocalhostPayments(): boolean {
   const raw = process.env.PAYMENTS_ALLOW_INSECURE_LOCALHOST?.trim().toLowerCase();

@@ -12,8 +12,8 @@ export type CustomerPriceImportAppliedPanelProps = {
   applyResult: ApplyResult;
   phase: ImportPhase;
   assignElapsedSec: number;
-  pendingCurrency: "USD" | "AED";
-  onPendingCurrencyChange: (currency: "USD" | "AED") => void;
+  pendingCurrency: "USD" | "AED" | "NGN";
+  onPendingCurrencyChange: (currency: "USD" | "AED" | "NGN") => void;
   pendingPageSize: number;
   onPendingPageSizeChange: (size: number) => void;
   pendingPage: number;

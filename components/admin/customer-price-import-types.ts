@@ -94,7 +94,7 @@ export type CustomerPriceImportState = {
   file: File | null;
   preview: PreviewResult | null;
   applyResult: ApplyResult | null;
-  pendingCurrency: "USD" | "AED";
+  pendingCurrency: "USD" | "AED" | "NGN";
   phase: ImportPhase;
   error: string | null;
   showAutoFix: boolean;

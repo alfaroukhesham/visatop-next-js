@@ -12,11 +12,20 @@ import {
   assertPaymentsAllowedForOrigin,
   assertPaddleServerConfigured,
   getActivePaymentProvider,
+  getFincraServerConfig,
   getZiinaServerConfig,
   requireCheckoutAppOrigin,
 } from "@/lib/payments/resolve-payment-provider";
 import { createZiinaPaymentIntent, ZiinaProviderError } from "@/lib/payments/ziina-client";
 import { isTrustedZiinaEmbeddedUrl } from "@/lib/payments/ziina-embedded";
+import {
+  membersHaveStoredNgnPrices,
+  resolveCheckoutProviderDecision,
+} from "@/lib/payments/resolve-checkout-provider";
+import { createFincraCheckout, FincraProviderError } from "@/lib/payments/fincra-client";
+import { isTrustedFincraCheckoutUrl } from "@/lib/payments/fincra-embedded";
+import { fincraMinorToMajorNumber } from "@/lib/payments/fincra-amounts";
+import { parseUsdAedCurrency } from "@/lib/pricing/catalog-currency";
 import type { CheckoutSessionData } from "@/lib/payments/checkout-types";
 import { diagnoseCheckoutBlock } from "@/lib/payments/diagnose-checkout-block";
 import { loadPaymentUploadPresence } from "@/lib/applications/load-payment-upload-presence";
@@ -25,6 +34,7 @@ import { sumCheckoutTotals, sumPartyLines, type TPartyLine } from "@/lib/payment
 import { FUNNEL_CHECKOUT_CREATED, serverFunnelEventId } from "@/lib/analytics/funnel-event-names";
 import { recordFunnelEvent } from "@/lib/analytics/record-funnel-event";
 import { isCheckoutTermsAccepted } from "@/lib/legal/terms";
+import { resolveApplicantEmailTx } from "@/lib/email/resolve-applicant-email";
 import * as schema from "@/lib/db/schema";
 import { asc, eq, and, or, inArray, isNull } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
@@ -76,7 +86,7 @@ export async function POST(req: Request) {
       return jsonError("UNAUTHORIZED", "Cannot access application", { status, requestId });
     }
 
-    const provider = getActivePaymentProvider();
+    const defaultProvider = getActivePaymentProvider();
 
     const runTx = async (tx: DbTransaction) => {
       const [requestedApp] = await tx
@@ -145,8 +155,26 @@ export async function POST(req: Request) {
         );
       }
 
-      const catalogCurrency =
-        primary.catalogCurrency?.trim().toUpperCase() === "AED" ? "AED" : "USD";
+      const displayCurrency = parseUsdAedCurrency(primary.catalogCurrency);
+      const hasStoredNgnPriceForEveryMember = await membersHaveStoredNgnPrices(tx, lockedRows);
+      const decision = resolveCheckoutProviderDecision({
+        nationalityCode: primary.nationalityCode,
+        hasStoredNgnPriceForEveryMember,
+        displayCurrency,
+        defaultProvider,
+      });
+      const provider = decision.provider;
+      const catalogCurrency = decision.quoteCurrency;
+
+      if (provider === "fincra") {
+        try {
+          getFincraServerConfig();
+        } catch (e) {
+          await tx.update(schema.application).set({ checkoutState: "none" }).where(inArray(schema.application.id, memberIds));
+          const msg = e instanceof Error ? e.message : "Fincra is not configured";
+          return jsonError("PAYMENT_PROVIDER_ERROR", msg, { status: 503, requestId });
+        }
+      }
 
       const prices: Array<Awaited<ReturnType<typeof resolveCheckoutTotal>>> = [];
       for (const member of lockedRows) {
@@ -209,6 +237,7 @@ export async function POST(req: Request) {
           kind: "customer_catalog",
           amountMinor: totalMinor.toString(),
           currency,
+          fxSource: provider === "fincra" ? "fixed_list" : null,
           lines: prices.map((p, i) => ({
             applicationId: lockedRows[i]!.id,
             serviceId: lockedRows[i]!.serviceId,
@@ -227,6 +256,7 @@ export async function POST(req: Request) {
         amount: totalMinor,
         currency,
         status: "checkout_created",
+        fxSource: provider === "fincra" ? "fixed_list" : null,
       });
 
       await tx
@@ -254,6 +284,78 @@ export async function POST(req: Request) {
       };
       if (requestedApp.partyId) metadata.partyId = requestedApp.partyId;
       if (primary.userId) metadata.userId = primary.userId;
+
+      if (provider === "fincra") {
+        const fincraCfg = getFincraServerConfig();
+        await tx
+          .update(schema.payment)
+          .set({ providerOperationId: paymentId })
+          .where(eq(schema.payment.id, paymentId));
+
+        const encId = encodeURIComponent(primary.id);
+        const redirectUrl = appHref(`/apply/applications/${encId}/checkout/return`);
+        const customerName = primary.fullName?.trim() || "VisaTop customer";
+        const customerEmail = await resolveApplicantEmailTx(tx, primary);
+        if (!customerEmail) {
+          await tx.update(schema.application).set({ checkoutState: "none" }).where(inArray(schema.application.id, memberIds));
+          return jsonError(
+            "VALIDATION_ERROR",
+            "Email is required on the application before Naira checkout.",
+            { status: 400, requestId, details: { reason: "missing_guest_email" } },
+          );
+        }
+
+        try {
+          const created = await createFincraCheckout({
+            apiBaseUrl: fincraCfg.apiBaseUrl,
+            secretKey: fincraCfg.secretKey,
+            publicKey: fincraCfg.publicKey,
+            amountMajor: fincraMinorToMajorNumber(totalMinor),
+            currency: "NGN",
+            reference: paymentId,
+            redirectUrl,
+            customer: {
+              name: customerName,
+              email: customerEmail,
+              phoneNumber: primary.phone,
+            },
+            feeBearer: fincraCfg.feeBearer,
+            metadata: {
+              ...metadata,
+              paymentId,
+            },
+            paymentMethods: ["card", "bank_transfer"],
+            timeoutMs: 8000,
+          });
+
+          if (!isTrustedFincraCheckoutUrl(created.link)) {
+            throw new FincraProviderError("Fincra checkout link is not a trusted host", 502);
+          }
+
+          await tx
+            .update(schema.payment)
+            .set({ providerCheckoutId: created.payCode })
+            .where(eq(schema.payment.id, paymentId));
+
+          const data: CheckoutSessionData = { provider: "fincra", redirectUrl: created.link };
+          return jsonOk(data, { requestId });
+        } catch (e) {
+          if (e instanceof FincraProviderError) {
+            console.error("[api/checkout] Fincra error", {
+              requestId,
+              message: e.message,
+              httpStatus: e.httpStatus,
+              fincraBody: e.fincraBody,
+            });
+            return jsonError("FINCRA_UNAVAILABLE", e.message, {
+              status: e.httpStatus >= 500 ? 502 : e.httpStatus,
+              requestId,
+              details: { reason: "provider_unavailable" },
+            });
+          }
+          throw e;
+        }
+      }
 
       if (provider === "paddle") {
         assertPaddleServerConfigured();
@@ -351,6 +453,13 @@ export async function POST(req: Request) {
         status: err.httpStatus,
         requestId,
         details: { paddleCode: err.paddleCode },
+      });
+    }
+    if (err instanceof FincraProviderError) {
+      return jsonError("FINCRA_UNAVAILABLE", err.message, {
+        status: err.httpStatus >= 500 ? 502 : err.httpStatus,
+        requestId,
+        details: { reason: "provider_unavailable" },
       });
     }
     return jsonError("INTERNAL_ERROR", "Checkout failed unexpectedly", { status: 500, requestId });

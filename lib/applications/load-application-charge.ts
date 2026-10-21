@@ -1,6 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
-import type { application } from "@/lib/db/schema";
+import { application } from "@/lib/db/schema";
 import type { DbTransaction } from "@/lib/db";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { payment } from "@/lib/db/schema/payments";
@@ -8,7 +8,14 @@ import { priceQuote } from "@/lib/db/schema/applications";
 import {
   toPublicApplication,
   type TApplicationCharge,
+  type TCheckoutOffer,
 } from "@/lib/applications/public-application";
+import { parseUsdAedCurrency } from "@/lib/pricing/catalog-currency";
+import {
+  membersHaveStoredNgnPrices,
+  resolveCheckoutProviderDecision,
+} from "@/lib/payments/resolve-checkout-provider";
+import { getActivePaymentProvider } from "@/lib/payments/resolve-payment-provider";
 
 /** Paid payment first, else the latest locked checkout quote. */
 export const loadLatestApplicationCharge = async (
@@ -43,10 +50,36 @@ export const loadLatestApplicationCharge = async (
   return { amountMinor: quote.amountMinor, currency: quote.currency };
 };
 
+export const loadCheckoutOffer = async (
+  tx: DbTransaction,
+  row: InferSelectModel<typeof application>,
+): Promise<TCheckoutOffer> => {
+  const members = row.partyId
+    ? await tx
+        .select({
+          nationalityCode: application.nationalityCode,
+          serviceId: application.serviceId,
+        })
+        .from(application)
+        .where(eq(application.partyId, row.partyId))
+    : [{ nationalityCode: row.nationalityCode, serviceId: row.serviceId }];
+  const hasStoredNgnPriceForEveryMember = await membersHaveStoredNgnPrices(tx, members);
+  const decision = resolveCheckoutProviderDecision({
+    nationalityCode: row.nationalityCode,
+    hasStoredNgnPriceForEveryMember,
+    displayCurrency: parseUsdAedCurrency(row.catalogCurrency),
+    defaultProvider: getActivePaymentProvider(),
+  });
+  return { provider: decision.provider, currency: decision.quoteCurrency };
+};
+
 export const toPublicApplicationWithCharge = async (
   row: InferSelectModel<typeof application>,
   t?: (key: string) => string,
 ) => {
-  const charge = await withSystemDbActor((tx) => loadLatestApplicationCharge(tx, row.id));
-  return toPublicApplication(row, charge, t);
+  const { charge, checkoutOffer } = await withSystemDbActor(async (tx) => ({
+    charge: await loadLatestApplicationCharge(tx, row.id),
+    checkoutOffer: await loadCheckoutOffer(tx, row),
+  }));
+  return toPublicApplication(row, charge, t, checkoutOffer);
 };

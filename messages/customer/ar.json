@@ -249,6 +249,8 @@
     "paymentConfirmed": "تم تأكيد الدفع",
     "paymentConfirmedDetail": "نؤكّد دفعتك ونبدأ المعالجة.",
     "payAndSubmit": "الدفع وإرسال الطلب",
+    "payInNaira": "الدفع بالنايرا",
+    "payInNairaHint": "طلبات الجنسية النيجيرية ذات سعر النايرا تُدفع عبر Fincra (بطاقة أو تحويل بنكي).",
     "preparingCheckout": "جارٍ تجهيز الدفع الآمن…",
     "previous": "السابق",
     "orderTitle": "طلبك",

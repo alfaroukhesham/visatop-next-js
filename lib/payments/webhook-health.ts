@@ -4,6 +4,7 @@ import { platformSetting } from "@/lib/db/schema";
 
 export const PLATFORM_KEY_LAST_WEBHOOK_ZIINA = "last_webhook_received_at_ziina";
 export const PLATFORM_KEY_LAST_WEBHOOK_PADDLE = "last_webhook_received_at_paddle";
+export const PLATFORM_KEY_LAST_WEBHOOK_FINCRA = "last_webhook_received_at_fincra";
 
 let warnedWebhookHealthMissing = false;
 
@@ -23,8 +24,9 @@ export async function markWebhookReceivedNow(tx: DbTransaction, key: string): Pr
 export async function getWebhookHealthFromTx(tx: DbTransaction): Promise<{
   lastZiina: string | null;
   lastPaddle: string | null;
+  lastFincra: string | null;
 }> {
-  const [ziinaRows, paddleRows] = await Promise.all([
+  const [ziinaRows, paddleRows, fincraRows] = await Promise.all([
     tx
       .select({ value: platformSetting.value })
       .from(platformSetting)
@@ -35,11 +37,17 @@ export async function getWebhookHealthFromTx(tx: DbTransaction): Promise<{
       .from(platformSetting)
       .where(eq(platformSetting.key, PLATFORM_KEY_LAST_WEBHOOK_PADDLE))
       .limit(1),
+    tx
+      .select({ value: platformSetting.value })
+      .from(platformSetting)
+      .where(eq(platformSetting.key, PLATFORM_KEY_LAST_WEBHOOK_FINCRA))
+      .limit(1),
   ]);
 
   return {
     lastZiina: ziinaRows[0]?.value ? ziinaRows[0].value : null,
     lastPaddle: paddleRows[0]?.value ? paddleRows[0].value : null,
+    lastFincra: fincraRows[0]?.value ? fincraRows[0].value : null,
   };
 }
 

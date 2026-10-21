@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FC } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { apiHref } from "@/lib/app-href";
@@ -11,13 +11,21 @@ const REFUND_REASONS = [
   { value: "customer_request", label: "Customer request" },
 ] as const;
 
-export function ApplicationRefundForm({ applicationId }: { applicationId: string }) {
+interface IApplicationRefundFormProps {
+  applicationId: string;
+  paymentProvider?: string | null;
+}
+
+export const ApplicationRefundForm: FC<IApplicationRefundFormProps> = ({
+  applicationId,
+  paymentProvider,
+}) => {
   const [reason, setReason] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reason) return;
     setLoading(true);
@@ -36,7 +44,7 @@ export function ApplicationRefundForm({ applicationId }: { applicationId: string
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   if (success) {
     return (
@@ -49,6 +57,12 @@ export function ApplicationRefundForm({ applicationId }: { applicationId: string
   return (
     <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3 border border-border p-4 bg-muted/30">
       <p className="text-sm font-semibold">Initiate Refund</p>
+      {paymentProvider === "fincra" ? (
+        <p className="text-muted-foreground text-xs">
+          Fincra&apos;s refund API is documented for over/under payments. If the provider rejects a
+          full refund, complete it in the Fincra dashboard.
+        </p>
+      ) : null}
       <div>
         <label htmlFor="refund-reason" className="text-xs font-medium text-muted-foreground block mb-1">
           Reason
@@ -83,4 +97,4 @@ export function ApplicationRefundForm({ applicationId }: { applicationId: string
       </Button>
     </form>
   );
-}
+};

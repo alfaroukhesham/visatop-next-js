@@ -1,4 +1,4 @@
-export type PaymentWebhookProvider = "paddle" | "ziina";
+export type PaymentWebhookProvider = "paddle" | "ziina" | "fincra";
 
 /** Normalized lifecycle for shared webhook apply logic (spec §15). */
 export type PaymentWebhookKind = "payment_completed" | "payment_failed";

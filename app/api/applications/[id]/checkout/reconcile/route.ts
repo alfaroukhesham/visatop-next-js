@@ -6,41 +6,14 @@ import { toPublicApplication } from "@/lib/applications/public-application";
 import { readCustomerLocaleFromCookieHeader } from "@/lib/i18n/customer-locale";
 import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 import { withSystemDbActor } from "@/lib/db/actor-context";
-import { application as applicationTable, payment } from "@/lib/db/schema";
+import { application as applicationTable } from "@/lib/db/schema";
 import { getActivePaymentProvider } from "@/lib/payments/resolve-payment-provider";
 import { reconcileZiinaPaymentFromReturn } from "@/lib/payments/reconcile-ziina-payments";
 import { scheduleZiinaPaidSideEffects } from "@/lib/payments/ziina-payment-side-effects";
 import { findOpenZiinaPaymentForApplication } from "@/lib/payments/ziina-checkout-session";
-import type { DbTransaction } from "@/lib/db";
-
-async function loadApplicationRowAfterZiinaAttempt(
-  tx: DbTransaction,
-  applicationId: string,
-  attempt: Awaited<ReturnType<typeof reconcileZiinaPaymentFromReturn>>,
-) {
-  void attempt;
-  return tx
-    .select()
-    .from(applicationTable)
-    .where(eq(applicationTable.id, applicationId))
-    .limit(1);
-}
-
-async function reconcileReturnAndLoadApplication(
-  tx: DbTransaction,
-  payRow: typeof payment.$inferSelect,
-  appRow: typeof applicationTable.$inferSelect,
-  applicationId: string,
-  requestId: string | null,
-) {
-  const attempt = await reconcileZiinaPaymentFromReturn(tx, payRow, requestId);
-  const [updatedApp] = await loadApplicationRowAfterZiinaAttempt(tx, applicationId, attempt);
-  return {
-    attempt,
-    application: updatedApp ?? appRow,
-    firstPaidApplicationId: attempt.process?.firstPaidApplicationId ?? null,
-  };
-}
+import { reconcileFincraPaymentFromReturn } from "@/lib/payments/reconcile-fincra-payments";
+import { scheduleFincraPaidSideEffects } from "@/lib/payments/fincra-payment-side-effects";
+import { findOpenFincraPaymentForApplication } from "@/lib/payments/fincra-checkout-session";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,10 +22,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   const [hdrs, { id: applicationId }] = await Promise.all([headers(), ctx.params]);
   const requestId = hdrs.get("x-request-id");
   const t = createCustomerT(readCustomerLocaleFromCookieHeader(hdrs.get("cookie")));
-
-  if (getActivePaymentProvider() !== "ziina") {
-    return jsonOk({ reconciled: false, reason: "not_ziina_provider" }, { requestId });
-  }
 
   const accessRes = await resolveApplicationAccess(req, hdrs, applicationId);
   if (!accessRes.ok) {
@@ -72,25 +41,44 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       return { kind: "already_paid" as const, application: appRow };
     }
 
-    // Payment rows are stored on the party primary; look across all members.
-    const payRow = await findOpenZiinaPaymentForApplication(tx, applicationId);
-    if (!payRow) {
+    const fincraPay = await findOpenFincraPaymentForApplication(tx, applicationId);
+    if (fincraPay) {
+      const attempt = await reconcileFincraPaymentFromReturn(tx, fincraPay, requestId);
+      const [updatedApp] = await tx
+        .select()
+        .from(applicationTable)
+        .where(eq(applicationTable.id, applicationId))
+        .limit(1);
+      return {
+        kind: "done" as const,
+        provider: "fincra" as const,
+        application: updatedApp ?? appRow,
+        attempt: { outcome: attempt.outcome, status: attempt.fincraStatus },
+        firstPaidApplicationId: attempt.process?.firstPaidApplicationId ?? null,
+      };
+    }
+
+    if (getActivePaymentProvider() !== "ziina") {
       return { kind: "no_checkout" as const, application: appRow };
     }
 
-    const { attempt, application: applicationRow, firstPaidApplicationId } = await reconcileReturnAndLoadApplication(
-      tx,
-      payRow,
-      appRow,
-      applicationId,
-      requestId,
-    );
+    const ziinaPay = await findOpenZiinaPaymentForApplication(tx, applicationId);
+    if (!ziinaPay) {
+      return { kind: "no_checkout" as const, application: appRow };
+    }
 
+    const attempt = await reconcileZiinaPaymentFromReturn(tx, ziinaPay, requestId);
+    const [updatedApp] = await tx
+      .select()
+      .from(applicationTable)
+      .where(eq(applicationTable.id, applicationId))
+      .limit(1);
     return {
       kind: "done" as const,
-      application: applicationRow,
-      attempt,
-      firstPaidApplicationId,
+      provider: "ziina" as const,
+      application: updatedApp ?? appRow,
+      attempt: { outcome: attempt.outcome, status: attempt.ziinaStatus },
+      firstPaidApplicationId: attempt.process?.firstPaidApplicationId ?? null,
     };
   });
 
@@ -121,7 +109,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   if (result.firstPaidApplicationId) {
-    scheduleZiinaPaidSideEffects(result.firstPaidApplicationId, requestId);
+    if (result.provider === "fincra") {
+      scheduleFincraPaidSideEffects(result.firstPaidApplicationId, requestId);
+    } else {
+      scheduleZiinaPaidSideEffects(result.firstPaidApplicationId, requestId);
+    }
   }
 
   return jsonOk(
@@ -129,7 +121,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       reconciled: result.attempt.outcome === "applied" && Boolean(result.firstPaidApplicationId),
       attempt: {
         outcome: result.attempt.outcome,
-        ziinaStatus: result.attempt.ziinaStatus,
+        providerStatus: result.attempt.status,
       },
       application: toPublicApplication(result.application, undefined, t),
     },

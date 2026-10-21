@@ -41,6 +41,20 @@ describe("admin notification email bodies", () => {
     expect(html).toContain("Payment completed");
   });
 
+  it("includes Fincra provider and NGN amount when present", () => {
+    const { text, html } = buildAdminPaymentCompletedBodies({
+      contactEmail: "ng@example.com",
+      serviceName: "UAE 30-day tourist visa",
+      applicationRef: "VT-NG1",
+      amountLine: "NGN 185,000.00",
+      provider: "fincra",
+    });
+    expect(text).toMatch(/fincra/i);
+    expect(text).toContain("NGN 185,000.00");
+    expect(html).toMatch(/fincra/i);
+    expect(html).toContain("NGN 185,000.00");
+  });
+
   it("uses static admin inbox constant", () => {
     expect(ADMIN_NOTIFICATION_EMAIL).toBe("info@visatop.com");
   });

@@ -249,6 +249,8 @@
     "paymentConfirmed": "Pagamento confermato",
     "paymentConfirmedDetail": "Stiamo confermando il pagamento e avviando l'elaborazione.",
     "payAndSubmit": "Paga e invia la domanda",
+    "payInNaira": "Paga in naira",
+    "payInNairaHint": "Le domande nigeriane con prezzo in naira si pagano tramite Fincra (carta o bonifico).",
     "preparingCheckout": "Preparazione checkout sicuro…",
     "previous": "Indietro",
     "orderTitle": "Il suo ordine",

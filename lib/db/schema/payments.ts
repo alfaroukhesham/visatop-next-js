@@ -19,6 +19,21 @@ export const payment = pgTable(
     status: text("status").notNull(),
     amount: bigint("amount", { mode: "bigint" }).notNull(), // minor units
     currency: text("currency").default("USD").notNull(),
+    /** Provider-reported amount received, minor units (Fincra kobo). */
+    amountReceivedMinor: bigint("amount_received_minor", { mode: "bigint" }),
+    /** Provider fee, minor units. */
+    feeMinor: bigint("fee_minor", { mode: "bigint" }),
+    /** Fincra variance: underpayment | overpayment | exact. */
+    varianceType: text("variance_type"),
+    /**
+     * FX snapshot for a future rate-based NGN price.
+     * Launch uses stored catalog NGN (`fx_source = fixed_list`); these stay null until FX ships.
+     */
+    fxRateUsed: text("fx_rate_used"),
+    fxBaseCurrency: text("fx_base_currency"),
+    fxBaseAmountMinor: bigint("fx_base_amount_minor", { mode: "bigint" }),
+    /** `fixed_list` | `snapshot` | `fincra_quote` */
+    fxSource: text("fx_source"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -28,6 +43,7 @@ export const payment = pgTable(
   (t) => [
     index("payment_applicationId_idx").on(t.applicationId),
     index("payment_provider_tx_idx").on(t.provider, t.providerTransactionId),
+    index("payment_provider_operation_idx").on(t.providerOperationId),
   ],
 );
 

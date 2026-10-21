@@ -14,7 +14,15 @@ type PaymentsSettingsState = {
   derivedZiinaWebhookUrl: string;
   ziina: { configured: boolean; missing: string[]; apiBaseUrl: string; testMode: boolean };
   paddle: { configured: boolean; missing: string[] };
-  webhookHealth: { lastZiina: string | null; lastPaddle: string | null };
+  fincra: {
+    enabled: boolean;
+    configured: boolean;
+    missing: string[];
+    apiBaseUrl: string;
+    feeBearer: string;
+    derivedWebhookUrl: string;
+  };
+  webhookHealth: { lastZiina: string | null; lastPaddle: string | null; lastFincra: string | null };
 };
 
 type UiState = {
@@ -153,7 +161,9 @@ export function PaymentsSettings() {
   }
 
   const missingAny =
-    state.settings.ziina.missing.length > 0 || state.settings.paddle.missing.length > 0;
+    state.settings.ziina.missing.length > 0 ||
+    state.settings.paddle.missing.length > 0 ||
+    (state.settings.fincra.enabled && state.settings.fincra.missing.length > 0);
 
   return (
     <div className="space-y-4">
@@ -161,7 +171,11 @@ export function PaymentsSettings() {
         <div className="border-destructive/40 bg-destructive/5 text-destructive border-b-2 px-3 py-2 text-sm">
           Missing env vars:{" "}
           <span className="font-mono text-xs">
-            {[...state.settings.ziina.missing, ...state.settings.paddle.missing].join(", ") || "—"}
+            {[
+              ...state.settings.ziina.missing,
+              ...state.settings.paddle.missing,
+              ...(state.settings.fincra.enabled ? state.settings.fincra.missing : []),
+            ].join(", ") || "—"}
           </span>
         </div>
       ) : null}
@@ -189,7 +203,41 @@ export function PaymentsSettings() {
           <p className="text-sm">
             Paddle: <span className="font-mono text-xs">{state.settings.webhookHealth.lastPaddle ?? "—"}</span>
           </p>
+          <p className="text-sm">
+            Fincra: <span className="font-mono text-xs">{state.settings.webhookHealth.lastFincra ?? "—"}</span>
+          </p>
         </div>
+      </div>
+
+      <div className="border-border space-y-3 border p-5">
+        <h3 className="font-heading text-base font-semibold tracking-tight">Fincra (Pay in Naira)</h3>
+        <p className="text-muted-foreground text-sm">
+          Per-checkout for Nigerian nationality when an NGN catalog price exists. Flag{" "}
+          <span className="font-mono text-xs">FINCRA_ENABLED</span> is{" "}
+          <span className="font-medium">{state.settings.fincra.enabled ? "on" : "off"}</span>
+          {state.settings.fincra.configured ? "; keys present." : "; keys missing."}
+        </p>
+        <p className="text-sm">
+          Webhook URL:{" "}
+          <span className="font-mono text-xs">{state.settings.fincra.derivedWebhookUrl}</span>
+        </p>
+        <p className="text-muted-foreground text-xs">
+          Register this URL in the Fincra dashboard (sandbox and live separately). Fincra only
+          accepts API calls from the portal&apos;s whitelisted IP — sandbox tests happen on staging,
+          not from local VMs. Fee bearer:{" "}
+          <span className="font-mono">{state.settings.fincra.feeBearer}</span>
+          {state.settings.fincra.apiBaseUrl ? (
+            <>
+              {" "}
+              · API: <span className="font-mono">{state.settings.fincra.apiBaseUrl}</span>
+            </>
+          ) : null}
+        </p>
+        {state.settings.fincra.enabled && state.settings.fincra.missing.length > 0 ? (
+          <p className="text-destructive text-xs">
+            Missing: {state.settings.fincra.missing.join(", ")}
+          </p>
+        ) : null}
       </div>
 
       <div className="border-border space-y-3 border border-b-2 border-b-primary bg-card p-5">

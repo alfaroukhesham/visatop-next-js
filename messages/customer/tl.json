@@ -249,6 +249,8 @@
     "paymentConfirmed": "Nakumpirma ang Payment",
     "paymentConfirmedDetail": "Kinukumpirma namin ang payment mo at sinisimulan na ang processing.",
     "payAndSubmit": "Magbayad at i-submit ang Application",
+    "payInNaira": "Magbayad sa Naira",
+    "payInNairaHint": "Ang mga aplikasyong Nigerian na may presyong Naira ay magbabayad sa Fincra (card o bank transfer).",
     "preparingCheckout": "Inihahanda ang Secure Checkout...",
     "previous": "Nakaraan",
     "orderTitle": "Ang order mo",

@@ -48,6 +48,14 @@ Include stable internal identifiers so webhooks can reconcile:
 - Status is “refund pending” until confirmed by webhook.
 - Always idempotent (webhook/event table).
 
+### Fincra (NGN, Nigerian nationality)
+
+- **Per checkout**, not per deployment. `PAYMENT_PROVIDER` remains the default (Paddle or Ziina). When **`FINCRA_ENABLED`** is on, Nigerian (`NG`) applications with a **stored NGN** `catalog_customer_price` row (kobo) are offered Fincra hosted checkout (card + bank transfer). Missing NGN prices fall back to the default provider; NGN is never FX-derived from USD/AED.
+- **Env (runtime, server-only):** `FINCRA_ENABLED`, `FINCRA_API_BASE_URL` (sandbox `https://sandboxapi.fincra.com` / live `https://api.fincra.com`), `FINCRA_SECRET_KEY`, `FINCRA_PUBLIC_KEY`, `FINCRA_BUSINESS_ID`, `FINCRA_WEBHOOK_SECRET`, `FINCRA_FEE_BEARER` (`business` default). Put these in `/root/visatop/.env.staging` and `/root/visatop/.env` — not in `NEXT_PUBLIC_*` / Docker build secrets. Leave `FINCRA_ENABLED` unset/false until NGN catalog rows and the Fincra dashboard webhook are ready.
+- **Webhook:** register `https://<host>/api/webhooks/fincra` in the Fincra dashboard (staging `https://app-staging.visatop.com/api/webhooks/fincra`, production `https://visatop.com/api/webhooks/fincra`). HMAC-SHA512 `signature` header. Fincra only sends success webhooks — poll `GET /checkout/payments/merchant-reference/{reference}` on return, webhook, and `POST /api/internal/reconcile-fincra-payments` (`x-internal-secret: INTERNAL_CRON_SECRET`; slots 5m / 15m / 60m / 24h). Invoke that internal route on the same host cron as Ziina reconcile.
+- **IP allowlist:** Fincra only accepts API calls from the portal server (`138.68.184.84`). Mock Fincra in CI; sandbox testing is on staging.
+- **Underpayments** never auto-mark paid (`payment.status = underpaid`, admin attention). Migration `0035_payment_fincra` is expand-contract (nullable columns + webhook-health RLS key).
+
 ---
 
 ## 2) Pricing + quotes + reference data (admin import)

@@ -31,25 +31,16 @@ import {
 } from "./transactional-email-html";
 import { transactionalSubjectPrefix, withTransactionalFooter } from "./transactional-footer";
 import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
+import { formatMinorUnitsAmount } from "@/lib/pricing/format-minor-units";
 
 function safeFilename(name: string | null, fallback: string) {
   const n = (name ?? "").replace(/[^\w.\-()+ ]/g, "_").slice(0, 120);
   return n.length > 0 ? n : fallback;
 }
 
-/** Minor units → display (USD/AED-style 2-decimal currencies). */
-function formatMinorCurrency(minor: number | bigint, currency: string): string {
-  const code = /^[A-Z]{3}$/i.test(currency) ? currency.toUpperCase() : "USD";
-  try {
-    const raw = typeof minor === "bigint" ? Number(minor) : minor;
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: code }).format(
-      raw / 100,
-    );
-  } catch {
-    const raw = typeof minor === "bigint" ? Number(minor) : minor;
-    return `${(raw / 100).toFixed(2)} ${code}`;
-  }
-}
+/** Minor units → display (USD/AED/NGN 2-decimal currencies). */
+const formatMinorCurrency = (minor: number | bigint, currency: string): string =>
+  formatMinorUnitsAmount(minor, currency);
 
 function generateTempInvoiceNumber(): string {
   return `INV-${randomBytes(4).toString("hex").toUpperCase()}`;

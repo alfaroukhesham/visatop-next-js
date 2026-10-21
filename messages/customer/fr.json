@@ -249,6 +249,8 @@
     "paymentConfirmed": "Paiement confirmé",
     "paymentConfirmedDetail": "Nous confirmons votre paiement et démarrons le traitement.",
     "payAndSubmit": "Payer et soumettre la demande",
+    "payInNaira": "Payer en naira",
+    "payInNairaHint": "Les demandes nigérianes avec un tarif en naira se règlent via Fincra (carte ou virement).",
     "preparingCheckout": "Préparation du paiement sécurisé…",
     "previous": "Précédent",
     "orderTitle": "Votre commande",
