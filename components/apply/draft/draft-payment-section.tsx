@@ -176,6 +176,7 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
 
           {fincraInline ? (
             <FincraInlineCheckout
+              key={fincraInline.reference}
               checkout={fincraInline}
               applicationId={applicationId}
               confirming={confirming}

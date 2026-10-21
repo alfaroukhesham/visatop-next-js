@@ -34,9 +34,24 @@ export const FincraInlineCheckout: FC<IFincraInlineCheckoutProps> = ({
   onError,
 }) => {
   const t = useCustomerT();
-  const [opening, setOpening] = useState(false);
-  const [closed, setClosed] = useState(false);
+  const checkoutRef = useRef(checkout);
+  const applicationIdRef = useRef(applicationId);
+  const onCompletedRef = useRef(onCompleted);
+  const onClosedRef = useRef(onClosed);
+  const onHostedRedirectRef = useRef(onHostedRedirect);
+  const onErrorRef = useRef(onError);
+  const tRef = useRef(t);
   const fallingBackRef = useRef(false);
+  const [opening, setOpening] = useState(() => !openedInlineReferences.has(checkout.reference));
+  const [closed, setClosed] = useState(false);
+
+  checkoutRef.current = checkout;
+  applicationIdRef.current = applicationId;
+  onCompletedRef.current = onCompleted;
+  onClosedRef.current = onClosed;
+  onHostedRedirectRef.current = onHostedRedirect;
+  onErrorRef.current = onError;
+  tRef.current = t;
 
   const fallbackToHosted = useCallback(async () => {
     if (fallingBackRef.current) return;
@@ -46,7 +61,11 @@ export const FincraInlineCheckout: FC<IFincraInlineCheckoutProps> = ({
       const res = await fetch(apiHref("/checkout"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ applicationId, termsAccepted: true, fincraMode: "hosted" }),
+        body: JSON.stringify({
+          applicationId: applicationIdRef.current,
+          termsAccepted: true,
+          fincraMode: "hosted",
+        }),
       });
       const raw = await res.text();
       let envelope: {
@@ -57,18 +76,18 @@ export const FincraInlineCheckout: FC<IFincraInlineCheckoutProps> = ({
       try {
         envelope = raw ? (JSON.parse(raw) as typeof envelope) : {};
       } catch {
-        throw new Error(t("checkout.errors.failedDot"));
+        throw new Error(tRef.current("checkout.errors.failedDot"));
       }
       if (!res.ok || !envelope.ok || !envelope.data?.redirectUrl) {
-        throw new Error(checkoutErrorToUserMessage(envelope.error, t));
+        throw new Error(checkoutErrorToUserMessage(envelope.error, tRef.current));
       }
-      onHostedRedirect(envelope.data.redirectUrl);
+      onHostedRedirectRef.current(envelope.data.redirectUrl);
     } catch (err: unknown) {
       fallingBackRef.current = false;
       setOpening(false);
-      onError(err instanceof Error ? err.message : t("checkout.errors.failedDot"));
+      onErrorRef.current(err instanceof Error ? err.message : tRef.current("checkout.errors.failedDot"));
     }
-  }, [applicationId, onError, onHostedRedirect, t]);
+  }, []);
 
   const openPopup = useCallback(async () => {
     setOpening(true);
@@ -76,15 +95,15 @@ export const FincraInlineCheckout: FC<IFincraInlineCheckoutProps> = ({
     try {
       const api = await loadFincraInlineScript();
       api.initialize(
-        toFincraInitializeOptions(checkout, {
+        toFincraInitializeOptions(checkoutRef.current, {
           onSuccess: () => {
             setOpening(false);
-            onCompleted();
+            onCompletedRef.current();
           },
           onClose: () => {
             setOpening(false);
             setClosed(true);
-            onClosed();
+            onClosedRef.current();
           },
         }),
       );
@@ -92,16 +111,18 @@ export const FincraInlineCheckout: FC<IFincraInlineCheckoutProps> = ({
     } catch {
       await fallbackToHosted();
     }
-  }, [checkout, fallbackToHosted, onClosed, onCompleted]);
+  }, [fallbackToHosted]);
+
+  const openPopupRef = useRef(openPopup);
+  openPopupRef.current = openPopup;
 
   useEffect(() => {
     if (openedInlineReferences.has(checkout.reference)) {
-      setClosed(true);
       return;
     }
     openedInlineReferences.add(checkout.reference);
-    void openPopup();
-  }, [checkout.reference, openPopup]);
+    void openPopupRef.current();
+  }, [checkout.reference]);
 
   return (
     <div className="relative mx-auto w-full max-w-[450px]" data-clarity-mask="true">
@@ -112,16 +133,15 @@ export const FincraInlineCheckout: FC<IFincraInlineCheckoutProps> = ({
             {t("payment.preparingCheckout")}
           </p>
         ) : null}
-        {closed && !confirming ? (
+        {!opening && !confirming ? (
           <div className="space-y-3 text-center">
-            <p className="text-muted-foreground text-sm">{t("payment.fincraWindowClosed")}</p>
+            <p className="text-muted-foreground text-sm">
+              {closed ? t("payment.fincraWindowClosed") : t("payment.completeInWidget")}
+            </p>
             <ClientButton type="button" className="h-12 w-full text-lg font-bold" onClick={() => void openPopup()}>
               {t("payment.continueFincraPayment")}
             </ClientButton>
           </div>
-        ) : null}
-        {!opening && !closed && !confirming ? (
-          <p className="text-muted-foreground text-center text-sm">{t("payment.completeInWidget")}</p>
         ) : null}
       </div>
       {confirming ? (
