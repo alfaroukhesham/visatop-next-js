@@ -25,6 +25,12 @@ import {
 import { createFincraCheckout, FincraProviderError } from "@/lib/payments/fincra-client";
 import { isTrustedFincraCheckoutUrl } from "@/lib/payments/fincra-embedded";
 import { fincraMinorToMajorNumber } from "@/lib/payments/fincra-amounts";
+import { buildFincraInlineCheckoutData } from "@/lib/payments/fincra-inline";
+import {
+  abandonFincraCheckoutLock,
+  shouldSelfHealFincraOpenPayment,
+} from "@/lib/payments/fincra-checkout-lock";
+import { loadOpenFincraPayment } from "@/lib/payments/fincra-checkout-session";
 import { parseUsdAedCurrency } from "@/lib/pricing/catalog-currency";
 import type { CheckoutSessionData } from "@/lib/payments/checkout-types";
 import { diagnoseCheckoutBlock } from "@/lib/payments/diagnose-checkout-block";
@@ -53,6 +59,8 @@ export async function POST(req: Request) {
       typeof (body as { applicationId?: unknown }).applicationId === "string"
         ? (body as { applicationId: string }).applicationId
         : null;
+    const fincraMode =
+      (body as { fincraMode?: unknown }).fincraMode === "hosted" ? "hosted" : "inline";
 
     if (!applicationId) return jsonError("VALIDATION_ERROR", "Missing applicationId", { status: 400, requestId });
 
@@ -109,23 +117,45 @@ export async function POST(req: Request) {
           ).map((m) => m.id)
         : [applicationId];
 
-      const lockedRows = await tx
-        .update(schema.application)
-        .set({ checkoutState: "pending" })
-        .where(
-          and(
-            inArray(schema.application.id, memberIds),
-            or(isNull(schema.application.checkoutState), eq(schema.application.checkoutState, "none")),
-            eq(schema.application.applicationStatus, "ready_for_payment"),
-          ),
-        )
-        .returning();
+      const lockCheckoutRows = async () =>
+        tx
+          .update(schema.application)
+          .set({ checkoutState: "pending" })
+          .where(
+            and(
+              inArray(schema.application.id, memberIds),
+              or(isNull(schema.application.checkoutState), eq(schema.application.checkoutState, "none")),
+              eq(schema.application.applicationStatus, "ready_for_payment"),
+            ),
+          )
+          .returning();
 
-      if (lockedRows.length !== memberIds.length) {
+      const unlockCheckoutRows = async (ids: string[]) => {
+        if (ids.length === 0) return;
         await tx
           .update(schema.application)
           .set({ checkoutState: "none" })
-          .where(inArray(schema.application.id, lockedRows.map((r) => r.id)));
+          .where(inArray(schema.application.id, ids));
+      };
+
+      let lockedRows = await lockCheckoutRows();
+
+      if (lockedRows.length !== memberIds.length) {
+        await unlockCheckoutRows(lockedRows.map((r) => r.id));
+        const openFincra = await loadOpenFincraPayment(tx, memberIds);
+        if (openFincra && shouldSelfHealFincraOpenPayment(openFincra)) {
+          await abandonFincraCheckoutLock(tx, {
+            memberIds,
+            paymentId: openFincra.id,
+            reason: openFincra.providerCheckoutId?.trim() ? "stale_checkout" : "unprovisioned_checkout",
+            requestId,
+          });
+          lockedRows = await lockCheckoutRows();
+        }
+      }
+
+      if (lockedRows.length !== memberIds.length) {
+        await unlockCheckoutRows(lockedRows.map((r) => r.id));
         const block = await diagnoseCheckoutBlock(tx, applicationId);
         return jsonError("CONFLICT", "Checkout cannot be started for this application", {
           status: 409,
@@ -305,6 +335,28 @@ export async function POST(req: Request) {
           );
         }
 
+        const fincraMetadata = {
+          ...metadata,
+          paymentId,
+        };
+        const inlineData = buildFincraInlineCheckoutData({
+          publicKey: fincraCfg.publicKey,
+          amountMinor: totalMinor,
+          customer: {
+            name: customerName,
+            email: customerEmail,
+            phoneNumber: primary.phone,
+          },
+          reference: paymentId,
+          feeBearer: fincraCfg.feeBearer,
+          metadata: fincraMetadata,
+        });
+
+        if (fincraMode !== "hosted") {
+          const data: CheckoutSessionData = inlineData;
+          return jsonOk(data, { requestId });
+        }
+
         try {
           const created = await createFincraCheckout({
             apiBaseUrl: fincraCfg.apiBaseUrl,
@@ -320,10 +372,7 @@ export async function POST(req: Request) {
               phoneNumber: primary.phone,
             },
             feeBearer: fincraCfg.feeBearer,
-            metadata: {
-              ...metadata,
-              paymentId,
-            },
+            metadata: fincraMetadata,
             paymentMethods: ["card", "bank_transfer"],
             timeoutMs: 8000,
           });
@@ -337,15 +386,24 @@ export async function POST(req: Request) {
             .set({ providerCheckoutId: created.payCode })
             .where(eq(schema.payment.id, paymentId));
 
-          const data: CheckoutSessionData = { provider: "fincra", redirectUrl: created.link };
+          const data: CheckoutSessionData = {
+            provider: "fincra",
+            mode: "hosted",
+            redirectUrl: created.link,
+          };
           return jsonOk(data, { requestId });
         } catch (e) {
           if (e instanceof FincraProviderError) {
+            await abandonFincraCheckoutLock(tx, {
+              memberIds,
+              paymentId,
+              reason: "provider_unavailable",
+              requestId,
+            });
             console.error("[api/checkout] Fincra error", {
               requestId,
               message: e.message,
               httpStatus: e.httpStatus,
-              fincraBody: e.fincraBody,
             });
             return jsonError("FINCRA_UNAVAILABLE", e.message, {
               status: e.httpStatus >= 500 ? 502 : e.httpStatus,

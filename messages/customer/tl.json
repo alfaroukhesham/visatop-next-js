@@ -251,6 +251,8 @@
     "payAndSubmit": "Magbayad at i-submit ang Application",
     "payInNaira": "Magbayad sa Naira",
     "payInNairaHint": "Ang mga aplikasyong Nigerian na may presyong Naira ay magbabayad sa Fincra (card o bank transfer).",
+    "continueFincraPayment": "Ipagpatuloy ang bayad",
+    "fincraWindowClosed": "Isinara ang window ng bayad. Maaari kang magpatuloy nang hindi umaalis sa page na ito, o kanselahin at i-reset.",
     "preparingCheckout": "Inihahanda ang Secure Checkout...",
     "previous": "Nakaraan",
     "orderTitle": "Ang order mo",

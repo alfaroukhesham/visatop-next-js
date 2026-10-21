@@ -1,12 +1,15 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { resolveApplicantEmailTx } from "@/lib/email/resolve-applicant-email";
 import { loadPartyMemberIds } from "@/lib/payments/ziina-checkout-session";
 import {
   fincraCheckoutUrlFromPayCode,
   isTrustedFincraCheckoutUrl,
 } from "@/lib/payments/fincra-embedded";
+import { buildFincraInlineCheckoutData, type TFincraInlineCheckoutData } from "@/lib/payments/fincra-inline";
 import { reconcileFincraPaymentFromReturn } from "@/lib/payments/reconcile-fincra-payments";
+import { getFincraServerConfig } from "@/lib/payments/resolve-payment-provider";
 import type { TResumeCheckoutSession } from "@/lib/payments/checkout-types";
 
 export const loadOpenFincraPayment = async (tx: DbTransaction, memberIds: string[]) => {
@@ -29,6 +32,46 @@ export const findOpenFincraPaymentForApplication = async (tx: DbTransaction, app
   const memberIds = await loadPartyMemberIds(tx, applicationId);
   if (!memberIds) return null;
   return loadOpenFincraPayment(tx, memberIds);
+};
+
+export const buildFincraInlineCheckoutDataForPayment = async (
+  tx: DbTransaction,
+  payRow: typeof schema.payment.$inferSelect,
+): Promise<TFincraInlineCheckoutData | null> => {
+  let cfg;
+  try {
+    cfg = getFincraServerConfig();
+  } catch {
+    return null;
+  }
+  const [app] = await tx
+    .select()
+    .from(schema.application)
+    .where(eq(schema.application.id, payRow.applicationId))
+    .limit(1);
+  if (!app) return null;
+  const customerEmail = await resolveApplicantEmailTx(tx, app);
+  if (!customerEmail) return null;
+  const metadata: Record<string, string> = {
+    applicationId: app.id,
+    paymentId: payRow.id,
+    serviceId: app.serviceId,
+    isGuest: app.isGuest ? "true" : "false",
+  };
+  if (app.partyId) metadata.partyId = app.partyId;
+  if (app.userId) metadata.userId = app.userId;
+  return buildFincraInlineCheckoutData({
+    publicKey: cfg.publicKey,
+    amountMinor: payRow.amount,
+    customer: {
+      name: app.fullName?.trim() || "VisaTop customer",
+      email: customerEmail,
+      phoneNumber: app.phone,
+    },
+    reference: payRow.id,
+    feeBearer: cfg.feeBearer,
+    metadata,
+  });
 };
 
 export type TResolveFincraCheckoutSessionResult = {
@@ -71,14 +114,17 @@ export const resolveFincraCheckoutSession = async (
     if (firstPaidApplicationId) return result({ kind: "paid" }, firstPaidApplicationId);
   }
 
-  if (attempt.outcome === "underpaid") {
-    return result({ kind: "confirming" });
+  if (attempt.outcome === "mismatch" || attempt.outcome === "underpaid") {
+    return result({ kind: "closed", status: "mismatch" });
   }
 
   const payCode = payRow.providerCheckoutId?.trim() ?? "";
   const redirectUrl = payCode ? fincraCheckoutUrlFromPayCode(payCode) : "";
-  if (!redirectUrl || !isTrustedFincraCheckoutUrl(redirectUrl)) {
-    return result({ kind: "unavailable" });
+  if (redirectUrl && isTrustedFincraCheckoutUrl(redirectUrl)) {
+    return result({ kind: "fincra_redirect", redirectUrl });
   }
-  return result({ kind: "fincra_redirect", redirectUrl });
+
+  const inline = await buildFincraInlineCheckoutDataForPayment(tx, payRow);
+  if (inline) return result({ kind: "fincra_inline", checkout: inline });
+  return result({ kind: "unavailable" });
 };

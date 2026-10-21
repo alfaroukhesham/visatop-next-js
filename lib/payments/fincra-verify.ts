@@ -1,70 +1,70 @@
 import type { FincraVerifiedPayment } from "@/lib/payments/fincra-client";
+import {
+  matchFincraChargeToStoredPayment,
+  type TFincraStoredPaymentRef,
+} from "@/lib/payments/fincra-charge-match";
 
 export type TFincraVerifyDecision =
   | {
       kind: "paid";
       amountReceivedMinor: bigint;
-      varianceType: "exact" | "overpayment";
+      varianceType: "exact";
       feeMinor: bigint | null;
     }
   | {
-      kind: "underpaid";
+      kind: "mismatch";
+      reason: "amount_mismatch" | "currency_mismatch";
       amountReceivedMinor: bigint | null;
-      varianceType: "underpayment";
+      expectedMinor: bigint;
+      expectedCurrency: string;
+      reportedCurrency: string;
       feeMinor: bigint | null;
     }
-  | { kind: "pending"; reason: string }
-  | { kind: "rejected"; reason: string };
+  | { kind: "unknown_reference" }
+  | { kind: "pending"; reason: string };
 
 const receivedMinor = (verified: FincraVerifiedPayment): bigint | null =>
   verified.amountReceivedMinor ?? verified.amountMinor;
 
 export const decideFincraVerifiedPayment = (params: {
   verified: FincraVerifiedPayment;
-  expectedMinor: bigint;
-  expectedCurrency: string;
+  payment: TFincraStoredPaymentRef | null | undefined;
+  merchantReference?: string | null;
 }): TFincraVerifyDecision => {
-  const { verified, expectedMinor } = params;
-  const expectedCurrency = params.expectedCurrency.trim().toUpperCase();
-  const status = verified.status.trim().toLowerCase();
+  const { verified, payment } = params;
+  const merchantReference = params.merchantReference ?? verified.merchantReference;
+  const match = matchFincraChargeToStoredPayment({
+    payment,
+    merchantReference,
+    reportedAmountMinor: receivedMinor(verified),
+    reportedCurrency: verified.currency,
+  });
 
+  if (match.kind === "unknown_reference") {
+    return { kind: "unknown_reference" };
+  }
+
+  const status = verified.status.trim().toLowerCase();
   if (status !== "success") {
     return { kind: "pending", reason: `status:${status || "missing"}` };
   }
 
-  if (verified.currency.trim().toUpperCase() !== expectedCurrency) {
-    return { kind: "rejected", reason: "currency_mismatch" };
-  }
-
-  const variance = verified.varianceType?.trim().toLowerCase() ?? null;
-  const got = receivedMinor(verified);
-
-  if (variance === "underpayment") {
+  if (match.kind === "mismatch") {
     return {
-      kind: "underpaid",
-      amountReceivedMinor: got,
-      varianceType: "underpayment",
-      feeMinor: verified.feeMinor,
-    };
-  }
-
-  if (got === null) {
-    return { kind: "pending", reason: "missing_amount_received" };
-  }
-
-  if (got < expectedMinor) {
-    return {
-      kind: "underpaid",
-      amountReceivedMinor: got,
-      varianceType: "underpayment",
+      kind: "mismatch",
+      reason: match.reason,
+      amountReceivedMinor: match.reportedMinor,
+      expectedMinor: match.expectedMinor,
+      expectedCurrency: match.expectedCurrency,
+      reportedCurrency: match.reportedCurrency,
       feeMinor: verified.feeMinor,
     };
   }
 
   return {
     kind: "paid",
-    amountReceivedMinor: got,
-    varianceType: got > expectedMinor || variance === "overpayment" ? "overpayment" : "exact",
+    amountReceivedMinor: match.amountMinor,
+    varianceType: "exact",
     feeMinor: verified.feeMinor,
   };
 };

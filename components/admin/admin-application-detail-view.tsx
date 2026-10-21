@@ -197,12 +197,30 @@ export function AdminApplicationDetailView({
                     <tr key={p.id} className="hover:bg-muted/40">
                       <td className="px-4 py-2 font-medium capitalize">{p.provider}</td>
                       <td className="px-4 py-2">
-                        <span className="font-mono text-xs bg-muted px-1.5 py-0.5">{p.status}</span>
+                        <span
+                          className={cn(
+                            "font-mono text-xs px-1.5 py-0.5",
+                            p.status === "mismatch" || p.varianceType?.includes("mismatch")
+                              ? "bg-destructive/15 text-destructive"
+                              : "bg-muted",
+                          )}
+                        >
+                          {p.status}
+                        </span>
                       </td>
                       <td className="px-4 py-2 font-mono tabular-nums">
                         {formatMinorUnitsAmount(p.amount, p.currency)}
                         {p.varianceType ? (
-                          <span className="ml-2 text-xs text-muted-foreground">{p.varianceType}</span>
+                          <span
+                            className={cn(
+                              "ml-2 text-xs",
+                              p.varianceType.includes("mismatch") || p.varianceType === "underpayment"
+                                ? "text-destructive"
+                                : "text-muted-foreground",
+                            )}
+                          >
+                            {p.varianceType}
+                          </span>
                         ) : null}
                       </td>
                       <td className="px-4 py-2 font-mono tabular-nums">

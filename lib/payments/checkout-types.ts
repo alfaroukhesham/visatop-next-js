@@ -1,7 +1,10 @@
+import type { TFincraHostedCheckoutData, TFincraInlineCheckoutData } from "@/lib/payments/fincra-inline";
+
 export type CheckoutSessionData =
   | { provider: "paddle"; transactionId: string; clientToken: string }
   | { provider: "ziina"; embeddedUrl: string }
-  | { provider: "fincra"; redirectUrl: string };
+  | TFincraInlineCheckoutData
+  | TFincraHostedCheckoutData;
 
 export type TZiinaCheckoutSession =
   | { kind: "open"; embeddedUrl: string }
@@ -14,4 +17,5 @@ export type TZiinaCheckoutSession =
 
 export type TResumeCheckoutSession =
   | TZiinaCheckoutSession
-  | { kind: "fincra_redirect"; redirectUrl: string };
+  | { kind: "fincra_redirect"; redirectUrl: string }
+  | { kind: "fincra_inline"; checkout: TFincraInlineCheckoutData };

@@ -251,6 +251,8 @@
     "payAndSubmit": "Bezahlen & Antrag einreichen",
     "payInNaira": "In Naira bezahlen",
     "payInNairaHint": "Nigerianische Anträge mit Naira-Preis zahlen über Fincra (Karte oder Überweisung).",
+    "continueFincraPayment": "Zahlung fortsetzen",
+    "fincraWindowClosed": "Das Zahlungsfenster wurde geschlossen. Sie können fortfahren, ohne diese Seite zu verlassen, oder abbrechen und zurücksetzen.",
     "preparingCheckout": "Sicherer Checkout wird vorbereitet…",
     "previous": "Zurück",
     "orderTitle": "Ihre Bestellung",

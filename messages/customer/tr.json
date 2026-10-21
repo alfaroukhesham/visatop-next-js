@@ -251,6 +251,8 @@
     "payAndSubmit": "Öde ve başvuruyu gönder",
     "payInNaira": "Naira ile öde",
     "payInNairaHint": "Naira fiyatı olan Nijerya başvuruları Fincra üzerinden ödenir (kart veya havale).",
+    "continueFincraPayment": "Ödemeye devam et",
+    "fincraWindowClosed": "Ödeme penceresi kapatıldı. Bu sayfadan ayrılmadan devam edebilir veya iptal edip sıfırlayabilirsiniz.",
     "preparingCheckout": "Güvenli ödeme hazırlanıyor…",
     "previous": "Geri",
     "orderTitle": "Siparişiniz",

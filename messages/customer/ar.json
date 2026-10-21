@@ -251,6 +251,8 @@
     "payAndSubmit": "الدفع وإرسال الطلب",
     "payInNaira": "الدفع بالنايرا",
     "payInNairaHint": "طلبات الجنسية النيجيرية ذات سعر النايرا تُدفع عبر Fincra (بطاقة أو تحويل بنكي).",
+    "continueFincraPayment": "متابعة الدفع",
+    "fincraWindowClosed": "أُغلق نافذة الدفع. يمكنك المتابعة دون مغادرة هذه الصفحة، أو الإلغاء وإعادة التعيين.",
     "preparingCheckout": "جارٍ تجهيز الدفع الآمن…",
     "previous": "السابق",
     "orderTitle": "طلبك",

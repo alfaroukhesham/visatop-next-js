@@ -169,9 +169,9 @@ describe("POST /api/webhooks/fincra", () => {
     expect(sideEffectsMock).not.toHaveBeenCalled();
   });
 
-  it("does not mark paid or send emails for underpayments", async () => {
+  it("does not mark paid or send emails for amount mismatches", async () => {
     processMock.mockResolvedValue({
-      outcome: "underpaid",
+      outcome: "mismatch",
       firstPaidApplicationId: null,
       paymentId: "pay_1",
     });
@@ -198,7 +198,74 @@ describe("POST /api/webhooks/fincra", () => {
     );
     expect(res.status).toBe(200);
     const decision = processMock.mock.calls[0]![1].decision;
-    expect(decision.kind).toBe("underpaid");
+    expect(decision.kind).toBe("mismatch");
+    expect(decision.reason).toBe("amount_mismatch");
+    expect(sideEffectsMock).not.toHaveBeenCalled();
+  });
+
+  it("does not mark paid on currency mismatch", async () => {
+    processMock.mockResolvedValue({
+      outcome: "mismatch",
+      firstPaidApplicationId: null,
+      paymentId: "pay_1",
+    });
+    verifyMock.mockResolvedValue({
+      id: "1",
+      status: "success",
+      currency: "USD",
+      amountMinor: BigInt(18_500_000),
+      amountReceivedMinor: BigInt(18_500_000),
+      amountExpectedMinor: BigInt(18_500_000),
+      varianceType: null,
+      message: null,
+      merchantReference: "pay_1",
+      reference: "fcr-p-1",
+      feeMinor: null,
+      raw: {},
+    });
+    const res = await POST(
+      new Request("http://localhost/api/webhooks/fincra", {
+        method: "POST",
+        headers: { signature: sign(body) },
+        body,
+      }),
+    );
+    expect(res.status).toBe(200);
+    const decision = processMock.mock.calls[0]![1].decision;
+    expect(decision.kind).toBe("mismatch");
+    expect(decision.reason).toBe("currency_mismatch");
+    expect(sideEffectsMock).not.toHaveBeenCalled();
+  });
+
+  it("does not verify or mark paid for an unknown merchant reference", async () => {
+    withSystemMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              limit: async () => [],
+            }),
+          }),
+        }),
+        update: () => ({
+          set: () => ({
+            where: () => ({
+              returning: async () => [{ key: "last_webhook_received_at_fincra" }],
+            }),
+          }),
+        }),
+      }),
+    );
+    const res = await POST(
+      new Request("http://localhost/api/webhooks/fincra", {
+        method: "POST",
+        headers: { signature: sign(body) },
+        body,
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(verifyMock).not.toHaveBeenCalled();
+    expect(processMock).not.toHaveBeenCalled();
     expect(sideEffectsMock).not.toHaveBeenCalled();
   });
 });

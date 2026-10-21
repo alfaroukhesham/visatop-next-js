@@ -251,6 +251,8 @@
     "payAndSubmit": "Paga e invia la domanda",
     "payInNaira": "Paga in naira",
     "payInNairaHint": "Le domande nigeriane con prezzo in naira si pagano tramite Fincra (carta o bonifico).",
+    "continueFincraPayment": "Continua il pagamento",
+    "fincraWindowClosed": "La finestra di pagamento è stata chiusa. Può continuare senza lasciare questa pagina, oppure annullare e reimpostare.",
     "preparingCheckout": "Preparazione checkout sicuro…",
     "previous": "Indietro",
     "orderTitle": "Il suo ordine",

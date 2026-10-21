@@ -49,7 +49,12 @@ export async function resolvePaymentRowForWebhook(
           .select()
           .from(payment)
           .where(
-            or(eq(payment.providerCheckoutId, tid), eq(payment.providerTransactionId, tid)),
+            or(
+              eq(payment.providerCheckoutId, tid),
+              eq(payment.providerTransactionId, tid),
+              eq(payment.id, tid),
+              eq(payment.providerOperationId, tid),
+            ),
           )
           .limit(1)
       )[0]
@@ -77,7 +82,7 @@ export async function resolvePaymentRowForWebhook(
     const rows = await tx
       .select()
       .from(payment)
-      .where(eq(payment.providerOperationId, operationId))
+      .where(or(eq(payment.providerOperationId, operationId), eq(payment.id, operationId)))
       .limit(1);
     payRow = rows[0];
   }

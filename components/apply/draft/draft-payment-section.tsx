@@ -10,11 +10,16 @@ import type { Readiness } from "@/lib/documents/validation-readiness";
 import { CheckoutErrorAlert } from "../checkout-error-alert";
 import { CheckoutTermsCheckbox } from "../checkout-terms-checkbox";
 import { PaddleCheckoutButton } from "../paddle-checkout-button";
+import { FincraInlineCheckout } from "../fincra-inline-checkout";
 import { ZiinaEmbeddedCheckout } from "../ziina-embedded-checkout";
+import type { TFincraInlineCheckoutData } from "@/lib/payments/fincra-inline";
 
 type CheckoutHandlers = {
   onZiinaEmbedded: (embeddedUrl: string) => void;
+  onFincraInline: (checkout: TFincraInlineCheckoutData) => void;
   onFincraRedirect: (redirectUrl: string) => void;
+  onFincraCompleted: () => void;
+  onFincraClosed: () => void;
   onZiinaCompleted: () => void;
   onZiinaFailed: () => void;
   onZiinaCanceled: () => void;
@@ -36,6 +41,7 @@ interface IDraftPaymentSectionProps {
   onCancelCheckout: () => void;
   checkout: CheckoutHandlers;
   embeddedUrl: string | null;
+  fincraInline: TFincraInlineCheckoutData | null;
   confirming: boolean;
   sessionLoading: boolean;
   showPaddleRetry: boolean;
@@ -53,6 +59,7 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
   onCancelCheckout,
   checkout,
   embeddedUrl,
+  fincraInline,
   confirming,
   sessionLoading,
   showPaddleRetry,
@@ -69,9 +76,10 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
   });
 
   const showUnpaidPay =
-    paymentReadiness === "ready" && app.paymentStatus === "unpaid" && !embeddedUrl;
+    paymentReadiness === "ready" && app.paymentStatus === "unpaid" && !embeddedUrl && !fincraInline;
   const showCheckoutCard =
-    app.paymentStatus !== "paid" && (app.paymentStatus === "checkout_created" || Boolean(embeddedUrl));
+    app.paymentStatus !== "paid" &&
+    (app.paymentStatus === "checkout_created" || Boolean(embeddedUrl) || Boolean(fincraInline));
 
   const payInNaira = app.checkoutOffer?.provider === "fincra";
   const payButton = (
@@ -95,6 +103,10 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
         onZiinaEmbedded={(url) => {
           onDismissCheckoutError();
           checkout.onZiinaEmbedded(url);
+        }}
+        onFincraInline={(session) => {
+          onDismissCheckoutError();
+          checkout.onFincraInline(session);
         }}
         onFincraRedirect={(url) => {
           onDismissCheckoutError();
@@ -133,7 +145,7 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
             <div>
               <h2 className="font-heading text-base! font-semibold md:text-lg!">{t("payment.completePaymentTitle")}</h2>
               <p className="text-sm text-muted-foreground">
-                {embeddedUrl ? t("payment.completeInWidget") : t("payment.checkoutInProgress")}
+                {embeddedUrl || fincraInline ? t("payment.completeInWidget") : t("payment.checkoutInProgress")}
               </p>
             </div>
             {countdown !== null && (
@@ -146,7 +158,7 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
 
           {checkoutError ? <CheckoutErrorAlert message={checkoutError} /> : null}
 
-          {sessionLoading && !embeddedUrl && !showPaddleRetry ? (
+          {sessionLoading && !embeddedUrl && !fincraInline && !showPaddleRetry ? (
             <p className="text-muted-foreground text-sm" role="status">
               {t("payment.preparingCheckout")}
             </p>
@@ -159,6 +171,18 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
               onCompleted={checkout.onZiinaCompleted}
               onFailed={checkout.onZiinaFailed}
               onCanceled={checkout.onZiinaCanceled}
+            />
+          ) : null}
+
+          {fincraInline ? (
+            <FincraInlineCheckout
+              checkout={fincraInline}
+              applicationId={applicationId}
+              confirming={confirming}
+              onCompleted={checkout.onFincraCompleted}
+              onClosed={checkout.onFincraClosed}
+              onHostedRedirect={checkout.onFincraRedirect}
+              onError={checkout.onError}
             />
           ) : null}
 

@@ -50,6 +50,10 @@ export function formatAuditActionTitle(action: string): string {
       return "Payment confirmed (marked as paid)";
     case "payment_amount_mismatch_flagged":
       return "Payment amount mismatch (flagged for review)";
+    case "payment_fincra_mismatch_flagged":
+      return "Fincra amount or currency mismatch (not marked paid)";
+    case "payment_fincra_checkout_abandoned":
+      return "Fincra checkout session cleared so the customer can retry";
     case "payment_paid_docs_retain_failed_flagged":
       return "Post-payment document retention failed (flagged)";
     case "payment_paid_but_application_cancelled":
@@ -80,6 +84,10 @@ export function formatAuditActionHint(log: AdminApplicationAuditRow): string | n
       return "Webhook confirmed payment; app moved into processing.";
     case "payment_amount_mismatch_flagged":
       return "Paid, but the amount didn’t match what we expected. Check pricing + payment records.";
+    case "payment_fincra_mismatch_flagged":
+      return "Fincra reported a different amount or currency than the locked quote. Payment was not marked paid.";
+    case "payment_fincra_checkout_abandoned":
+      return "The Fincra checkout lock was cleared after a provider error or stale session.";
     case "payment_paid_docs_retain_failed_flagged":
       return "Paid, but required docs could not be retained. Check document storage + required docs.";
     case "payment_paid_but_application_cancelled":
@@ -97,11 +105,13 @@ export function formatAuditInlineDetails(log: AdminApplicationAuditRow): string 
   const after = tryParseJson(log.afterJson) as Record<string, unknown> | null;
   if (!after) return null;
 
-  if (log.action === "payment_amount_mismatch_flagged") {
+  if (log.action === "payment_amount_mismatch_flagged" || log.action === "payment_fincra_mismatch_flagged") {
     const expected = after.expectedAmountMinor ?? after.paymentAmountMinor;
     const received = after.receivedAmountMinor ?? after.eventAmountMinor;
-    if (typeof expected === "number" && typeof received === "number") {
-      return `Expected ${expected} (minor units), received ${received}.`;
+    const reason = typeof after.reason === "string" ? after.reason : null;
+    if (expected != null && received != null) {
+      const detail = `Expected ${String(expected)} (minor units), received ${String(received)}.`;
+      return reason ? `${reason}: ${detail}` : detail;
     }
   }
 
