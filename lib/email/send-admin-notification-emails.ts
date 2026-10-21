@@ -1,6 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { withSystemDbActor } from "@/lib/db/actor-context";
-import { application, visaService } from "@/lib/db/schema";
+import { application, payment, visaService } from "@/lib/db/schema";
+import { formatMinorUnitsAmount } from "@/lib/pricing/format-minor-units";
 import { ADMIN_NOTIFICATION_EMAIL } from "./admin-notification-constants";
 import { tryClaimTransactionalEmail } from "./claim-transactional-email";
 import { isMailgunConfigured, mailgunSendText } from "./mailgun";
@@ -113,18 +114,23 @@ export function buildAdminPaymentCompletedBodies(input: {
   contactEmail: string;
   serviceName: string;
   applicationRef: string;
+  amountLine?: string | null;
+  provider?: string | null;
 }): { subject: string; text: string; html: string } {
-  const { contactEmail, serviceName, applicationRef } = input;
+  const { contactEmail, serviceName, applicationRef, amountLine, provider } = input;
+  const detailRows: AdminDetailRow[] = [
+    { label: "Customer email", value: contactEmail },
+    { label: "Service", value: serviceName },
+  ];
+  if (amountLine) detailRows.push({ label: "Amount", value: amountLine });
+  if (provider) detailRows.push({ label: "Provider", value: provider });
 
   return buildAdminEmailBodies({
     eyebrow: "Admin · Payment received",
     headline: "Payment completed",
     footerNote: "The application is now in progress. Review it in the admin console when ready.",
     headerRef: applicationRef,
-    detailRows: [
-      { label: "Customer email", value: contactEmail },
-      { label: "Service", value: serviceName },
-    ],
+    detailRows,
     subject: `${transactionalSubjectPrefix()}Payment received — ${serviceName}`,
   });
 }
@@ -139,7 +145,17 @@ async function loadApplicationWithService(applicationId: string) {
       .limit(1);
     if (!row) return null;
     const contactEmail = await resolveApplicantEmailTx(tx, row.app);
-    return { ...row, contactEmail };
+    const [paid] = await tx
+      .select({
+        amount: payment.amount,
+        currency: payment.currency,
+        provider: payment.provider,
+      })
+      .from(payment)
+      .where(and(eq(payment.applicationId, applicationId), eq(payment.status, "paid")))
+      .orderBy(desc(payment.updatedAt))
+      .limit(1);
+    return { ...row, contactEmail, paid };
   });
 }
 
@@ -225,6 +241,10 @@ export async function sendAdminPaymentCompletedEmail(
     contactEmail: payload.contactEmail,
     serviceName: payload.serviceName,
     applicationRef: applicationRef(payload.app),
+    amountLine: payload.paid
+      ? formatMinorUnitsAmount(payload.paid.amount, payload.paid.currency)
+      : null,
+    provider: payload.paid?.provider ?? null,
   });
 
   const sent = await mailgunSendText({ to: ADMIN_NOTIFICATION_EMAIL, subject, text, html });

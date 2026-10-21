@@ -140,15 +140,17 @@ const AED_SIGNALS = [
   "dirham",
   "dirhams",
 ];
+const NGN_SIGNALS = ["ngn", "₦", "naira"];
 
 /**
  * Attempt to parse a currency code from raw cell text.
- * Returns "USD", "AED", or null.
+ * Returns "USD", "AED", "NGN", or null.
  */
 export function parseCurrencySignal(
   raw: string,
-): "USD" | "AED" | null {
+): "USD" | "AED" | "NGN" | null {
   const lower = raw.toLowerCase();
+  if (NGN_SIGNALS.some((s) => lower.includes(s))) return "NGN";
   if (USD_SIGNALS.some((s) => lower.includes(s))) return "USD";
   if (AED_SIGNALS.some((s) => lower.includes(s))) return "AED";
   return null;
@@ -162,8 +164,8 @@ export function parseCurrencySignal(
 export function extractNumericValue(raw: string): number | null {
   // Strip known currency signal words/symbols
   let cleaned = raw
-    .replace(/usd|aed|dh|dhs|د\.إ/gi, "")
-    .replace(/[$]/g, "")
+    .replace(/usd|aed|ngn|naira|dh|dhs|د\.إ/gi, "")
+    .replace(/[$₦]/g, "")
     .trim();
 
   // If after stripping we have something like "1 234" (space-separated thousands)
@@ -195,7 +197,7 @@ export function toMinorUnits(value: number): bigint {
 }
 
 export type MoneyCellResult =
-  | { kind: "priced"; currency: "USD" | "AED"; amountMinor: bigint }
+  | { kind: "priced"; currency: "USD" | "AED" | "NGN"; amountMinor: bigint }
   | { kind: "ambiguous"; amountMinor: bigint } // amount parsed, currency unknown
   | { kind: "empty" }; // no parseable amount
 

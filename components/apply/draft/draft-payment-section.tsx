@@ -14,6 +14,7 @@ import { ZiinaEmbeddedCheckout } from "../ziina-embedded-checkout";
 
 type CheckoutHandlers = {
   onZiinaEmbedded: (embeddedUrl: string) => void;
+  onFincraRedirect: (redirectUrl: string) => void;
   onZiinaCompleted: () => void;
   onZiinaFailed: () => void;
   onZiinaCanceled: () => void;
@@ -72,6 +73,7 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
   const showCheckoutCard =
     app.paymentStatus !== "paid" && (app.paymentStatus === "checkout_created" || Boolean(embeddedUrl));
 
+  const payInNaira = app.checkoutOffer?.provider === "fincra";
   const payButton = (
     <div className="space-y-4">
       <CheckoutTermsCheckbox
@@ -82,13 +84,21 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
         }}
         error={termsError}
       />
+      {payInNaira ? (
+        <p className="text-muted-foreground text-sm">{t("payment.payInNairaHint")}</p>
+      ) : null}
       <PaddleCheckoutButton
         applicationId={applicationId}
+        payLabel={payInNaira ? t("payment.payInNaira") : undefined}
         termsAccepted={termsAccepted}
         onTermsRejected={() => setTermsError(t("checkout.errors.termsRequired"))}
         onZiinaEmbedded={(url) => {
           onDismissCheckoutError();
           checkout.onZiinaEmbedded(url);
+        }}
+        onFincraRedirect={(url) => {
+          onDismissCheckoutError();
+          checkout.onFincraRedirect(url);
         }}
         onOverlayClosed={checkout.onOverlayClosed}
         onSuccess={checkout.onSuccess}

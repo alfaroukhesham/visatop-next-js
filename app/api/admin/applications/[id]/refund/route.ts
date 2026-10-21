@@ -4,8 +4,9 @@ import { jsonError, jsonOk } from "@/lib/api/response";
 import { runAdminDbJson } from "@/lib/admin-api/require-admin-db";
 import { writeAdminAudit } from "@/lib/admin-api/write-admin-audit";
 import { PaddleProviderError, paddleAdapter } from "@/lib/payments/paddle-adapter";
-import { getZiinaServerConfig } from "@/lib/payments/resolve-payment-provider";
+import { getFincraServerConfig, getZiinaServerConfig } from "@/lib/payments/resolve-payment-provider";
 import { initiateZiinaRefund, ZiinaProviderError } from "@/lib/payments/ziina-client";
+import { initiateFincraRefund, FincraProviderError } from "@/lib/payments/fincra-client";
 import * as schema from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import type { PaddleRefundReason } from "@/lib/payments/types";
@@ -68,6 +69,87 @@ export async function POST(
         .where(eq(schema.payment.applicationId, applicationId))
         .orderBy(desc(schema.payment.createdAt))
         .limit(1);
+
+      if (!payment) {
+        return jsonError("VALIDATION_ERROR", "No payment found for this application", {
+          status: 400,
+          requestId,
+        });
+      }
+
+      if (payment.provider === "fincra") {
+        const transReference =
+          payment.providerCheckoutId?.trim() || payment.providerTransactionId?.trim();
+        if (!transReference) {
+          return jsonError(
+            "VALIDATION_ERROR",
+            "No Fincra transaction reference for this application. Complete the refund in the Fincra dashboard.",
+            { status: 400, requestId, details: { reason: "fincra_refund_missing_reference" } },
+          );
+        }
+
+        let fincraCfg;
+        try {
+          fincraCfg = getFincraServerConfig();
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : "Fincra is not configured";
+          return jsonError("PAYMENT_PROVIDER_ERROR", msg, { status: 503, requestId });
+        }
+
+        try {
+          const result = await initiateFincraRefund({
+            apiBaseUrl: fincraCfg.apiBaseUrl,
+            secretKey: fincraCfg.secretKey,
+            transReference,
+            timeoutMs: 8000,
+          });
+
+          await tx
+            .update(schema.application)
+            .set({ paymentStatus: "refund_pending" })
+            .where(eq(schema.application.id, applicationId));
+
+          await writeAdminAudit(tx, {
+            adminUserId,
+            action: "application.refund.initiate",
+            entityType: "application",
+            entityId: applicationId,
+            afterJson: JSON.stringify({
+              reason,
+              provider: "fincra",
+              refundId: result.refundId,
+              refundStatus: result.status,
+              alreadyInitiated: result.alreadyInitiated,
+            }),
+          });
+
+          return jsonOk(
+            {
+              refundId: result.refundId,
+              status: result.status,
+              alreadyInitiated: result.alreadyInitiated,
+            },
+            { requestId },
+          );
+        } catch (err: unknown) {
+          console.error("Fincra refund failed:", err instanceof Error ? err.message : err);
+          const message =
+            err instanceof FincraProviderError
+              ? err.message
+              : err instanceof Error
+                ? err.message
+                : "Refund initiation failed";
+          return jsonError(
+            "FINCRA_REFUND_UNAVAILABLE",
+            `${message}. Fincra's refund API is documented for over/under payments; if this was a standard card or transfer payment, complete the refund in the Fincra dashboard.`,
+            {
+              status: err instanceof FincraProviderError ? err.httpStatus : 502,
+              requestId,
+              details: { reason: "fincra_refund_not_supported" },
+            },
+          );
+        }
+      }
 
       if (payment.provider === "ziina") {
         const intentId = payment.providerCheckoutId?.trim();

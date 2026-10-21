@@ -34,8 +34,8 @@ export type CustomerPriceImportPendingWizardProps = {
   applyResult: ApplyResult;
   phase: ImportPhase;
   assignElapsedSec: number;
-  pendingCurrency: "USD" | "AED";
-  onPendingCurrencyChange: (currency: "USD" | "AED") => void;
+  pendingCurrency: "USD" | "AED" | "NGN";
+  onPendingCurrencyChange: (currency: "USD" | "AED" | "NGN") => void;
   pendingPageSize: number;
   onPendingPageSizeChange: (size: number) => void;
   pendingPage: number;
@@ -91,7 +91,8 @@ export function CustomerPriceImportPendingWizard({
           </CardTitle>
           <CardDescription className="text-xs">
             Review the rows below, choose which currency the stored amounts represent, then assign once for the
-            whole batch. The other currency is filled automatically from your FX rate.
+            whole batch. USD and AED fill the sibling currency from your FX rate. NGN is stored as-is with no
+            conversion.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -117,7 +118,7 @@ export function CustomerPriceImportPendingWizard({
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Amounts are in:</span>
               <div className="flex gap-2">
-                {(["USD", "AED"] as const).map((c) => (
+                {(["USD", "AED", "NGN"] as const).map((c) => (
                   <button
                     key={c}
                     type="button"

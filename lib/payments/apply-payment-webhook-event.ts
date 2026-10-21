@@ -68,7 +68,12 @@ export async function resolvePaymentRowForWebhook(
 
   // Ziina can include `operation_id` in the PaymentIntent payload; use it as a recovery lookup.
   const { operationId } = event.metadata;
-  if (!payRow && event.provider === "ziina" && typeof operationId === "string" && operationId) {
+  if (
+    !payRow &&
+    (event.provider === "ziina" || event.provider === "fincra") &&
+    typeof operationId === "string" &&
+    operationId
+  ) {
     const rows = await tx
       .select()
       .from(payment)

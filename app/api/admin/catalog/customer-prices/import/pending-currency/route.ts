@@ -57,10 +57,10 @@ export async function POST(req: Request) {
 
     const { currency, batchId, pendingIds } = body as Record<string, unknown>;
 
-    if (currency !== "USD" && currency !== "AED") {
+    if (currency !== "USD" && currency !== "AED" && currency !== "NGN") {
       return jsonError(
         "VALIDATION_ERROR",
-        "Field 'currency' must be 'USD' or 'AED'.",
+        "Field 'currency' must be 'USD', 'AED', or 'NGN'.",
         { status: 400, requestId },
       );
     }
@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     const result = await assignPendingCurrency(
       tx,
       {
-        currency: currency as "USD" | "AED",
+        currency: currency as "USD" | "AED" | "NGN",
         batchId: typeof batchId === "string" ? batchId : undefined,
         pendingIds: Array.isArray(pendingIds)
           ? (pendingIds as string[])

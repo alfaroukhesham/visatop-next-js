@@ -52,7 +52,11 @@ export const checkoutErrorToUserMessage = (
       return t("checkout.errors.providerUnavailable");
     case "unknown":
     default:
-      if (err.code === "PAYMENT_PROVIDER_ERROR" || err.code === "ZIINA_UNAVAILABLE") {
+      if (
+        err.code === "PAYMENT_PROVIDER_ERROR" ||
+        err.code === "ZIINA_UNAVAILABLE" ||
+        err.code === "FINCRA_UNAVAILABLE"
+      ) {
         return checkoutErrorToUserMessage({ ...err, details: { reason: "provider_unavailable" } }, t);
       }
       if (err.message && !isGenericConflictMessage(err.message)) {
@@ -73,6 +77,7 @@ const inferReasonFromCode = (code: string | undefined): CheckoutBlockReason => {
     case "TERMS_NOT_ACCEPTED":
       return "terms_not_accepted";
     case "ZIINA_UNAVAILABLE":
+    case "FINCRA_UNAVAILABLE":
     case "SERVICE_UNAVAILABLE":
       return "provider_unavailable";
     default:

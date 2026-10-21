@@ -3,7 +3,13 @@ import { runAdminDbJson } from "@/lib/admin-api/require-admin-db";
 import { jsonOk } from "@/lib/api/response";
 import { apiHref } from "@/lib/app-href";
 import { getAppOrigin } from "@/lib/app-url";
-import { getActivePaymentProvider, isHttpsOrigin } from "@/lib/payments/resolve-payment-provider";
+import {
+  fincraMissingEnvNames,
+  getActivePaymentProvider,
+  isFincraEnabled,
+  isHttpsOrigin,
+  parseFincraFeeBearer,
+} from "@/lib/payments/resolve-payment-provider";
 import { getWebhookHealthFromTx } from "@/lib/payments/webhook-health";
 
 export const runtime = "nodejs";
@@ -26,8 +32,10 @@ export async function GET() {
     const appOrigin = getAppOrigin();
     const ziinaMissing = missingEnv(["ZIINA_ACCESS_TOKEN", "ZIINA_WEBHOOK_SECRET"]);
     const paddleMissing = missingEnv(["PADDLE_API_KEY", "PADDLE_WEBHOOK_SECRET"]);
+    const fincraMissing = fincraMissingEnvNames();
 
     const webhookUrl = apiHref("webhooks/ziina");
+    const fincraWebhookUrl = apiHref("webhooks/fincra");
     const canRegisterZiinaWebhook = isHttpsOrigin(appOrigin);
 
     const health = await getWebhookHealthFromTx(tx);
@@ -48,9 +56,18 @@ export async function GET() {
           configured: paddleMissing.length === 0,
           missing: paddleMissing,
         },
+        fincra: {
+          enabled: isFincraEnabled(),
+          configured: fincraMissing.length === 0,
+          missing: fincraMissing,
+          apiBaseUrl: process.env.FINCRA_API_BASE_URL?.trim() || "",
+          feeBearer: parseFincraFeeBearer(process.env.FINCRA_FEE_BEARER),
+          derivedWebhookUrl: fincraWebhookUrl,
+        },
         webhookHealth: {
           lastZiina: health.lastZiina,
           lastPaddle: health.lastPaddle,
+          lastFincra: health.lastFincra,
         },
       },
       { requestId },

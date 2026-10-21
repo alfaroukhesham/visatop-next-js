@@ -43,6 +43,14 @@ describe("checkoutErrorToUserMessage", () => {
     expect(msg).toMatch(/passport copy/i);
   });
 
+  it("maps FINCRA_UNAVAILABLE to the generic provider copy", () => {
+    const msg = checkoutErrorToUserMessage({
+      code: "FINCRA_UNAVAILABLE",
+      message: "Fincra checkout failed (HTTP 502)",
+    });
+    expect(msg).toMatch(/payment partner is temporarily unavailable/i);
+  });
+
   it("ignores generic conflict server message", () => {
     const msg = checkoutErrorToUserMessage({
       code: "CONFLICT",

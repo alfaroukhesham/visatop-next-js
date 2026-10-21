@@ -249,6 +249,8 @@
     "paymentConfirmed": "Payment Confirmed",
     "paymentConfirmedDetail": "We're confirming your payment and starting processing.",
     "payAndSubmit": "Pay & Submit Application",
+    "payInNaira": "Pay in Naira",
+    "payInNairaHint": "Nigerian applications with a Naira price pay through Fincra (card or bank transfer).",
     "preparingCheckout": "Preparing Secure Checkout...",
     "previous": "Previous",
     "orderTitle": "Your order",

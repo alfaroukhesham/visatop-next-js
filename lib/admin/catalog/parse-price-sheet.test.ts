@@ -80,6 +80,16 @@ describe("parseMoneyCell", () => {
     expect(r).toEqual({ kind: "priced", currency: "USD", amountMinor: BigInt(15000) });
   });
 
+  it("NGN signal → priced NGN in kobo", () => {
+    const r = parseMoneyCell("NGN 185000");
+    expect(r).toEqual({ kind: "priced", currency: "NGN", amountMinor: BigInt(18_500_000) });
+    expect(parseMoneyCell("₦185000.00")).toEqual({
+      kind: "priced",
+      currency: "NGN",
+      amountMinor: BigInt(18_500_000),
+    });
+  });
+
   it("AED signal → priced AED", () => {
     const r = parseMoneyCell("AED 550");
     expect(r).toEqual({ kind: "priced", currency: "AED", amountMinor: BigInt(55000) });
@@ -124,6 +134,12 @@ describe("parseCurrencySignal", () => {
     expect(parseCurrencySignal("AED 100")).toBe("AED");
     expect(parseCurrencySignal("100 DH")).toBe("AED");
     expect(parseCurrencySignal("100 dirhams")).toBe("AED");
+  });
+
+  it("detects NGN variants", () => {
+    expect(parseCurrencySignal("NGN 185000")).toBe("NGN");
+    expect(parseCurrencySignal("₦185000")).toBe("NGN");
+    expect(parseCurrencySignal("185000 naira")).toBe("NGN");
   });
 
   it("returns null for no signal", () => {

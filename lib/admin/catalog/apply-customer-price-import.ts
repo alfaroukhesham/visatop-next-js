@@ -430,7 +430,7 @@ export async function previewPriceSheetImport(
   // Track per (nationality, service) which currencies are present in the sheet.
   const seenPairCurrencies = new Map<
     string,
-    { serviceName: string; currencies: Set<"USD" | "AED"> }
+    { serviceName: string; currencies: Set<"USD" | "AED" | "NGN"> }
   >();
   function pairKey(nat: string, svcName: string) {
     return natServiceNormKey(nat, svcName.toLowerCase());
@@ -458,7 +458,7 @@ export async function previewPriceSheetImport(
           const k = pairKey(natCode, svcName);
           const existing = seenPairCurrencies.get(k) ?? {
             serviceName: svcName,
-            currencies: new Set<"USD" | "AED">(),
+            currencies: new Set<"USD" | "AED" | "NGN">(),
           };
           existing.currencies.add(parsed.currency);
           existing.serviceName = svcName;
@@ -479,11 +479,13 @@ export async function previewPriceSheetImport(
     }
   }
 
-  // Build auto-fix preview: any pair with exactly one currency in sheet will need FX.
+  // Build auto-fix preview: USD/AED pairs with exactly one of those currencies need FX.
+  // NGN is stored as-is and never FX-derived.
   for (const [key, entry] of seenPairCurrencies) {
-    if (entry.currencies.size !== 1) continue;
+    const usdAed = [...entry.currencies].filter((c): c is "USD" | "AED" => c === "USD" || c === "AED");
+    if (usdAed.length !== 1) continue;
     const { natCode } = splitNatServiceNormKey(key);
-    const [existingCurrency] = [...entry.currencies.values()];
+    const existingCurrency = usdAed[0]!;
     const derivedCurrency: "USD" | "AED" = existingCurrency === "USD" ? "AED" : "USD";
     autoFixPreview.push({
       nationalityCode: natCode,
@@ -621,14 +623,14 @@ export async function applyPriceSheetImport(
 
   const seenPair = new Map<
     string,
-    { usdMinor?: bigint; aedMinor?: bigint }
+    { usdMinor?: bigint; aedMinor?: bigint; ngnMinor?: bigint }
   >();
 
   type UpsertPlan = {
     nationalityCode: string;
     serviceNorm: string;
     serviceName: string;
-    currency: "USD" | "AED";
+    currency: "USD" | "AED" | "NGN";
     amountMinor: bigint;
     source: string;
   };
@@ -678,8 +680,10 @@ export async function applyPriceSheetImport(
         const existing = seenPair.get(pairK) ?? {};
         if (parsed.currency === "USD") {
           existing.usdMinor = parsed.amountMinor;
-        } else {
+        } else if (parsed.currency === "AED") {
           existing.aedMinor = parsed.amountMinor;
+        } else {
+          existing.ngnMinor = parsed.amountMinor;
         }
         seenPair.set(pairK, existing);
         toUpsert.push({
@@ -844,7 +848,7 @@ export async function applyPriceSheetImport(
       nationalityCode: string;
       serviceId: string;
       serviceName: string;
-      currency: "USD" | "AED";
+      currency: "USD" | "AED" | "NGN";
       amountMinor: bigint;
       source: string;
     }
@@ -1089,7 +1093,7 @@ export async function listPendingPriceImportPage(
 type CatalogPriceUpsertRow = {
   nationalityCode: string;
   serviceId: string;
-  currency: "USD" | "AED";
+  currency: "USD" | "AED" | "NGN";
   amountMinor: bigint;
   source: string;
 };
@@ -1104,7 +1108,7 @@ function dedupeCatalogPriceUpserts(rows: CatalogPriceUpsertRow[]): CatalogPriceU
 }
 
 export type AssignPendingCurrencyInput = {
-  currency: "USD" | "AED";
+  currency: "USD" | "AED" | "NGN";
   pendingIds?: string[]; // if empty, assigns to all rows of batchId
   batchId?: string;
 };
@@ -1164,7 +1168,7 @@ export async function assignPendingCurrency(
   }
 
   const promoted = pendingRows.length;
-  const fxRate = readFxRateString();
+  const fxRate = currency === "NGN" ? null : readFxRateString();
 
   const primarySource = "admin_import";
   const primaryRows: CatalogPriceUpsertRow[] = pendingRows.map((p) => ({
@@ -1175,22 +1179,25 @@ export async function assignPendingCurrency(
     source: primarySource,
   }));
 
-  const siblingCurrency: "USD" | "AED" = currency === "USD" ? "AED" : "USD";
-  const siblingSource =
-    currency === "USD" ? "fx_derived_aed_from_usd" : "fx_derived_usd_from_aed";
-  const siblingRows: CatalogPriceUpsertRow[] = pendingRows.map((p) => {
-    const siblingAmountMinor =
-      currency === "USD"
-        ? fxUsdToAed(p.amountMinor, fxRate)
-        : fxAedToUsd(p.amountMinor, fxRate);
-    return {
-      nationalityCode: p.nationalityCode,
-      serviceId: p.serviceId,
-      currency: siblingCurrency,
-      amountMinor: siblingAmountMinor,
-      source: siblingSource,
-    };
-  });
+  const siblingRows: CatalogPriceUpsertRow[] =
+    currency === "NGN"
+      ? []
+      : pendingRows.map((p) => {
+          const siblingCurrency: "USD" | "AED" = currency === "USD" ? "AED" : "USD";
+          const siblingSource =
+            currency === "USD" ? "fx_derived_aed_from_usd" : "fx_derived_usd_from_aed";
+          const siblingAmountMinor =
+            currency === "USD"
+              ? fxUsdToAed(p.amountMinor, fxRate!)
+              : fxAedToUsd(p.amountMinor, fxRate!);
+          return {
+            nationalityCode: p.nationalityCode,
+            serviceId: p.serviceId,
+            currency: siblingCurrency,
+            amountMinor: siblingAmountMinor,
+            source: siblingSource,
+          };
+        });
 
   const primaryUnique = dedupeCatalogPriceUpserts(primaryRows);
   const siblingUnique = dedupeCatalogPriceUpserts(siblingRows);
@@ -1283,14 +1290,17 @@ export async function assignPendingCurrency(
       : [];
   const serviceIdToName = new Map(svcRows.map((s) => [s.id, s.name]));
 
-  const autoFix: AutoFix[] = samplePending.map((p) => ({
-    nationalityCode: p.nationalityCode,
-    serviceId: p.serviceId,
-    serviceName: serviceIdToName.get(p.serviceId) ?? p.serviceId,
-    fixedCurrency: siblingCurrency,
-    derivedFrom: currency,
-    fxRate,
-  }));
+  const autoFix: AutoFix[] =
+    currency === "NGN"
+      ? []
+      : samplePending.map((p) => ({
+          nationalityCode: p.nationalityCode,
+          serviceId: p.serviceId,
+          serviceName: serviceIdToName.get(p.serviceId) ?? p.serviceId,
+          fixedCurrency: (currency === "USD" ? "AED" : "USD") as "USD" | "AED",
+          derivedFrom: currency as "USD" | "AED",
+          fxRate: fxRate ?? "",
+        }));
 
   const autoFixTruncated = promoted > ASSIGN_PENDING_AUTOFIX_RESPONSE_CAP;
 

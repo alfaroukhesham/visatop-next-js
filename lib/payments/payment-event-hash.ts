@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 
-export type PaymentEventHashProvider = "paddle" | "ziina";
+export type PaymentEventHashProvider = "paddle" | "ziina" | "fincra";
 
 /**
  * Dedupe key for `payment_event.payload_hash` (spec §5.3).
@@ -29,3 +29,22 @@ export function computeZiinaReconcileProbePayloadHash(paymentId: string, slot: s
   const input = `ziina-reconcile-probe\n${paymentId}\n${slot}`;
   return crypto.createHash("sha256").update(input, "utf8").digest("hex");
 }
+
+export const computeFincraReconcilePayloadHash = (
+  paymentId: string,
+  source: string,
+  verifyStatus: string,
+): string => {
+  const input = `fincra-reconcile\n${paymentId}\n${source}\n${verifyStatus}`;
+  return crypto.createHash("sha256").update(input, "utf8").digest("hex");
+};
+
+export const computeFincraReconcileProbePayloadHash = (paymentId: string, slot: string): string => {
+  const input = `fincra-reconcile-probe\n${paymentId}\n${slot}`;
+  return crypto.createHash("sha256").update(input, "utf8").digest("hex");
+};
+
+export const computeFincraUnderpayPayloadHash = (paymentId: string, receivedMinor: string): string => {
+  const input = `fincra-underpay\n${paymentId}\n${receivedMinor}`;
+  return crypto.createHash("sha256").update(input, "utf8").digest("hex");
+};

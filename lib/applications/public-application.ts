@@ -11,6 +11,11 @@ export type TApplicationCharge = {
   currency: string;
 };
 
+export type TCheckoutOffer = {
+  provider: "fincra" | "paddle" | "ziina";
+  currency: string;
+};
+
 /**
  * Shape returned from public application endpoints. Fields surfaced here are
  * safe to render in the apply UI: lifecycle, applicant profile, passport
@@ -22,6 +27,7 @@ export function toPublicApplication(
   row: ApplicationRow,
   charge?: TApplicationCharge | null,
   t?: (key: string) => string,
+  checkoutOffer?: TCheckoutOffer | null,
 ) {
   const clientTracking = computeClientApplicationTracking(
     {
@@ -50,6 +56,7 @@ export function toPublicApplication(
     adminAttentionRequired: row.adminAttentionRequired,
     chargedAmountMajor: charge ? minorUnitsToMajor(charge.amountMinor) : null,
     chargedCurrency: charge?.currency?.trim().toUpperCase() || null,
+    checkoutOffer: checkoutOffer ?? null,
 
     applicant: {
       fullName: row.fullName,

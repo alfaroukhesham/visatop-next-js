@@ -13,7 +13,7 @@ import { applyPreviousHref, type TApplyWizardMember } from "@/lib/apply/apply-wi
 import { computeValidation, type Readiness } from "@/lib/documents/validation-readiness";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
-import type { TZiinaCheckoutSession } from "@/lib/payments/checkout-types";
+import type { TResumeCheckoutSession } from "@/lib/payments/checkout-types";
 
 interface IApplicationPaymentPanelProps {
   applicationId: string;
@@ -69,7 +69,7 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
 
     let cancelled = false;
     const run = async () => {
-      const res = await fetchApiEnvelope<TZiinaCheckoutSession>(
+      const res = await fetchApiEnvelope<TResumeCheckoutSession>(
         apiHref(`/applications/${encodeURIComponent(applicationId)}/checkout-session`),
       );
       if (cancelled) return;
@@ -78,6 +78,10 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
         return;
       }
       const data = res.data;
+      if (data.kind === "fincra_redirect") {
+        window.location.assign(data.redirectUrl);
+        return;
+      }
       if (data.kind === "open") {
         setShowPaddleRetry(false);
         setEmbeddedUrl(data.embeddedUrl);
@@ -231,6 +235,9 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
         }}
         checkout={{
           onZiinaEmbedded,
+          onFincraRedirect: (url) => {
+            window.location.assign(url);
+          },
           onZiinaCompleted,
           onZiinaFailed,
           onZiinaCanceled,

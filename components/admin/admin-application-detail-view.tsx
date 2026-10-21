@@ -46,6 +46,8 @@ type PaymentRow = {
   status: string;
   amount: bigint;
   currency: string;
+  amountReceivedMinor?: bigint | null;
+  varianceType?: string | null;
   providerTransactionId: string | null;
   createdAt: Date;
 };
@@ -185,6 +187,7 @@ export function AdminApplicationDetailView({
                     <th className="px-4 py-2 text-xs font-bold uppercase text-muted-foreground">Provider</th>
                     <th className="px-4 py-2 text-xs font-bold uppercase text-muted-foreground">Status</th>
                     <th className="px-4 py-2 text-xs font-bold uppercase text-muted-foreground">Amount</th>
+                    <th className="px-4 py-2 text-xs font-bold uppercase text-muted-foreground">Received</th>
                     <th className="px-4 py-2 text-xs font-bold uppercase text-muted-foreground">Transaction ID</th>
                     <th className="px-4 py-2 text-xs font-bold uppercase text-muted-foreground">Date</th>
                   </tr>
@@ -198,9 +201,17 @@ export function AdminApplicationDetailView({
                       </td>
                       <td className="px-4 py-2 font-mono tabular-nums">
                         {formatMinorUnitsAmount(p.amount, p.currency)}
+                        {p.varianceType ? (
+                          <span className="ml-2 text-xs text-muted-foreground">{p.varianceType}</span>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-2 font-mono tabular-nums">
+                        {p.amountReceivedMinor != null
+                          ? formatMinorUnitsAmount(p.amountReceivedMinor, p.currency)
+                          : "—"}
                       </td>
                       <td className="px-4 py-2 font-mono text-xs text-muted-foreground truncate max-w-[200px]">
-                        {p.providerTransactionId ?? ", "}
+                        {p.providerTransactionId ?? "—"}
                       </td>
                       <td className="px-4 py-2 text-xs text-muted-foreground">
                         {p.createdAt.toLocaleString()}
@@ -214,7 +225,10 @@ export function AdminApplicationDetailView({
 
           {app.paymentStatus === "paid" && (
             <div className="border-t border-border pt-4">
-              <ApplicationRefundForm applicationId={app.id} />
+              <ApplicationRefundForm
+                applicationId={app.id}
+                paymentProvider={payments[0]?.provider ?? null}
+              />
             </div>
           )}
         </div>

@@ -20,6 +20,7 @@ import {
   readFxRateString,
   type FxLeg,
 } from "./fx-usd-aed";
+import type { TCatalogCurrency, TUsdAedCurrency } from "./catalog-currency";
 
 type SchemaDb = DbTransaction;
 
@@ -30,14 +31,14 @@ export type CustomerCatalogPriceRow = {
 };
 
 /**
- * Load both stored currency rows for a (nationality, service) pair.
- * Returns a map: { USD?: row, AED?: row }
+ * Load stored currency rows for a (nationality, service) pair.
+ * Returns a map: { USD?: row, AED?: row, NGN?: row }
  */
 async function loadStoredPrices(
   tx: SchemaDb,
   nationalityCode: string,
   serviceId: string,
-): Promise<{ USD?: CustomerCatalogPriceRow; AED?: CustomerCatalogPriceRow }> {
+): Promise<{ USD?: CustomerCatalogPriceRow; AED?: CustomerCatalogPriceRow; NGN?: CustomerCatalogPriceRow }> {
   const rows = await tx
     .select({
       currency: schema.catalogCustomerPrice.currency,
@@ -52,9 +53,9 @@ async function loadStoredPrices(
       ),
     );
 
-  const result: { USD?: CustomerCatalogPriceRow; AED?: CustomerCatalogPriceRow } = {};
+  const result: { USD?: CustomerCatalogPriceRow; AED?: CustomerCatalogPriceRow; NGN?: CustomerCatalogPriceRow } = {};
   for (const r of rows) {
-    if (r.currency === "USD" || r.currency === "AED") {
+    if (r.currency === "USD" || r.currency === "AED" || r.currency === "NGN") {
       if (!Number.isInteger(r.amountMinor)) {
         throw new Error(`catalog_customer_price.amount_minor must be an integer (got ${r.amountMinor})`);
       }
@@ -71,7 +72,7 @@ async function loadStoredPrices(
 export type CheckoutTotal = {
   /** Amount in minor units for the requested currency. */
   displayMinor: bigint;
-  currency: "USD" | "AED";
+  currency: TCatalogCurrency;
   /**
    * FX rate snapshot if this amount was derived via conversion at resolve time.
    * null if the amount came directly from a stored row.
@@ -101,13 +102,27 @@ export async function resolveCheckoutTotal(
   params: {
     nationalityCode: string;
     serviceId: string;
-    catalogCurrency: "USD" | "AED";
+    catalogCurrency: TCatalogCurrency;
   },
 ): Promise<CheckoutTotal | null> {
   const { nationalityCode, serviceId, catalogCurrency } = params;
   const stored = await loadStoredPrices(tx, nationalityCode, serviceId);
 
-  // Neither currency stored → not offered
+  // NGN is stored-only: never derive from USD/AED (and never derive USD/AED from NGN).
+  if (catalogCurrency === "NGN") {
+    const row = stored.NGN;
+    if (!row) return null;
+    return {
+      displayMinor: row.amountMinor,
+      currency: "NGN",
+      fxRateUsed: null,
+      fxLeg: null,
+      source: row.source,
+      wasFxDerived: false,
+    };
+  }
+
+  // Neither USD/AED stored → not offered (NGN-only routes still need a USD/AED book for default checkout)
   if (!stored.USD && !stored.AED) return null;
 
   // Direct row exists for requested currency
@@ -165,11 +180,11 @@ export async function batchCustomerPricesForServices(
   nationalityCode: string,
   serviceIds: string[],
 ): Promise<
-  Map<string, { USD?: CustomerCatalogPriceRow; AED?: CustomerCatalogPriceRow }>
+  Map<string, { USD?: CustomerCatalogPriceRow; AED?: CustomerCatalogPriceRow; NGN?: CustomerCatalogPriceRow }>
 > {
   const map = new Map<
     string,
-    { USD?: CustomerCatalogPriceRow; AED?: CustomerCatalogPriceRow }
+    { USD?: CustomerCatalogPriceRow; AED?: CustomerCatalogPriceRow; NGN?: CustomerCatalogPriceRow }
   >();
 
   if (!serviceIds.length) return map;
@@ -191,7 +206,7 @@ export async function batchCustomerPricesForServices(
 
   for (const r of rows) {
     const existing = map.get(r.serviceId) ?? {};
-    if (r.currency === "USD" || r.currency === "AED") {
+    if (r.currency === "USD" || r.currency === "AED" || r.currency === "NGN") {
       if (!Number.isInteger(r.amountMinor)) {
         throw new Error(`catalog_customer_price.amount_minor must be an integer (got ${r.amountMinor})`);
       }
@@ -212,10 +227,10 @@ export async function batchCustomerPricesForServices(
  * Pure function (no DB call — takes pre-loaded price map entry).
  */
 export function resolveDisplayPrice(
-  priceEntry: { USD?: CustomerCatalogPriceRow; AED?: CustomerCatalogPriceRow } | undefined,
-  catalogCurrency: "USD" | "AED",
+  priceEntry: { USD?: CustomerCatalogPriceRow; AED?: CustomerCatalogPriceRow; NGN?: CustomerCatalogPriceRow } | undefined,
+  catalogCurrency: TUsdAedCurrency,
   fxRate: string | null,
-): { displayMinor: bigint; currency: "USD" | "AED"; wasFxDerived: boolean } | null {
+): { displayMinor: bigint; currency: TUsdAedCurrency; wasFxDerived: boolean } | null {
   if (!priceEntry) return null;
   if (!priceEntry.USD && !priceEntry.AED) return null;
 

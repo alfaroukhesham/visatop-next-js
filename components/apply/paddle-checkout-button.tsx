@@ -18,6 +18,7 @@ import { checkoutErrorToUserMessage } from "@/lib/payments/checkout-client-messa
 interface IPaddleCheckoutButtonProps {
   applicationId: string;
   disabled?: boolean;
+  payLabel?: string;
   /** Must be true to POST /api/checkout. Unticked clicks must not start payment. */
   termsAccepted?: boolean;
   /** Called when the user tries to pay without accepting Terms (inline error). */
@@ -25,6 +26,7 @@ interface IPaddleCheckoutButtonProps {
   onSuccess?: () => void;
   /** Called with Ziina `embedded_url` so checkout stays on the payment step. */
   onZiinaEmbedded?: (embeddedUrl: string) => void;
+  onFincraRedirect?: (redirectUrl: string) => void;
   /** Runs whenever the Paddle overlay closes (success, cancel, or dismiss). Use to refetch server payment state. */
   onOverlayClosed?: () => void;
   onCancel?: () => void;
@@ -37,7 +39,9 @@ export function PaddleCheckoutButton({
   termsAccepted = false,
   onTermsRejected,
   onSuccess,
+  payLabel,
   onZiinaEmbedded,
+  onFincraRedirect,
   onOverlayClosed,
   onCancel,
   onError,
@@ -87,6 +91,7 @@ export function PaddleCheckoutButton({
         data?:
           | { provider: "paddle"; transactionId: string; clientToken: string }
           | { provider: "ziina"; embeddedUrl: string }
+          | { provider: "fincra"; redirectUrl: string }
           | { transactionId?: string; clientToken?: string };
         error?: { code?: string; message?: string; details?: { reason?: string } };
       };
@@ -109,6 +114,26 @@ export function PaddleCheckoutButton({
       }
 
       const data = envelope.data;
+      if ("provider" in data && data.provider === "fincra") {
+        if (!("redirectUrl" in data) || !data.redirectUrl) {
+          throw new Error(checkoutErrorToUserMessage(envelope.error, t));
+        }
+        trackEventOnce(
+          APPLY_FUNNEL_EVENTS.paymentStarted,
+          {
+            application_id: applicationId,
+            payment_provider: "fincra",
+          },
+          `${APPLY_FUNNEL_EVENTS.paymentStarted}:${applicationId}:fincra`,
+        );
+        if (onFincraRedirect) {
+          onFincraRedirect(data.redirectUrl);
+        } else {
+          window.location.assign(data.redirectUrl);
+        }
+        return;
+      }
+
       if ("provider" in data && data.provider === "ziina") {
         if (!("embeddedUrl" in data) || !data.embeddedUrl) {
           throw new Error(checkoutErrorToUserMessage(envelope.error, t));
@@ -224,7 +249,7 @@ export function PaddleCheckoutButton({
           {t("payment.preparingCheckout")}
         </>
       ) : (
-        t("payment.payAndSubmit")
+        payLabel ?? t("payment.payAndSubmit")
       )}
     </ClientButton>
   );
