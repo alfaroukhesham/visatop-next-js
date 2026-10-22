@@ -20,6 +20,11 @@ import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { convertMinorBetweenUsdAed, parsePublicDisplayFxAedPerUsd } from "@/lib/catalog/display-price";
+import {
+  pickDefaultCatalogCurrency,
+  type TVisibleCatalogCurrency,
+} from "@/lib/catalog/local-currency";
+import { isUsdAedCurrency } from "@/lib/pricing/catalog-currency";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
@@ -40,7 +45,7 @@ import { cn } from "@/lib/utils";
 type Nationality = { code: string; name: string };
 type Service = IService;
 
-type DisplayCurrency = "USD" | "AED";
+type DisplayCurrency = string;
 
 const formatDisplayMinor = (minor: string | null, currency: string | null): string | null => {
   if (minor === null || currency === null) return null;
@@ -71,6 +76,7 @@ const formatPriceForDisplay = (
     const text = formatDisplayMinor(minorStr, cur);
     return text ? { text, isEstimate: false } : null;
   }
+  if (!isUsdAedCurrency(cur) || !isUsdAedCurrency(tab)) return null;
   const fx = parsePublicDisplayFxAedPerUsd();
   if (!fx) return null;
   const converted = convertMinorBetweenUsdAed(minor, cur, tab, fx);
@@ -87,6 +93,7 @@ const toDisplayMinor = (s: Service, tab: DisplayCurrency): number | null => {
   if (!Number.isFinite(n)) return null;
   const minor = BigInt(Math.trunc(n));
   if (cur === tab) return Number(minor);
+  if (!isUsdAedCurrency(cur) || !isUsdAedCurrency(tab)) return null;
   const fx = parsePublicDisplayFxAedPerUsd();
   if (!fx) return null;
   const converted = convertMinorBetweenUsdAed(minor, cur, tab, fx);
@@ -189,7 +196,7 @@ const bootChooserForm = (nationalityCode: string) => {
   const code = nationalityCode.trim().toUpperCase();
   return {
     nationality: code.length === 2 ? code : "",
-    displayCurrency: restored?.displayCurrency ?? ("USD" as DisplayCurrency),
+    displayCurrency: restored?.displayCurrency ?? null,
     serviceId: restored?.serviceId ?? "",
     email: restored?.email ?? "",
     answers: restored
@@ -231,7 +238,10 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   const [services, setServices] = useState<Service[]>([]);
   const [serviceId, setServiceId] = useState(boot.serviceId);
   const [email, setEmail] = useState(boot.email);
-  const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>(boot.displayCurrency);
+  const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>(boot.displayCurrency ?? "");
+  const [visibleCurrencies, setVisibleCurrencies] = useState<TVisibleCatalogCurrency[]>([]);
+  const localPricedServiceIdsRef = useRef<string[]>([]);
+  const currencyTouchedRef = useRef(false);
   const [loadingList, setLoadingList] = useState(true);
   const [loadingServices, setLoadingServices] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -341,17 +351,35 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
         const hadServices = servicesRef.current.length > 0;
         if (!hadServices) setLoadingServices(true);
         try {
-          const res = await fetchApiEnvelope<{ services: Service[] }>(
-            apiHref(
-              `/catalog/services?nationality=${encodeURIComponent(nationality)}&currency=${encodeURIComponent(displayCurrency)}`,
-            ),
-          );
+          const fetchServices = (currency: string) =>
+            fetchApiEnvelope<{
+              services: Service[];
+              currency: string;
+              currencies: TVisibleCatalogCurrency[];
+              localPricedServiceIds: string[];
+            }>(
+              apiHref(
+                `/catalog/services?nationality=${encodeURIComponent(nationality)}${
+                  currency ? `&currency=${encodeURIComponent(currency)}` : ""
+                }`,
+              ),
+            );
+          let res = await fetchServices(displayCurrency);
+          if (!res.ok && displayCurrency) {
+            currencyTouchedRef.current = false;
+            res = await fetchServices("");
+          }
           if (cancelled) return;
           if (!res.ok) {
             setError(res.error.message);
             setServices([]);
           } else {
             setServices(res.data.services);
+            setVisibleCurrencies(res.data.currencies ?? []);
+            localPricedServiceIdsRef.current = res.data.localPricedServiceIds ?? [];
+            if (!currencyTouchedRef.current && res.data.currency) {
+              setDisplayCurrency(res.data.currency);
+            }
             setError(null);
           }
         } finally {
@@ -624,20 +652,23 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <ChooserCardHeader nationalityName={nationalityName} />
             <div className="flex items-center gap-1 sm:pt-1" role="group" aria-label={t("start.showPricesIn")}>
-              {(["USD", "AED"] as const).map((c) => {
-                const active = displayCurrency === c;
+              {visibleCurrencies.map((c) => {
+                const active = displayCurrency === c.code;
                 return (
                   <button
-                    key={c}
+                    key={c.code}
                     type="button"
-                    onClick={() => setDisplayCurrency(c)}
+                    onClick={() => {
+                      currencyTouchedRef.current = true;
+                      setDisplayCurrency(c.code);
+                    }}
                     className={cn(
                       "rounded-xl border-2 px-3 py-1.5 text-xs font-bold uppercase tracking-widest",
                       active ? "border-secondary bg-secondary text-white"
                         : "border-border bg-card text-foreground hover:border-secondary",
                     )}
                   >
-                    {c}
+                    {c.code}
                   </button>
                 );
               })}
@@ -651,7 +682,16 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
               services={services}
               formatPrice={(s) => formatPriceForDisplay(s, displayCurrency)}
               selectedServiceId={serviceId}
-              onSelectService={setServiceId}
+              onSelectService={(id) => {
+                setServiceId(id);
+                if (currencyTouchedRef.current) return;
+                const next = pickDefaultCatalogCurrency({
+                  visible: visibleCurrencies,
+                  localPricedServiceIds: localPricedServiceIdsRef.current,
+                  selectedServiceId: id,
+                });
+                if (next && next !== displayCurrency) setDisplayCurrency(next);
+              }}
               partyEnabled={partyEnabled}
               canAddTraveler={canAddTraveler(additionalTravelers.length + 1, partyMaxTravelers)}
               onAddTraveler={addTraveler}

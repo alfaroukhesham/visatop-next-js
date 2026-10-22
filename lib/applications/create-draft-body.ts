@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { zIso4217Alpha3 } from "@/lib/validation/currency";
 
 const travelerSchema = z.object({
   serviceId: z.string().min(1),
@@ -16,8 +17,8 @@ export const createDraftBodySchema = z
     travelers: z.array(travelerSchema).min(1).optional(),
     /** Contact email — required at step 2 on the client; optional for signed-in API creates (account email used). */
     guestEmail: z.email().max(320).optional(),
-    /** Price book for checkout (must match seeded reference + margin currency). */
-    catalogCurrency: z.enum(["USD", "AED"]).default("USD"),
+    /** Price book for checkout. Server validates visibility + stored local prices. */
+    catalogCurrency: zIso4217Alpha3.default("USD"),
   })
   .refine((b) => Boolean(b.travelers?.length || b.serviceId), {
     message: "Choose a service.",
@@ -32,9 +33,9 @@ export type CreateDraftTraveler = { serviceId: string; kind: "adult" | "child" }
  * but `serviceId` is present, fall back to a single adult traveler. The first
  * traveler is the primary applicant.
  */
-export function normalizeCreateDraftBody(
+export const normalizeCreateDraftBody = (
   body: CreateDraftBody,
-): { travelers: CreateDraftTraveler[] } {
+): { travelers: CreateDraftTraveler[] } => {
   const travelers = body.travelers?.length
     ? body.travelers
     : body.serviceId

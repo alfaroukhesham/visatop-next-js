@@ -13,13 +13,24 @@ describe("resolveDisplayPrice", () => {
     expect(r!.wasFxDerived).toBe(false);
   });
 
-  it("returns a stored NGN row without FX", () => {
+  it("returns a stored local currency row without FX", () => {
     const row = {
-      NGN: { currency: "NGN" as const, amountMinor: BigInt(18_500_000), source: "admin_import" },
-      USD: { currency: "USD" as const, amountMinor: BigInt(19900), source: "admin_import" },
+      NGN: { currency: "NGN", amountMinor: BigInt(18_500_000), source: "admin_import" },
+      USD: { currency: "USD", amountMinor: BigInt(19900), source: "admin_import" },
     };
-    // resolveDisplayPrice is USD/AED only; NGN checkout uses resolveCheckoutTotal.
-    expect(row.NGN.amountMinor).toBe(BigInt(18_500_000));
+    const r = resolveDisplayPrice(row, "NGN", "3.67");
+    expect(r).toEqual({
+      displayMinor: BigInt(18_500_000),
+      currency: "NGN",
+      wasFxDerived: false,
+    });
+  });
+
+  it("does not FX-derive a missing local currency from USD", () => {
+    const row = {
+      USD: { currency: "USD", amountMinor: BigInt(19900), source: "admin_import" },
+    };
+    expect(resolveDisplayPrice(row, "KES", "3.67")).toBeNull();
   });
 
   it("resolveCheckoutTotal uses stored NGN and never FX-derives it", async () => {

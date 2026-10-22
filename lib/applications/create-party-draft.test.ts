@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertCreateTravelers } from "./create-party-draft";
+import { assertCreateTravelers, assertDraftCatalogCurrency } from "./create-party-draft";
 import { normalizeCreateDraftBody } from "./create-draft-body";
 
 const catalog = [
@@ -76,5 +76,50 @@ describe("assertCreateTravelers", () => {
     expect(
       assertCreateTravelers([{ serviceId: "svc-missing", kind: "adult" }], config, catalog),
     ).toEqual({ ok: false, message: "Invalid nationality or service." });
+  });
+});
+
+describe("assertDraftCatalogCurrency", () => {
+  const visible = [
+    { code: "USD", kind: "global" as const },
+    { code: "AED", kind: "global" as const },
+    { code: "NGN", kind: "local" as const },
+  ];
+  const priced = [{ id: "svc-adult", displayPriceMinor: "18500000" }];
+  const travelers = [{ serviceId: "svc-adult", kind: "adult" as const }];
+
+  it("allows NGN when the nationality can see it and a stored price exists", () => {
+    expect(assertDraftCatalogCurrency("NGN", visible, priced, travelers)).toEqual({ ok: true });
+  });
+
+  it("rejects NGN when the service has no stored local price", () => {
+    expect(
+      assertDraftCatalogCurrency(
+        "NGN",
+        visible,
+        [{ id: "svc-adult", displayPriceMinor: null }],
+        travelers,
+      ),
+    ).toEqual({
+      ok: false,
+      message: "Pricing unavailable for this nationality/service/currency combination.",
+    });
+  });
+
+  it("rejects NGN when it is not visible for the nationality", () => {
+    expect(
+      assertDraftCatalogCurrency(
+        "NGN",
+        [
+          { code: "USD", kind: "global" },
+          { code: "AED", kind: "global" },
+        ],
+        priced,
+        travelers,
+      ),
+    ).toEqual({
+      ok: false,
+      message: "This currency is not available for the selected nationality.",
+    });
   });
 });

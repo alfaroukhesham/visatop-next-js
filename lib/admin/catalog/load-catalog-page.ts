@@ -1,7 +1,12 @@
 import { desc } from "drizzle-orm";
 import { withAdminDbActor } from "@/lib/db/actor-context";
 import * as schema from "@/lib/db/schema";
-import type { CatalogNationality, CatalogService } from "@/lib/admin/catalog/catalog-types";
+import type {
+  CatalogLocalCurrency,
+  CatalogNationality,
+  CatalogService,
+} from "@/lib/admin/catalog/catalog-types";
+import { listAdminLocalCurrencies } from "@/lib/admin/catalog/local-currency-admin";
 
 export type CatalogPageView =
   | { kind: "forbidden" }
@@ -9,6 +14,7 @@ export type CatalogPageView =
       kind: "ok";
       nationalities: CatalogNationality[];
       services: CatalogService[];
+      localCurrencies: CatalogLocalCurrency[];
       canWrite: boolean;
     };
 
@@ -21,7 +27,7 @@ export async function loadCatalogPage(adminUserId: string): Promise<CatalogPageV
     const canWrite =
       permissions.includes("catalog.write") && permissions.includes("audit.write");
 
-    const [nationalities, services] = await Promise.all([
+    const [nationalities, services, localCurrencies] = await Promise.all([
       tx
         .select({
           code: schema.nationality.code,
@@ -45,8 +51,15 @@ export async function loadCatalogPage(adminUserId: string): Promise<CatalogPageV
         })
         .from(schema.visaService)
         .orderBy(desc(schema.visaService.createdAt)),
+      listAdminLocalCurrencies(tx),
     ]);
 
-    return { kind: "ok", nationalities, services: services as CatalogService[], canWrite };
+    return {
+      kind: "ok",
+      nationalities,
+      services: services as CatalogService[],
+      localCurrencies,
+      canWrite,
+    };
   });
 }

@@ -18,10 +18,7 @@ import {
 } from "@/lib/payments/resolve-payment-provider";
 import { createZiinaPaymentIntent, ZiinaProviderError } from "@/lib/payments/ziina-client";
 import { isTrustedZiinaEmbeddedUrl } from "@/lib/payments/ziina-embedded";
-import {
-  membersHaveStoredNgnPrices,
-  resolveCheckoutProviderDecision,
-} from "@/lib/payments/resolve-checkout-provider";
+import { resolveCheckoutOfferDecision } from "@/lib/payments/resolve-checkout-provider";
 import { createFincraCheckout, FincraProviderError } from "@/lib/payments/fincra-client";
 import { isTrustedFincraCheckoutUrl } from "@/lib/payments/fincra-embedded";
 import { fincraMinorToMajorNumber } from "@/lib/payments/fincra-amounts";
@@ -31,7 +28,6 @@ import {
   shouldSelfHealFincraOpenPayment,
 } from "@/lib/payments/fincra-checkout-lock";
 import { loadOpenFincraPayment } from "@/lib/payments/fincra-checkout-session";
-import { parseUsdAedCurrency } from "@/lib/pricing/catalog-currency";
 import type { CheckoutSessionData } from "@/lib/payments/checkout-types";
 import { diagnoseCheckoutBlock } from "@/lib/payments/diagnose-checkout-block";
 import { loadPaymentUploadPresence } from "@/lib/applications/load-payment-upload-presence";
@@ -185,16 +181,28 @@ export async function POST(req: Request) {
         );
       }
 
-      const displayCurrency = parseUsdAedCurrency(primary.catalogCurrency);
-      const hasStoredNgnPriceForEveryMember = await membersHaveStoredNgnPrices(tx, lockedRows);
-      const decision = resolveCheckoutProviderDecision({
+      const offer = await resolveCheckoutOfferDecision(tx, {
         nationalityCode: primary.nationalityCode,
-        hasStoredNgnPriceForEveryMember,
-        displayCurrency,
+        selectedCurrency: primary.catalogCurrency,
+        members: lockedRows,
         defaultProvider,
       });
-      const provider = decision.provider;
-      const catalogCurrency = decision.quoteCurrency;
+      if (!offer.ok) {
+        await tx.update(schema.application).set({ checkoutState: "none" }).where(inArray(schema.application.id, memberIds));
+        const message =
+          offer.reason === "missing_stored_price"
+            ? "Pricing unavailable for this nationality/service/currency combination"
+            : "This currency is not available for the selected nationality.";
+        return jsonError("VALIDATION_ERROR", message, {
+          status: 400,
+          requestId,
+          details: {
+            reason: offer.reason === "missing_stored_price" ? "pricing_unavailable" : "currency_not_allowed",
+          },
+        });
+      }
+      const provider = offer.decision.provider;
+      const catalogCurrency = offer.decision.quoteCurrency;
 
       if (provider === "fincra") {
         try {

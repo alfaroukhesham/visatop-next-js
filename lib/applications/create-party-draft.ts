@@ -6,6 +6,11 @@ import { listPublicServicesForNationality } from "@/lib/catalog/queries";
 import type { TTravelerKind } from "@/lib/catalog/guided-choice";
 import { computeDraftExpiresAt, getDraftTtlHoursFromTx } from "@/lib/applications/draft-ttl";
 import type { CreateDraftTraveler } from "@/lib/applications/create-draft-body";
+import { loadVisibleCatalogCurrencies } from "@/lib/catalog/load-visible-catalog-currencies";
+import {
+  assertSelectedCatalogCurrency,
+  type TVisibleCatalogCurrency,
+} from "@/lib/catalog/local-currency";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { serverFunnelEventId } from "@/lib/analytics/funnel-event-names";
 import { recordFunnelEvent } from "@/lib/analytics/record-funnel-event";
@@ -20,11 +25,11 @@ export type TCreateTravelersAssertion =
  * Validate the requested travelers against apply-config and the priced catalog
  * for this nationality. Pure — takes pre-loaded rows so tests need no DB.
  */
-export function assertCreateTravelers(
+export const assertCreateTravelers = (
   travelers: CreateDraftTraveler[],
   applyConfig: Pick<TApplyConfig, "partyEnabled" | "partyMaxTravelers">,
   catalogRows: TCatalogServiceRow[],
-): TCreateTravelersAssertion {
+): TCreateTravelersAssertion => {
   if (travelers.length < 1) return { ok: false, message: "Choose a service." };
   if (!applyConfig.partyEnabled && travelers.length > 1) {
     return { ok: false, message: "This checkout is for one traveller only." };
@@ -46,9 +51,32 @@ export function assertCreateTravelers(
   return { ok: true };
 }
 
+export const assertDraftCatalogCurrency = (
+  catalogCurrency: string,
+  visible: TVisibleCatalogCurrency[],
+  catalogRows: Array<{ id: string; displayPriceMinor: string | null }>,
+  travelers: CreateDraftTraveler[],
+): TCreateTravelersAssertion => {
+  const byId = new Map(catalogRows.map((r) => [r.id, r]));
+  const hasStoredPrice = travelers.every((t) => {
+    const row = byId.get(t.serviceId);
+    return Boolean(row?.displayPriceMinor);
+  });
+  const selected = assertSelectedCatalogCurrency({
+    selected: catalogCurrency,
+    visible,
+    hasStoredPrice,
+  });
+  if (selected.ok) return { ok: true };
+  if (selected.reason === "missing_stored_price") {
+    return { ok: false, message: "Pricing unavailable for this nationality/service/currency combination." };
+  }
+  return { ok: false, message: "This currency is not available for the selected nationality." };
+};
+
 export type TCreatePartyDraftParams = {
   nationalityCode: string;
-  catalogCurrency: "USD" | "AED";
+  catalogCurrency: string;
   guestEmail: string | null;
   travelers: CreateDraftTraveler[];
   userId: string | null;
@@ -68,23 +96,31 @@ export type TCreatePartyDraftResult = {
  * Create a draft party + its applications in one transaction. Must run inside
  * `withSystemDbActor` (application_party has no client INSERT policy).
  */
-export async function createPartyDraft(
+export const createPartyDraft = async (
   tx: DbTransaction,
   params: TCreatePartyDraftParams,
-): Promise<TCreatePartyDraftResult> {
+): Promise<TCreatePartyDraftResult> => {
   const now = new Date();
   const [applyConfig, ttlHours] = await Promise.all([
     getApplyConfigFromTx(tx),
     getDraftTtlHoursFromTx(tx),
   ]);
-  const catalogRows = await listPublicServicesForNationality(
-    tx,
-    params.nationalityCode,
-    params.catalogCurrency,
-  );
+  const [catalogRows, visible] = await Promise.all([
+    listPublicServicesForNationality(tx, params.nationalityCode, params.catalogCurrency),
+    loadVisibleCatalogCurrencies(tx, params.nationalityCode),
+  ]);
   const assertion = assertCreateTravelers(params.travelers, applyConfig, catalogRows);
   if (!assertion.ok) {
     throw new CreatePartyDraftValidationError(assertion.message);
+  }
+  const currencyAssertion = assertDraftCatalogCurrency(
+    params.catalogCurrency,
+    visible,
+    catalogRows,
+    params.travelers,
+  );
+  if (!currencyAssertion.ok) {
+    throw new CreatePartyDraftValidationError(currencyAssertion.message);
   }
 
   const draftExpiresAt = computeDraftExpiresAt(now, ttlHours);

@@ -82,13 +82,12 @@ export type PublicServiceRow = {
  *   "checkout uses the locked quote amount [from the sheet]."
  *   The catalog_customer_price IS the exact customer total.
  */
-export async function listPublicServicesForNationality(
+export const listPublicServicesForNationality = async (
   tx: SchemaDb,
   nationalityCode: string,
   catalogCurrency: string = "USD",
-): Promise<PublicServiceRow[]> {
-  const currency =
-    catalogCurrency.trim().toUpperCase() === "AED" ? "AED" : "USD";
+): Promise<PublicServiceRow[]> => {
+  const currency = catalogCurrency.trim().toUpperCase() || "USD";
 
   // Services offered to this nationality: those with ≥1 published price row
   const services = await tx

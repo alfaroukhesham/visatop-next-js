@@ -135,7 +135,7 @@ describe("POST /api/applications", () => {
           nationalityCode: "US",
           serviceId: "svc-1",
           guestEmail: "guest@example.com",
-          catalogCurrency: "EUR",
+          catalogCurrency: "EURO",
         }),
       }),
     );
