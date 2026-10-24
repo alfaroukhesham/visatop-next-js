@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FC } from "react";
+import { useEffect, useMemo, type FC } from "react";
 import { Camera, FileText, Landmark, ShieldCheck } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ClientButton } from "@/components/client/client-button";
@@ -30,6 +30,7 @@ import { ApplicantReview } from "./applicant-review";
 import { DocumentUploadSlot } from "./document-upload-slot";
 import type { DocType, ExtractResponse, PublicDocument, TUploadSlotError } from "./types";
 import type { TPhoneNationalityOption } from "./phone-country-field";
+import { ApplyOrderTotal } from "@/components/apply/apply-order-total";
 
 type TMemberView = {
   app: PublicApplication | null;
@@ -63,55 +64,6 @@ const iconForSlot = (key: string) => {
   if (key === "personal_photo") return Camera;
   if (key === "bank_statement_6m") return Landmark;
   return FileText;
-};
-
-const ApplyOrderTotal: FC<{
-  nationalityCode: string;
-  currency: string;
-  serviceIds: string[];
-}> = ({ nationalityCode, currency, serviceIds }) => {
-  const t = useCustomerT();
-  const [total, setTotal] = useState<string | null>(null);
-  const serviceKey = serviceIds.join("|");
-  useEffect(() => {
-    let cancelled = false;
-    const ids = serviceKey.split("|").filter(Boolean);
-    const run = async () => {
-      const tab = currency === "AED" ? "AED" : "USD";
-      const res = await fetchApiEnvelope<{
-        services: { id: string; displayPriceMinor: string | null; currency: string | null }[];
-      }>(
-        apiHref(
-          `/catalog/services?nationality=${encodeURIComponent(nationalityCode)}&currency=${encodeURIComponent(tab)}`,
-        ),
-      );
-      if (cancelled || !res.ok) return;
-      let sum = BigInt(0);
-      for (const id of ids) {
-        const service = res.data.services.find((row) => row.id === id);
-        if (!service?.displayPriceMinor) return;
-        const minor = Number(service.displayPriceMinor);
-        if (!Number.isFinite(minor)) return;
-        sum += BigInt(Math.trunc(minor));
-      }
-      if (cancelled) return;
-      try {
-        setTotal(new Intl.NumberFormat(undefined, { style: "currency", currency: tab }).format(Number(sum) / 100));
-      } catch {
-        setTotal(`${(Number(sum) / 100).toFixed(2)} ${tab}`);
-      }
-    };
-    void run();
-    return () => {
-      cancelled = true;
-    };
-  }, [currency, nationalityCode, serviceKey]);
-  if (!total) return null;
-  return (
-    <p className="text-muted-foreground text-center text-sm">
-      {t("wizard.orderTotal", { total })}
-    </p>
-  );
 };
 
 export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({

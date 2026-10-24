@@ -10,6 +10,8 @@ export type TFincraInlineCustomer = {
   phoneNumber?: string;
 };
 
+export const FINCRA_INLINE_PAYMENT_METHODS = ["card", "bank_transfer"] as const;
+
 export type TFincraInlineCheckoutData = {
   provider: "fincra";
   mode: "inline";
@@ -36,6 +38,7 @@ export type TFincraInitializeOptions = {
   reference: string;
   feeBearer: FincraFeeBearer;
   metadata: Record<string, string>;
+  paymentMethods: string[];
   onSuccess: (data: { reference?: string }) => void;
   onClose: () => void;
 };
@@ -84,9 +87,51 @@ export const toFincraInitializeOptions = (
   reference: data.reference,
   feeBearer: data.feeBearer,
   metadata: data.metadata,
+  paymentMethods: [...FINCRA_INLINE_PAYMENT_METHODS],
   onSuccess: hooks.onSuccess,
   onClose: hooks.onClose,
 });
+
+let widgetOpen = false;
+const openedInlineReferences = new Set<string>();
+
+export const isFincraInlineWidgetOpen = (): boolean => widgetOpen;
+
+export const claimFincraInlineReference = (reference: string): boolean => {
+  if (openedInlineReferences.has(reference)) return false;
+  openedInlineReferences.add(reference);
+  return true;
+};
+
+export const hasFincraInlineReferenceBeenOpened = (reference: string): boolean =>
+  openedInlineReferences.has(reference);
+
+export const initializeFincraInlineCheckout = (
+  api: TFincraInlineApi,
+  data: TFincraInlineCheckoutData,
+  hooks: { onSuccess: TFincraInitializeOptions["onSuccess"]; onClose: TFincraInitializeOptions["onClose"] },
+): boolean => {
+  if (widgetOpen) return false;
+  widgetOpen = true;
+  try {
+    api.initialize(
+      toFincraInitializeOptions(data, {
+        onSuccess: (payload) => {
+          widgetOpen = false;
+          hooks.onSuccess(payload);
+        },
+        onClose: () => {
+          widgetOpen = false;
+          hooks.onClose();
+        },
+      }),
+    );
+    return true;
+  } catch (err) {
+    widgetOpen = false;
+    throw err;
+  }
+};
 
 export const getFincraInlineApi = (): TFincraInlineApi | null => {
   if (typeof window === "undefined") return null;
@@ -129,4 +174,9 @@ export const loadFincraInlineScript = (): Promise<TFincraInlineApi> => {
 
 export const resetFincraInlineScriptLoaderForTests = (): void => {
   inflightLoad = null;
+};
+
+export const resetFincraInlineWidgetLockForTests = (): void => {
+  widgetOpen = false;
+  openedInlineReferences.clear();
 };

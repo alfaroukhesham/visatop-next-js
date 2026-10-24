@@ -89,12 +89,15 @@ export const parseFincraWebhookToNormalized = (rawBody: string): FincraWebhookPa
 
   const metadata: Record<string, string> = {};
   if (merchantReference) metadata.operationId = merchantReference;
-  if (typeof d.metadata === "object" && d.metadata !== null) {
-    const meta = d.metadata as Record<string, unknown>;
-    for (const key of ["applicationId", "priceQuoteId", "partyId", "serviceId", "userId", "isGuest"]) {
-      if (typeof meta[key] === "string" && meta[key]) metadata[key] = meta[key];
+  const collectMeta = (value: unknown, depth: number) => {
+    if (depth > 2 || !value || typeof value !== "object") return;
+    const meta = value as Record<string, unknown>;
+    for (const key of ["applicationId", "priceQuoteId", "partyId", "serviceId", "userId", "isGuest", "paymentId"]) {
+      if (typeof meta[key] === "string" && meta[key] && !metadata[key]) metadata[key] = meta[key];
     }
-  }
+    collectMeta(meta.metadata, depth + 1);
+  };
+  collectMeta(d.metadata, 0);
 
   return {
     kind: "event",

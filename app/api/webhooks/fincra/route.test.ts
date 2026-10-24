@@ -138,6 +138,46 @@ describe("POST /api/webhooks/fincra", () => {
     expect(verifyMock).not.toHaveBeenCalled();
   });
 
+  it("resolves an attempt reference and verifies with that merchant reference", async () => {
+    const attemptBody = JSON.stringify({
+      event: "charge.successful",
+      data: {
+        id: 1,
+        amount: 185000,
+        amountReceived: 185000,
+        currency: "NGN",
+        status: "success",
+        reference: "fcr-p-1",
+        merchantReference: "pay_1-a2",
+        metadata: { paymentId: "pay_1", applicationId: "app_1" },
+      },
+    });
+    verifyMock.mockResolvedValue({
+      id: "1",
+      status: "success",
+      currency: "NGN",
+      amountMinor: BigInt(18_500_000),
+      amountReceivedMinor: BigInt(18_500_000),
+      amountExpectedMinor: BigInt(18_500_000),
+      varianceType: null,
+      message: null,
+      merchantReference: "pay_1-a2",
+      reference: "fcr-p-1",
+      feeMinor: BigInt(301),
+      raw: {},
+    });
+    const res = await POST(
+      new Request("http://localhost/api/webhooks/fincra", {
+        method: "POST",
+        headers: { signature: sign(attemptBody) },
+        body: attemptBody,
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(verifyMock).toHaveBeenCalledWith(expect.objectContaining({ merchantReference: "pay_1-a2" }));
+    expect(processMock).toHaveBeenCalledTimes(1);
+  });
+
   it("verifies with Fincra then applies a successful charge", async () => {
     const res = await POST(
       new Request("http://localhost/api/webhooks/fincra", {

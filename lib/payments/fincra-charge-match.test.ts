@@ -51,6 +51,17 @@ describe("matchFincraChargeToStoredPayment", () => {
     ).toMatchObject({ kind: "mismatch", reason: "currency_mismatch", reportedCurrency: "USD" });
   });
 
+  it("matches an attempt reference that belongs to the stored payment id", () => {
+    expect(
+      matchFincraChargeToStoredPayment({
+        payment: { ...payment, providerOperationId: "pay_1-a3" },
+        merchantReference: "pay_1-a2",
+        reportedAmountMinor: BigInt(18_500_000),
+        reportedCurrency: "NGN",
+      }),
+    ).toEqual({ kind: "match", amountMinor: BigInt(18_500_000), currency: "NGN" });
+  });
+
   it("rejects an unknown or unbound merchant reference", () => {
     expect(
       matchFincraChargeToStoredPayment({

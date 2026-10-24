@@ -57,6 +57,32 @@ describe("parseFincraWebhookToNormalized", () => {
     }
   });
 
+  it("keeps paymentId from checkout metadata, including nested copies", () => {
+    const body = JSON.stringify({
+      event: "charge.successful",
+      data: {
+        id: 601227,
+        amount: 185000,
+        currency: "NGN",
+        status: "success",
+        reference: "fcr-p-abc",
+        merchantReference: "pay_1-a2",
+        metadata: {
+          reference: "pay_1-a2",
+          metadata: { applicationId: "app_1", paymentId: "pay_1" },
+        },
+      },
+    });
+    const r = parseFincraWebhookToNormalized(body);
+    expect(r.kind).toBe("event");
+    if (r.kind === "event") {
+      expect(r.merchantReference).toBe("pay_1-a2");
+      expect(r.event.metadata.paymentId).toBe("pay_1");
+      expect(r.event.metadata.applicationId).toBe("app_1");
+      expect(r.event.metadata.operationId).toBe("pay_1-a2");
+    }
+  });
+
   it("ignores unsupported events", () => {
     const body = JSON.stringify({ event: "payout.successful", data: { id: 1 } });
     expect(parseFincraWebhookToNormalized(body).kind).toBe("ignored");

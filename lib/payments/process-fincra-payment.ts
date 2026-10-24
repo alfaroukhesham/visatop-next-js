@@ -201,7 +201,7 @@ export const processFincraVerifiedPaymentInTransaction = async (
     };
   }
 
-  if (payRow.status === "paid" && appRow.paymentStatus === "paid") {
+  if (payRow.status === "paid") {
     return {
       outcome: "duplicate",
       firstPaidApplicationId: null,

@@ -179,6 +179,25 @@ describe("processFincraVerifiedPaymentInTransaction", () => {
     expect(resolvePaymentRowForWebhook).not.toHaveBeenCalled();
   });
 
+  it("ignores a later attempt once the payment row is already paid", async () => {
+    vi.mocked(resolvePaymentRowForWebhook).mockResolvedValue({ ...payRow, status: "paid" } as never);
+    const { tx } = makeTx();
+    const result = await processFincraVerifiedPaymentInTransaction(tx, {
+      normalized: { ...event, metadata: { ...event.metadata, operationId: "pay_1-a2" } },
+      decision: {
+        kind: "paid",
+        amountReceivedMinor: BigInt(18500000),
+        varianceType: "exact",
+        feeMinor: BigInt(301),
+      },
+      payloadHash: "hash-later-attempt",
+      eventType: "charge.successful",
+      logLabel: "test",
+    });
+    expect(result.outcome).toBe("duplicate");
+    expect(applyPaymentWebhookEvent).not.toHaveBeenCalled();
+  });
+
   it("skips apply when the payload hash already exists", async () => {
     const { tx } = makeTx({ duplicateEvent: true });
     const result = await processFincraVerifiedPaymentInTransaction(tx, {

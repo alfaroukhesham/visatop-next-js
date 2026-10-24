@@ -182,6 +182,7 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
               confirming={confirming}
               onCompleted={checkout.onFincraCompleted}
               onClosed={checkout.onFincraClosed}
+              onSession={checkout.onFincraInline}
               onHostedRedirect={checkout.onFincraRedirect}
               onError={checkout.onError}
             />

@@ -11,6 +11,13 @@ export type TFincraOpenPaymentLock = {
   status: string;
   providerCheckoutId: string | null;
   createdAt: Date;
+  amount?: bigint;
+  currency?: string;
+};
+
+export type TFincraRotateMemberLock = {
+  checkoutState: string | null;
+  paymentStatus: string;
 };
 
 export const isFincraOpenPaymentStale = (createdAt: Date, nowMs: number = Date.now()): boolean =>
@@ -20,16 +27,81 @@ export const isFincraOpenPaymentUnprovisioned = (providerCheckoutId: string | nu
   !(providerCheckoutId ?? "").trim();
 
 /**
- * 409 self-heal: a Fincra row that never received a hosted pay code (provider
+ * 409 self-heal: a hosted Fincra row that never received a pay code (provider
  * create failed) or that has gone stale should not block a clean retry.
+ * Inline checkouts never get a pay code, so missing `providerCheckoutId` is
+ * not treated as failed unless `treatMissingPayCodeAsFailed` is true.
  */
 export const shouldSelfHealFincraOpenPayment = (
   payRow: TFincraOpenPaymentLock,
   nowMs: number = Date.now(),
+  options?: { treatMissingPayCodeAsFailed?: boolean },
 ): boolean => {
   if (payRow.provider !== "fincra") return false;
   if (payRow.status !== "checkout_created") return false;
-  return isFincraOpenPaymentUnprovisioned(payRow.providerCheckoutId) || isFincraOpenPaymentStale(payRow.createdAt, nowMs);
+  const treatMissingPayCodeAsFailed = options?.treatMissingPayCodeAsFailed ?? true;
+  if (treatMissingPayCodeAsFailed && isFincraOpenPaymentUnprovisioned(payRow.providerCheckoutId)) return true;
+  return isFincraOpenPaymentStale(payRow.createdAt, nowMs);
+};
+
+/**
+ * Continue-payment may mint `${paymentId}-aN` only for the caller's own still-
+ * pending inline Fincra row. Amount and currency must stay on that row.
+ */
+export const canRotateFincraInlineAttempt = (params: {
+  fincraMode: "inline" | "hosted";
+  payRow: {
+    provider: string;
+    status: string;
+    amount: bigint;
+    currency: string;
+  };
+  members: TFincraRotateMemberLock[];
+  expectedAmount: bigint;
+  expectedCurrency: string;
+}): boolean => {
+  if (params.fincraMode !== "inline") return false;
+  if (params.payRow.provider !== "fincra") return false;
+  if (params.payRow.status !== "checkout_created") return false;
+  if (params.payRow.amount !== params.expectedAmount) return false;
+  if (params.payRow.currency.trim().toUpperCase() !== params.expectedCurrency.trim().toUpperCase()) {
+    return false;
+  }
+  if (params.members.length === 0) return false;
+  return params.members.every(
+    (member) => member.checkoutState === "pending" && member.paymentStatus !== "paid",
+  );
+};
+
+export type TFincraLockedCheckoutRetry = "rotate" | "self_heal" | "conflict";
+
+export const classifyFincraLockedCheckoutRetry = (params: {
+  fincraMode: "inline" | "hosted";
+  payRow: (TFincraOpenPaymentLock & { amount: bigint; currency: string }) | null;
+  members: TFincraRotateMemberLock[];
+  nowMs?: number;
+}): TFincraLockedCheckoutRetry => {
+  if (!params.payRow) return "conflict";
+  if (
+    canRotateFincraInlineAttempt({
+      fincraMode: params.fincraMode,
+      payRow: params.payRow,
+      members: params.members,
+      expectedAmount: params.payRow.amount,
+      expectedCurrency: params.payRow.currency,
+    })
+  ) {
+    return "rotate";
+  }
+  if (
+    params.fincraMode === "hosted" &&
+    shouldSelfHealFincraOpenPayment(params.payRow, params.nowMs ?? Date.now(), {
+      treatMissingPayCodeAsFailed: true,
+    })
+  ) {
+    return "self_heal";
+  }
+  return "conflict";
 };
 
 export const abandonFincraCheckoutLock = async (
