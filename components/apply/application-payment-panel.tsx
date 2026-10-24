@@ -14,6 +14,7 @@ import { computeValidation, type Readiness } from "@/lib/documents/validation-re
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 import type { TResumeCheckoutSession } from "@/lib/payments/checkout-types";
+import type { TFincraInlineCheckoutData } from "@/lib/payments/fincra-inline";
 
 interface IApplicationPaymentPanelProps {
   applicationId: string;
@@ -24,6 +25,7 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
   const router = useRouter();
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [embeddedUrl, setEmbeddedUrl] = useState<string | null>(null);
+  const [fincraInline, setFincraInline] = useState<TFincraInlineCheckoutData | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [showPaddleRetry, setShowPaddleRetry] = useState(false);
   const draft = useApplicationDraft(applicationId);
@@ -65,7 +67,7 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
 
   useEffect(() => {
     if (app?.paymentStatus !== "checkout_created") return;
-    if (embeddedUrl) return;
+    if (embeddedUrl || fincraInline) return;
 
     let cancelled = false;
     const run = async () => {
@@ -80,6 +82,11 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
       const data = res.data;
       if (data.kind === "fincra_redirect") {
         window.location.assign(data.redirectUrl);
+        return;
+      }
+      if (data.kind === "fincra_inline") {
+        setShowPaddleRetry(false);
+        setFincraInline(data.checkout);
         return;
       }
       if (data.kind === "open") {
@@ -109,7 +116,7 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
     return () => {
       cancelled = true;
     };
-  }, [app?.paymentStatus, applicationId, embeddedUrl, goToSubmitted, t]);
+  }, [app?.paymentStatus, applicationId, embeddedUrl, fincraInline, goToSubmitted, t]);
 
   useEffect(() => {
     return () => {
@@ -159,11 +166,31 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
     (url: string) => {
       setCheckoutError(null);
       setShowPaddleRetry(false);
+      setFincraInline(null);
       setEmbeddedUrl(url);
       void loadDraft({ silent: true });
     },
     [loadDraft],
   );
+
+  const onFincraInline = useCallback(
+    (session: TFincraInlineCheckoutData) => {
+      setCheckoutError(null);
+      setShowPaddleRetry(false);
+      setEmbeddedUrl(null);
+      setFincraInline(session);
+      void loadDraft({ silent: true });
+    },
+    [loadDraft],
+  );
+
+  const onFincraCompleted = useCallback(() => {
+    pollUntilPaid();
+  }, [pollUntilPaid]);
+
+  const onFincraClosed = useCallback(() => {
+    setConfirming(false);
+  }, []);
 
   const onZiinaCompleted = useCallback(() => {
     pollUntilPaid();
@@ -204,6 +231,7 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
   const sessionLoading =
     app.paymentStatus === "checkout_created" &&
     !embeddedUrl &&
+    !fincraInline &&
     !showPaddleRetry &&
     !checkoutError &&
     !confirming;
@@ -228,6 +256,7 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
         onCancelCheckout={() => {
           setCheckoutError(null);
           setEmbeddedUrl(null);
+          setFincraInline(null);
           setConfirming(false);
           setShowPaddleRetry(false);
           pollCleanupRef.current?.();
@@ -235,9 +264,12 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
         }}
         checkout={{
           onZiinaEmbedded,
+          onFincraInline,
           onFincraRedirect: (url) => {
             window.location.assign(url);
           },
+          onFincraCompleted,
+          onFincraClosed,
           onZiinaCompleted,
           onZiinaFailed,
           onZiinaCanceled,
@@ -252,6 +284,7 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
           },
         }}
         embeddedUrl={embeddedUrl}
+        fincraInline={fincraInline}
         confirming={confirming}
         sessionLoading={sessionLoading}
         showPaddleRetry={app.paymentStatus === "checkout_created" && showPaddleRetry}

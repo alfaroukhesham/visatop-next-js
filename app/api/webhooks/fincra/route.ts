@@ -85,6 +85,19 @@ export async function POST(req: Request) {
         return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
       }
 
+      const [payForAmount] = await tx
+        .select()
+        .from(payment)
+        .where(or(eq(payment.providerOperationId, merchantReference), eq(payment.id, merchantReference)))
+        .limit(1);
+
+      if (!payForAmount) {
+        console.warn("[webhooks/fincra] Unknown merchant reference; not marking paid", {
+          requestId,
+        });
+        return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
+      }
+
       let verified;
       try {
         verified = await verifyFincraCheckoutByMerchantReference({
@@ -96,22 +109,14 @@ export async function POST(req: Request) {
         });
       } catch (e) {
         const msg = e instanceof FincraProviderError ? e.message : e instanceof Error ? e.message : String(e);
-        console.error("[webhooks/fincra] Verify API failed", { requestId, merchantReference, error: msg });
+        console.error("[webhooks/fincra] Verify API failed", { requestId, error: msg });
         throw e;
       }
 
-      const [payForAmount] = await tx
-        .select()
-        .from(payment)
-        .where(or(eq(payment.providerOperationId, merchantReference), eq(payment.id, merchantReference)))
-        .limit(1);
-
-      const expectedMinor = payForAmount?.amount ?? BigInt(parsed.event.amountMinor);
-      const expectedCurrency = payForAmount?.currency ?? parsed.event.currency;
       const decision = decideFincraVerifiedPayment({
         verified,
-        expectedMinor,
-        expectedCurrency,
+        payment: payForAmount,
+        merchantReference,
       });
 
       const normalized = {

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import type { DbTransaction } from "@/lib/db";
 import { application, auditLog, payment, paymentEvent } from "@/lib/db/schema";
@@ -14,9 +14,9 @@ import type { TFincraVerifyDecision } from "@/lib/payments/fincra-verify";
 export type ProcessFincraPaymentOutcome =
   | "applied"
   | "duplicate"
-  | "underpaid"
+  | "mismatch"
   | "pending"
-  | "rejected"
+  | "unknown_reference"
   | "noop_no_payment"
   | "noop_no_application"
   | "rejected_provider_mismatch";
@@ -27,22 +27,24 @@ export type ProcessFincraPaymentResult = {
   paymentId: string | null;
 };
 
-const flagUnderpayment = async (
+const flagMismatch = async (
   tx: DbTransaction,
   params: {
     payRow: typeof payment.$inferSelect;
     appRow: typeof application.$inferSelect;
-    decision: Extract<TFincraVerifyDecision, { kind: "underpaid" }>;
+    decision: Extract<TFincraVerifyDecision, { kind: "mismatch" }>;
     providerEventId: string;
     payloadHash: string;
     eventType: string;
     logLabel: string;
+    requestId?: string | null;
   },
 ): Promise<ProcessFincraPaymentResult> => {
-  const { payRow, appRow, decision, providerEventId, payloadHash, eventType, logLabel } = params;
+  const { payRow, appRow, decision, providerEventId, payloadHash, eventType, logLabel, requestId } =
+    params;
   await requirePaymentEventPayloadHashDedupeIndex(tx);
   const received = decision.amountReceivedMinor?.toString() ?? "unknown";
-  const underpayHash = computeFincraUnderpayPayloadHash(payRow.id, received);
+  const mismatchHash = computeFincraUnderpayPayloadHash(payRow.id, `${decision.reason}:${received}`);
   const [inserted] = await tx
     .insert(paymentEvent)
     .values({
@@ -50,7 +52,7 @@ const flagUnderpayment = async (
       paymentId: payRow.id,
       providerEventId,
       type: eventType,
-      payloadHash: payloadHash || underpayHash,
+      payloadHash: payloadHash || mismatchHash,
     })
     .onConflictDoNothing({ target: paymentEvent.payloadHash })
     .returning();
@@ -66,46 +68,66 @@ const flagUnderpayment = async (
   await tx
     .update(payment)
     .set({
-      status: "underpaid",
+      status: "mismatch",
       amountReceivedMinor: decision.amountReceivedMinor,
       feeMinor: decision.feeMinor,
-      varianceType: "underpayment",
+      varianceType: decision.reason,
     })
     .where(eq(payment.id, payRow.id));
 
-  await tx
-    .update(application)
-    .set({ adminAttentionRequired: true })
-    .where(eq(application.id, appRow.id));
+  const mismatchAppPatch = {
+    adminAttentionRequired: true as const,
+    checkoutState: "none",
+    paymentStatus: "unpaid",
+  };
+  if (appRow.partyId) {
+    await tx
+      .update(application)
+      .set(mismatchAppPatch)
+      .where(and(eq(application.partyId, appRow.partyId), ne(application.paymentStatus, "paid")));
+  } else {
+    await tx
+      .update(application)
+      .set(mismatchAppPatch)
+      .where(and(eq(application.id, appRow.id), ne(application.paymentStatus, "paid")));
+  }
 
   await tx.insert(auditLog).values({
     actorType: "system",
     actorId: null,
-    action: "payment_fincra_underpaid_flagged",
+    action: "payment_fincra_mismatch_flagged",
     entityType: "application",
     entityId: appRow.id,
     beforeJson: JSON.stringify({
       paymentStatus: appRow.paymentStatus,
       adminAttentionRequired: appRow.adminAttentionRequired,
       expectedAmountMinor: payRow.amount.toString(),
+      expectedCurrency: payRow.currency,
     }),
     afterJson: JSON.stringify({
       providerEventId,
       paymentId: payRow.id,
+      reason: decision.reason,
       expectedAmountMinor: payRow.amount.toString(),
+      expectedCurrency: payRow.currency,
       receivedAmountMinor: received,
-      varianceType: "underpayment",
+      reportedCurrency: decision.reportedCurrency,
+      requestId: requestId ?? null,
     }),
   });
 
-  console.warn(`[${logLabel}] Fincra underpayment held for admin review (not marked paid)`, {
+  console.warn(`[${logLabel}] Fincra charge mismatch held for admin review (not marked paid)`, {
+    requestId: requestId ?? null,
     paymentId: payRow.id,
     applicationId: appRow.id,
+    reason: decision.reason,
     expectedAmountMinor: payRow.amount.toString(),
+    expectedCurrency: payRow.currency,
     receivedAmountMinor: received,
+    reportedCurrency: decision.reportedCurrency,
   });
 
-  return { outcome: "underpaid", firstPaidApplicationId: null, paymentId: payRow.id };
+  return { outcome: "mismatch", firstPaidApplicationId: null, paymentId: payRow.id };
 };
 
 export const processFincraVerifiedPaymentInTransaction = async (
@@ -122,16 +144,26 @@ export const processFincraVerifiedPaymentInTransaction = async (
 ): Promise<ProcessFincraPaymentResult> => {
   const { normalized, decision, payloadHash, eventType, requestId, logLabel, verifiedIds } = params;
 
+  if (decision.kind === "unknown_reference") {
+    console.warn(`[${logLabel}] Fincra reference does not map to a stored payment (not marked paid)`, {
+      requestId: requestId ?? null,
+      providerPaymentId: normalized.providerPaymentId,
+    });
+    return { outcome: "unknown_reference", firstPaidApplicationId: null, paymentId: null };
+  }
+
   const payRow = await resolvePaymentRowForWebhook(tx, normalized);
   if (!payRow) {
     console.info(`[${logLabel}] No matching payment row for Fincra reference`, {
+      requestId: requestId ?? null,
       providerPaymentId: normalized.providerPaymentId,
     });
-    return { outcome: "noop_no_payment", firstPaidApplicationId: null, paymentId: null };
+    return { outcome: "unknown_reference", firstPaidApplicationId: null, paymentId: null };
   }
 
   if (payRow.provider !== "fincra") {
     console.warn(`[${logLabel}] Payment row provider mismatch`, {
+      requestId: requestId ?? null,
       paymentId: payRow.id,
       rowProvider: payRow.provider,
     });
@@ -146,6 +178,7 @@ export const processFincraVerifiedPaymentInTransaction = async (
         route: logLabel,
         providerEventId: normalized.providerEventId ?? normalized.providerPaymentId,
         rawEventType: normalized.rawEventType,
+        requestId: requestId ?? null,
       }),
     });
     return {
@@ -182,25 +215,8 @@ export const processFincraVerifiedPaymentInTransaction = async (
     return { outcome: "pending", firstPaidApplicationId: null, paymentId: payRow.id };
   }
 
-  if (decision.kind === "rejected") {
-    await tx.update(application).set({ adminAttentionRequired: true }).where(eq(application.id, appRow.id));
-    await tx.insert(auditLog).values({
-      actorType: "system",
-      actorId: null,
-      action: "payment_fincra_verify_rejected",
-      entityType: "application",
-      entityId: appRow.id,
-      afterJson: JSON.stringify({
-        paymentId: payRow.id,
-        reason: decision.reason,
-        providerEventId,
-      }),
-    });
-    return { outcome: "rejected", firstPaidApplicationId: null, paymentId: payRow.id };
-  }
-
-  if (decision.kind === "underpaid") {
-    return flagUnderpayment(tx, {
+  if (decision.kind === "mismatch") {
+    return flagMismatch(tx, {
       payRow,
       appRow,
       decision,
@@ -208,6 +224,7 @@ export const processFincraVerifiedPaymentInTransaction = async (
       payloadHash,
       eventType,
       logLabel,
+      requestId,
     });
   }
 
@@ -249,22 +266,6 @@ export const processFincraVerifiedPaymentInTransaction = async (
     currency: payRow.currency,
     providerPaymentId: verifiedIds?.payCode || normalized.providerPaymentId,
   };
-
-  if (decision.varianceType === "overpayment") {
-    await tx.update(application).set({ adminAttentionRequired: true }).where(eq(application.id, appRow.id));
-    await tx.insert(auditLog).values({
-      actorType: "system",
-      actorId: null,
-      action: "payment_fincra_overpayment_flagged",
-      entityType: "application",
-      entityId: appRow.id,
-      afterJson: JSON.stringify({
-        paymentId: payRow.id,
-        expectedAmountMinor: payRow.amount.toString(),
-        receivedAmountMinor: decision.amountReceivedMinor.toString(),
-      }),
-    });
-  }
 
   const [freshPay] = await tx.select().from(payment).where(eq(payment.id, payRow.id)).limit(1);
   const payApply = await applyPaymentWebhookEvent(

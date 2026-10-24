@@ -251,6 +251,8 @@
     "payAndSubmit": "Biya & Gabatar da nema",
     "payInNaira": "Biya da Naira",
     "payInNairaHint": "Aikace-aikacen Najeriya da farashin Naira ana biya ta Fincra (kati ko canja wurin banki).",
+    "continueFincraPayment": "Ci gaba da biya",
+    "fincraWindowClosed": "An rufe tagar biya. Kuna iya ci gaba ba tare da barin wannan shafin ba, ko soke kuma sake saiti.",
     "preparingCheckout": "Ana shirya biya mai aminci…",
     "previous": "Baya",
     "orderTitle": "Odar ku",

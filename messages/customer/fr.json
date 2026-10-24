@@ -251,6 +251,8 @@
     "payAndSubmit": "Payer et soumettre la demande",
     "payInNaira": "Payer en naira",
     "payInNairaHint": "Les demandes nigérianes avec un tarif en naira se règlent via Fincra (carte ou virement).",
+    "continueFincraPayment": "Continuer le paiement",
+    "fincraWindowClosed": "La fenêtre de paiement a été fermée. Vous pouvez continuer sans quitter cette page, ou annuler et réinitialiser.",
     "preparingCheckout": "Préparation du paiement sécurisé…",
     "previous": "Précédent",
     "orderTitle": "Votre commande",

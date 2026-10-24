@@ -14,6 +14,7 @@ import { apiHref } from "@/lib/app-href";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { trackApplyPaymentCompleted, trackEventOnce } from "@/lib/analytics/gtag-client";
 import { checkoutErrorToUserMessage } from "@/lib/payments/checkout-client-messages";
+import type { TFincraInlineCheckoutData } from "@/lib/payments/fincra-inline";
 
 interface IPaddleCheckoutButtonProps {
   applicationId: string;
@@ -26,6 +27,7 @@ interface IPaddleCheckoutButtonProps {
   onSuccess?: () => void;
   /** Called with Ziina `embedded_url` so checkout stays on the payment step. */
   onZiinaEmbedded?: (embeddedUrl: string) => void;
+  onFincraInline?: (checkout: TFincraInlineCheckoutData) => void;
   onFincraRedirect?: (redirectUrl: string) => void;
   /** Runs whenever the Paddle overlay closes (success, cancel, or dismiss). Use to refetch server payment state. */
   onOverlayClosed?: () => void;
@@ -41,6 +43,7 @@ export function PaddleCheckoutButton({
   onSuccess,
   payLabel,
   onZiinaEmbedded,
+  onFincraInline,
   onFincraRedirect,
   onOverlayClosed,
   onCancel,
@@ -91,7 +94,8 @@ export function PaddleCheckoutButton({
         data?:
           | { provider: "paddle"; transactionId: string; clientToken: string }
           | { provider: "ziina"; embeddedUrl: string }
-          | { provider: "fincra"; redirectUrl: string }
+          | TFincraInlineCheckoutData
+          | { provider: "fincra"; mode?: "hosted" | "inline"; redirectUrl?: string; key?: string }
           | { transactionId?: string; clientToken?: string };
         error?: { code?: string; message?: string; details?: { reason?: string } };
       };
@@ -115,9 +119,6 @@ export function PaddleCheckoutButton({
 
       const data = envelope.data;
       if ("provider" in data && data.provider === "fincra") {
-        if (!("redirectUrl" in data) || !data.redirectUrl) {
-          throw new Error(checkoutErrorToUserMessage(envelope.error, t));
-        }
         trackEventOnce(
           APPLY_FUNNEL_EVENTS.paymentStarted,
           {
@@ -126,10 +127,19 @@ export function PaddleCheckoutButton({
           },
           `${APPLY_FUNNEL_EVENTS.paymentStarted}:${applicationId}:fincra`,
         );
+        if (data.mode === "inline" || ("key" in data && typeof data.key === "string" && data.key)) {
+          onFincraInline?.(data as TFincraInlineCheckoutData);
+          setIsInitializing(false);
+          return;
+        }
+        const redirectUrl = "redirectUrl" in data ? data.redirectUrl : undefined;
+        if (!redirectUrl) {
+          throw new Error(checkoutErrorToUserMessage(envelope.error, t));
+        }
         if (onFincraRedirect) {
-          onFincraRedirect(data.redirectUrl);
+          onFincraRedirect(redirectUrl);
         } else {
-          window.location.assign(data.redirectUrl);
+          window.location.assign(redirectUrl);
         }
         return;
       }

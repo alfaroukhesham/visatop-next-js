@@ -187,8 +187,8 @@ const applyVerified = async (
 
   const decision = decideFincraVerifiedPayment({
     verified,
-    expectedMinor: payRow.amount,
-    expectedCurrency: payRow.currency,
+    payment: payRow,
+    merchantReference,
   });
 
   if (decision.kind === "pending") {

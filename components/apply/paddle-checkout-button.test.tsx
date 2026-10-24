@@ -77,4 +77,38 @@ describe("PaddleCheckoutButton terms gate", () => {
       termsAccepted: true,
     });
   });
+
+  it("keeps Fincra checkout on-page when the API returns mode inline", async () => {
+    const user = userEvent.setup();
+    const onFincraInline = vi.fn();
+    const onFincraRedirect = vi.fn();
+    const inline = {
+      provider: "fincra" as const,
+      mode: "inline" as const,
+      key: "pk_test",
+      amount: 185000,
+      currency: "NGN" as const,
+      customer: { name: "Ada", email: "ada@example.com" },
+      reference: "pay_1",
+      feeBearer: "business" as const,
+      metadata: { paymentId: "pay_1" },
+    };
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ ok: true, data: inline }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    render(
+      <PaddleCheckoutButton
+        applicationId="app-1"
+        termsAccepted
+        onFincraInline={onFincraInline}
+        onFincraRedirect={onFincraRedirect}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /pay & submit/i }));
+    expect(onFincraInline).toHaveBeenCalledWith(inline);
+    expect(onFincraRedirect).not.toHaveBeenCalled();
+  });
 });
