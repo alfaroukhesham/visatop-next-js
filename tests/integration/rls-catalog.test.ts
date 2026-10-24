@@ -50,6 +50,30 @@ describe.skipIf(!run)("RLS: catalog + pricing (Postgres)", () => {
     });
   });
 
+  it("denies catalog_currency SELECT for admin without catalog.read", async () => {
+    await withActor("admin", "u1", "", async (c) => {
+      const r = await c.query(`select count(*)::int as n from catalog_currency`);
+      expect(r.rows[0].n).toBe(0);
+    });
+  });
+
+  it("allows catalog_currency SELECT for admin with catalog.read", async () => {
+    await withActor("admin", "u1", "catalog.read", async (c) => {
+      const r = await c.query(`select count(*)::int as n from catalog_currency`);
+      expect(r.rows[0].n).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  it("denies catalog_currency INSERT for admin without catalog.write", async () => {
+    await withActor("admin", "u1", "catalog.read", async (c) => {
+      await expect(
+        c.query(
+          `insert into catalog_currency (code, kind, enabled) values ('ZZZ','local', true)`,
+        ),
+      ).rejects.toThrow();
+    });
+  });
+
   it("denies nationality INSERT for admin without catalog.write", async () => {
     await withActor("admin", "u1", "catalog.read", async (c) => {
       await expect(

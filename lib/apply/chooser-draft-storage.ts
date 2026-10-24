@@ -1,9 +1,10 @@
 import type { TChooserPhase } from "@/lib/apply/guided-visa-filter";
 import type { TPartyTravelerDraft } from "@/lib/apply/party-travelers";
 import type { TStayBucket, TTravelerKind } from "@/lib/catalog/guided-choice";
+import { isIso4217CurrencyCode } from "@/lib/catalog/local-currency";
 
 export type TChooserDraft = {
-  displayCurrency: "USD" | "AED";
+  displayCurrency: string;
   serviceId: string;
   stay: TStayBucket | null;
   entry: "single" | "multiple";
@@ -49,11 +50,13 @@ export function readChooserDraft(nationality: string): TChooserDraft | null {
     const raw = storage.getItem(storageKey(code));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<TChooserDraft>;
-    if (parsed.displayCurrency !== "USD" && parsed.displayCurrency !== "AED") return null;
+    const displayCurrency =
+      typeof parsed.displayCurrency === "string" ? parsed.displayCurrency.trim().toUpperCase() : "";
+    if (!isIso4217CurrencyCode(displayCurrency)) return null;
     if (!isPhase(parsed.phase)) return null;
     if (parsed.stay !== null && parsed.stay !== undefined && !isStayBucket(parsed.stay)) return null;
     return {
-      displayCurrency: parsed.displayCurrency,
+      displayCurrency,
       serviceId: typeof parsed.serviceId === "string" ? parsed.serviceId : "",
       stay: parsed.stay ?? null,
       entry: parsed.entry === "multiple" ? "multiple" : "single",

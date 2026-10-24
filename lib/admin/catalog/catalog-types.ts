@@ -19,6 +19,13 @@ export type CatalogService = {
   showInGuidedChooser: boolean;
 };
 
+export type CatalogLocalCurrency = {
+  code: string;
+  enabled: boolean;
+  nationalityCodes: string[];
+  nationalities: Array<{ code: string; name: string }>;
+};
+
 export type CatalogEligibility = {
   serviceId: string;
   nationalityCode: string;

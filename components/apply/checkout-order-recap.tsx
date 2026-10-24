@@ -24,7 +24,7 @@ type CatalogService = {
   currency: string | null;
 };
 
-type DisplayCurrency = "USD" | "AED";
+type DisplayCurrency = string;
 
 type TTranslate = (key: string, vars?: TCustomerMessageVars) => string;
 
@@ -62,6 +62,7 @@ function priceMinorForDisplay(s: CatalogService, tab: DisplayCurrency): bigint |
   if (!Number.isFinite(n)) return null;
   const minor = BigInt(Math.trunc(n));
   if (cur === tab) return minor;
+  if ((cur !== "USD" && cur !== "AED") || (tab !== "USD" && tab !== "AED")) return null;
   const fx = parsePublicDisplayFxAedPerUsd();
   if (!fx) return null;
   return convertMinorBetweenUsdAed(minor, cur, tab, fx);
@@ -130,7 +131,11 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
     };
   }, [badges, t]);
 
-  const currency = (application.catalogCurrency?.toUpperCase() === "AED" ? "AED" : "USD") as DisplayCurrency;
+  const currency = (
+    application.checkoutOffer?.currency ||
+    application.catalogCurrency ||
+    "USD"
+  ).trim().toUpperCase();
 
   useEffect(() => {
     let cancelled = false;

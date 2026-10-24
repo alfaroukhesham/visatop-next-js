@@ -253,6 +253,13 @@
       "when": 1782290000000,
       "tag": "0035_payment_fincra",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1782310000000,
+      "tag": "0036_catalog_local_currency",
+      "breakpoints": true
     }
   ]
 }

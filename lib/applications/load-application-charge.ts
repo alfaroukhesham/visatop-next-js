@@ -11,10 +11,7 @@ import {
   type TCheckoutOffer,
 } from "@/lib/applications/public-application";
 import { parseUsdAedCurrency } from "@/lib/pricing/catalog-currency";
-import {
-  membersHaveStoredNgnPrices,
-  resolveCheckoutProviderDecision,
-} from "@/lib/payments/resolve-checkout-provider";
+import { resolveCheckoutOfferDecision } from "@/lib/payments/resolve-checkout-provider";
 import { getActivePaymentProvider } from "@/lib/payments/resolve-payment-provider";
 
 /** Paid payment first, else the latest locked checkout quote. */
@@ -63,14 +60,19 @@ export const loadCheckoutOffer = async (
         .from(application)
         .where(eq(application.partyId, row.partyId))
     : [{ nationalityCode: row.nationalityCode, serviceId: row.serviceId }];
-  const hasStoredNgnPriceForEveryMember = await membersHaveStoredNgnPrices(tx, members);
-  const decision = resolveCheckoutProviderDecision({
+  const offer = await resolveCheckoutOfferDecision(tx, {
     nationalityCode: row.nationalityCode,
-    hasStoredNgnPriceForEveryMember,
-    displayCurrency: parseUsdAedCurrency(row.catalogCurrency),
+    selectedCurrency: row.catalogCurrency,
+    members,
     defaultProvider: getActivePaymentProvider(),
   });
-  return { provider: decision.provider, currency: decision.quoteCurrency };
+  if (!offer.ok) {
+    return {
+      provider: getActivePaymentProvider(),
+      currency: parseUsdAedCurrency(row.catalogCurrency),
+    };
+  }
+  return { provider: offer.decision.provider, currency: offer.decision.quoteCurrency };
 };
 
 export const toPublicApplicationWithCharge = async (

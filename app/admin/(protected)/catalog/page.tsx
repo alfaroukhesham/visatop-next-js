@@ -10,10 +10,14 @@ import { loadCatalogPage } from "@/lib/admin/catalog/load-catalog-page";
 import { getAdminUserId } from "@/lib/admin/get-admin-session";
 import type { CatalogNationality, CatalogService } from "@/lib/admin/catalog/catalog-types";
 
-function normalizeTab(value: string | string[] | undefined): "services" | "nationalities" {
+const normalizeTab = (
+  value: string | string[] | undefined,
+): "services" | "nationalities" | "local-currencies" => {
   const raw = Array.isArray(value) ? value[0] : value;
-  return raw === "nationalities" ? "nationalities" : "services";
-}
+  if (raw === "nationalities") return "nationalities";
+  if (raw === "local-currencies") return "local-currencies";
+  return "services";
+};
 
 type PageProps = {
   searchParams: Promise<{ tab?: string | string[] }>;
@@ -50,9 +54,15 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
     <AdminShell
       title="Catalog"
       active="catalog"
-      subtitle="Manage services and nationalities."
+      subtitle="Manage services, nationalities, and local currencies."
     >
-      <CatalogHub tab={tab} nationalities={nationalities} services={services} canWrite={view.canWrite} />
+      <CatalogHub
+        tab={tab}
+        nationalities={nationalities}
+        services={services}
+        localCurrencies={view.localCurrencies}
+        canWrite={view.canWrite}
+      />
     </AdminShell>
   );
 }

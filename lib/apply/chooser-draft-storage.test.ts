@@ -41,4 +41,18 @@ describe("chooser draft storage", () => {
       email: "a@b.co",
     });
   });
+
+  it("round-trips a local currency tab", () => {
+    writeChooserDraft("ng", {
+      displayCurrency: "NGN",
+      serviceId: "svc-1",
+      stay: "15_30",
+      entry: "single",
+      kind: "adult",
+      phase: "results",
+      additionalTravelers: [],
+      email: "",
+    });
+    expect(readChooserDraft("NG")?.displayCurrency).toBe("NGN");
+  });
 });

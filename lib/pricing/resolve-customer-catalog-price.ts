@@ -9,6 +9,9 @@
  *   Add-ons are NOT applied on top of catalog_customer_price in this resolver.
  *   This matches the spec's intent: "checkout uses the locked quote amount."
  *   Documented here so future devs understand the deliberate choice.
+ *
+ * Local currencies (e.g. NGN) are stored-only: never FX-derived from USD/AED
+ * and never used to derive USD/AED.
  */
 
 import { and, eq, inArray } from "drizzle-orm";
@@ -20,7 +23,7 @@ import {
   readFxRateString,
   type FxLeg,
 } from "./fx-usd-aed";
-import type { TCatalogCurrency, TUsdAedCurrency } from "./catalog-currency";
+import { isUsdAedCurrency, type TCatalogCurrency, type TUsdAedCurrency } from "./catalog-currency";
 
 type SchemaDb = DbTransaction;
 
@@ -30,15 +33,31 @@ export type CustomerCatalogPriceRow = {
   source: string;
 };
 
+export type TStoredCustomerPrices = Record<string, CustomerCatalogPriceRow>;
+
+const toStoredRow = (r: {
+  currency: string;
+  amountMinor: number;
+  source: string;
+}): CustomerCatalogPriceRow => {
+  if (!Number.isInteger(r.amountMinor)) {
+    throw new Error(`catalog_customer_price.amount_minor must be an integer (got ${r.amountMinor})`);
+  }
+  return {
+    currency: r.currency,
+    amountMinor: BigInt(r.amountMinor),
+    source: r.source,
+  };
+};
+
 /**
  * Load stored currency rows for a (nationality, service) pair.
- * Returns a map: { USD?: row, AED?: row, NGN?: row }
  */
-async function loadStoredPrices(
+const loadStoredPrices = async (
   tx: SchemaDb,
   nationalityCode: string,
   serviceId: string,
-): Promise<{ USD?: CustomerCatalogPriceRow; AED?: CustomerCatalogPriceRow; NGN?: CustomerCatalogPriceRow }> {
+): Promise<TStoredCustomerPrices> => {
   const rows = await tx
     .select({
       currency: schema.catalogCustomerPrice.currency,
@@ -53,21 +72,12 @@ async function loadStoredPrices(
       ),
     );
 
-  const result: { USD?: CustomerCatalogPriceRow; AED?: CustomerCatalogPriceRow; NGN?: CustomerCatalogPriceRow } = {};
+  const result: TStoredCustomerPrices = {};
   for (const r of rows) {
-    if (r.currency === "USD" || r.currency === "AED" || r.currency === "NGN") {
-      if (!Number.isInteger(r.amountMinor)) {
-        throw new Error(`catalog_customer_price.amount_minor must be an integer (got ${r.amountMinor})`);
-      }
-      result[r.currency] = {
-        currency: r.currency,
-        amountMinor: BigInt(r.amountMinor),
-        source: r.source,
-      };
-    }
+    result[r.currency] = toStoredRow(r);
   }
   return result;
-}
+};
 
 export type CheckoutTotal = {
   /** Amount in minor units for the requested currency. */
@@ -86,60 +96,54 @@ export type CheckoutTotal = {
   wasFxDerived: boolean;
 };
 
+const storedOnlyTotal = (
+  row: CustomerCatalogPriceRow,
+  currency: TCatalogCurrency,
+): CheckoutTotal => ({
+  displayMinor: row.amountMinor,
+  currency,
+  fxRateUsed: null,
+  fxLeg: null,
+  source: row.source,
+  wasFxDerived: false,
+});
+
 /**
  * Resolve checkout total for a given (nationality, service, currency).
  *
- * Currency resolution per spec §4:
+ * Currency resolution per spec §4 (USD/AED):
  *   Both stored  → use directly, no conversion
  *   USD only     → USD from row; AED = fx(USD → AED)
  *   AED only     → AED from row; USD = fx(AED → USD)
  *   Neither      → not offered; returns null
  *
+ * Local currencies: stored row required; never FX-derived.
+ *
  * Add-ons: NOT applied (see module JSDoc above).
  */
-export async function resolveCheckoutTotal(
+export const resolveCheckoutTotal = async (
   tx: SchemaDb,
   params: {
     nationalityCode: string;
     serviceId: string;
     catalogCurrency: TCatalogCurrency;
   },
-): Promise<CheckoutTotal | null> {
+): Promise<CheckoutTotal | null> => {
   const { nationalityCode, serviceId, catalogCurrency } = params;
   const stored = await loadStoredPrices(tx, nationalityCode, serviceId);
 
-  // NGN is stored-only: never derive from USD/AED (and never derive USD/AED from NGN).
-  if (catalogCurrency === "NGN") {
-    const row = stored.NGN;
+  if (!isUsdAedCurrency(catalogCurrency)) {
+    const row = stored[catalogCurrency];
     if (!row) return null;
-    return {
-      displayMinor: row.amountMinor,
-      currency: "NGN",
-      fxRateUsed: null,
-      fxLeg: null,
-      source: row.source,
-      wasFxDerived: false,
-    };
+    return storedOnlyTotal(row, catalogCurrency);
   }
 
-  // Neither USD/AED stored → not offered (NGN-only routes still need a USD/AED book for default checkout)
   if (!stored.USD && !stored.AED) return null;
 
-  // Direct row exists for requested currency
   if (stored[catalogCurrency]) {
-    const row = stored[catalogCurrency]!;
-    return {
-      displayMinor: row.amountMinor,
-      currency: catalogCurrency,
-      fxRateUsed: null,
-      fxLeg: null,
-      source: row.source,
-      wasFxDerived: false,
-    };
+    return storedOnlyTotal(stored[catalogCurrency]!, catalogCurrency);
   }
 
-  // Need FX conversion
-  // FX is read lazily only when conversion is needed.
   const fxRate = readFxRateString();
 
   if (catalogCurrency === "AED" && stored.USD) {
@@ -167,25 +171,18 @@ export async function resolveCheckoutTotal(
   }
 
   return null;
-}
+};
 
 /**
  * Batch load customer prices for multiple services for a given nationality.
  * Used by the catalog listing query.
- *
- * Returns a map: serviceId → { USD?, AED? }
  */
-export async function batchCustomerPricesForServices(
+export const batchCustomerPricesForServices = async (
   tx: SchemaDb,
   nationalityCode: string,
   serviceIds: string[],
-): Promise<
-  Map<string, { USD?: CustomerCatalogPriceRow; AED?: CustomerCatalogPriceRow; NGN?: CustomerCatalogPriceRow }>
-> {
-  const map = new Map<
-    string,
-    { USD?: CustomerCatalogPriceRow; AED?: CustomerCatalogPriceRow; NGN?: CustomerCatalogPriceRow }
-  >();
+): Promise<Map<string, TStoredCustomerPrices>> => {
+  const map = new Map<string, TStoredCustomerPrices>();
 
   if (!serviceIds.length) return map;
 
@@ -206,32 +203,36 @@ export async function batchCustomerPricesForServices(
 
   for (const r of rows) {
     const existing = map.get(r.serviceId) ?? {};
-    if (r.currency === "USD" || r.currency === "AED" || r.currency === "NGN") {
-      if (!Number.isInteger(r.amountMinor)) {
-        throw new Error(`catalog_customer_price.amount_minor must be an integer (got ${r.amountMinor})`);
-      }
-      existing[r.currency] = {
-        currency: r.currency,
-        amountMinor: BigInt(r.amountMinor),
-        source: r.source,
-      };
-    }
+    existing[r.currency] = toStoredRow(r);
     map.set(r.serviceId, existing);
   }
 
   return map;
-}
+};
 
 /**
  * Resolve catalog display price for a service given stored prices + FX rules.
  * Pure function (no DB call — takes pre-loaded price map entry).
+ *
+ * Local currencies are stored-only (never FX).
  */
-export function resolveDisplayPrice(
-  priceEntry: { USD?: CustomerCatalogPriceRow; AED?: CustomerCatalogPriceRow; NGN?: CustomerCatalogPriceRow } | undefined,
-  catalogCurrency: TUsdAedCurrency,
+export const resolveDisplayPrice = (
+  priceEntry: TStoredCustomerPrices | undefined,
+  catalogCurrency: string,
   fxRate: string | null,
-): { displayMinor: bigint; currency: TUsdAedCurrency; wasFxDerived: boolean } | null {
+): { displayMinor: bigint; currency: string; wasFxDerived: boolean } | null => {
   if (!priceEntry) return null;
+
+  if (!isUsdAedCurrency(catalogCurrency)) {
+    const row = priceEntry[catalogCurrency];
+    if (!row) return null;
+    return {
+      displayMinor: row.amountMinor,
+      currency: catalogCurrency,
+      wasFxDerived: false,
+    };
+  }
+
   if (!priceEntry.USD && !priceEntry.AED) return null;
 
   if (priceEntry[catalogCurrency]) {
@@ -261,4 +262,6 @@ export function resolveDisplayPrice(
   }
 
   return null;
-}
+};
+
+export type { TUsdAedCurrency };
