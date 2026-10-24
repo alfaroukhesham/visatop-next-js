@@ -139,4 +139,39 @@ describe("FincraInlineCheckout", () => {
     expect(initialize.mock.calls[1]?.[0]).toMatchObject({ reference: "pay_inline_retry-a2" });
     expect(onCompleted).not.toHaveBeenCalled();
   });
+
+  it("surfaces a checkout 409 as an inline error and keeps Continue payment for retry", async () => {
+    const user = userEvent.setup();
+    const onError = vi.fn();
+    initialize.mockImplementation((options: { onClose: () => void }) => {
+      options.onClose();
+    });
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ok: false,
+          error: { code: "CONFLICT", message: "Checkout cannot be started for this application" },
+        }),
+        { status: 409, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    render(
+      <FincraInlineCheckout
+        checkout={checkoutFor("pay_inline_retry-a1")}
+        applicationId="app-1"
+        onCompleted={() => undefined}
+        onClosed={() => undefined}
+        onHostedRedirect={() => undefined}
+        onError={onError}
+      />,
+    );
+
+    await waitFor(() => expect(initialize).toHaveBeenCalledTimes(1));
+    const retry = screen.getByRole("button", { name: /continue payment/i });
+    await user.click(retry);
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+    expect(onError.mock.calls[0]?.[0]).toMatch(/cannot be started|refresh|retry/i);
+    expect(screen.getByRole("button", { name: /continue payment/i })).toBeEnabled();
+  });
 });

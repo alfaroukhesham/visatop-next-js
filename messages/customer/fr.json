@@ -65,7 +65,6 @@
     "chooseServiceError": "Choisissez un service.",
     "enterEmailError": "Saisissez votre adresse e-mail.",
     "enterValidEmailError": "Saisissez une adresse e-mail valide.",
-    "enterRealEmailError": "Saisissez une véritable adresse e-mail pour recevoir les mises à jour de votre demande.",
     "party": {
       "travellerNumber": "Voyageur {number}",
       "remove": "Supprimer",

@@ -84,14 +84,24 @@ export const rotateOpenFincraInlineAttempt = async (
   },
 ): Promise<TFincraInlineCheckoutData | null> => {
   const nextReference = nextFincraAttemptReference(params.payRow.id, params.payRow.providerOperationId);
+  const [updated] = await tx
+    .update(schema.payment)
+    .set({ providerOperationId: nextReference })
+    .where(
+      and(
+        eq(schema.payment.id, params.payRow.id),
+        eq(schema.payment.status, "checkout_created"),
+        eq(schema.payment.amount, params.payRow.amount),
+        eq(schema.payment.currency, params.payRow.currency),
+      ),
+    )
+    .returning();
+  if (!updated) return null;
+
   await tx
     .update(schema.application)
     .set({ checkoutState: "pending" })
     .where(and(inArray(schema.application.id, params.memberIds), ne(schema.application.paymentStatus, "paid")));
-  await tx
-    .update(schema.payment)
-    .set({ providerOperationId: nextReference })
-    .where(eq(schema.payment.id, params.payRow.id));
   await tx.insert(schema.auditLog).values({
     actorType: "system",
     actorId: null,
@@ -101,6 +111,8 @@ export const rotateOpenFincraInlineAttempt = async (
     afterJson: JSON.stringify({
       previousReference: params.payRow.providerOperationId ?? params.payRow.id,
       nextReference,
+      amount: params.payRow.amount.toString(),
+      currency: params.payRow.currency,
       requestId: params.requestId,
     }),
   });

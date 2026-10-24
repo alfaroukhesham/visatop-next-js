@@ -65,7 +65,6 @@
     "chooseServiceError": "Choose a service.",
     "enterEmailError": "Enter your email address.",
     "enterValidEmailError": "Enter a valid email address.",
-    "enterRealEmailError": "Enter a real email address we can use to send your application updates.",
     "party": {
       "travellerNumber": "Traveller {number}",
       "remove": "Remove",

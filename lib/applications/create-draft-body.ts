@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { zIso4217Alpha3 } from "@/lib/validation/currency";
-import { GUEST_EMAIL_REJECTED_MESSAGE, isPlausibleGuestEmail } from "@/lib/validation/guest-email";
 
 const travelerSchema = z.object({
   serviceId: z.string().min(1),
@@ -17,13 +16,7 @@ export const createDraftBodySchema = z
     serviceId: z.string().min(1).optional(),
     travelers: z.array(travelerSchema).min(1).optional(),
     /** Contact email — required at step 2 on the client; optional for signed-in API creates (account email used). */
-    guestEmail: z
-      .email()
-      .max(320)
-      .optional()
-      .refine((value) => value === undefined || isPlausibleGuestEmail(value), {
-        message: GUEST_EMAIL_REJECTED_MESSAGE,
-      }),
+    guestEmail: z.email().max(320).optional(),
     /** Price book for checkout. Server validates visibility + stored local prices. */
     catalogCurrency: zIso4217Alpha3.default("USD"),
   })

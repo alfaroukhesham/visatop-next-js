@@ -65,7 +65,6 @@
     "chooseServiceError": "Wählen Sie einen Service.",
     "enterEmailError": "Geben Sie Ihre E-Mail-Adresse ein.",
     "enterValidEmailError": "Geben Sie eine gültige E-Mail-Adresse ein.",
-    "enterRealEmailError": "Geben Sie eine echte E-Mail-Adresse ein, an die wir Ihre Antragsupdates senden können.",
     "party": {
       "travellerNumber": "Reisende/r {number}",
       "remove": "Entfernen",

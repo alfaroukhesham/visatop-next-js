@@ -65,7 +65,6 @@
     "chooseServiceError": "Bir hizmet seçin.",
     "enterEmailError": "E-posta adresinizi girin.",
     "enterValidEmailError": "Geçerli bir e-posta adresi girin.",
-    "enterRealEmailError": "Başvuru güncellemelerini gönderebilmemiz için gerçek bir e-posta adresi girin.",
     "party": {
       "travellerNumber": "Yolcu {number}",
       "remove": "Kaldır",

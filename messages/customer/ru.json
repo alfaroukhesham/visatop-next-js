@@ -65,7 +65,6 @@
     "chooseServiceError": "Выберите услугу.",
     "enterEmailError": "Укажите адрес электронной почты.",
     "enterValidEmailError": "Укажите корректный адрес электронной почты.",
-    "enterRealEmailError": "Укажите настоящий адрес электронной почты, чтобы мы могли отправлять обновления по заявке.",
     "party": {
       "travellerNumber": "Путешественник {number}",
       "remove": "Удалить",

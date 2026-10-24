@@ -25,7 +25,7 @@ import { fincraMinorToMajorNumber } from "@/lib/payments/fincra-amounts";
 import { buildFincraInlineCheckoutData } from "@/lib/payments/fincra-inline";
 import {
   abandonFincraCheckoutLock,
-  shouldSelfHealFincraOpenPayment,
+  classifyFincraLockedCheckoutRetry,
 } from "@/lib/payments/fincra-checkout-lock";
 import { loadOpenFincraPayment, rotateOpenFincraInlineAttempt } from "@/lib/payments/fincra-checkout-session";
 import { nextFincraAttemptReference } from "@/lib/payments/fincra-attempt-reference";
@@ -140,7 +140,19 @@ export async function POST(req: Request) {
       if (lockedRows.length !== memberIds.length) {
         await unlockCheckoutRows(lockedRows.map((r) => r.id));
         const openFincra = await loadOpenFincraPayment(tx, memberIds);
-        if (openFincra && fincraMode !== "hosted") {
+        const memberLocks = await tx
+          .select({
+            checkoutState: schema.application.checkoutState,
+            paymentStatus: schema.application.paymentStatus,
+          })
+          .from(schema.application)
+          .where(inArray(schema.application.id, memberIds));
+        const retry = classifyFincraLockedCheckoutRetry({
+          fincraMode,
+          payRow: openFincra,
+          members: memberLocks,
+        });
+        if (retry === "rotate" && openFincra) {
           const rotated = await rotateOpenFincraInlineAttempt(tx, {
             payRow: openFincra,
             memberIds,
@@ -151,7 +163,7 @@ export async function POST(req: Request) {
             return jsonOk(data, { requestId });
           }
         }
-        if (openFincra && shouldSelfHealFincraOpenPayment(openFincra)) {
+        if (retry === "self_heal" && openFincra) {
           await abandonFincraCheckoutLock(tx, {
             memberIds,
             paymentId: openFincra.id,
