@@ -27,7 +27,8 @@ import {
   abandonFincraCheckoutLock,
   shouldSelfHealFincraOpenPayment,
 } from "@/lib/payments/fincra-checkout-lock";
-import { loadOpenFincraPayment } from "@/lib/payments/fincra-checkout-session";
+import { loadOpenFincraPayment, rotateOpenFincraInlineAttempt } from "@/lib/payments/fincra-checkout-session";
+import { nextFincraAttemptReference } from "@/lib/payments/fincra-attempt-reference";
 import type { CheckoutSessionData } from "@/lib/payments/checkout-types";
 import { diagnoseCheckoutBlock } from "@/lib/payments/diagnose-checkout-block";
 import { loadPaymentUploadPresence } from "@/lib/applications/load-payment-upload-presence";
@@ -139,6 +140,17 @@ export async function POST(req: Request) {
       if (lockedRows.length !== memberIds.length) {
         await unlockCheckoutRows(lockedRows.map((r) => r.id));
         const openFincra = await loadOpenFincraPayment(tx, memberIds);
+        if (openFincra && fincraMode !== "hosted") {
+          const rotated = await rotateOpenFincraInlineAttempt(tx, {
+            payRow: openFincra,
+            memberIds,
+            requestId: requestId ?? null,
+          });
+          if (rotated) {
+            const data: CheckoutSessionData = rotated;
+            return jsonOk(data, { requestId });
+          }
+        }
         if (openFincra && shouldSelfHealFincraOpenPayment(openFincra)) {
           await abandonFincraCheckoutLock(tx, {
             memberIds,
@@ -325,9 +337,10 @@ export async function POST(req: Request) {
 
       if (provider === "fincra") {
         const fincraCfg = getFincraServerConfig();
+        const attemptRef = nextFincraAttemptReference(paymentId, null);
         await tx
           .update(schema.payment)
-          .set({ providerOperationId: paymentId })
+          .set({ providerOperationId: attemptRef })
           .where(eq(schema.payment.id, paymentId));
 
         const encId = encodeURIComponent(primary.id);
@@ -355,7 +368,7 @@ export async function POST(req: Request) {
             email: customerEmail,
             phoneNumber: primary.phone,
           },
-          reference: paymentId,
+          reference: attemptRef,
           feeBearer: fincraCfg.feeBearer,
           metadata: fincraMetadata,
         });
@@ -372,7 +385,7 @@ export async function POST(req: Request) {
             publicKey: fincraCfg.publicKey,
             amountMajor: fincraMinorToMajorNumber(totalMinor),
             currency: "NGN",
-            reference: paymentId,
+            reference: attemptRef,
             redirectUrl,
             customer: {
               name: customerName,

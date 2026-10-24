@@ -65,6 +65,7 @@
     "chooseServiceError": "एक सेवा चुनें।",
     "enterEmailError": "अपना ईमेल पता दर्ज करें।",
     "enterValidEmailError": "एक मान्य ईमेल पता दर्ज करें।",
+    "enterRealEmailError": "आवेदन अपडेट भेजने के लिए एक वास्तविक ईमेल पता दर्ज करें।",
     "party": {
       "travellerNumber": "यात्री {number}",
       "remove": "हटाएँ",

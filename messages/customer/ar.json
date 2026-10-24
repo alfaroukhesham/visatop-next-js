@@ -65,6 +65,7 @@
     "chooseServiceError": "اختر خدمة.",
     "enterEmailError": "أدخل عنوان بريدك الإلكتروني.",
     "enterValidEmailError": "أدخل عنوان بريد إلكتروني صالح.",
+    "enterRealEmailError": "أدخل عنوان بريد إلكتروني حقيقي لنرسل إليه تحديثات طلبك.",
     "party": {
       "travellerNumber": "مسافر {number}",
       "remove": "إزالة",

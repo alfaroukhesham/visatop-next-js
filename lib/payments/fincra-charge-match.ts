@@ -1,3 +1,5 @@
+import { parseFincraAttemptReference } from "@/lib/payments/fincra-attempt-reference";
+
 export type TFincraStoredPaymentRef = {
   id: string;
   amount: bigint;
@@ -24,7 +26,9 @@ const referenceMapsToPayment = (
   const ref = merchantReference?.trim() ?? "";
   if (!ref) return true;
   const operationId = payment.providerOperationId?.trim() ?? "";
-  return ref === payment.id || (operationId.length > 0 && ref === operationId);
+  if (ref === payment.id || (operationId.length > 0 && ref === operationId)) return true;
+  const parsed = parseFincraAttemptReference(ref);
+  return Boolean(parsed && parsed.paymentId === payment.id);
 };
 
 export const matchFincraChargeToStoredPayment = (params: {

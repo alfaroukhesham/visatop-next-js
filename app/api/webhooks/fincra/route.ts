@@ -16,8 +16,7 @@ import { processFincraVerifiedPaymentInTransaction } from "@/lib/payments/proces
 import { scheduleFincraPaidSideEffects } from "@/lib/payments/fincra-payment-side-effects";
 import { getFincraServerConfig } from "@/lib/payments/resolve-payment-provider";
 import { markWebhookReceivedNow, PLATFORM_KEY_LAST_WEBHOOK_FINCRA } from "@/lib/payments/webhook-health";
-import { payment } from "@/lib/db/schema";
-import { eq, or } from "drizzle-orm";
+import { findFincraPaymentForWebhookRefs } from "@/lib/payments/fincra-payment-lookup";
 
 export const runtime = "nodejs";
 
@@ -67,36 +66,25 @@ export async function POST(req: Request) {
     const handleResult = await withSystemDbActor(async (tx) => {
       await markWebhookReceivedNow(tx, PLATFORM_KEY_LAST_WEBHOOK_FINCRA);
 
-      let merchantReference = parsed.merchantReference || parsed.event.metadata.operationId || null;
-      if (!merchantReference && parsed.event.providerPaymentId) {
-        const [byPayCode] = await tx
-          .select({ providerOperationId: payment.providerOperationId, id: payment.id })
-          .from(payment)
-          .where(eq(payment.providerCheckoutId, parsed.event.providerPaymentId))
-          .limit(1);
-        merchantReference = byPayCode?.providerOperationId ?? byPayCode?.id ?? null;
-      }
+      const payForAmount = await findFincraPaymentForWebhookRefs(tx, {
+        merchantReference: parsed.merchantReference || parsed.event.metadata.operationId || null,
+        paymentIdFromMetadata: parsed.event.metadata.paymentId || null,
+        providerPaymentId: parsed.event.providerPaymentId,
+      });
 
-      if (!merchantReference) {
-        console.warn("[webhooks/fincra] Missing merchant reference; cannot verify", {
+      if (!payForAmount) {
+        console.warn("[webhooks/fincra] Unknown merchant reference; not marking paid", {
           requestId,
           providerPaymentId: parsed.event.providerPaymentId,
         });
         return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
       }
 
-      const [payForAmount] = await tx
-        .select()
-        .from(payment)
-        .where(or(eq(payment.providerOperationId, merchantReference), eq(payment.id, merchantReference)))
-        .limit(1);
-
-      if (!payForAmount) {
-        console.warn("[webhooks/fincra] Unknown merchant reference; not marking paid", {
-          requestId,
-        });
-        return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
-      }
+      const merchantReference =
+        parsed.merchantReference ||
+        parsed.event.metadata.operationId ||
+        payForAmount.providerOperationId ||
+        payForAmount.id;
 
       let verified;
       try {
@@ -125,6 +113,7 @@ export async function POST(req: Request) {
           ...parsed.event.metadata,
           operationId: merchantReference,
           applicationId: parsed.event.metadata.applicationId || payForAmount?.applicationId || "",
+          paymentId: parsed.event.metadata.paymentId || payForAmount.id,
         },
         providerPaymentId: verified.reference || parsed.event.providerPaymentId,
       };

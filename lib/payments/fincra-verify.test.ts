@@ -67,6 +67,15 @@ describe("decideFincraVerifiedPayment", () => {
     expect(d).toMatchObject({ kind: "mismatch", reason: "currency_mismatch" });
   });
 
+  it("marks paid when the merchant reference is a later attempt for the same payment", () => {
+    const d = decideFincraVerifiedPayment({
+      verified: base({ merchantReference: "pay_1-a2" }),
+      payment: { ...payment, providerOperationId: "pay_1-a3" },
+      merchantReference: "pay_1-a2",
+    });
+    expect(d).toMatchObject({ kind: "paid", varianceType: "exact" });
+  });
+
   it("does not mark paid for an unknown reference", () => {
     expect(decideFincraVerifiedPayment({ verified: base({}), payment: null })).toEqual({
       kind: "unknown_reference",

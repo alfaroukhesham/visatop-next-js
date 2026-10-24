@@ -39,6 +39,7 @@ import { auth } from "@/lib/auth";
 import * as actor from "@/lib/db/actor-context";
 import { createPartyDraft, CreatePartyDraftValidationError } from "@/lib/applications/create-party-draft";
 import { POST } from "./route";
+import { GUEST_EMAIL_REJECTED_MESSAGE } from "@/lib/validation/guest-email";
 
 const guestRow = {
   id: "app-1",
@@ -90,7 +91,7 @@ describe("POST /api/applications", () => {
         body: JSON.stringify({
           nationalityCode: "US",
           serviceId: "svc-1",
-          guestEmail: "guest@example.com",
+          guestEmail: "guest@gmail.com",
         }),
       }),
     );
@@ -134,7 +135,7 @@ describe("POST /api/applications", () => {
         body: JSON.stringify({
           nationalityCode: "US",
           serviceId: "svc-1",
-          guestEmail: "guest@example.com",
+          guestEmail: "guest@gmail.com",
           catalogCurrency: "EURO",
         }),
       }),
@@ -163,6 +164,27 @@ describe("POST /api/applications", () => {
     );
     expect(res.status).toBe(201);
     expect(res.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("rejects junk guest emails with a clear validation message", async () => {
+    vi.mocked(auth.api.getSession).mockResolvedValue(null as never);
+
+    const res = await POST(
+      new Request("http://localhost/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nationalityCode: "NG",
+          serviceId: "svc-1",
+          guestEmail: "x@x.com",
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+    expect(body.error.details.fieldErrors.guestEmail).toContain(GUEST_EMAIL_REJECTED_MESSAGE);
+    expect(createPartyDraft).not.toHaveBeenCalled();
   });
 
   it("maps CreatePartyDraftValidationError to 400", async () => {

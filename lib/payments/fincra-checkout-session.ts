@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { resolveApplicantEmailTx } from "@/lib/email/resolve-applicant-email";
@@ -8,6 +8,7 @@ import {
   isTrustedFincraCheckoutUrl,
 } from "@/lib/payments/fincra-embedded";
 import { buildFincraInlineCheckoutData, type TFincraInlineCheckoutData } from "@/lib/payments/fincra-inline";
+import { nextFincraAttemptReference } from "@/lib/payments/fincra-attempt-reference";
 import { reconcileFincraPaymentFromReturn } from "@/lib/payments/reconcile-fincra-payments";
 import { getFincraServerConfig } from "@/lib/payments/resolve-payment-provider";
 import type { TResumeCheckoutSession } from "@/lib/payments/checkout-types";
@@ -68,9 +69,44 @@ export const buildFincraInlineCheckoutDataForPayment = async (
       email: customerEmail,
       phoneNumber: app.phone,
     },
-    reference: payRow.id,
+    reference: payRow.providerOperationId?.trim() || nextFincraAttemptReference(payRow.id, payRow.providerOperationId),
     feeBearer: cfg.feeBearer,
     metadata,
+  });
+};
+
+export const rotateOpenFincraInlineAttempt = async (
+  tx: DbTransaction,
+  params: {
+    payRow: typeof schema.payment.$inferSelect;
+    memberIds: string[];
+    requestId: string | null;
+  },
+): Promise<TFincraInlineCheckoutData | null> => {
+  const nextReference = nextFincraAttemptReference(params.payRow.id, params.payRow.providerOperationId);
+  await tx
+    .update(schema.application)
+    .set({ checkoutState: "pending" })
+    .where(and(inArray(schema.application.id, params.memberIds), ne(schema.application.paymentStatus, "paid")));
+  await tx
+    .update(schema.payment)
+    .set({ providerOperationId: nextReference })
+    .where(eq(schema.payment.id, params.payRow.id));
+  await tx.insert(schema.auditLog).values({
+    actorType: "system",
+    actorId: null,
+    action: "payment_fincra_attempt_rotated",
+    entityType: "payment",
+    entityId: params.payRow.id,
+    afterJson: JSON.stringify({
+      previousReference: params.payRow.providerOperationId ?? params.payRow.id,
+      nextReference,
+      requestId: params.requestId,
+    }),
+  });
+  return buildFincraInlineCheckoutDataForPayment(tx, {
+    ...params.payRow,
+    providerOperationId: nextReference,
   });
 };
 

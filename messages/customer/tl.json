@@ -65,6 +65,7 @@
     "chooseServiceError": "Pumili ng service.",
     "enterEmailError": "Ilagay ang email address mo.",
     "enterValidEmailError": "Maglagay ng valid na email address.",
+    "enterRealEmailError": "Maglagay ng totoong email address para maipadala namin ang mga update sa iyong aplikasyon.",
     "party": {
       "travellerNumber": "Traveler {number}",
       "remove": "Alisin",

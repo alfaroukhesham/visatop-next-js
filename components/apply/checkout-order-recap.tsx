@@ -4,8 +4,13 @@ import { useEffect, useMemo, useState, type FC } from "react";
 import { ClientOrderRecapSkeleton } from "@/components/client/client-loading";
 import { AllInPriceBadges } from "@/components/apply/all-in-price-badges";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
-import { convertMinorBetweenUsdAed, parsePublicDisplayFxAedPerUsd } from "@/lib/catalog/display-price";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
+import {
+  catalogCurrencyTab,
+  formatDisplayMinor,
+  formatPriceForDisplay,
+  priceMinorForDisplay,
+} from "@/lib/catalog/format-catalog-price";
 import { apiHref } from "@/lib/app-href";
 import type { PublicApplication } from "@/lib/applications/public-application";
 import type { TPublicPartyMember } from "@/lib/applications/load-party-members";
@@ -24,59 +29,7 @@ type CatalogService = {
   currency: string | null;
 };
 
-type DisplayCurrency = string;
-
 type TTranslate = (key: string, vars?: TCustomerMessageVars) => string;
-
-const displayCurrencyFormatters = new Map<string, Intl.NumberFormat>();
-
-function displayCurrencyFormatter(currency: string): Intl.NumberFormat {
-  let fmt = displayCurrencyFormatters.get(currency);
-  if (!fmt) {
-    fmt = new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 2,
-    });
-    displayCurrencyFormatters.set(currency, fmt);
-  }
-  return fmt;
-}
-
-function formatDisplayMinor(minor: string | null, currency: string | null): string | null {
-  if (minor === null || currency === null) return null;
-  const n = Number(minor);
-  if (!Number.isFinite(n)) return null;
-  try {
-    return displayCurrencyFormatter(currency).format(n / 100);
-  } catch {
-    return `${(n / 100).toFixed(2)} ${currency}`;
-  }
-}
-
-function priceMinorForDisplay(s: CatalogService, tab: DisplayCurrency): bigint | null {
-  const minorStr = s.displayPriceMinor;
-  const cur = s.currency;
-  if (minorStr === null || cur === null) return null;
-  const n = Number(minorStr);
-  if (!Number.isFinite(n)) return null;
-  const minor = BigInt(Math.trunc(n));
-  if (cur === tab) return minor;
-  if ((cur !== "USD" && cur !== "AED") || (tab !== "USD" && tab !== "AED")) return null;
-  const fx = parsePublicDisplayFxAedPerUsd();
-  if (!fx) return null;
-  return convertMinorBetweenUsdAed(minor, cur, tab, fx);
-}
-
-function formatPriceForDisplay(
-  s: CatalogService,
-  tab: DisplayCurrency,
-): { text: string; isEstimate: boolean } | null {
-  const minor = priceMinorForDisplay(s, tab);
-  if (minor === null) return null;
-  const text = formatDisplayMinor(minor.toString(), tab);
-  return text ? { text, isEstimate: s.currency !== tab } : null;
-}
 
 const entriesLabel = (entries: string | null, t: TTranslate): string | null => {
   if (!entries) return null;
@@ -131,11 +84,9 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
     };
   }, [badges, t]);
 
-  const currency = (
-    application.checkoutOffer?.currency ||
-    application.catalogCurrency ||
-    "USD"
-  ).trim().toUpperCase();
+  const currency = catalogCurrencyTab(
+    application.checkoutOffer?.currency || application.catalogCurrency || "USD",
+  );
 
   useEffect(() => {
     let cancelled = false;

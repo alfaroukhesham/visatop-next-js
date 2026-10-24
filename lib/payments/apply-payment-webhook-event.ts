@@ -1,7 +1,8 @@
 import { retainRequiredDocuments } from "@/lib/applications/retain-required-documents";
 import { application, applicationParty, auditLog, payment } from "@/lib/db/schema";
 import type { DbTransaction } from "@/lib/db";
-import { and, asc, desc, eq, ne, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, or } from "drizzle-orm";
+import { fincraWebhookLookupIds } from "@/lib/payments/fincra-attempt-reference";
 import type { NormalizedPaymentWebhookEvent } from "./normalized-webhook";
 import type { ApplicationRow } from "@/lib/applications/load-application-row-for-request";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
@@ -85,6 +86,21 @@ export async function resolvePaymentRowForWebhook(
       .where(or(eq(payment.providerOperationId, operationId), eq(payment.id, operationId)))
       .limit(1);
     payRow = rows[0];
+  }
+
+  if (!payRow && event.provider === "fincra") {
+    const ids = fincraWebhookLookupIds({
+      merchantReference: typeof operationId === "string" ? operationId : tid,
+      paymentIdFromMetadata: event.metadata.paymentId,
+    });
+    if (ids.length > 0) {
+      const rows = await tx
+        .select()
+        .from(payment)
+        .where(or(inArray(payment.providerOperationId, ids), inArray(payment.id, ids)))
+        .limit(1);
+      payRow = rows[0];
+    }
   }
 
   return payRow;

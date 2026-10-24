@@ -27,6 +27,7 @@ import {
 import { isUsdAedCurrency } from "@/lib/pricing/catalog-currency";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
+import { isPlausibleGuestEmail } from "@/lib/validation/guest-email";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { trackEventOnce } from "@/lib/analytics/gtag-client";
 import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
@@ -499,6 +500,10 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       setError(t("start.enterValidEmailError"));
       return;
     }
+    if (!isPlausibleGuestEmail(trimmedEmail)) {
+      setError(t("start.enterRealEmailError"));
+      return;
+    }
     setSubmitting(true);
     const body: Record<string, unknown> = {
       nationalityCode: nationality,
@@ -517,7 +522,8 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     );
     setSubmitting(false);
     if (!res.ok) {
-      setError(res.error.message);
+      const details = res.error.details as { fieldErrors?: { guestEmail?: string[] } } | undefined;
+      setError(details?.fieldErrors?.guestEmail?.[0] ?? res.error.message);
       return;
     }
     trackEventOnce(
