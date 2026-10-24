@@ -12,6 +12,7 @@ import { CheckoutTermsCheckbox } from "../checkout-terms-checkbox";
 import { PaddleCheckoutButton } from "../paddle-checkout-button";
 import { FincraInlineCheckout } from "../fincra-inline-checkout";
 import { ZiinaEmbeddedCheckout } from "../ziina-embedded-checkout";
+import { PaymentWhatsAppHelp } from "../payment-whatsapp-help";
 import type { TFincraInlineCheckoutData } from "@/lib/payments/fincra-inline";
 
 type CheckoutHandlers = {
@@ -117,6 +118,7 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
         onCancel={checkout.onStartCheckoutTimer}
         onError={checkout.onError}
       />
+      {payInNaira ? <PaymentWhatsAppHelp /> : null}
     </div>
   );
 
@@ -187,6 +189,7 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
               onError={checkout.onError}
             />
           ) : null}
+          {fincraInline && !showPaddleRetry ? <PaymentWhatsAppHelp /> : null}
 
           {showPaddleRetry ? <div className="flex-1">{payButton}</div> : null}
 

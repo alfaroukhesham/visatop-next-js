@@ -24,7 +24,7 @@ export const StickyWhatsAppButton: FC<IStickyWhatsAppButtonProps> = ({ label }) 
       rel="noopener noreferrer"
       aria-label={label}
       title={label}
-      className="fixed z-40 flex size-14 touch-manipulation items-center justify-center rounded-full text-white shadow-[0_8px_24px_rgba(37,211,102,0.45)] transition-[filter,transform] hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-safe:hover:scale-105 motion-reduce:hover:scale-100 print:hidden right-4 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:right-6 sm:bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))]"
+      className="fixed z-[2147483646] flex size-14 touch-manipulation items-center justify-center rounded-full text-white shadow-[0_8px_24px_rgba(37,211,102,0.45)] transition-[filter,transform] hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white motion-safe:hover:scale-105 motion-reduce:hover:scale-100 print:hidden right-4 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:right-6 sm:bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))]"
       style={{ backgroundColor: "#25D366" }}
     >
       <WhatsAppIcon />
