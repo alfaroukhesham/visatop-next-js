@@ -39,6 +39,13 @@ vi.mock("@/lib/payments/fincra-payment-side-effects", () => ({
   scheduleFincraPaidSideEffects: (...args: unknown[]) => sideEffectsMock(...args),
 }));
 
+const recordMock = vi.fn();
+const auditMock = vi.fn();
+vi.mock("@/lib/payments/fincra-webhook-record", () => ({
+  recordFincraWebhookEvent: (...args: unknown[]) => recordMock(...args),
+  auditFincraUnpaidAttemptEvent: (...args: unknown[]) => auditMock(...args),
+}));
+
 import { POST } from "./route";
 
 const secret = "whsec";
@@ -106,6 +113,8 @@ describe("POST /api/webhooks/fincra", () => {
       firstPaidApplicationId: "app_1",
       paymentId: "pay_1",
     });
+    recordMock.mockResolvedValue(true);
+    auditMock.mockResolvedValue({ isCurrentAttempt: true });
   });
 
   it("rejects an invalid signature without verifying with Fincra", async () => {
@@ -307,5 +316,87 @@ describe("POST /api/webhooks/fincra", () => {
     expect(verifyMock).not.toHaveBeenCalled();
     expect(processMock).not.toHaveBeenCalled();
     expect(sideEffectsMock).not.toHaveBeenCalled();
+  });
+
+  const emptyTx = () => ({
+    select: () => ({ from: () => ({ where: () => ({ limit: async () => [] }) }) }),
+    update: () => ({
+      set: () => ({ where: () => ({ returning: async () => [{ key: "last_webhook_received_at_fincra" }] }) }),
+    }),
+  });
+
+  const post = (raw: string, signature = sign(raw)) =>
+    POST(
+      new Request("http://localhost/api/webhooks/fincra", {
+        method: "POST",
+        headers: { signature },
+        body: raw,
+      }),
+    );
+
+  const unpaidBody = (event: string, merchantReference: string) =>
+    JSON.stringify({
+      event,
+      data: { id: 77, reference: "fcr-p-9", merchantReference, status: event.split(".")[1], amount: 332450, currency: "NGN" },
+    });
+
+  it.each(["charge.expired", "charge.failed"])("persists %s for an -aN ref and audits without verifying/marking", async (event) => {
+    const res = await post(unpaidBody(event, "pay_1-a1"));
+    expect(res.status).toBe(200);
+    expect(recordMock).toHaveBeenCalledTimes(1);
+    const arg = recordMock.mock.calls[0]![1];
+    expect(arg.envelope.eventName).toBe(event);
+    expect(arg.envelope.merchantReference).toBe("pay_1-a1");
+    expect(arg.payRow.id).toBe("pay_1");
+    expect(auditMock).toHaveBeenCalledTimes(1);
+    expect(verifyMock).not.toHaveBeenCalled();
+    expect(processMock).not.toHaveBeenCalled();
+    expect(sideEffectsMock).not.toHaveBeenCalled();
+    const json = await res.json();
+    expect(json.data.matched).toBe(true);
+  });
+
+  it("stores an unknown (e.g. staging) reference as unmatched and returns 200", async () => {
+    withSystemMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(emptyTx()));
+    const res = await post(unpaidBody("charge.expired", "staging_pay-a1"));
+    expect(res.status).toBe(200);
+    expect(recordMock.mock.calls[0]![1].payRow).toBeNull();
+    expect(auditMock).not.toHaveBeenCalled();
+    const json = await res.json();
+    expect(json.data.matched).toBe(false);
+  });
+
+  it("treats a duplicate delivery as a no-op", async () => {
+    recordMock.mockResolvedValue(false);
+    const res = await post(unpaidBody("charge.expired", "pay_1-a1"));
+    expect(res.status).toBe(200);
+    expect(auditMock).not.toHaveBeenCalled();
+    const json = await res.json();
+    expect(json.data.duplicate).toBe(true);
+  });
+
+  it("does not store anything on a bad signature", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const res = await post(unpaidBody("charge.expired", "pay_1-a1"), "ab".repeat(64));
+    expect(res.status).toBe(401);
+    expect(recordMock).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith("[webhooks/fincra] Invalid webhook signature", expect.anything());
+    warn.mockRestore();
+  });
+
+  it("also persists charge.successful events alongside processing", async () => {
+    const res = await post(body);
+    expect(res.status).toBe(200);
+    expect(processMock).toHaveBeenCalledTimes(1);
+    expect(recordMock).toHaveBeenCalledTimes(1);
+    expect(recordMock.mock.calls[0]![1].payRow.id).toBe("pay_1");
+  });
+
+  it("stores an unmatched charge.successful without verifying", async () => {
+    withSystemMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(emptyTx()));
+    const res = await post(body);
+    expect(res.status).toBe(200);
+    expect(recordMock.mock.calls[0]![1].payRow).toBeNull();
+    expect(verifyMock).not.toHaveBeenCalled();
   });
 });

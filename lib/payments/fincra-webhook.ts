@@ -114,3 +114,44 @@ export const parseFincraWebhookToNormalized = (rawBody: string): FincraWebhookPa
     },
   };
 };
+
+export type FincraWebhookEnvelope = {
+  eventName: string;
+  providerEventId: string | null;
+  /** Our reference sent at checkout (`<paymentId>-aN`). */
+  merchantReference: string | null;
+  /** Fincra pay code / charge reference (e.g. fcr-p-…). */
+  providerReference: string | null;
+  status: string | null;
+  paymentIdFromMetadata: string | null;
+};
+
+/** Lenient read of any Fincra webhook body (all event types) for audit storage and logging. */
+export const parseFincraWebhookEnvelope = (rawBody: string): FincraWebhookEnvelope | null => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawBody);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  const rec = parsed as Record<string, unknown>;
+  const eventName = typeof rec.event === "string" && rec.event.trim() ? rec.event.trim() : "unknown";
+  const d = rec.data && typeof rec.data === "object" ? (rec.data as Record<string, unknown>) : {};
+  const str = (v: unknown): string | null =>
+    typeof v === "string" && v.trim() ? v.trim() : typeof v === "number" ? String(v) : null;
+  const meta = d.metadata && typeof d.metadata === "object" ? (d.metadata as Record<string, unknown>) : {};
+  const innerMeta =
+    meta.metadata && typeof meta.metadata === "object" ? (meta.metadata as Record<string, unknown>) : {};
+  return {
+    eventName,
+    providerEventId: str(d.id) ?? str(d.chargeReference) ?? str(d.reference),
+    merchantReference: str(d.merchantReference) ?? str(meta.reference),
+    providerReference: str(d.reference) ?? str(d.chargeReference),
+    status: str(d.status)?.toLowerCase() ?? null,
+    paymentIdFromMetadata: str(meta.paymentId) ?? str(innerMeta.paymentId),
+  };
+};
+
+/** Non-success charge events we record against the attempt without changing payment/application state. */
+export const FINCRA_TERMINAL_UNPAID_EVENTS = new Set(["charge.failed", "charge.expired"]);

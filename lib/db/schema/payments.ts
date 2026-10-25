@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { pgTable, text, timestamp, index, bigint, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, index, bigint, uniqueIndex, boolean } from "drizzle-orm/pg-core";
 import { application } from "./applications";
 
 export const payment = pgTable(
@@ -53,18 +53,23 @@ export const paymentEvent = pgTable(
     id: text("id")
       .primaryKey()
       .default(sql`gen_random_uuid()`),
-    paymentId: text("payment_id")
-      .notNull()
-      .references(() => payment.id, { onDelete: "cascade" }),
+    /** Null when a verified webhook did not match any payment row (e.g. staging refs on the shared live account). */
+    paymentId: text("payment_id").references(() => payment.id, { onDelete: "cascade" }),
     providerEventId: text("provider_event_id"),
     type: text("type").notNull(),
     payloadHash: text("payload_hash").notNull(),
+    provider: text("provider"),
+    merchantReference: text("merchant_reference"),
+    status: text("status"),
+    signatureValid: boolean("signature_valid").default(true).notNull(),
+    matched: boolean("matched").default(true).notNull(),
     receivedAt: timestamp("received_at").defaultNow().notNull(),
   },
   (t) => [
     index("payment_event_paymentId_idx").on(t.paymentId),
     index("payment_event_providerEvent_idx").on(t.providerEventId),
     uniqueIndex("payment_event_payload_hash_unique").on(t.payloadHash),
+    index("payment_event_merchant_reference_idx").on(t.merchantReference),
   ],
 );
 
