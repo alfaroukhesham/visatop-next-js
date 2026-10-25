@@ -153,4 +153,37 @@ describe("recordFunnelEvent", () => {
       }),
     );
   });
+
+  it("stores country and device, falling back country to nationality", async () => {
+    const values = vi.fn(() => ({
+      then(resolve: (value: unknown) => unknown) {
+        return Promise.resolve(resolve("awaited-without-on-conflict"));
+      },
+      onConflictDoNothing: vi.fn(() => ({
+        returning: async () => [{ eventId: "evt-geo-1" }],
+      })),
+    }));
+    const inner = {
+      insert: vi.fn(() => ({ values })),
+    };
+    const tx = {
+      transaction: vi.fn(async (fn: (sp: typeof inner) => Promise<unknown>) => fn(inner)),
+      insert: inner.insert,
+    };
+    await recordFunnelEvent(tx as never, {
+      eventId: "evt-geo-1",
+      eventName: APPLY_FUNNEL_EVENTS.visaListViewed,
+      sessionId: "sid-1",
+      nationalityCode: "IN",
+      countryCode: null,
+      deviceType: "mobile",
+      source: "client",
+    });
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        countryCode: "IN",
+        deviceType: "mobile",
+      }),
+    );
+  });
 });

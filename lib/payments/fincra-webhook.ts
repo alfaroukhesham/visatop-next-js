@@ -124,6 +124,8 @@ export type FincraWebhookEnvelope = {
   providerReference: string | null;
   status: string | null;
   paymentIdFromMetadata: string | null;
+  /** Provider failure copy when present (charge.failed / charge.expired). */
+  failureMessage: string | null;
 };
 
 /** Lenient read of any Fincra webhook body (all event types) for audit storage and logging. */
@@ -143,6 +145,7 @@ export const parseFincraWebhookEnvelope = (rawBody: string): FincraWebhookEnvelo
   const meta = d.metadata && typeof d.metadata === "object" ? (d.metadata as Record<string, unknown>) : {};
   const innerMeta =
     meta.metadata && typeof meta.metadata === "object" ? (meta.metadata as Record<string, unknown>) : {};
+  const errorObj = d.error && typeof d.error === "object" ? (d.error as Record<string, unknown>) : null;
   return {
     eventName,
     providerEventId: str(d.id) ?? str(d.chargeReference) ?? str(d.reference),
@@ -150,6 +153,13 @@ export const parseFincraWebhookEnvelope = (rawBody: string): FincraWebhookEnvelo
     providerReference: str(d.reference) ?? str(d.chargeReference),
     status: str(d.status)?.toLowerCase() ?? null,
     paymentIdFromMetadata: str(meta.paymentId) ?? str(innerMeta.paymentId),
+    failureMessage:
+      str(d.message) ??
+      str(d.failureReason) ??
+      str(d.failure_reason) ??
+      str(d.reason) ??
+      str(errorObj?.message) ??
+      (typeof d.error === "string" ? str(d.error) : null),
   };
 };
 

@@ -3,7 +3,9 @@ import { jsonError, jsonOk } from "@/lib/api/response";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { withAnalyticsBeaconDbActor } from "@/lib/db/actor-context";
 import { consumeBeaconRateLimit } from "@/lib/analytics/beacon-rate-limit";
+import { analyticsDeviceTypeFromUserAgent } from "@/lib/analytics/device-type";
 import { parseBeaconPayload } from "@/lib/analytics/funnel-event-names";
+import { analyticsCountryFromHeaders } from "@/lib/analytics/geo-country";
 import { recordFunnelEvent } from "@/lib/analytics/record-funnel-event";
 import { z } from "zod";
 
@@ -42,6 +44,8 @@ export async function POST(req: Request) {
     await withAnalyticsBeaconDbActor(async (tx) => {
       await recordFunnelEvent(tx, {
         ...payload.data,
+        countryCode: analyticsCountryFromHeaders(hdrs),
+        deviceType: analyticsDeviceTypeFromUserAgent(hdrs.get("user-agent")),
         source: "client",
       });
     });

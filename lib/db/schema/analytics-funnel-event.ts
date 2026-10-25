@@ -15,6 +15,10 @@ export const analyticsFunnelEvent = pgTable(
     applicationId: text("application_id").references(() => application.id, { onDelete: "set null" }),
     nationalityCode: text("nationality_code"),
     serviceId: text("service_id"),
+    /** ISO2 from a trusted edge geo header, else nationality. Never PII. */
+    countryCode: text("country_code"),
+    /** mobile | tablet | desktop from User-Agent. */
+    deviceType: text("device_type"),
     metadata: jsonb("metadata"),
     source: text("source").notNull(),
     failureReason: text("failure_reason"),
@@ -25,6 +29,8 @@ export const analyticsFunnelEvent = pgTable(
     index("analytics_funnel_event_eventName_idx").on(t.eventName),
     index("analytics_funnel_event_applicationId_idx").on(t.applicationId),
     index("analytics_funnel_event_sessionId_idx").on(t.sessionId),
+    index("analytics_funnel_event_countryCode_idx").on(t.countryCode),
+    index("analytics_funnel_event_deviceType_idx").on(t.deviceType),
   ],
 );
 

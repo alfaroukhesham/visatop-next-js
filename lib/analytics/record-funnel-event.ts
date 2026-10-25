@@ -1,7 +1,9 @@
 import { analyticsFunnelEvent } from "@/lib/db/schema";
 import type { DbTransaction } from "@/lib/db";
+import { sanitizeAnalyticsDeviceType, type TAnalyticsDeviceType } from "@/lib/analytics/device-type";
 import { funnelEventMetadataFromFields } from "@/lib/analytics/funnel-event-metadata";
 import { isPersistableFunnelEvent, shouldSkipClientFunnelPersist } from "@/lib/analytics/funnel-event-names";
+import { analyticsCountryForFunnelEvent } from "@/lib/analytics/geo-country";
 import { isForeignKeyViolation, isUniqueViolation } from "@/lib/db/pg-errors";
 import { logger } from "@/lib/logger";
 
@@ -12,6 +14,8 @@ export type TRecordFunnelEventInput = {
   applicationId?: string | null;
   nationalityCode?: string | null;
   serviceId?: string | null;
+  countryCode?: string | null;
+  deviceType?: TAnalyticsDeviceType | string | null;
   failureReason?: string | null;
   errorCode?: string | null;
   httpStatus?: number | null;
@@ -38,6 +42,11 @@ const insertRow = async (
       applicationId: input.applicationId ?? null,
       nationalityCode: input.nationalityCode ?? null,
       serviceId: input.serviceId ?? null,
+      countryCode: analyticsCountryForFunnelEvent({
+        geoCountry: input.countryCode,
+        nationalityCode: input.nationalityCode,
+      }),
+      deviceType: sanitizeAnalyticsDeviceType(input.deviceType),
       failureReason: input.failureReason ?? input.reason ?? null,
       metadata: funnelEventMetadataFromFields({
         errorCode: input.errorCode,

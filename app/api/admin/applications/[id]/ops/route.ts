@@ -18,6 +18,7 @@ import {
   sendOutcomeApprovedEmail,
   sendOutcomeUaeAuthorityRejectionEmail,
 } from "@/lib/email/send-application-transactional-emails";
+import { fulfilledAtForCompletedTransition } from "@/lib/applications/lifecycle-timestamps";
 import {
   APPLICATION_STATUSES,
   TERMINAL_APPLICATION_STATUSES,
@@ -185,8 +186,19 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     }
 
     if (nextApplicationStatus !== undefined || nextAdminOpsStep !== undefined) {
-      const patch: { applicationStatus?: ApplicationStatus; adminOpsStep?: string | null } = {};
-      if (nextApplicationStatus !== undefined) patch.applicationStatus = nextApplicationStatus;
+      const patch: {
+        applicationStatus?: ApplicationStatus;
+        adminOpsStep?: string | null;
+        fulfilledAt?: Date;
+      } = {};
+      if (nextApplicationStatus !== undefined) {
+        patch.applicationStatus = nextApplicationStatus;
+        const fulfilledAt = fulfilledAtForCompletedTransition(
+          nextApplicationStatus,
+          row.fulfilledAt,
+        );
+        if (fulfilledAt) patch.fulfilledAt = fulfilledAt;
+      }
       if (nextAdminOpsStep !== undefined) patch.adminOpsStep = nextAdminOpsStep;
       await tx.update(schema.application).set(patch).where(eq(schema.application.id, applicationId));
     }

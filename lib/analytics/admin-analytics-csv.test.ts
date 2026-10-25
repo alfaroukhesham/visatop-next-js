@@ -52,6 +52,13 @@ const sample: TAdminAnalyticsPayload = {
     },
   ],
   emailsByKind: [{ kind: "application_draft_started", count: 4 }],
+  durations: {
+    timeToPay: { p50Seconds: 120, p95Seconds: 3600, sampleSize: 2 },
+    paidToFulfilled: { p50Seconds: 86400, p95Seconds: 172800, sampleSize: 1 },
+  },
+  paymentFailures: [{ code: "fincra:expired", count: 3 }],
+  conversionByCountry: [{ key: "IN", created: 7, paid: 1 }],
+  conversionByDevice: [{ key: "mobile", created: 6, paid: 1 }],
 };
 
 describe("analyticsSummaryToCsv", () => {
@@ -60,6 +67,9 @@ describe("analyticsSummaryToCsv", () => {
     expect(csv).toContain("applications_created,10");
     expect(csv).toContain("application_started,Nationality / start,10");
     expect(csv).toContain("IN,India,7,1");
+    expect(csv).toContain("time_to_pay,120,3600,2");
+    expect(csv).toContain("fincra:expired,3");
+    expect(csv).toContain("mobile,6,1");
     expect(csv).not.toContain("@");
   });
 
@@ -87,6 +97,8 @@ describe("funnelEventsToCsv", () => {
           applicationId: null,
           nationalityCode: "IN",
           serviceId: null,
+          countryCode: "IN",
+          deviceType: "mobile",
           source: "client",
           failureReason: null,
         },
@@ -106,11 +118,15 @@ describe("funnelEventsToCsv", () => {
         applicationId: null,
         nationalityCode: "IN",
         serviceId: null,
+        countryCode: "IN",
+        deviceType: "desktop",
         source: "client",
         failureReason: null,
       },
     ]);
     expect(csv).toContain("event_name");
+    expect(csv).toContain("country_code");
+    expect(csv).toContain("device_type");
     expect(csv.toLowerCase()).not.toContain("email");
     expect(csv.toLowerCase()).not.toContain("passport");
   });

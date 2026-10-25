@@ -6,6 +6,8 @@ export type ZiinaIntentSnapshot = {
   amountMinor: number;
   currencyCode: string;
   operationId?: string | null;
+  errorCode?: string | null;
+  errorMessage?: string | null;
 };
 
 export type ZiinaIntentMapResult =
@@ -53,6 +55,10 @@ export function mapZiinaIntentSnapshotToNormalized(
   }
 
   if (status === "failed" || status === "canceled") {
+    const metadata: Record<string, string> = {};
+    if (operationId) metadata.operationId = operationId;
+    metadata.failureCode = snapshot.errorCode?.trim() || status;
+    if (snapshot.errorMessage?.trim()) metadata.failureMessage = snapshot.errorMessage.trim();
     return {
       kind: "event",
       event: {
@@ -61,7 +67,7 @@ export function mapZiinaIntentSnapshotToNormalized(
         providerPaymentId: id,
         amountMinor: Number.isFinite(amount) ? amount : 0,
         currency: currency.length === 3 ? currency : "USD",
-        metadata: operationId ? { operationId } : {},
+        metadata,
         rawEventType,
         providerEventId: id,
       },

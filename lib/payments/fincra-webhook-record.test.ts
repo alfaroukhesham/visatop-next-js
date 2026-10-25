@@ -22,7 +22,9 @@ const makeTx = (insertReturns: unknown[]) => {
         return { onConflictDoNothing: () => ({ returning: async () => insertReturns }), then: undefined };
       },
     }),
-    update: () => ({ set: (v: unknown) => (set(v), { where: async () => [] }) }),
+    update: () => ({
+      set: (v: unknown) => (set(v), { where: () => ({ returning: async () => [{ id: "pay_1" }] }) }),
+    }),
   };
   return { tx, values, set };
 };
@@ -41,8 +43,19 @@ describe("parseFincraWebhookEnvelope", () => {
       providerReference: "fcr-p-1",
       status: "expired",
       paymentIdFromMetadata: "abc",
+      failureMessage: null,
     });
     expect(parseFincraWebhookEnvelope("not json")).toBeNull();
+  });
+
+  it("reads a provider failure message when present", () => {
+    const e = parseFincraWebhookEnvelope(
+      JSON.stringify({
+        event: "charge.failed",
+        data: { id: 5, merchantReference: "pay_1-a1", status: "failed", message: "Do not honour" },
+      }),
+    );
+    expect(e?.failureMessage).toBe("Do not honour");
   });
 });
 
@@ -69,15 +82,18 @@ describe("recordFincraWebhookEvent", () => {
 });
 
 describe("auditFincraUnpaidAttemptEvent", () => {
-  it("audits without updating payment, flags stale attempts", async () => {
+  it("audits and records failure_code without changing payment status", async () => {
     const { tx, values, set } = makeTx([]);
     const r = await auditFincraUnpaidAttemptEvent(tx as never, { envelope: env(), payRow: payRow as never });
     expect(r).toEqual({ isCurrentAttempt: false });
     expect(values).toHaveBeenCalledWith(expect.objectContaining({ action: "payment_fincra_attempt_expired" }));
-    expect(set).not.toHaveBeenCalled();
+    expect(set).toHaveBeenCalledWith({ failureCode: "expired", failureMessage: "expired" });
+    expect(set.mock.calls[0]![0]).not.toHaveProperty("status");
+    expect(set.mock.calls[0]![0]).not.toHaveProperty("checkoutState");
   });
   it("ignores non-terminal events", async () => {
-    const { tx } = makeTx([]);
+    const { tx, set } = makeTx([]);
     expect(await auditFincraUnpaidAttemptEvent(tx as never, { envelope: env({ eventName: "charge.successful" }), payRow: payRow as never })).toBeNull();
+    expect(set).not.toHaveBeenCalled();
   });
 });

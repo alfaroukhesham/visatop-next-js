@@ -4,6 +4,10 @@ import type { DbTransaction } from "@/lib/db";
 import { auditLog, payment, paymentEvent } from "@/lib/db/schema";
 import type { FincraWebhookEnvelope } from "@/lib/payments/fincra-webhook";
 import { FINCRA_TERMINAL_UNPAID_EVENTS } from "@/lib/payments/fincra-webhook";
+import {
+  fincraFailureCodeFromEventName,
+  recordPaymentFailureInfo,
+} from "@/lib/payments/payment-failure-info";
 
 type PaymentRow = typeof payment.$inferSelect;
 
@@ -63,6 +67,14 @@ export const auditFincraUnpaidAttemptEvent = async (
   if (!FINCRA_TERMINAL_UNPAID_EVENTS.has(envelope.eventName)) return null;
   const isCurrentAttempt =
     !envelope.merchantReference || envelope.merchantReference === (payRow.providerOperationId ?? payRow.id);
+  const failureCode = fincraFailureCodeFromEventName(envelope.eventName);
+  if (failureCode) {
+    await recordPaymentFailureInfo(tx, {
+      paymentId: payRow.id,
+      failureCode,
+      failureMessage: envelope.failureMessage ?? envelope.status,
+    });
+  }
   await tx.insert(auditLog).values({
     actorType: "system",
     actorId: null,
@@ -76,6 +88,7 @@ export const auditFincraUnpaidAttemptEvent = async (
       providerEventId: envelope.providerEventId,
       isCurrentAttempt,
       paymentStatusUnchanged: true,
+      failureCode,
       requestId: requestId ?? null,
     }),
   });
