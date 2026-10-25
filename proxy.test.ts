@@ -34,6 +34,31 @@ describe("proxy trailing-slash redirect", () => {
   });
 });
 
+describe("proxy x-trace-id", () => {
+  it("sets x-trace-id and forwards traceparent on pass-through responses", () => {
+    const response = proxy(requestFor("/visa-processing/api/health"));
+    expect(response.status).toBe(200);
+    const traceId = response.headers.get("x-trace-id");
+    expect(traceId).toMatch(/^[0-9a-f]{32}$/);
+    expect(response.headers.get("x-request-id")).toBeTruthy();
+    expect(response.headers.get("x-middleware-request-traceparent")).toMatch(
+      new RegExp(`^00-${traceId}-[0-9a-f]{16}-01$`),
+    );
+    expect(response.headers.get("x-middleware-request-x-trace-id")).toBe(traceId);
+  });
+
+  it("reuses an incoming traceparent and echoes that trace id", () => {
+    const incoming = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
+    const req = new NextRequest("https://visatop.com/visa-processing/api/health", {
+      headers: { traceparent: incoming, "x-request-id": "req-trace-1" },
+    });
+    const response = proxy(req);
+    expect(response.headers.get("x-request-id")).toBe("req-trace-1");
+    expect(response.headers.get("x-trace-id")).toBe("4bf92f3577b34da6a3ce929d0e0e4736");
+    expect(response.headers.get("x-middleware-request-traceparent")).toBe(incoming);
+  });
+});
+
 describe("proxy matcher", () => {
   it("omits the /visa-processing prefix so Next.js basePath is not applied twice", () => {
     for (const source of config.matcher) {

@@ -28,7 +28,7 @@ Do not use `console.*` in server code (API routes, `lib/payments/*`, OCR, email)
 
 ## Request and trace correlation
 
-`proxy.ts` sets `x-request-id` (incoming or generated) on matched routes and echoes it on the response. Route handlers already pass it into `jsonOk` / `jsonError`.
+`proxy.ts` sets `x-request-id` (incoming or generated) and **`x-trace-id`** on matched routes and echoes both on the response. Route handlers already pass the request id into `jsonOk` / `jsonError`.
 
 `createRequestLogger(requestId)` adds:
 

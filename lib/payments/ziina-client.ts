@@ -1,3 +1,5 @@
+import { setSafeSpanAttributes, withSpan } from "@/lib/observability/tracing";
+
 export class ZiinaProviderError extends Error {
   readonly httpStatus: number;
   readonly ziinaBody?: string;
@@ -68,6 +70,7 @@ export const parseZiinaPaymentIntentCreated = (
 export async function createZiinaPaymentIntent(
   params: CreateZiinaPaymentIntentParams,
 ): Promise<ZiinaPaymentIntentCreated> {
+  return withSpan("ziina.payment_intent.create", { provider: "ziina", operation: "payment_intent.create" }, async (span) => {
   const url = `${params.baseUrl.replace(/\/$/, "")}/payment_intent`;
   const body = {
     amount: params.amountMinor,
@@ -109,6 +112,11 @@ export async function createZiinaPaymentIntent(
 
   const text = await res.text();
   if (!res.ok) {
+    setSafeSpanAttributes(span, {
+      status: "error",
+      errorCode: `http_${res.status}`,
+      "http.status_code": res.status,
+    });
     throw new ZiinaProviderError(
       `Ziina payment_intent failed (HTTP ${res.status})`,
       res.status >= 500 ? 502 : res.status >= 400 ? 400 : 502,
@@ -123,13 +131,17 @@ export async function createZiinaPaymentIntent(
     throw new ZiinaProviderError("Ziina payment_intent returned non-JSON", 502, text.slice(0, 200));
   }
   try {
-    return parseZiinaPaymentIntentCreated(json, params.operationId);
+    const created = parseZiinaPaymentIntentCreated(json, params.operationId);
+    setSafeSpanAttributes(span, { status: "ok", "http.status_code": res.status });
+    return created;
   } catch (e) {
     if (e instanceof ZiinaProviderError) {
+      setSafeSpanAttributes(span, { status: "error", errorCode: "parse_error" });
       throw new ZiinaProviderError(e.message, e.httpStatus, text.slice(0, 300));
     }
     throw e;
   }
+  });
 }
 
 export async function getZiinaPaymentIntent(params: {
@@ -138,6 +150,7 @@ export async function getZiinaPaymentIntent(params: {
   paymentIntentId: string;
   timeoutMs?: number;
 }): Promise<ZiinaPaymentIntentRecord> {
+  return withSpan("ziina.payment_intent.get", { provider: "ziina", operation: "payment_intent.get" }, async (span) => {
   const endpoint = `${params.baseUrl.replace(/\/$/, "")}/payment_intent/${encodeURIComponent(params.paymentIntentId)}`;
   const res = await ziinaFetchJson(endpoint, {
     method: "GET",
@@ -148,6 +161,11 @@ export async function getZiinaPaymentIntent(params: {
     timeoutMs: params.timeoutMs,
   });
   if (!res.ok) {
+    setSafeSpanAttributes(span, {
+      status: "error",
+      errorCode: `http_${res.status}`,
+      "http.status_code": res.status,
+    });
     throw new ZiinaProviderError(
       `Ziina get payment_intent failed (HTTP ${res.status})`,
       res.status >= 500 ? 502 : res.status >= 400 ? 400 : 502,
@@ -165,8 +183,10 @@ export async function getZiinaPaymentIntent(params: {
   const operationId = typeof rec.operation_id === "string" ? rec.operation_id : null;
   const embeddedUrl = typeof rec.embedded_url === "string" ? rec.embedded_url : null;
   if (!id || !status) {
+    setSafeSpanAttributes(span, { status: "error", errorCode: "missing_id_or_status" });
     throw new ZiinaProviderError("Ziina payment_intent response missing id or status", 502);
   }
+  setSafeSpanAttributes(span, { status, "http.status_code": 200 });
   return {
     id,
     status,
@@ -176,6 +196,7 @@ export async function getZiinaPaymentIntent(params: {
     embeddedUrl,
     raw: rec,
   };
+  });
 }
 
 export type InitiateZiinaRefundParams = {
@@ -274,6 +295,7 @@ export async function deleteZiinaWebhook(params: {
 }
 
 export async function initiateZiinaRefund(params: InitiateZiinaRefundParams): Promise<ZiinaRefundResult> {
+  return withSpan("ziina.refund.initiate", { provider: "ziina", operation: "refund.initiate" }, async (span) => {
   const url = `${params.baseUrl.replace(/\/$/, "")}/refund`;
   const body: Record<string, unknown> = {
     id: params.refundClientId,
@@ -309,6 +331,11 @@ export async function initiateZiinaRefund(params: InitiateZiinaRefundParams): Pr
 
   const text = await res.text();
   if (!res.ok) {
+    setSafeSpanAttributes(span, {
+      status: "error",
+      errorCode: `http_${res.status}`,
+      "http.status_code": res.status,
+    });
     throw new ZiinaProviderError(
       `Ziina refund failed (HTTP ${res.status})`,
       res.status >= 500 ? 502 : res.status >= 400 ? 400 : 502,
@@ -326,7 +353,10 @@ export async function initiateZiinaRefund(params: InitiateZiinaRefundParams): Pr
   const refundId = typeof rec.id === "string" ? rec.id : "";
   const status = typeof rec.status === "string" ? rec.status : "unknown";
   if (!refundId) {
+    setSafeSpanAttributes(span, { status: "error", errorCode: "missing_refund_id" });
     throw new ZiinaProviderError("Ziina refund response missing id", 502, text.slice(0, 300));
   }
+  setSafeSpanAttributes(span, { status, "http.status_code": res.status });
   return { refundId, status };
+  });
 }

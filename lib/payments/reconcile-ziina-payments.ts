@@ -18,6 +18,7 @@ import {
   requirePaymentEventPayloadHashDedupeIndex,
 } from "@/lib/payments/payment-webhook-db-guard";
 import { createRequestLogger } from "@/lib/logger";
+import { setSafeSpanAttributes, withSpan } from "@/lib/observability/tracing";
 
 const ZIINA_RECONCILE_SLOTS = [
   { slot: "5m", delayMs: 5 * 60 * 1000 },
@@ -107,12 +108,37 @@ export function dueZiinaReconcileSlots(
   return due;
 }
 
-export async function reconcileZiinaPaymentRow(
+export const reconcileZiinaPaymentRow = async (
   tx: DbTransaction,
   payRow: ReconcileZiinaPaymentRow,
   slot: ZiinaReconcileSlot,
   requestId?: string | null,
-): Promise<ReconcileZiinaAttemptResult> {
+): Promise<ReconcileZiinaAttemptResult> =>
+  withSpan(
+    "reconcile.ziina.payment",
+    {
+      provider: "ziina",
+      paymentId: payRow.id,
+      applicationId: payRow.applicationId,
+      slot,
+      operation: "reconcile.payment",
+    },
+    async (span) => {
+      const result = await reconcileZiinaPaymentRowUntraced(tx, payRow, slot, requestId);
+      setSafeSpanAttributes(span, {
+        status: result.outcome,
+        errorCode: result.error ? result.outcome : undefined,
+      });
+      return result;
+    },
+  );
+
+const reconcileZiinaPaymentRowUntraced = async (
+  tx: DbTransaction,
+  payRow: ReconcileZiinaPaymentRow,
+  slot: ZiinaReconcileSlot,
+  requestId?: string | null,
+): Promise<ReconcileZiinaAttemptResult> => {
   const intentId = payRow.providerCheckoutId?.trim();
   const log = createRequestLogger(requestId);
   if (!intentId) {
@@ -309,7 +335,7 @@ export async function reconcileZiinaPaymentRow(
     outcome: processResult.outcome,
     process: processResult,
   };
-}
+};
 
 /** Reconcile from checkout return (no slot probe bookkeeping beyond apply). */
 export async function reconcileZiinaPaymentFromReturn(

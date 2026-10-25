@@ -250,6 +250,7 @@ Migrated in `drizzle/0002_harsh_wolverine.sql`:
 
 - **Matchers:** `/api/:path*`, `/portal`, `/portal/:path*`, `/admin`, `/admin/:path*`.
 - **`x-request-id`:** Set on all matched routes (or generated) and echoed on the response; route handlers read via `headers().get('x-request-id')` and pass into `jsonOk` / `jsonError`.
+- **`x-trace-id`:** W3C trace id (32 hex) echoed alongside `x-request-id`. Incoming `traceparent` is forwarded so the Node SDK continues the same trace.
 - **`x-pathname`:** Set from `nextUrl.pathname` for **`/portal*`** and **`/admin*`** so layouts can build accurate **`callbackUrl`** after sign-in.
 - **Node.js runtime requirement:** every `route.ts` under `app/api/` **must** export `export const runtime = "nodejs"`. Without this, Next.js 16 Turbopack in dev may evaluate the handler for the proxy's Edge compilation graph and throw `(unsupported edge import 'path')`. This is a one-liner per file — see §8 testing notes.
 
@@ -258,12 +259,20 @@ Migrated in `drizzle/0002_harsh_wolverine.sql`:
 - Use **`jsonOk` / `jsonError`** for non–Better-Auth JSON routes (see Cursor rule `visa-api-response-envelope.mdc`).
 - **`details`** must stay free of secrets/PII.
 
-### OpenTelemetry (`instrumentation.ts`)
+### GlitchTip (`instrumentation.ts` + `lib/observability/sentry-*`)
+
+- DSN-gated `@sentry/nextjs` against self-hosted GlitchTip. See [`docs/observability/sentry.md`](observability/sentry.md).
+- `register()` calls `registerSentry()` first (including Edge), then Node tracing. `onRequestError` is a no-op without `SENTRY_DSN`.
+
+### OpenTelemetry (`instrumentation.ts` + `lib/observability/`)
 
 - Server-only; skipped on Edge (`NEXT_RUNTIME === edge`).
-- **`OTEL_EXPORTER_OTLP_ENDPOINT`** — if set, traces export via OTLP HTTP; if unset, SDK runs without exporting.
-- Optional: **`OTEL_SERVICE_NAME`**, **`OTEL_DIAGNOSTIC_LOGS=1`** for verbose OTel internal logs.
-- **Lookahead:** narrow `@opentelemetry/auto-instrumentations-node` to only what you need; document sampling in production.
+- **No-op unless `OTEL_EXPORTER_OTLP_ENDPOINT` (or `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`) is set** — the NodeSDK is not imported or started, so local/CI have no startup cost.
+- Droplet default collector: Grafana Alloy on the `visatop_edge` network at **`http://alloy:4318`**, writing to self-hosted Tempo. See [`docs/observability/tracing.md`](observability/tracing.md).
+- Resource attributes: `service.name`, `service.version` (`GIT_SHA` from the deploy image tag), `deployment.environment` from **`APP_ENV`** (never `NODE_ENV`).
+- Parent-based ratio sampler via `OTEL_TRACES_SAMPLER_RATIO` (default `1` for low traffic). Tail-sample errors/slow traces at Alloy.
+- Manual spans around Gemini OCR, payment provider APIs, webhooks, Mailgun, and reconcile jobs. Attributes are IDs/status/error codes only.
+- **`x-trace-id`** is set next to **`x-request-id`** in `proxy.ts`.
 
 ### Logging (`lib/logger.ts`)
 

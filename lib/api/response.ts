@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { getCurrentTraceId } from "@/lib/observability/tracing";
+import { TRACE_ID_HEADER } from "@/lib/observability/trace-headers";
 
 export type ApiErrorCode =
   | "UNAUTHORIZED"
@@ -73,11 +75,15 @@ export function jsonOk<T>(
   },
 ) {
   const requestId = resolveRequestId(opts?.requestId);
+  const traceId = getCurrentTraceId();
   return NextResponse.json<ApiOk<T>>(
     { ok: true, data, meta: { requestId } },
     {
       status: opts?.status ?? 200,
-      headers: mergeHeaders(opts?.headers, { "x-request-id": requestId }),
+      headers: mergeHeaders(opts?.headers, {
+        "x-request-id": requestId,
+        ...(traceId ? { [TRACE_ID_HEADER]: traceId } : {}),
+      }),
     },
   );
 }
@@ -93,11 +99,15 @@ export function jsonError(
   },
 ) {
   const requestId = resolveRequestId(opts?.requestId);
+  const traceId = getCurrentTraceId();
   return NextResponse.json<ApiErr>(
     { ok: false, error: { code, message, details: opts?.details }, meta: { requestId } },
     {
       status: opts?.status ?? 400,
-      headers: mergeHeaders(opts?.headers, { "x-request-id": requestId }),
+      headers: mergeHeaders(opts?.headers, {
+        "x-request-id": requestId,
+        ...(traceId ? { [TRACE_ID_HEADER]: traceId } : {}),
+      }),
     },
   );
 }

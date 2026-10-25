@@ -3,6 +3,7 @@ import {
   resolveGeminiModelId,
   resolvePromptVersion,
 } from "@/lib/gemini/client";
+import { setSafeSpanAttributes, withSpan } from "@/lib/observability/tracing";
 
 import { assessPassportImageQuality } from "./image-quality";
 import { mrzCheckDigitsValid, mrzVisualAgrees, parseTd3Line2 } from "./mrz-check";
@@ -139,32 +140,34 @@ const defaultCallModel: CallModelFn = async ({
   imageBytes,
   contentType,
   signal,
-}) => {
-  const ai = getGeminiClient();
-  const res = await ai.models.generateContent({
-    model: modelId,
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { text: prompt },
-          {
-            inlineData: {
-              mimeType: contentType,
-              data: imageBytes.toString("base64"),
+}) =>
+  withSpan("gemini.ocr.call", { provider: "gemini", operation: "generateContent" }, async (span) => {
+    const ai = getGeminiClient();
+    const res = await ai.models.generateContent({
+      model: modelId,
+      contents: [
+        {
+          role: "user",
+          parts: [
+            { text: prompt },
+            {
+              inlineData: {
+                mimeType: contentType,
+                data: imageBytes.toString("base64"),
+              },
             },
-          },
-        ],
+          ],
+        },
+      ],
+      config: {
+        responseMimeType: "application/json",
+        abortSignal: signal,
       },
-    ],
-    config: {
-      responseMimeType: "application/json",
-      abortSignal: signal,
-    },
+    });
+    setSafeSpanAttributes(span, { status: "ok" });
+    const text = res.text ?? "";
+    return { text, usage: res.usageMetadata };
   });
-  const text = res.text ?? "";
-  return { text, usage: res.usageMetadata };
-};
 
 type PassportAttemptRun = {
   outcome: OcrAttemptOutcome;
@@ -318,9 +321,9 @@ export function ocrReadConfidence(result: OcrResult | null): "high" | "low" {
   return "high";
 }
 
-export async function extractPassport(
+const extractPassportUntraced = async (
   input: ExtractPassportInput,
-): Promise<ExtractPassportResult> {
+): Promise<ExtractPassportResult> => {
   const modelId = resolveGeminiModelId();
   const promptVersion = resolvePromptVersion();
   if (!input.skipImageQuality) {
@@ -377,6 +380,15 @@ export async function extractPassport(
     model: modelId,
     promptVersion,
   };
-}
+};
+
+export const extractPassport = async (
+  input: ExtractPassportInput,
+): Promise<ExtractPassportResult> =>
+  withSpan("gemini.ocr.extract", { provider: "gemini" }, async (span) => {
+    const result = await extractPassportUntraced(input);
+    setSafeSpanAttributes(span, { status: result.status });
+    return result;
+  });
 
 export { listFilledOcrFields };

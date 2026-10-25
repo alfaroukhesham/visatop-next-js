@@ -12,11 +12,17 @@ import {
 } from "@/lib/payments/reconcile-ziina-payments";
 import { scheduleZiinaPaidSideEffects } from "@/lib/payments/ziina-payment-side-effects";
 import { createRequestLogger } from "@/lib/logger";
+import { withSpan } from "@/lib/observability/tracing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
+export const POST = async (request: Request) =>
+  withSpan("reconcile.ziina", { provider: "ziina", operation: "reconcile" }, () =>
+    postReconcileZiina(request),
+  );
+
+const postReconcileZiina = async (request: Request) => {
   const hdrs = await headers();
   const requestId = hdrs.get("x-request-id");
   const expected = process.env.INTERNAL_CRON_SECRET?.trim();
@@ -99,4 +105,4 @@ export async function POST(request: Request) {
     },
     { requestId },
   );
-}
+};

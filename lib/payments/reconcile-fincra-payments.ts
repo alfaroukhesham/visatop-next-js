@@ -22,6 +22,7 @@ import {
   requirePaymentEventPayloadHashDedupeIndex,
 } from "@/lib/payments/payment-webhook-db-guard";
 import { createRequestLogger } from "@/lib/logger";
+import { setSafeSpanAttributes, withSpan } from "@/lib/observability/tracing";
 
 const FINCRA_RECONCILE_SLOTS = [
   { slot: "5m", delayMs: 5 * 60 * 1000 },
@@ -242,6 +243,28 @@ const applyVerified = async (
 };
 
 export const reconcileFincraPaymentRow = async (
+  tx: DbTransaction,
+  payRow: ReconcileFincraPaymentRow,
+  slot: FincraReconcileSlot,
+  requestId?: string | null,
+): Promise<ReconcileFincraAttemptResult> =>
+  withSpan(
+    "reconcile.fincra.payment",
+    {
+      provider: "fincra",
+      paymentId: payRow.id,
+      applicationId: payRow.applicationId,
+      slot,
+      operation: "reconcile.payment",
+    },
+    async (span) => {
+      const result = await reconcileFincraPaymentRowUntraced(tx, payRow, slot, requestId);
+      setSafeSpanAttributes(span, { status: result.outcome, errorCode: result.error ? result.outcome : undefined });
+      return result;
+    },
+  );
+
+const reconcileFincraPaymentRowUntraced = async (
   tx: DbTransaction,
   payRow: ReconcileFincraPaymentRow,
   slot: FincraReconcileSlot,
