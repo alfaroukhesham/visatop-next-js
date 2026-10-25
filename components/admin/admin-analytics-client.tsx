@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type FC } from "react";
 import { apiHref } from "@/lib/app-href";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import type { TAdminAnalyticsPayload } from "@/lib/analytics/admin-analytics-types";
+import { AdminAnalyticsObservability } from "@/components/admin/admin-analytics-observability";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -425,6 +426,8 @@ export const AdminAnalyticsClient: FC = () => {
               </CardContent>
             </Card>
           </div>
+
+          <AdminAnalyticsObservability data={data} />
         </AnalyticsResultsFrame>
       ) : null}
     </div>

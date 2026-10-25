@@ -18,6 +18,7 @@ vi.mock("@/lib/analytics/admin-analytics-query", () => ({
 
 import { adminAuth } from "@/lib/admin-auth";
 import * as actorContext from "@/lib/db/actor-context";
+import { emptyAdminAnalyticsExpansion } from "@/lib/analytics/admin-analytics-expansion";
 import { loadAdminAnalytics } from "@/lib/analytics/admin-analytics-query";
 import { GET } from "./route";
 
@@ -51,6 +52,7 @@ describe("GET /api/admin/analytics", () => {
       }),
     );
     vi.mocked(loadAdminAnalytics).mockResolvedValue({
+      ...emptyAdminAnalyticsExpansion(),
       range: { from: "2026-09-08T00:00:00.000Z", to: "2026-09-15T00:00:00.000Z" },
       kpis: {
         applicationsCreated: { current: 0, previous: 0, deltaPct: 0 },

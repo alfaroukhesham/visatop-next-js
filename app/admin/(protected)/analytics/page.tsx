@@ -9,7 +9,7 @@ export default function AdminAnalyticsPage() {
   return (
     <AdminShell
       title="Analytics"
-      subtitle="Pulse, funnel drop-off, and volume for the customer apply journey."
+      subtitle="Pulse, funnel drop-off, payments, webhooks, OCR, and volume for the customer apply journey."
       active="analytics"
     >
       <AdminAnalyticsClient />
