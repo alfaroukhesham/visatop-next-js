@@ -4,6 +4,8 @@ import { resourceFromAttributes } from "@opentelemetry/resources";
 import { SemanticResourceAttributes } from "@opentelemetry/semantic-conventions";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
+import * as Sentry from "@sentry/nextjs";
+import { isSentryEnabled } from "@/lib/observability/sentry-env";
 
 let sdk: NodeSDK | null = null;
 
@@ -11,9 +13,25 @@ function isTruthy(v?: string) {
   return v === "1" || v === "true" || v === "yes";
 }
 
+const registerSentry = async () => {
+  if (!isSentryEnabled()) return;
+  if (process.env.NEXT_RUNTIME === "edge") {
+    await import("./sentry.edge.config");
+    return;
+  }
+  await import("./sentry.server.config");
+};
+
+export const onRequestError: typeof Sentry.captureRequestError = (...args) => {
+  if (!isSentryEnabled()) return;
+  Sentry.captureRequestError(...args);
+};
+
 export async function register() {
+  await registerSentry();
+
   // Next.js calls `register()` in supported runtimes.
-  // Keep this server-only; do not attempt to initialize in edge.
+  // Keep OTel server-only; do not attempt to initialize in edge.
   if (process.env.NEXT_RUNTIME === "edge") return;
 
   if (sdk) return;

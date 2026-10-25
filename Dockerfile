@@ -23,6 +23,16 @@ RUN pnpm install --frozen-lockfile
 # Copy source and build
 COPY . .
 ENV NODE_ENV=production
+# Git sha + APP_ENV are baked for GlitchTip release/environment tags.
+# Staging images are still NODE_ENV=production; do not use NODE_ENV as the Sentry env.
+ARG GIT_SHA=
+ARG APP_ENV=development
+ENV GIT_SHA=$GIT_SHA \
+    APP_ENV=$APP_ENV \
+    NEXT_PUBLIC_GIT_SHA=$GIT_SHA \
+    NEXT_PUBLIC_APP_ENV=$APP_ENV \
+    SENTRY_RELEASE=$GIT_SHA \
+    NEXT_PUBLIC_SENTRY_RELEASE=$GIT_SHA
 # Next collects page data at build time; DB env must exist. Do not COPY .env* (see .dockerignore).
 #   docker buildx build --secret id=env,src=.env.local --platform linux/arm64 ...
 RUN --mount=type=secret,id=env \
@@ -34,9 +44,17 @@ RUN --mount=type=secret,id=env \
 ARG TARGETPLATFORM=linux/arm64
 FROM --platform=$TARGETPLATFORM node:22-bookworm-slim AS runner
 
+ARG GIT_SHA=
+ARG APP_ENV=development
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+ENV GIT_SHA=$GIT_SHA \
+    APP_ENV=$APP_ENV \
+    NEXT_PUBLIC_GIT_SHA=$GIT_SHA \
+    NEXT_PUBLIC_APP_ENV=$APP_ENV \
+    SENTRY_RELEASE=$GIT_SHA \
+    NEXT_PUBLIC_SENTRY_RELEASE=$GIT_SHA
 
 WORKDIR /app
 

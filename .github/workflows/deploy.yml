@@ -88,6 +88,8 @@ jobs:
           sbom: false
           build-args: |
             TARGETPLATFORM=linux/amd64
+            GIT_SHA=${{ steps.rev.outputs.sha }}
+            APP_ENV=${{ env.ENVIRONMENT }}
           secret-files: |
             env=${{ runner.temp }}/build.env
           tags: ${{ env.ENVIRONMENT == 'production' && 'alfarouk1995/visatop-next' || 'alfarouk1995/visatop-next-demo' }}:sha-${{ steps.rev.outputs.sha }}

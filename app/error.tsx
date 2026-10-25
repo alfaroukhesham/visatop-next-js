@@ -1,19 +1,24 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type FC } from "react";
 import Link from "next/link";
+import * as Sentry from "@sentry/nextjs";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { isSentryEnabled } from "@/lib/observability/sentry-env";
 import { cn } from "@/lib/utils";
 
-export default function Error({
-  error,
-  reset,
-}: {
+interface IErrorPageProps {
   error: Error & { digest?: string };
   reset: () => void;
-}) {
+}
+
+const ErrorPage: FC<IErrorPageProps> = ({ error, reset }) => {
   useEffect(() => {
-    console.error(error);
+    if (isSentryEnabled()) {
+      Sentry.captureException(error);
+    } else {
+      console.error(error);
+    }
   }, [error]);
 
   return (
@@ -39,4 +44,6 @@ export default function Error({
       </div>
     </div>
   );
-}
+};
+
+export default ErrorPage;
