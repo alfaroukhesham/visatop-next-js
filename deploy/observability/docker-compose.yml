@@ -1,0 +1,344 @@
+# VisaTop self-hosted observability. Opt-in: nothing here is started by deploy.yml.
+# Farouk: see docs/observability/infra.md
+#
+#   cd deploy/observability
+#   cp env.example .env   # then edit secrets
+#   ./scripts/up.sh core  # or: full
+#
+# UIs bind 127.0.0.1 only. SSH tunnel; do not publish 0.0.0.0.
+name: visatop-obs
+
+x-logging: &json-logging
+  driver: json-file
+  options:
+    max-size: "8m"
+    max-file: "3"
+
+x-restart: &unless-stopped
+  unless-stopped
+
+networks:
+  obs:
+    name: visatop_obs
+  edge:
+    name: visatop_edge
+    external: true
+
+volumes:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+  grafana-data:
+  glitchtip-pg-data:
+  kuma-data:
+
+services:
+  alloy:
+    profiles: ["core", "full"]
+    image: grafana/alloy:v1.10.1
+    container_name: visatop-alloy
+    restart: *unless-stopped
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    environment:
+      HOSTNAME: visatop-droplet
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host/root:ro,rslave
+      - /var/lib/docker:/var/lib/docker:ro
+    ports:
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+    networks:
+      - obs
+      - edge
+    mem_limit: 384m
+    cpus: 0.50
+    pids_limit: 256
+    logging: *json-logging
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+
+  prometheus:
+    profiles: ["core", "full"]
+    image: prom/prometheus:v2.55.1
+    container_name: visatop-prometheus
+    restart: *unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --storage.tsdb.retention.size=6GB
+      - --web.enable-remote-write-receiver
+      - --web.listen-address=0.0.0.0:9090
+      - --web.enable-lifecycle
+      - --storage.tsdb.min-block-duration=2h
+      - --storage.tsdb.max-block-duration=2h
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    networks:
+      - obs
+    mem_limit: 512m
+    cpus: 0.40
+    pids_limit: 200
+    logging: *json-logging
+
+  loki:
+    profiles: ["core", "full"]
+    image: grafana/loki:3.4.2
+    container_name: visatop-loki
+    restart: *unless-stopped
+    command:
+      - -config.file=/etc/loki/loki.yml
+      - -target=all
+    volumes:
+      - ./loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+    networks:
+      - obs
+    mem_limit: 384m
+    cpus: 0.40
+    pids_limit: 200
+    logging: *json-logging
+
+  tempo:
+    profiles: ["core", "full"]
+    image: grafana/tempo:2.7.1
+    container_name: visatop-tempo
+    restart: *unless-stopped
+    command:
+      - -config.file=/etc/tempo/tempo.yml
+      - -target=all
+    volumes:
+      - ./tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo-data:/var/tempo
+    networks:
+      - obs
+    mem_limit: 256m
+    cpus: 0.30
+    pids_limit: 200
+    logging: *json-logging
+
+  grafana:
+    profiles: ["core", "full"]
+    image: grafana/grafana:11.6.3
+    container_name: visatop-grafana
+    restart: *unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-changeme}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      GF_LOG_LEVEL: warn
+      GF_SERVER_HTTP_ADDR: 0.0.0.0
+      GF_SERVER_ROOT_URL: http://127.0.0.1:3030
+      GF_UNIFIED_ALERTING_ENABLED: "true"
+      GF_SMTP_ENABLED: ${GF_SMTP_ENABLED:-false}
+      GF_SMTP_HOST: ${GF_SMTP_HOST:-smtp.eu.mailgun.org:587}
+      GF_SMTP_USER: ${GF_SMTP_USER:-}
+      GF_SMTP_PASSWORD: ${GF_SMTP_PASSWORD:-}
+      GF_SMTP_FROM_ADDRESS: ${GF_SMTP_FROM_ADDRESS:-alerts@localhost}
+      GF_SMTP_FROM_NAME: ${GF_SMTP_FROM_NAME:-VisaTop alerts}
+      GF_SMTP_STARTTLS_POLICY: ${GF_SMTP_STARTTLS_POLICY:-MandatoryStartTLS}
+      GRAFANA_ALERT_EMAIL: ${GRAFANA_ALERT_EMAIL:-ops@localhost}
+      GRAFANA_ALERT_WEBHOOK_URL: ${GRAFANA_ALERT_WEBHOOK_URL:-http://127.0.0.1:9/configure-me}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "127.0.0.1:3030:3000"
+    networks:
+      - obs
+    mem_limit: 256m
+    cpus: 0.30
+    pids_limit: 200
+    logging: *json-logging
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+
+  obs-caddy:
+    profiles: ["core", "full"]
+    image: caddy:2.9-alpine
+    container_name: visatop-obs-caddy
+    restart: *unless-stopped
+    environment:
+      OBS_BASIC_AUTH_USER: ${OBS_BASIC_AUTH_USER:-farouk}
+      OBS_BASIC_AUTH_HASH: ${OBS_BASIC_AUTH_HASH}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - "127.0.0.1:3080:3080"
+      - "127.0.0.1:3081:3081"
+      - "127.0.0.1:3082:3082"
+    networks:
+      - obs
+    mem_limit: 64m
+    cpus: 0.10
+    pids_limit: 64
+    logging: *json-logging
+    depends_on:
+      - grafana
+
+  caddy-admin-proxy-prod:
+    profiles: ["caddy-metrics", "full"]
+    image: alpine/socat:1.8.0.0
+    container_name: visatop-caddy-admin-proxy-prod
+    restart: *unless-stopped
+    network_mode: "container:visatop-edge-prod"
+    command: TCP-LISTEN:2020,fork,reuseaddr,bind=0.0.0.0 TCP:127.0.0.1:2019
+    mem_limit: 16m
+    cpus: 0.05
+    pids_limit: 32
+    logging: *json-logging
+
+  caddy-admin-proxy-staging:
+    profiles: ["caddy-metrics", "full"]
+    image: alpine/socat:1.8.0.0
+    container_name: visatop-caddy-admin-proxy-staging
+    restart: *unless-stopped
+    network_mode: "container:visatop-edge-staging"
+    command: TCP-LISTEN:2020,fork,reuseaddr,bind=0.0.0.0 TCP:127.0.0.1:2019
+    mem_limit: 16m
+    cpus: 0.05
+    pids_limit: 32
+    logging: *json-logging
+
+  glitchtip-postgres:
+    profiles: ["errors", "full"]
+    image: postgres:16-alpine
+    container_name: visatop-glitchtip-postgres
+    restart: *unless-stopped
+    environment:
+      POSTGRES_DB: glitchtip
+      POSTGRES_USER: glitchtip
+      POSTGRES_PASSWORD: ${GLITCHTIP_POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - glitchtip-pg-data:/var/lib/postgresql/data
+    command:
+      - postgres
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - max_connections=50
+      - -c
+      - log_min_duration_statement=1000
+    networks:
+      - obs
+    mem_limit: 256m
+    cpus: 0.25
+    pids_limit: 100
+    logging: *json-logging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U glitchtip -d glitchtip"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
+
+  redis:
+    profiles: ["errors", "full"]
+    image: redis:7-alpine
+    container_name: visatop-glitchtip-redis
+    restart: *unless-stopped
+    command: redis-server --maxmemory 48mb --maxmemory-policy allkeys-lru --save "" --appendonly no
+    networks:
+      - obs
+    mem_limit: 64m
+    cpus: 0.10
+    pids_limit: 64
+    logging: *json-logging
+
+  glitchtip-worker:
+    profiles: ["errors", "full"]
+    image: glitchtip/glitchtip:v5.0.9
+    container_name: visatop-glitchtip-worker
+    restart: *unless-stopped
+    command: ./bin/run-celery-with-beat.sh
+    environment:
+      DATABASE_URL: postgres://glitchtip:${GLITCHTIP_POSTGRES_PASSWORD:-changeme}@glitchtip-postgres:5432/glitchtip
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:-changeme}
+      PORT: "8000"
+      GLITCHTIP_DOMAIN: ${GLITCHTIP_DOMAIN:-http://127.0.0.1:3040}
+      DEFAULT_FROM_EMAIL: ${GLITCHTIP_DEFAULT_FROM_EMAIL:-alerts@localhost}
+      EMAIL_URL: ${GLITCHTIP_EMAIL_URL:-consolemail://}
+      GLITCHTIP_MAX_EVENT_LIFE_DAYS: ${GLITCHTIP_MAX_EVENT_LIFE_DAYS:-15}
+      CELERY_WORKER_AUTOSCALE: "1,1"
+      CELERY_WORKER_MAX_TASKS_PER_CHILD: "500"
+      ENABLE_ORGANIZATION_CREATION: "true"
+    networks:
+      - obs
+      - edge
+    mem_limit: 256m
+    cpus: 0.25
+    pids_limit: 150
+    logging: *json-logging
+    depends_on:
+      glitchtip-postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  glitchtip-web:
+    profiles: ["errors", "full"]
+    image: glitchtip/glitchtip:v5.0.9
+    container_name: visatop-glitchtip
+    restart: *unless-stopped
+    environment:
+      DATABASE_URL: postgres://glitchtip:${GLITCHTIP_POSTGRES_PASSWORD:-changeme}@glitchtip-postgres:5432/glitchtip
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:-changeme}
+      PORT: "8000"
+      GLITCHTIP_DOMAIN: ${GLITCHTIP_DOMAIN:-http://127.0.0.1:3040}
+      DEFAULT_FROM_EMAIL: ${GLITCHTIP_DEFAULT_FROM_EMAIL:-alerts@localhost}
+      EMAIL_URL: ${GLITCHTIP_EMAIL_URL:-consolemail://}
+      GLITCHTIP_MAX_EVENT_LIFE_DAYS: ${GLITCHTIP_MAX_EVENT_LIFE_DAYS:-15}
+      ENABLE_ORGANIZATION_CREATION: "true"
+    ports:
+      - "127.0.0.1:3040:8000"
+    networks:
+      - obs
+      - edge
+    mem_limit: 384m
+    cpus: 0.40
+    pids_limit: 150
+    logging: *json-logging
+    depends_on:
+      glitchtip-postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  kuma:
+    profiles: ["uptime", "full"]
+    image: louislam/uptime-kuma:1.23.16
+    container_name: visatop-kuma
+    restart: *unless-stopped
+    volumes:
+      - kuma-data:/app/data
+    ports:
+      - "127.0.0.1:3050:3001"
+    networks:
+      - obs
+      - edge
+    mem_limit: 192m
+    cpus: 0.20
+    pids_limit: 100
+    logging: *json-logging

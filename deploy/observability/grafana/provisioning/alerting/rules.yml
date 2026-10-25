@@ -1,0 +1,394 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: visatop-infra
+    folder: VisaTop
+    interval: 60s
+    rules:
+      - uid: vt_site_down
+        title: Site down
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              datasource: { type: prometheus, uid: prometheus }
+              editorMode: code
+              expr: min(probe_success{job=~"prometheus.exporter.blackbox.health|blackbox"}) or min(probe_success)
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [1], type: lt }
+                  operator: { type: and }
+                  query: { params: [] }
+                  reducer: { params: [], type: last }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 2m
+        labels: { severity: critical, team: visatop }
+        annotations:
+          summary: VisaTop health probe is failing
+          description: Local Caddy and/or public /visa-processing/api/health is not returning 200. Same-host monitoring cannot page if the droplet itself is down — see docs/observability/infra.md.
+
+      - uid: vt_5xx_spike
+        title: 5xx / error spike
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              datasource: { type: prometheus, uid: prometheus }
+              editorMode: code
+              expr: |
+                (
+                  sum(rate(caddy_http_request_duration_seconds_count{code=~"5.."}[5m]))
+                  or
+                  sum(rate(caddy_http_requests_total{code=~"5.."}[5m]))
+                  or
+                  vector(0)
+                )
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [0.05], type: gt }
+                  operator: { type: and }
+                  query: { params: [] }
+                  reducer: { params: [], type: last }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 5m
+        labels: { severity: warning, team: visatop }
+        annotations:
+          summary: HTTP 5xx rate is elevated
+          description: Caddy is seeing more than ~0.05 5xx/s over 5m.
+
+      - uid: vt_disk_high
+        title: Disk usage over 80 percent
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              datasource: { type: prometheus, uid: prometheus }
+              editorMode: code
+              expr: |
+                max(
+                  1 - (
+                    node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
+                    /
+                    node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}
+                  )
+                )
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [0.8], type: gt }
+                  operator: { type: and }
+                  query: { params: [] }
+                  reducer: { params: [], type: last }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 5m
+        labels: { severity: warning, team: visatop }
+        annotations:
+          summary: Filesystem is over 80% full
+          description: Free disk on the droplet is below 20%. Trim Docker / obs volumes or expand the droplet.
+
+      - uid: vt_memory_high
+        title: Memory usage over 80 percent
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              datasource: { type: prometheus, uid: prometheus }
+              editorMode: code
+              expr: 1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [0.8], type: gt }
+                  operator: { type: and }
+                  query: { params: [] }
+                  reducer: { params: [], type: last }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
+        noDataState: Alerting
+        execErrState: Alerting
+        for: 5m
+        labels: { severity: warning, team: visatop }
+        annotations:
+          summary: Host memory is over 80%
+          description: The droplet is memory-constrained. Stop unused obs profiles or resize before the app OOMs.
+
+      - uid: vt_container_restarts
+        title: Container restarts
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              datasource: { type: prometheus, uid: prometheus }
+              editorMode: code
+              expr: |
+                sum(
+                  increase(container_restart_count{name=~"visatop-.*"}[15m])
+                  or
+                  changes(container_start_time_seconds{name=~"visatop-.*"}[15m])
+                )
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [0], type: gt }
+                  operator: { type: and }
+                  query: { params: [] }
+                  reducer: { params: [], type: last }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
+        noDataState: OK
+        execErrState: Alerting
+        for: 2m
+        labels: { severity: warning, team: visatop }
+        annotations:
+          summary: A VisaTop container restarted
+          description: cAdvisor saw a restart or start-time change on visatop-* in the last 15 minutes.
+
+  - orgId: 1
+    name: visatop-app
+    folder: VisaTop
+    interval: 60s
+    rules:
+      - uid: vt_webhook_401
+        title: Webhook 401s
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              datasource: { type: prometheus, uid: prometheus }
+              editorMode: code
+              expr: sum(increase(visatop_webhook_401_total[15m])) or vector(0)
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [3], type: gt }
+                  operator: { type: and }
+                  query: { params: [] }
+                  reducer: { params: [], type: last }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
+        noDataState: OK
+        execErrState: OK
+        for: 5m
+        labels: { severity: warning, team: visatop }
+        annotations:
+          summary: Payment webhook signatures are being rejected
+          description: More than 3 webhook_signature_rejected log lines in 15m (Paddle/Ziina/Fincra).
+
+      - uid: vt_webhook_unmatched
+        title: Unmatched webhooks
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              datasource: { type: prometheus, uid: prometheus }
+              editorMode: code
+              expr: sum(increase(visatop_webhook_unmatched_total[15m])) or vector(0)
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [3], type: gt }
+                  operator: { type: and }
+                  query: { params: [] }
+                  reducer: { params: [], type: last }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
+        noDataState: OK
+        execErrState: OK
+        for: 5m
+        labels: { severity: warning, team: visatop }
+        annotations:
+          summary: Payment webhooks are not matching stored payments
+          description: More than 3 unmatched webhooks in 15m. Check staging/prod merchant refs and payment_event rows.
+
+      - uid: vt_ocr_error_spike
+        title: OCR error spike
+        condition: B
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              datasource: { type: prometheus, uid: prometheus }
+              editorMode: code
+              expr: sum(increase(visatop_ocr_failed_total[15m])) or vector(0)
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [5], type: gt }
+                  operator: { type: and }
+                  query: { params: [] }
+                  reducer: { params: [], type: last }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: A
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: B
+              type: threshold
+        noDataState: OK
+        execErrState: OK
+        for: 5m
+        labels: { severity: warning, team: visatop }
+        annotations:
+          summary: Passport OCR failures are spiking
+          description: More than 5 [extract] failed outcomes in 15m. Check Gemini quota and image quality — logs are redacted.
+
+      - uid: vt_checkout_without_paid
+        title: Checkouts without paid payments
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 21600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              datasource: { type: prometheus, uid: prometheus }
+              editorMode: code
+              expr: sum(increase(visatop_checkout_created_total[6h])) or vector(0)
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            relativeTimeRange: { from: 21600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              datasource: { type: prometheus, uid: prometheus }
+              editorMode: code
+              expr: sum(increase(visatop_payment_paid_total[6h])) or vector(0)
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+              range: false
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              conditions:
+                - evaluator: { params: [0], type: gt }
+                  operator: { type: and }
+                  query: { params: [] }
+                  reducer: { params: [], type: last }
+                  type: query
+              datasource: { type: __expr__, uid: __expr__ }
+              expression: "$A > 0 && $B == 0"
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: math
+        noDataState: OK
+        execErrState: OK
+        for: 30m
+        labels: { severity: critical, team: visatop }
+        annotations:
+          summary: Checkouts are being created but nothing is marking paid
+          description: At least one [checkout] checkout_created in 6h and zero [payments] marked_paid. Check webhooks, provider dashboards, and INTERNAL_CRON_SECRET reconcile jobs.

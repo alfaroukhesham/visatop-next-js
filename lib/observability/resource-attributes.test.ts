@@ -27,6 +27,11 @@ describe("resolveServiceVersion", () => {
     );
   });
 
+  it("falls back to RELEASE_SHA then VISATOP_RELEASE_SHA", () => {
+    expect(resolveServiceVersion({ RELEASE_SHA: "relsha" })).toBe("relsha");
+    expect(resolveServiceVersion({ VISATOP_RELEASE_SHA: "deadbeef" })).toBe("deadbeef");
+  });
+
   it("is unknown when no release sha is set", () => {
     expect(resolveServiceVersion({})).toBe("unknown");
   });

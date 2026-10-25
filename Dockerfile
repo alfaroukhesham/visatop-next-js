@@ -51,6 +51,7 @@ ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 ENV GIT_SHA=$GIT_SHA \
     APP_ENV=$APP_ENV \
+    RELEASE_SHA=$GIT_SHA \
     NEXT_PUBLIC_GIT_SHA=$GIT_SHA \
     NEXT_PUBLIC_APP_ENV=$APP_ENV \
     SENTRY_RELEASE=$GIT_SHA \
@@ -77,6 +78,12 @@ RUN rm -f .env \
 
 USER nextjs
 EXPOSE 3000
+
+# Liveness only. Must stay DB-free (same path as scripts/blue-green-deploy.sh wait_healthy).
+# wait_healthy uses `docker exec` + fetch and does not read State.Health, so this
+# HEALTHCHECK cannot block a blue/green flip. --restart unless-stopped ignores unhealthy.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=45s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:3000/visa-processing/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 # Next standalone server entrypoint
 CMD ["node", "server.js"]

@@ -434,6 +434,13 @@ export async function POST(
         ? EXTRACTION_STATUS.NEEDS_MANUAL
         : EXTRACTION_STATUS.FAILED;
 
+  if (terminalStatus === EXTRACTION_STATUS.FAILED) {
+    log.info(
+      { status: terminalStatus, provider: ocrResult.provider },
+      "[extract] failed",
+    );
+  }
+
   // Server-side diagnostic breadcrumb; do not log OCR JSON or bytes.
   log.info(
     {

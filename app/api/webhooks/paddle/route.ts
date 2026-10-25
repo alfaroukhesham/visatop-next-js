@@ -37,6 +37,10 @@ const postPaddleWebhook = async (req: Request) => {
   const signature = hdrs.get("paddle-signature");
 
   if (!signature || !(await paddleAdapter.verifyWebhookSignature(bodyText, signature))) {
+    log.warn(
+      { marker: "webhook_signature_rejected", hasSignatureHeader: Boolean(signature) },
+      "[webhooks/paddle] Invalid signature",
+    );
     return jsonError("UNAUTHORIZED", "Invalid signature", { status: 401, requestId });
   }
 
@@ -60,6 +64,7 @@ const postPaddleWebhook = async (req: Request) => {
       if (!payRow) {
         log.warn(
           {
+            marker: "webhook_unmatched",
             type: normalized.rawEventType,
             transactionId: normalized.providerPaymentId,
             applicationId: normalized.metadata.applicationId,

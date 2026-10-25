@@ -1,0 +1,16 @@
+apiVersion: 1
+
+templates:
+  - orgId: 1
+    name: visatop.default.title
+    template: |
+      {{ define "visatop.title" }}[VisaTop] {{ .Status | toUpper }} {{ .GroupLabels.alertname }}{{ end }}
+  - orgId: 1
+    name: visatop.default.message
+    template: |
+      {{ define "visatop.message" }}
+      {{ range .Alerts }}
+      {{ .Annotations.summary }}
+      {{ .Annotations.description }}
+      {{ end }}
+      {{ end }}

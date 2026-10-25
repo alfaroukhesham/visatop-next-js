@@ -25,6 +25,8 @@ APP_ENV=production   # or staging — never use NODE_ENV here
 # GIT_SHA is injected at `docker run` from the image tag sha-<gitsha>
 ```
 
+Compose service DNS is `alloy`; `container_name` `visatop-alloy` also resolves. The receiver and tail-sampling live in [`deploy/observability/alloy/config.alloy`](../../deploy/observability/alloy/config.alloy) — see [`infra.md`](infra.md).
+
 Either form of the endpoint is accepted; the SDK normalizes to the traces path:
 
 | Env value | Exporter URL |
@@ -34,7 +36,7 @@ Either form of the endpoint is accepted; the SDK normalizes to the traces path:
 
 Optional override: `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` (wins over the base endpoint).
 
-Minimal Alloy receive → Tempo (operator-owned file; not shipped in this repo):
+Shipped Alloy receive → Tempo (`deploy/observability/alloy/config.alloy`; tail sampling keeps ERROR, ≥2s, and 5%):
 
 ```alloy
 otelcol.receiver.otlp "app" {
@@ -76,7 +78,7 @@ Set in `lib/observability/resource-attributes.ts` when the SDK starts:
 | Attribute | Source |
 | --- | --- |
 | `service.name` | `OTEL_SERVICE_NAME` or `visatop-next-js` |
-| `service.version` | `GIT_SHA` (deploy script, from `:sha-<gitsha>` image tag) or `VISATOP_RELEASE_SHA` |
+| `service.version` | `GIT_SHA` (deploy script, from `:sha-<gitsha>` image tag), else `RELEASE_SHA`, else `VISATOP_RELEASE_SHA` |
 | `deployment.environment` | **`APP_ENV`** (`staging` / `production`). **Not** `NODE_ENV` (that is `production` on both slots). |
 
 `blue-green-deploy.sh` passes `-e APP_ENV=<staging|production>` and `-e GIT_SHA=<sha>` on `docker run`.
@@ -147,6 +149,4 @@ HTTP auto-instrumentation is on (with query strings stripped and no header captu
 | `OTEL_SERVICE_NAME` | Override service name |
 | `OTEL_DIAGNOSTIC_LOGS=1` | Verbose SDK logs |
 
-## Merge note
-
-This is one of six parallel observability PRs. GlitchTip (`registerSentry` / `onRequestError`) and tracing (`registerTracing`) both live in `instrumentation.ts`. Structured logs keep `requestId`/`traceId`/`spanId`; responses keep `x-request-id` and `x-trace-id`. Tracing still does not import the NodeSDK until an OTLP endpoint is set.
+GlitchTip (`registerSentry` / `onRequestError`) and tracing (`registerTracing`) both live in `instrumentation.ts`. Structured logs keep `requestId`/`traceId`/`spanId`; responses keep `x-request-id` and `x-trace-id`. Tracing still does not import the NodeSDK until an OTLP endpoint is set. Droplet Alloy/Tempo compose: [`infra.md`](infra.md).

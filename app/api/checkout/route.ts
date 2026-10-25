@@ -328,6 +328,8 @@ export async function POST(req: Request) {
         .set({ paymentStatus: "checkout_created" })
         .where(inArray(schema.application.id, memberIds));
 
+      log.info({ provider }, "[checkout] checkout_created");
+
       for (const member of lockedRows) {
         await recordFunnelEvent(tx, {
           eventId: serverFunnelEventId(member.id, FUNNEL_CHECKOUT_CREATED),
