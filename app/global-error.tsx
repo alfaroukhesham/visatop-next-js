@@ -1,12 +1,21 @@
 "use client";
 
-export default function GlobalError({
-  error,
-  reset,
-}: {
+import { useEffect, type FC } from "react";
+import * as Sentry from "@sentry/nextjs";
+import { isSentryEnabled } from "@/lib/observability/sentry-env";
+
+interface IGlobalErrorPageProps {
   error: Error & { digest?: string };
   reset: () => void;
-}) {
+}
+
+const GlobalErrorPage: FC<IGlobalErrorPageProps> = ({ error, reset }) => {
+  useEffect(() => {
+    if (isSentryEnabled()) {
+      Sentry.captureException(error);
+    }
+  }, [error]);
+
   return (
     <html lang="en">
       <body className="flex min-h-screen items-center justify-center bg-zinc-100 p-6 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-50">
@@ -26,4 +35,6 @@ export default function GlobalError({
       </body>
     </html>
   );
-}
+};
+
+export default GlobalErrorPage;

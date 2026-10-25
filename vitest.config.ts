@@ -24,6 +24,7 @@ export default defineConfig({
       ".worktrees/**",
       ".agents/**",
       "tests/e2e/**",
+      "tests/synthetics/**",
     ],
     coverage: {
       provider: "v8",

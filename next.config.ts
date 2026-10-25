@@ -1,4 +1,6 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs/config";
+import { buildSentryWebpackPluginOptions } from "./lib/observability/sentry-build";
 
 /**
  * Next.js 16+ blocks cross-origin access to `/_next/*` dev assets (e.g. webpack-hmr /
@@ -161,4 +163,4 @@ const nextConfig: NextConfig = {
     : {}),
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, buildSentryWebpackPluginOptions());
