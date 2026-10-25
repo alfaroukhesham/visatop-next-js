@@ -7,9 +7,14 @@ import {
   PaymentWebhookSchemaDeploymentError,
 } from "@/lib/payments/payment-webhook-db-guard";
 import {
+  parseFincraWebhookEnvelope,
   parseFincraWebhookToNormalized,
   verifyFincraWebhookSignature,
 } from "@/lib/payments/fincra-webhook";
+import {
+  auditFincraUnpaidAttemptEvent,
+  recordFincraWebhookEvent,
+} from "@/lib/payments/fincra-webhook-record";
 import { verifyFincraCheckoutByMerchantReference, FincraProviderError } from "@/lib/payments/fincra-client";
 import { decideFincraVerifiedPayment } from "@/lib/payments/fincra-verify";
 import { processFincraVerifiedPaymentInTransaction } from "@/lib/payments/process-fincra-payment";
@@ -54,12 +59,65 @@ export async function POST(req: Request) {
     });
   }
 
-  const parsed = parseFincraWebhookToNormalized(bodyText);
-  if (parsed.kind === "ignored") {
-    return jsonOk({ received: true, ignored: parsed.reason }, { requestId });
+  const envelope = parseFincraWebhookEnvelope(bodyText);
+  if (!envelope) {
+    console.warn("[webhooks/fincra] Verified webhook with unparseable body", { requestId });
+    return jsonOk({ received: true, ignored: "invalid_json" }, { requestId });
   }
+  const logCtx = {
+    requestId,
+    event: envelope.eventName,
+    merchantReference: envelope.merchantReference,
+    providerReference: envelope.providerReference,
+    providerEventId: envelope.providerEventId,
+    status: envelope.status,
+  };
+  console.info("[webhooks/fincra] Webhook received", logCtx);
 
   const payloadHash = computePaymentEventPayloadHash("fincra", bodyText);
+  const parsed = parseFincraWebhookToNormalized(bodyText);
+
+  if (parsed.kind === "ignored") {
+    // Non-success (charge.failed / charge.expired / other) events: always persist, never mark paid.
+    try {
+      const result = await withSystemDbActor(async (tx) => {
+        await markWebhookReceivedNow(tx, PLATFORM_KEY_LAST_WEBHOOK_FINCRA);
+        const payRow = await findFincraPaymentForWebhookRefs(tx, {
+          merchantReference: envelope.merchantReference,
+          paymentIdFromMetadata: envelope.paymentIdFromMetadata,
+          providerPaymentId: envelope.providerReference,
+        });
+        const stored = await recordFincraWebhookEvent(tx, { envelope, payloadHash, payRow });
+        const attempt =
+          stored && payRow ? await auditFincraUnpaidAttemptEvent(tx, { envelope, payRow, requestId }) : null;
+        return { stored, matched: Boolean(payRow), paymentId: payRow?.id ?? null, attempt };
+      });
+      console.info("[webhooks/fincra] Webhook recorded", {
+        ...logCtx,
+        outcome: result.stored ? (result.matched ? "stored" : "stored_unmatched") : "duplicate",
+        paymentId: result.paymentId,
+        isCurrentAttempt: result.attempt?.isCurrentAttempt ?? null,
+        ignoredReason: parsed.reason,
+      });
+      return jsonOk(
+        { received: true, ignored: parsed.reason, matched: result.matched, duplicate: !result.stored },
+        { requestId },
+      );
+    } catch (e) {
+      if (e instanceof PaymentWebhookSchemaDeploymentError || isPostgresOnConflictMissingConstraintError(e)) {
+        return jsonError("SERVICE_UNAVAILABLE", "Payment webhook storage is not migrated", {
+          status: 503,
+          requestId,
+          details: { code: "payment_event_dedupe_index_missing" },
+        });
+      }
+      console.error("[webhooks/fincra] Failed to record webhook", {
+        ...logCtx,
+        err: e instanceof Error ? e.message : String(e),
+      });
+      throw e;
+    }
+  }
 
   let firstPaidApplicationId: string | null = null;
   try {
@@ -73,9 +131,10 @@ export async function POST(req: Request) {
       });
 
       if (!payForAmount) {
-        console.warn("[webhooks/fincra] Unknown merchant reference; not marking paid", {
-          requestId,
-          providerPaymentId: parsed.event.providerPaymentId,
+        const stored = await recordFincraWebhookEvent(tx, { envelope, payloadHash, payRow: null });
+        console.warn("[webhooks/fincra] Unknown merchant reference; stored unmatched, not marking paid", {
+          ...logCtx,
+          outcome: stored ? "stored_unmatched" : "duplicate",
         });
         return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
       }
@@ -126,6 +185,14 @@ export async function POST(req: Request) {
         requestId,
         logLabel: "webhooks/fincra",
         verifiedIds: { payCode: verified.reference, fincraId: verified.id },
+      });
+
+      // Persist every verified event (pending / unknown / duplicate outcomes included); no-op if already stored.
+      await recordFincraWebhookEvent(tx, { envelope, payloadHash, payRow: payForAmount });
+      console.info("[webhooks/fincra] Webhook recorded", {
+        ...logCtx,
+        outcome: processResult.outcome,
+        paymentId: payForAmount.id,
       });
 
       if (processResult.outcome === "rejected_provider_mismatch") {
