@@ -36,6 +36,7 @@ import type {
   TApplicantExportRow,
   TFunnelEventExportRow,
 } from "@/lib/analytics/admin-analytics-types";
+import { loadAdminAnalyticsExpansion } from "@/lib/analytics/admin-analytics-expansion-query";
 import { minorUnitsToJsonSafeNumber } from "@/lib/pricing/minor-units-json";
 
 export const ANALYTICS_EVENTS_EXPORT_LIMIT = 20000;
@@ -135,7 +136,7 @@ export const loadAdminAnalytics = async (
 ): Promise<TAdminAnalyticsPayload> => {
   const prev = previousPeriod(range);
 
-  const [appAgg, lastPaidRows, revenueRows, createdWeeks, paidWeeks, events, nationalityRows, stopRows, failureRows] =
+  const [appAgg, lastPaidRows, revenueRows, createdWeeks, paidWeeks, events, nationalityRows, stopRows, failureRows, expansion] =
     await Promise.all([
       tx
         .select({
@@ -268,6 +269,7 @@ export const loadAdminAnalytics = async (
           ),
         )
         .groupBy(analyticsFunnelEvent.failureReason),
+      loadAdminAnalyticsExpansion(tx, range),
     ]);
 
   const created = asInt(appAgg[0]?.created);
@@ -347,6 +349,7 @@ export const loadAdminAnalytics = async (
       created: asInt(r.created),
       paid: asInt(r.paid),
     })),
+    ...expansion,
   };
 };
 

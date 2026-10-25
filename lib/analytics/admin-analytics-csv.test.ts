@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { analyticsSummaryToCsv, funnelEventsToCsv } from "@/lib/analytics/admin-analytics-csv";
+import { emptyAdminAnalyticsExpansion } from "@/lib/analytics/admin-analytics-expansion";
 import type { TAdminAnalyticsPayload } from "@/lib/analytics/admin-analytics-types";
 
 const sample: TAdminAnalyticsPayload = {
+  ...emptyAdminAnalyticsExpansion(),
   range: { from: "2026-09-08T00:00:00.000Z", to: "2026-09-15T00:00:00.000Z" },
   kpis: {
     applicationsCreated: { current: 10, previous: 8, deltaPct: 25 },
@@ -36,6 +38,20 @@ const sample: TAdminAnalyticsPayload = {
   passportFailures: [],
   weekly: [{ weekStart: "2026-09-14", created: 10, paid: 2 }],
   nationalities: [{ code: "IN", name: "India", created: 7, paid: 1 }],
+  paymentsByProvider: [
+    {
+      provider: "fincra",
+      currency: "NGN",
+      attempts: 8,
+      paid: 2,
+      failed: 1,
+      expired: 2,
+      mismatch: 1,
+      conversionPct: 25,
+      timeToPaySeconds: { avg: 90, p50: 60, p95: 180 },
+    },
+  ],
+  emailsByKind: [{ kind: "application_draft_started", count: 4 }],
 };
 
 describe("analyticsSummaryToCsv", () => {
@@ -45,6 +61,18 @@ describe("analyticsSummaryToCsv", () => {
     expect(csv).toContain("application_started,Nationality / start,10");
     expect(csv).toContain("IN,India,7,1");
     expect(csv).not.toContain("@");
+  });
+
+  it("includes observability sections without emails, names, or passport fields", () => {
+    const csv = analyticsSummaryToCsv(sample);
+    expect(csv).toContain("fincra,NGN,8,2,1,2,1,25,90,60,180");
+    expect(csv).toContain("application_draft_started,4");
+    expect(csv).toContain("webhook_kpi");
+    expect(csv).toContain("ocr_attempts");
+    expect(csv).not.toMatch(/@[a-z0-9]/i);
+    expect(csv).not.toContain("passport_number");
+    expect(csv).not.toContain("full_name");
+    expect(csv).not.toContain("guest_email");
   });
 });
 

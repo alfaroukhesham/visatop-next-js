@@ -1,3 +1,5 @@
+import type { TAdminAnalyticsExpansion } from "@/lib/analytics/admin-analytics-expansion";
+
 export type TAnalyticsKpi = {
   current: number;
   previous: number;
@@ -42,7 +44,7 @@ export type TAdminAnalyticsPayload = {
   passportFailures: { code: string; count: number }[];
   weekly: { weekStart: string; created: number; paid: number }[];
   nationalities: { code: string; name: string; created: number; paid: number }[];
-};
+} & TAdminAnalyticsExpansion;
 
 export type TFunnelEventExportRow = {
   occurredAt: string;
