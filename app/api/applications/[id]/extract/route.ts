@@ -19,6 +19,7 @@ import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 
 import { jsonError, jsonOk } from "@/lib/api/response";
+import { createRequestLogger } from "@/lib/logger";
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
 import { extractClientIp } from "@/lib/applications/client-ip";
 import { consume } from "@/lib/applications/document-rate-limit";
@@ -121,6 +122,7 @@ export async function POST(
 ) {
   const hdrs = await headers();
   const requestId = hdrs.get("x-request-id");
+  const log = createRequestLogger(requestId);
   const { id: applicationId } = await ctx.params;
 
   const access = await resolveApplicationAccess(req, hdrs, applicationId);
@@ -264,12 +266,10 @@ export async function POST(
       now: finishedAt,
     });
 
-    console.info("[extract] capped", {
-      requestId,
-      applicationId,
-      documentId: lease.documentId,
-      attemptsAlreadyUsed,
-    });
+    log.info(
+      { applicationId, documentId: lease.documentId, attemptsAlreadyUsed },
+      "[extract] capped",
+    );
 
     return jsonOk(
       {
@@ -435,23 +435,25 @@ export async function POST(
         : EXTRACTION_STATUS.FAILED;
 
   // Server-side diagnostic breadcrumb; do not log OCR JSON or bytes.
-  console.info("[extract] finished", {
-    requestId,
-    applicationId,
-    documentId: lease.documentId,
-    status: terminalStatus,
-    provider: ocrResult.provider,
-    model: ocrResult.model,
-    promptVersion: ocrResult.promptVersion,
-    attempts: ocrResult.attempts.map((a) => ({
-      attempt: a.attempt,
-      status: a.status,
-      errorCode: a.errorCode,
-      errorMessage: a.errorMessage,
-      missingFields: a.missingFields,
-      latencyMs: a.latencyMs,
-    })),
-  });
+  log.info(
+    {
+      applicationId,
+      documentId: lease.documentId,
+      status: terminalStatus,
+      provider: ocrResult.provider,
+      model: ocrResult.model,
+      promptVersion: ocrResult.promptVersion,
+      attempts: ocrResult.attempts.map((a) => ({
+        attempt: a.attempt,
+        status: a.status,
+        errorCode: a.errorCode,
+        errorMessage: a.errorMessage,
+        missingFields: a.missingFields,
+        latencyMs: a.latencyMs,
+      })),
+    },
+    "[extract] finished",
+  );
 
   const payload: ExtractResponsePayload = {
     extraction: {

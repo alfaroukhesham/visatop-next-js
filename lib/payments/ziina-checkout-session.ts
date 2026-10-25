@@ -9,6 +9,7 @@ import {
 } from "@/lib/payments/ziina-embedded";
 import { getActivePaymentProvider, getZiinaServerConfig } from "@/lib/payments/resolve-payment-provider";
 import { reconcileZiinaPaymentFromReturn } from "@/lib/payments/reconcile-ziina-payments";
+import { createRequestLogger } from "@/lib/logger";
 
 export const loadPartyMemberIds = async (tx: DbTransaction, applicationId: string): Promise<string[] | null> => {
   const [requestedApp] = await tx
@@ -105,11 +106,10 @@ export const resolveZiinaCheckoutSession = async (
     });
   } catch (e) {
     if (e instanceof ZiinaProviderError) {
-      console.warn("[checkout-session] Ziina GET payment_intent failed", {
-        paymentId: payRow.id,
-        intentId,
-        message: e.message,
-      });
+      createRequestLogger(requestId).warn(
+        { paymentId: payRow.id, intentId, message: e.message },
+        "[checkout-session] Ziina GET payment_intent failed",
+      );
     }
     return result({ kind: "unavailable" });
   }

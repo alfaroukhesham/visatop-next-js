@@ -46,6 +46,7 @@ vi.mock("@/lib/payments/fincra-webhook-record", () => ({
   auditFincraUnpaidAttemptEvent: (...args: unknown[]) => auditMock(...args),
 }));
 
+import { logger } from "@/lib/logger";
 import { POST } from "./route";
 
 const secret = "whsec";
@@ -376,12 +377,20 @@ describe("POST /api/webhooks/fincra", () => {
   });
 
   it("does not store anything on a bad signature", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warn = vi.fn();
+    const childSpy = vi.spyOn(logger, "child").mockReturnValue({
+      warn,
+      info: vi.fn(),
+      error: vi.fn(),
+    } as ReturnType<typeof logger.child>);
     const res = await post(unpaidBody("charge.expired", "pay_1-a1"), "ab".repeat(64));
     expect(res.status).toBe(401);
     expect(recordMock).not.toHaveBeenCalled();
-    expect(warn).toHaveBeenCalledWith("[webhooks/fincra] Invalid webhook signature", expect.anything());
-    warn.mockRestore();
+    expect(warn).toHaveBeenCalledWith(
+      { hasSignatureHeader: true },
+      "[webhooks/fincra] Invalid webhook signature",
+    );
+    childSpy.mockRestore();
   });
 
   it("also persists charge.successful events alongside processing", async () => {

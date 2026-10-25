@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { logger } from "@/lib/logger";
 import { and, desc, eq } from "drizzle-orm";
 import {
   isResumeEmailLinkSecretConfigured,
@@ -199,10 +200,10 @@ export async function sendPaymentReceivedInProgressEmail(
   requestId: string | null,
 ): Promise<void> {
   if (!isMailgunConfigured()) {
-    console.warn("[email] Mailgun not configured; skipping payment_received_in_progress", {
+    logger.warn({
       applicationId,
       requestId,
-    });
+    }, "[email] Mailgun not configured; skipping payment_received_in_progress");
     return;
   }
 
@@ -243,7 +244,7 @@ export async function sendPaymentReceivedInProgressEmail(
   });
 
   if (!payload?.to) {
-    console.warn("[email] No recipient for payment_received_in_progress", { applicationId, requestId });
+    logger.warn({ applicationId, requestId }, "[email] No recipient for payment_received_in_progress");
     return;
   }
 
@@ -252,7 +253,7 @@ export async function sendPaymentReceivedInProgressEmail(
     TRANSACTIONAL_EMAIL_KINDS.PAYMENT_RECEIVED_IN_PROGRESS,
   );
   if (!claimed) {
-    console.info("[email] payment_received_in_progress already recorded (skip duplicate)", { applicationId, requestId });
+    logger.info({ applicationId, requestId }, "[email] payment_received_in_progress already recorded (skip duplicate)");
     return;
   }
 
@@ -276,7 +277,7 @@ export async function sendPaymentReceivedInProgressEmail(
 
   const sent = await mailgunSendText({ to: payload.to, subject, text, html: htmlWithFooter });
   if (!sent.ok) {
-    console.error("[email] Mailgun send failed", { applicationId, requestId, error: sent.error });
+    logger.error({ applicationId, requestId, error: sent.error }, "[email] Mailgun send failed");
   }
 }
 
@@ -286,7 +287,7 @@ export async function sendOutcomeApprovedEmail(
   requestId: string | null,
 ): Promise<void> {
   if (!isMailgunConfigured()) {
-    console.warn("[email] Mailgun not configured; skipping outcome_approved", { applicationId, requestId });
+    logger.warn({ applicationId, requestId }, "[email] Mailgun not configured; skipping outcome_approved");
     return;
   }
 
@@ -321,17 +322,17 @@ export async function sendOutcomeApprovedEmail(
   });
 
   if (!payload?.to || !payload.doc) {
-    console.warn("[email] Missing recipient or outcome document for outcome_approved", {
+    logger.warn({
       applicationId,
       outcomeDocumentId,
       requestId,
-    });
+    }, "[email] Missing recipient or outcome document for outcome_approved");
     return;
   }
 
   const claimed = await tryClaimTransactionalEmail(applicationId, TRANSACTIONAL_EMAIL_KINDS.OUTCOME_APPROVED);
   if (!claimed) {
-    console.info("[email] outcome_approved already recorded (skip duplicate)", { applicationId, requestId });
+    logger.info({ applicationId, requestId }, "[email] outcome_approved already recorded (skip duplicate)");
     return;
   }
 
@@ -356,7 +357,7 @@ export async function sendOutcomeApprovedEmail(
     ],
   });
   if (!sent.ok) {
-    console.error("[email] Mailgun send failed", { applicationId, requestId, error: sent.error });
+    logger.error({ applicationId, requestId, error: sent.error }, "[email] Mailgun send failed");
   }
 }
 
@@ -366,10 +367,10 @@ export async function sendOutcomeUaeAuthorityRejectionEmail(
   requestId: string | null,
 ): Promise<void> {
   if (!isMailgunConfigured()) {
-    console.warn("[email] Mailgun not configured; skipping outcome_uae_authority_rejection", {
+    logger.warn({
       applicationId,
       requestId,
-    });
+    }, "[email] Mailgun not configured; skipping outcome_uae_authority_rejection");
     return;
   }
 
@@ -404,11 +405,11 @@ export async function sendOutcomeUaeAuthorityRejectionEmail(
   });
 
   if (!payload?.to || !payload.doc) {
-    console.warn("[email] Missing recipient or outcome document for UAE authority rejection", {
+    logger.warn({
       applicationId,
       outcomeDocumentId,
       requestId,
-    });
+    }, "[email] Missing recipient or outcome document for UAE authority rejection");
     return;
   }
 
@@ -417,10 +418,10 @@ export async function sendOutcomeUaeAuthorityRejectionEmail(
     TRANSACTIONAL_EMAIL_KINDS.OUTCOME_UAE_AUTHORITY_REJECTION,
   );
   if (!claimed) {
-    console.info("[email] outcome_uae_authority_rejection already recorded (skip duplicate)", {
+    logger.info({
       applicationId,
       requestId,
-    });
+    }, "[email] outcome_uae_authority_rejection already recorded (skip duplicate)");
     return;
   }
 
@@ -445,7 +446,7 @@ export async function sendOutcomeUaeAuthorityRejectionEmail(
     ],
   });
   if (!sent.ok) {
-    console.error("[email] Mailgun send failed", { applicationId, requestId, error: sent.error });
+    logger.error({ applicationId, requestId, error: sent.error }, "[email] Mailgun send failed");
   }
 }
 
@@ -531,20 +532,20 @@ export async function sendApplicationDraftStartedEmail(input: {
   const { primaryApplicationId, partyId, guestEmail, requestId } = input;
 
   if (!isResumeEmailLinkSecretConfigured()) {
-    console.warn("[email] GUEST_LINK_INTENT_SECRET not configured; skipping application_draft_started", {
+    logger.warn({
       primaryApplicationId,
       partyId,
       requestId,
-    });
+    }, "[email] GUEST_LINK_INTENT_SECRET not configured; skipping application_draft_started");
     return;
   }
 
   if (!isMailgunConfigured()) {
-    console.warn("[email] Mailgun not configured; skipping application_draft_started", {
+    logger.warn({
       primaryApplicationId,
       partyId,
       requestId,
-    });
+    }, "[email] Mailgun not configured; skipping application_draft_started");
     return;
   }
 
@@ -592,11 +593,11 @@ export async function sendApplicationDraftStartedEmail(input: {
   });
 
   if (!payload?.to) {
-    console.warn("[email] Missing payload for application_draft_started", {
+    logger.warn({
       primaryApplicationId,
       partyId,
       requestId,
-    });
+    }, "[email] Missing payload for application_draft_started");
     return;
   }
 
@@ -605,10 +606,10 @@ export async function sendApplicationDraftStartedEmail(input: {
     TRANSACTIONAL_EMAIL_KINDS.APPLICATION_DRAFT_STARTED,
   );
   if (!claimed) {
-    console.info("[email] application_draft_started already recorded (skip duplicate)", {
+    logger.info({
       primaryApplicationId,
       requestId,
-    });
+    }, "[email] application_draft_started already recorded (skip duplicate)");
     return;
   }
 
@@ -620,6 +621,6 @@ export async function sendApplicationDraftStartedEmail(input: {
 
   const sent = await mailgunSendText({ to: payload.to, subject, text, html });
   if (!sent.ok) {
-    console.error("[email] Mailgun send failed", { primaryApplicationId, requestId, error: sent.error });
+    logger.error({ primaryApplicationId, requestId, error: sent.error }, "[email] Mailgun send failed");
   }
 }

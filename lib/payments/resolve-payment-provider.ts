@@ -1,4 +1,5 @@
 import { getAppOrigin } from "@/lib/app-url";
+import { logger } from "@/lib/logger";
 
 export type ActivePaymentProvider = "paddle" | "ziina";
 export type CheckoutPaymentProvider = ActivePaymentProvider | "fincra";
@@ -127,9 +128,10 @@ export function assertPaymentsAllowedForOrigin(origin: string): { ok: true } | {
   if (shouldAllowInsecureLocalhostPayments()) {
     if (!warnedInsecureLocalhost) {
       warnedInsecureLocalhost = true;
-      console.warn("[payments] PAYMENTS_ALLOW_INSECURE_LOCALHOST=true — allowing checkout without https origin", {
-        origin,
-      });
+      logger.warn(
+        { origin },
+        "[payments] PAYMENTS_ALLOW_INSECURE_LOCALHOST=true — allowing checkout without https origin",
+      );
     }
     return { ok: true };
   }

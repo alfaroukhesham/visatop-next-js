@@ -8,6 +8,7 @@ import {
 } from "@/lib/payments/apply-payment-webhook-event";
 import type { NormalizedPaymentWebhookEvent } from "@/lib/payments/normalized-webhook";
 import { requirePaymentEventPayloadHashDedupeIndex } from "@/lib/payments/payment-webhook-db-guard";
+import { createRequestLogger } from "@/lib/logger";
 
 export type ProcessZiinaPaymentOutcome =
   | "applied"
@@ -35,19 +36,19 @@ export async function processZiinaPaymentInTransaction(
 ): Promise<ProcessZiinaPaymentResult> {
   const { normalized, payloadHash, eventType, requestId, logLabel } = params;
   const intentId = normalized.providerPaymentId;
+  const log = createRequestLogger(requestId);
 
   const payRow = await resolvePaymentRowForWebhook(tx, normalized);
   if (!payRow) {
-    console.info(`[${logLabel}] No matching payment row for Ziina intent`, { intentId });
+    log.info({ intentId, scope: logLabel }, `[${logLabel}] No matching payment row for Ziina intent`);
     return { outcome: "noop_no_payment", firstPaidApplicationId: null, paymentId: null, intentId };
   }
 
   if (payRow.provider !== "ziina") {
-    console.warn(`[${logLabel}] Payment row provider mismatch`, {
-      paymentId: payRow.id,
-      rowProvider: payRow.provider,
-      intentId,
-    });
+    log.warn(
+      { paymentId: payRow.id, rowProvider: payRow.provider, intentId, scope: logLabel },
+      `[${logLabel}] Payment row provider mismatch`,
+    );
     const providerEventId = normalized.providerEventId ?? intentId;
     await tx.insert(auditLog).values({
       actorType: "system",
@@ -76,11 +77,15 @@ export async function processZiinaPaymentInTransaction(
     .where(eq(application.id, payRow.applicationId))
     .limit(1);
   if (!appRow) {
-    console.warn(`[${logLabel}] Payment row without application`, {
-      paymentId: payRow.id,
-      applicationId: payRow.applicationId,
-      intentId,
-    });
+    log.warn(
+      {
+        paymentId: payRow.id,
+        applicationId: payRow.applicationId,
+        intentId,
+        scope: logLabel,
+      },
+      `[${logLabel}] Payment row without application`,
+    );
     return {
       outcome: "noop_no_application",
       firstPaidApplicationId: null,
@@ -90,11 +95,10 @@ export async function processZiinaPaymentInTransaction(
   }
 
   if (payRow.status === "paid" && appRow.paymentStatus === "paid") {
-    console.info(`[${logLabel}] Payment already marked paid (idempotent skip)`, {
-      paymentId: payRow.id,
-      applicationId: appRow.id,
-      intentId,
-    });
+    log.info(
+      { paymentId: payRow.id, applicationId: appRow.id, intentId, scope: logLabel },
+      `[${logLabel}] Payment already marked paid (idempotent skip)`,
+    );
     return {
       outcome: "duplicate",
       firstPaidApplicationId: null,
@@ -119,11 +123,10 @@ export async function processZiinaPaymentInTransaction(
     .returning();
 
   if (!insertedEvent) {
-    console.info(`[${logLabel}] Duplicate payment_event (already processed)`, {
-      paymentId: payRow.id,
-      intentId,
-      eventType,
-    });
+    log.info(
+      { paymentId: payRow.id, intentId, eventType, scope: logLabel },
+      `[${logLabel}] Duplicate payment_event (already processed)`,
+    );
     return {
       outcome: "duplicate",
       firstPaidApplicationId: null,
@@ -142,13 +145,17 @@ export async function processZiinaPaymentInTransaction(
   );
 
   if (payApply.didFirstPaidTransition) {
-    console.info(`[${logLabel}] Payment marked paid via Ziina`, {
-      paymentId: payRow.id,
-      applicationId: appRow.id,
-      intentId,
-      eventType,
-      kind: normalized.kind,
-    });
+    log.info(
+      {
+        paymentId: payRow.id,
+        applicationId: appRow.id,
+        intentId,
+        eventType,
+        kind: normalized.kind,
+        scope: logLabel,
+      },
+      `[${logLabel}] Payment marked paid via Ziina`,
+    );
     return {
       outcome: "applied",
       firstPaidApplicationId: payRow.applicationId,
@@ -157,15 +164,19 @@ export async function processZiinaPaymentInTransaction(
     };
   }
 
-  console.info(`[${logLabel}] Ziina event recorded without first-paid transition`, {
-    paymentId: payRow.id,
-    applicationId: appRow.id,
-    intentId,
-    eventType,
-    kind: normalized.kind,
-    paymentStatus: appRow.paymentStatus,
-    applicationStatus: appRow.applicationStatus,
-  });
+  log.info(
+    {
+      paymentId: payRow.id,
+      applicationId: appRow.id,
+      intentId,
+      eventType,
+      kind: normalized.kind,
+      paymentStatus: appRow.paymentStatus,
+      applicationStatus: appRow.applicationStatus,
+      scope: logLabel,
+    },
+    `[${logLabel}] Ziina event recorded without first-paid transition`,
+  );
   return {
     outcome: "applied",
     firstPaidApplicationId: null,

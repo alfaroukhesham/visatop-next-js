@@ -8,6 +8,7 @@ import type { ApplicationRow } from "@/lib/applications/load-application-row-for
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { serverFunnelEventId } from "@/lib/analytics/funnel-event-names";
 import { recordFunnelEvent } from "@/lib/analytics/record-funnel-event";
+import { createRequestLogger } from "@/lib/logger";
 
 export type ApplyPaymentWebhookContext = {
   requestId?: string | null;
@@ -124,11 +125,14 @@ export async function applyPaymentWebhookEvent(
   ctx?: ApplyPaymentWebhookContext,
 ): Promise<ApplyPaymentWebhookEventResult> {
   if (payRow.provider !== event.provider) {
-    console.warn("[applyPaymentWebhookEvent] provider mismatch — caller should reject before insert", {
-      paymentId: payRow.id,
-      rowProvider: payRow.provider,
-      eventProvider: event.provider,
-    });
+    createRequestLogger(ctx?.requestId).warn(
+      {
+        paymentId: payRow.id,
+        rowProvider: payRow.provider,
+        eventProvider: event.provider,
+      },
+      "[applyPaymentWebhookEvent] provider mismatch — caller should reject before insert",
+    );
     return { didFirstPaidTransition: false };
   }
 

@@ -10,6 +10,7 @@ import type { NormalizedPaymentWebhookEvent } from "@/lib/payments/normalized-we
 import { requirePaymentEventPayloadHashDedupeIndex } from "@/lib/payments/payment-webhook-db-guard";
 import { computeFincraUnderpayPayloadHash } from "@/lib/payments/payment-event-hash";
 import type { TFincraVerifyDecision } from "@/lib/payments/fincra-verify";
+import { createRequestLogger } from "@/lib/logger";
 
 export type ProcessFincraPaymentOutcome =
   | "applied"
@@ -116,16 +117,19 @@ const flagMismatch = async (
     }),
   });
 
-  console.warn(`[${logLabel}] Fincra charge mismatch held for admin review (not marked paid)`, {
-    requestId: requestId ?? null,
-    paymentId: payRow.id,
-    applicationId: appRow.id,
-    reason: decision.reason,
-    expectedAmountMinor: payRow.amount.toString(),
-    expectedCurrency: payRow.currency,
-    receivedAmountMinor: received,
-    reportedCurrency: decision.reportedCurrency,
-  });
+  createRequestLogger(requestId).warn(
+    {
+      paymentId: payRow.id,
+      applicationId: appRow.id,
+      reason: decision.reason,
+      expectedAmountMinor: payRow.amount.toString(),
+      expectedCurrency: payRow.currency,
+      receivedAmountMinor: received,
+      reportedCurrency: decision.reportedCurrency,
+      scope: logLabel,
+    },
+    `[${logLabel}] Fincra charge mismatch held for admin review (not marked paid)`,
+  );
 
   return { outcome: "mismatch", firstPaidApplicationId: null, paymentId: payRow.id };
 };
@@ -143,30 +147,30 @@ export const processFincraVerifiedPaymentInTransaction = async (
   },
 ): Promise<ProcessFincraPaymentResult> => {
   const { normalized, decision, payloadHash, eventType, requestId, logLabel, verifiedIds } = params;
+  const log = createRequestLogger(requestId);
 
   if (decision.kind === "unknown_reference") {
-    console.warn(`[${logLabel}] Fincra reference does not map to a stored payment (not marked paid)`, {
-      requestId: requestId ?? null,
-      providerPaymentId: normalized.providerPaymentId,
-    });
+    log.warn(
+      { providerPaymentId: normalized.providerPaymentId, scope: logLabel },
+      `[${logLabel}] Fincra reference does not map to a stored payment (not marked paid)`,
+    );
     return { outcome: "unknown_reference", firstPaidApplicationId: null, paymentId: null };
   }
 
   const payRow = await resolvePaymentRowForWebhook(tx, normalized);
   if (!payRow) {
-    console.info(`[${logLabel}] No matching payment row for Fincra reference`, {
-      requestId: requestId ?? null,
-      providerPaymentId: normalized.providerPaymentId,
-    });
+    log.info(
+      { providerPaymentId: normalized.providerPaymentId, scope: logLabel },
+      `[${logLabel}] No matching payment row for Fincra reference`,
+    );
     return { outcome: "unknown_reference", firstPaidApplicationId: null, paymentId: null };
   }
 
   if (payRow.provider !== "fincra") {
-    console.warn(`[${logLabel}] Payment row provider mismatch`, {
-      requestId: requestId ?? null,
-      paymentId: payRow.id,
-      rowProvider: payRow.provider,
-    });
+    log.warn(
+      { paymentId: payRow.id, rowProvider: payRow.provider, scope: logLabel },
+      `[${logLabel}] Payment row provider mismatch`,
+    );
     await tx.insert(auditLog).values({
       actorType: "system",
       actorId: null,

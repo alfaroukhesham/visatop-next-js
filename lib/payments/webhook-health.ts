@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
 import { platformSetting } from "@/lib/db/schema";
+import { logger } from "@/lib/logger";
 
 export const PLATFORM_KEY_LAST_WEBHOOK_ZIINA = "last_webhook_received_at_ziina";
 export const PLATFORM_KEY_LAST_WEBHOOK_PADDLE = "last_webhook_received_at_paddle";
@@ -17,7 +18,7 @@ export async function markWebhookReceivedNow(tx: DbTransaction, key: string): Pr
 
   if (updated.length === 0 && !warnedWebhookHealthMissing) {
     warnedWebhookHealthMissing = true;
-    console.error("[payments] webhook health setting missing or not updatable (check migrations/RLS)", { key });
+    logger.error({ key }, "[payments] webhook health setting missing or not updatable (check migrations/RLS)");
   }
 }
 

@@ -20,12 +20,14 @@ import { createId } from "@paralleldrive/cuid2";
 import { markWebhookReceivedNow, PLATFORM_KEY_LAST_WEBHOOK_PADDLE } from "@/lib/payments/webhook-health";
 import { sendPaymentReceivedInProgressEmail } from "@/lib/email/send-application-transactional-emails";
 import { sendAdminPaymentCompletedEmail } from "@/lib/email/send-admin-notification-emails";
+import { createRequestLogger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   const [bodyText, hdrs] = await Promise.all([req.text(), headers()]);
   const requestId = hdrs.get("x-request-id");
+  const log = createRequestLogger(requestId);
   const signature = hdrs.get("paddle-signature");
 
   if (!signature || !(await paddleAdapter.verifyWebhookSignature(bodyText, signature))) {
@@ -50,19 +52,22 @@ export async function POST(req: Request) {
 
       const payRow = await resolvePaymentRowForWebhook(tx, normalized);
       if (!payRow) {
-        console.warn("[webhooks/paddle] No payment row for event", {
-          type: normalized.rawEventType,
-          transactionId: normalized.providerPaymentId,
-          applicationId: normalized.metadata.applicationId,
-        });
+        log.warn(
+          {
+            type: normalized.rawEventType,
+            transactionId: normalized.providerPaymentId,
+            applicationId: normalized.metadata.applicationId,
+          },
+          "[webhooks/paddle] No payment row for event",
+        );
         return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
       }
 
       if (payRow.provider !== "paddle") {
-        console.warn("[webhooks/paddle] payment row provider mismatch", {
-          paymentId: payRow.id,
-          rowProvider: payRow.provider,
-        });
+        log.warn(
+          { paymentId: payRow.id, rowProvider: payRow.provider },
+          "[webhooks/paddle] payment row provider mismatch",
+        );
         await tx.insert(auditLog).values({
           actorType: "system",
           actorId: null,
@@ -113,10 +118,7 @@ export async function POST(req: Request) {
     }
   } catch (e) {
     if (e instanceof PaymentWebhookSchemaDeploymentError || isPostgresOnConflictMissingConstraintError(e)) {
-      console.error("[webhooks/paddle] payment_event idempotency index missing or ON CONFLICT unusable", {
-        requestId,
-        err: e instanceof Error ? e.message : e,
-      });
+      log.error({ err: e }, "[webhooks/paddle] payment_event idempotency index missing or ON CONFLICT unusable");
       return jsonError(
         "SERVICE_UNAVAILABLE",
         "Payment webhook storage is not migrated; cannot record Paddle events safely. Apply database migrations, then retry.",
@@ -137,18 +139,10 @@ export async function POST(req: Request) {
     const paidAppId = firstPaidApplicationId;
     after(() => {
       void sendPaymentReceivedInProgressEmail(paidAppId, requestId).catch((err) => {
-        console.error("[webhooks/paddle] payment_received_in_progress email failed", {
-          applicationId: paidAppId,
-          requestId,
-          err: err instanceof Error ? err.message : err,
-        });
+        log.error({ err, applicationId: paidAppId }, "[webhooks/paddle] payment_received_in_progress email failed");
       });
       void sendAdminPaymentCompletedEmail(paidAppId, requestId).catch((err) => {
-        console.error("[webhooks/paddle] admin_payment_completed email failed", {
-          applicationId: paidAppId,
-          requestId,
-          err: err instanceof Error ? err.message : err,
-        });
+        log.error({ err, applicationId: paidAppId }, "[webhooks/paddle] admin_payment_completed email failed");
       });
     });
   }

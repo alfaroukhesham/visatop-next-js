@@ -17,6 +17,7 @@ import {
   isPostgresOnConflictMissingConstraintError,
   requirePaymentEventPayloadHashDedupeIndex,
 } from "@/lib/payments/payment-webhook-db-guard";
+import { createRequestLogger } from "@/lib/logger";
 
 const ZIINA_RECONCILE_SLOTS = [
   { slot: "5m", delayMs: 5 * 60 * 1000 },
@@ -113,11 +114,9 @@ export async function reconcileZiinaPaymentRow(
   requestId?: string | null,
 ): Promise<ReconcileZiinaAttemptResult> {
   const intentId = payRow.providerCheckoutId?.trim();
+  const log = createRequestLogger(requestId);
   if (!intentId) {
-    console.warn("[ziina-reconcile] Missing provider_checkout_id on payment", {
-      paymentId: payRow.id,
-      slot,
-    });
+    log.warn({ paymentId: payRow.id, slot }, "[ziina-reconcile] Missing provider_checkout_id on payment");
     return {
       paymentId: payRow.id,
       applicationId: payRow.applicationId,
@@ -142,7 +141,7 @@ export async function reconcileZiinaPaymentRow(
     ziinaCfg = getZiinaServerConfig();
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Ziina not configured";
-    console.error("[ziina-reconcile] Ziina config missing", { paymentId: payRow.id, slot, msg });
+    log.error({ paymentId: payRow.id, slot, msg }, "[ziina-reconcile] Ziina config missing");
     return {
       paymentId: payRow.id,
       applicationId: payRow.applicationId,
@@ -163,13 +162,16 @@ export async function reconcileZiinaPaymentRow(
     });
   } catch (e) {
     const msg = e instanceof ZiinaProviderError ? e.message : e instanceof Error ? e.message : String(e);
-    console.error("[ziina-reconcile] Ziina GET payment_intent failed", {
-      paymentId: payRow.id,
-      applicationId: payRow.applicationId,
-      slot,
-      intentId,
-      error: msg,
-    });
+    log.error(
+      {
+        paymentId: payRow.id,
+        applicationId: payRow.applicationId,
+        slot,
+        intentId,
+        error: msg,
+      },
+      "[ziina-reconcile] Ziina GET payment_intent failed",
+    );
     await tx.insert(auditLog).values({
       actorType: "system",
       actorId: null,
@@ -202,22 +204,28 @@ export async function reconcileZiinaPaymentRow(
   );
 
   if (mapped.kind === "ignored") {
-    console.info("[ziina-reconcile] Ziina intent not terminal yet", {
-      paymentId: payRow.id,
-      applicationId: payRow.applicationId,
-      slot,
-      intentId,
-      ziinaStatus: intent.status,
-      reason: mapped.reason,
-    });
-    if (slot === "15m") {
-      console.warn("[ziina-reconcile] Final reconcile probe: payment still not terminal on Ziina", {
+    log.info(
+      {
         paymentId: payRow.id,
         applicationId: payRow.applicationId,
+        slot,
         intentId,
         ziinaStatus: intent.status,
         reason: mapped.reason,
-      });
+      },
+      "[ziina-reconcile] Ziina intent not terminal yet",
+    );
+    if (slot === "15m") {
+      log.warn(
+        {
+          paymentId: payRow.id,
+          applicationId: payRow.applicationId,
+          intentId,
+          ziinaStatus: intent.status,
+          reason: mapped.reason,
+        },
+        "[ziina-reconcile] Final reconcile probe: payment still not terminal on Ziina",
+      );
     }
     return {
       paymentId: payRow.id,
@@ -241,15 +249,18 @@ export async function reconcileZiinaPaymentRow(
   } catch (e) {
     if (isPostgresOnConflictMissingConstraintError(e)) throw e;
     const msg = e instanceof Error ? e.message : String(e);
-    console.error("[ziina-reconcile] Failed to apply Ziina terminal status", {
-      paymentId: payRow.id,
-      applicationId: payRow.applicationId,
-      slot,
-      intentId,
-      ziinaStatus: intent.status,
-      kind: mapped.event.kind,
-      error: msg,
-    });
+    log.error(
+      {
+        paymentId: payRow.id,
+        applicationId: payRow.applicationId,
+        slot,
+        intentId,
+        ziinaStatus: intent.status,
+        kind: mapped.event.kind,
+        error: msg,
+      },
+      "[ziina-reconcile] Failed to apply Ziina terminal status",
+    );
     await tx.insert(auditLog).values({
       actorType: "system",
       actorId: null,
@@ -279,14 +290,14 @@ export async function reconcileZiinaPaymentRow(
     processResult.outcome !== "applied" &&
     intent.status === "completed"
   ) {
-    console.error(
-      "[ziina-reconcile] CRITICAL: Ziina shows completed but payment was not marked paid in our DB",
+    log.error(
       {
         paymentId: payRow.id,
         applicationId: payRow.applicationId,
         intentId,
         processOutcome: processResult.outcome,
       },
+      "[ziina-reconcile] CRITICAL: Ziina shows completed but payment was not marked paid in our DB",
     );
   }
 
@@ -342,11 +353,10 @@ export async function reconcileZiinaPaymentFromReturn(
     });
   } catch (e) {
     const msg = e instanceof ZiinaProviderError ? e.message : e instanceof Error ? e.message : String(e);
-    console.warn("[ziina-reconcile/return] Ziina GET payment_intent failed", {
-      paymentId: payRow.id,
-      intentId,
-      error: msg,
-    });
+    createRequestLogger(requestId).warn(
+      { paymentId: payRow.id, intentId, error: msg },
+      "[ziina-reconcile/return] Ziina GET payment_intent failed",
+    );
     return {
       paymentId: payRow.id,
       applicationId: payRow.applicationId,
@@ -369,13 +379,16 @@ export async function reconcileZiinaPaymentFromReturn(
   );
 
   if (mapped.kind === "ignored") {
-    console.info("[ziina-reconcile/return] Ziina intent not terminal on return", {
-      paymentId: payRow.id,
-      applicationId: payRow.applicationId,
-      intentId,
-      ziinaStatus: intent.status,
-      reason: mapped.reason,
-    });
+    createRequestLogger(requestId).info(
+      {
+        paymentId: payRow.id,
+        applicationId: payRow.applicationId,
+        intentId,
+        ziinaStatus: intent.status,
+        reason: mapped.reason,
+      },
+      "[ziina-reconcile/return] Ziina intent not terminal on return",
+    );
     return {
       paymentId: payRow.id,
       applicationId: payRow.applicationId,

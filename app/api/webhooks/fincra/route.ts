@@ -22,12 +22,14 @@ import { scheduleFincraPaidSideEffects } from "@/lib/payments/fincra-payment-sid
 import { getFincraServerConfig } from "@/lib/payments/resolve-payment-provider";
 import { markWebhookReceivedNow, PLATFORM_KEY_LAST_WEBHOOK_FINCRA } from "@/lib/payments/webhook-health";
 import { findFincraPaymentForWebhookRefs } from "@/lib/payments/fincra-payment-lookup";
+import { createRequestLogger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   const [bodyText, hdrs] = await Promise.all([req.text(), headers()]);
   const requestId = hdrs.get("x-request-id");
+  const log = createRequestLogger(requestId);
   const sig = req.headers.get("signature") ?? hdrs.get("signature");
 
   let cfg;
@@ -49,10 +51,7 @@ export async function POST(req: Request) {
   }
 
   if (!verifyFincraWebhookSignature(bodyText, sig, cfg.webhookSecret)) {
-    console.warn("[webhooks/fincra] Invalid webhook signature", {
-      requestId,
-      hasSignatureHeader: Boolean(sig),
-    });
+    log.warn({ hasSignatureHeader: Boolean(sig) }, "[webhooks/fincra] Invalid webhook signature");
     return jsonError("WEBHOOK_SIGNATURE_INVALID", "Invalid Fincra webhook signature", {
       status: 401,
       requestId,
@@ -61,18 +60,17 @@ export async function POST(req: Request) {
 
   const envelope = parseFincraWebhookEnvelope(bodyText);
   if (!envelope) {
-    console.warn("[webhooks/fincra] Verified webhook with unparseable body", { requestId });
+    log.warn("[webhooks/fincra] Verified webhook with unparseable body");
     return jsonOk({ received: true, ignored: "invalid_json" }, { requestId });
   }
   const logCtx = {
-    requestId,
     event: envelope.eventName,
     merchantReference: envelope.merchantReference,
     providerReference: envelope.providerReference,
     providerEventId: envelope.providerEventId,
     status: envelope.status,
   };
-  console.info("[webhooks/fincra] Webhook received", logCtx);
+  log.info(logCtx, "[webhooks/fincra] Webhook received");
 
   const payloadHash = computePaymentEventPayloadHash("fincra", bodyText);
   const parsed = parseFincraWebhookToNormalized(bodyText);
@@ -92,13 +90,16 @@ export async function POST(req: Request) {
           stored && payRow ? await auditFincraUnpaidAttemptEvent(tx, { envelope, payRow, requestId }) : null;
         return { stored, matched: Boolean(payRow), paymentId: payRow?.id ?? null, attempt };
       });
-      console.info("[webhooks/fincra] Webhook recorded", {
-        ...logCtx,
-        outcome: result.stored ? (result.matched ? "stored" : "stored_unmatched") : "duplicate",
-        paymentId: result.paymentId,
-        isCurrentAttempt: result.attempt?.isCurrentAttempt ?? null,
-        ignoredReason: parsed.reason,
-      });
+      log.info(
+        {
+          ...logCtx,
+          outcome: result.stored ? (result.matched ? "stored" : "stored_unmatched") : "duplicate",
+          paymentId: result.paymentId,
+          isCurrentAttempt: result.attempt?.isCurrentAttempt ?? null,
+          ignoredReason: parsed.reason,
+        },
+        "[webhooks/fincra] Webhook recorded",
+      );
       return jsonOk(
         { received: true, ignored: parsed.reason, matched: result.matched, duplicate: !result.stored },
         { requestId },
@@ -111,10 +112,7 @@ export async function POST(req: Request) {
           details: { code: "payment_event_dedupe_index_missing" },
         });
       }
-      console.error("[webhooks/fincra] Failed to record webhook", {
-        ...logCtx,
-        err: e instanceof Error ? e.message : String(e),
-      });
+      log.error({ ...logCtx, err: e }, "[webhooks/fincra] Failed to record webhook");
       throw e;
     }
   }
@@ -132,10 +130,10 @@ export async function POST(req: Request) {
 
       if (!payForAmount) {
         const stored = await recordFincraWebhookEvent(tx, { envelope, payloadHash, payRow: null });
-        console.warn("[webhooks/fincra] Unknown merchant reference; stored unmatched, not marking paid", {
-          ...logCtx,
-          outcome: stored ? "stored_unmatched" : "duplicate",
-        });
+        log.warn(
+          { ...logCtx, outcome: stored ? "stored_unmatched" : "duplicate" },
+          "[webhooks/fincra] Unknown merchant reference; stored unmatched, not marking paid",
+        );
         return { kind: "noop" as const, firstPaidApplicationId: null as string | null };
       }
 
@@ -156,7 +154,7 @@ export async function POST(req: Request) {
         });
       } catch (e) {
         const msg = e instanceof FincraProviderError ? e.message : e instanceof Error ? e.message : String(e);
-        console.error("[webhooks/fincra] Verify API failed", { requestId, error: msg });
+        log.error({ error: msg }, "[webhooks/fincra] Verify API failed");
         throw e;
       }
 
@@ -189,11 +187,10 @@ export async function POST(req: Request) {
 
       // Persist every verified event (pending / unknown / duplicate outcomes included); no-op if already stored.
       await recordFincraWebhookEvent(tx, { envelope, payloadHash, payRow: payForAmount });
-      console.info("[webhooks/fincra] Webhook recorded", {
-        ...logCtx,
-        outcome: processResult.outcome,
-        paymentId: payForAmount.id,
-      });
+      log.info(
+        { ...logCtx, outcome: processResult.outcome, paymentId: payForAmount.id },
+        "[webhooks/fincra] Webhook recorded",
+      );
 
       if (processResult.outcome === "rejected_provider_mismatch") {
         return { kind: "reject" as const, firstPaidApplicationId: null as string | null };
@@ -225,10 +222,7 @@ export async function POST(req: Request) {
         },
       );
     }
-    console.error("[webhooks/fincra] Unhandled webhook processing error", {
-      requestId,
-      err: e instanceof Error ? e.message : e,
-    });
+    log.error({ err: e }, "[webhooks/fincra] Unhandled webhook processing error");
     throw e;
   }
 

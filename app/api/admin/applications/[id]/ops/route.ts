@@ -25,6 +25,7 @@ import {
 } from "@/lib/applications/status";
 import * as schema from "@/lib/db/schema";
 import { DOCUMENT_STATUS, DOCUMENT_TYPE } from "@/lib/db/schema";
+import { createRequestLogger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -64,6 +65,7 @@ const patchBodySchema = z
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const hdrs = await headers();
   const requestId = hdrs.get("x-request-id");
+  const log = createRequestLogger(requestId);
   const [{ id: applicationId }, parsed] = await Promise.all([
     ctx.params,
     parseJsonBody(req, patchBodySchema, requestId),
@@ -224,17 +226,17 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     if (emailJob) {
       if (!isMailgunConfigured()) {
         transactionalEmail = "skipped_mailgun_not_configured";
-        console.warn(
-          "[admin/ops] Outcome email not queued: set MAILGUN_API_KEY and MAILGUN_DOMAIN in the server environment.",
+        log.warn(
           { applicationId },
+          "[admin/ops] Outcome email not queued: set MAILGUN_API_KEY and MAILGUN_DOMAIN in the server environment.",
         );
       } else {
         const to = await resolveApplicantEmailTx(tx, row);
         if (!to) {
           transactionalEmail = "skipped_no_recipient";
-          console.warn(
-            "[admin/ops] Outcome email not queued: no applicant email (guestEmail empty and no user email).",
+          log.warn(
             { applicationId },
+            "[admin/ops] Outcome email not queued: no applicant email (guestEmail empty and no user email).",
           );
         } else {
           transactionalEmail = "queued";
@@ -242,22 +244,14 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
           if (job.kind === "outcome_approved") {
             after(() => {
               void sendOutcomeApprovedEmail(applicationId, job.outcomeDocumentId, requestId).catch((err) => {
-                console.error("[admin/ops] outcome approved email failed", {
-                  applicationId,
-                  requestId,
-                  err: err instanceof Error ? err.message : err,
-                });
+                log.error({ err, applicationId }, "[admin/ops] outcome approved email failed");
               });
             });
           } else {
             after(() => {
               void sendOutcomeUaeAuthorityRejectionEmail(applicationId, job.outcomeDocumentId, requestId).catch(
                 (err) => {
-                  console.error("[admin/ops] UAE rejection email failed", {
-                    applicationId,
-                    requestId,
-                    err: err instanceof Error ? err.message : err,
-                  });
+                  log.error({ err, applicationId }, "[admin/ops] UAE rejection email failed");
                 },
               );
             });

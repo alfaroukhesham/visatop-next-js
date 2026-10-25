@@ -112,7 +112,8 @@ Run migrations against the production Neon branch before expecting sign-up/sign-
 - **Proxy** (`proxy.ts`, Next.js 16): sets **`x-request-id`** for `/api/*`, `/portal/*`, and `/admin/*`; sets **`x-pathname`** for portal/admin routes so post-login redirects preserve deep links. All API `route.ts` files export `runtime = "nodejs"` to prevent Turbopack edge bundling issues.
 - **JSON APIs** (non–Better-Auth): use **`jsonOk` / `jsonError`** from [`lib/api/response.ts`](lib/api/response.ts) and pass through **`x-request-id`** from headers. See [`.cursor/rules/visa-api-response-envelope.mdc`](.cursor/rules/visa-api-response-envelope.mdc).
 - **OpenTelemetry** ([`instrumentation.ts`](instrumentation.ts)): optional export via **`OTEL_EXPORTER_OTLP_ENDPOINT`**; server-only. Optional **`OTEL_SERVICE_NAME`**, **`OTEL_DIAGNOSTIC_LOGS=1`**.
-- **Logging**: [`lib/logger.ts`](lib/logger.ts) (Pino + redaction). Set **`LOG_LEVEL`** if needed.
+- **Logging**: [`lib/logger.ts`](lib/logger.ts) (Pino JSON + redaction). Set **`APP_ENV`** (`staging` / `production`, not `NODE_ENV`), **`GIT_SHA`**, and optional **`LOG_LEVEL`**. Request child loggers carry `x-request-id` and OpenTelemetry span ids. Droplet destination is Grafana Alloy → **self-hosted Loki**. See [`docs/observability/logging.md`](docs/observability/logging.md).
+- **Errors / readiness**: `@sentry/nextjs` against **self-hosted GlitchTip** (not sentry.io). `GET /api/health` stays liveness; `GET /api/health/ready` is DB + config readiness. See [`docs/observability/sentry.md`](docs/observability/sentry.md).
 
 Full conventions, RLS follow-ups (audit log, guests, refunds, `system` actor), and **phases 1–4** (catalog/pricing, guests + docs, Paddle, affiliate jobs): [`docs/IMPLEMENTATION_REFERENCE.md`](docs/IMPLEMENTATION_REFERENCE.md).
 

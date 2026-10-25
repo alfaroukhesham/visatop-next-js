@@ -14,15 +14,15 @@ import { sendAdminStep2ServiceSelectedEmail } from "@/lib/email/send-admin-notif
 import { sendApplicationDraftStartedEmail } from "@/lib/email/send-application-transactional-emails";
 import { readCustomerLocaleFromCookieHeader } from "@/lib/i18n/customer-locale";
 import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
+import { createRequestLogger } from "@/lib/logger";
 
 const queueAdminStep2Email = (applicationId: string, requestId: string | null) => {
   after(() => {
     void sendAdminStep2ServiceSelectedEmail(applicationId, requestId).catch((err) => {
-      console.error("[api/applications] admin_step2_service_selected email failed", {
-        applicationId,
-        requestId,
-        err: err instanceof Error ? err.message : err,
-      });
+      createRequestLogger(requestId).error(
+        { err, applicationId },
+        "[api/applications] admin_step2_service_selected email failed",
+      );
     });
   });
 };
@@ -36,12 +36,10 @@ const queueApplicationDraftStartedEmail = (input: {
 }) => {
   after(() => {
     void sendApplicationDraftStartedEmail(input).catch((err) => {
-      console.error("[api/applications] application_draft_started email failed", {
-        primaryApplicationId: input.primaryApplicationId,
-        partyId: input.partyId,
-        requestId: input.requestId,
-        err: err instanceof Error ? err.message : err,
-      });
+      createRequestLogger(input.requestId).error(
+        { err, primaryApplicationId: input.primaryApplicationId, partyId: input.partyId },
+        "[api/applications] application_draft_started email failed",
+      );
     });
   });
 };

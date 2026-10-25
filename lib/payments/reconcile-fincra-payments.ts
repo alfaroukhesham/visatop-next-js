@@ -21,6 +21,7 @@ import {
   isPostgresOnConflictMissingConstraintError,
   requirePaymentEventPayloadHashDedupeIndex,
 } from "@/lib/payments/payment-webhook-db-guard";
+import { createRequestLogger } from "@/lib/logger";
 
 const FINCRA_RECONCILE_SLOTS = [
   { slot: "5m", delayMs: 5 * 60 * 1000 },
@@ -157,12 +158,10 @@ const applyVerified = async (
     });
   } catch (e) {
     const msg = e instanceof FincraProviderError ? e.message : e instanceof Error ? e.message : String(e);
-    console.error("[fincra-reconcile] verify failed", {
-      paymentId: payRow.id,
-      merchantReference,
-      slot,
-      error: msg,
-    });
+    createRequestLogger(requestId).error(
+      { paymentId: payRow.id, merchantReference, slot, error: msg },
+      "[fincra-reconcile] verify failed",
+    );
     await tx.insert(auditLog).values({
       actorType: "system",
       actorId: null,
