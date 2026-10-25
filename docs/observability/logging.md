@@ -1,8 +1,6 @@
 # Structured logging
 
-App logs are JSON (Pino) on process stdout. On the droplet they are scraped by **Grafana Alloy** into **self-hosted Loki**. Log shipping (Alloy/Loki config) lives in a separate infra PR. This document is the application contract: fields, redaction, and what not to log.
-
-This change is one of six parallel observability PRs and may need a rebase before merge.
+App logs are JSON (Pino) on process stdout. On the droplet they are scraped by **Grafana Alloy** into **self-hosted Loki**. Alloy/Loki compose and scrape config live in [`infra.md`](infra.md) (`deploy/observability/`). This document is the application contract: fields, redaction, and what not to log.
 
 ## Logger
 
@@ -60,7 +58,7 @@ Never log raw webhook payloads (Paddle, Ziina, Fincra). Log event type, provider
 
 ## Caddy access logs
 
-`scripts/blue-green-deploy.sh` `write_caddyfile` emits a site-level JSON access log to **stdout** (Docker logs). Routing, trusted proxies, and blue-green flip behavior are unchanged. Alloy should scrape the Caddy container stdout into the same self-hosted Loki.
+`scripts/blue-green-deploy.sh` `write_caddyfile` emits a site-level JSON access log to **stdout** (Docker logs). Routing, trusted proxies, and blue-green flip behavior are unchanged. Alloy scrapes the Caddy container stdout into the same self-hosted Loki (`deploy/observability/alloy/config.alloy`).
 
 File rotation is not used in the container: stdout is the Docker/Alloy contract. Do not add a host bind-mount for Caddy logs unless infra explicitly wants a file sink.
 

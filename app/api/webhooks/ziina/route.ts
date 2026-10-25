@@ -45,7 +45,10 @@ const postZiinaWebhook = async (req: Request) => {
       });
     }
     if (!allowUnsigned) {
-      log.warn("[webhooks/ziina] Missing webhook secret and unsigned not allowed");
+      log.warn(
+        { marker: "webhook_signature_rejected" },
+        "[webhooks/ziina] Missing webhook secret and unsigned not allowed",
+      );
       return jsonError("WEBHOOK_SIGNATURE_INVALID", "Invalid or missing Ziina webhook signature", {
         status: 401,
         requestId,
@@ -53,7 +56,10 @@ const postZiinaWebhook = async (req: Request) => {
     }
     log.error("[webhooks/ziina] CRITICAL: ZIINA_WEBHOOK_ALLOW_UNSIGNED=true — webhooks are not authenticated");
   } else if (!verifyZiinaWebhookSignature(bodyText, sig, secret)) {
-    log.warn({ hasSignatureHeader: Boolean(sig) }, "[webhooks/ziina] Invalid webhook signature");
+    log.warn(
+      { marker: "webhook_signature_rejected", hasSignatureHeader: Boolean(sig) },
+      "[webhooks/ziina] Invalid webhook signature",
+    );
     return jsonError("WEBHOOK_SIGNATURE_INVALID", "Invalid Ziina webhook signature", { status: 401, requestId });
   }
 

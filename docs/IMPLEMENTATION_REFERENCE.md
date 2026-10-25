@@ -268,17 +268,18 @@ Migrated in `drizzle/0002_harsh_wolverine.sql`:
 
 - Server-only; skipped on Edge (`NEXT_RUNTIME === edge`).
 - **No-op unless `OTEL_EXPORTER_OTLP_ENDPOINT` (or `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`) is set** — the NodeSDK is not imported or started, so local/CI have no startup cost.
-- Droplet default collector: Grafana Alloy on the `visatop_edge` network at **`http://alloy:4318`**, writing to self-hosted Tempo. See [`docs/observability/tracing.md`](observability/tracing.md).
-- Resource attributes: `service.name`, `service.version` (`GIT_SHA` from the deploy image tag), `deployment.environment` from **`APP_ENV`** (never `NODE_ENV`).
+- Droplet default collector: Grafana Alloy on the `visatop_edge` network at **`http://alloy:4318`** (compose service `alloy`, container `visatop-alloy`), writing to self-hosted Tempo. See [`docs/observability/tracing.md`](observability/tracing.md) and [`docs/observability/infra.md`](observability/infra.md).
+- Resource attributes: `service.name`, `service.version` (`GIT_SHA` / `RELEASE_SHA` from the deploy image), `deployment.environment` from **`APP_ENV`** (never `NODE_ENV`).
 - Parent-based ratio sampler via `OTEL_TRACES_SAMPLER_RATIO` (default `1` for low traffic). Tail-sample errors/slow traces at Alloy.
 - Manual spans around Gemini OCR, payment provider APIs, webhooks, Mailgun, and reconcile jobs. Attributes are IDs/status/error codes only.
 - **`x-trace-id`** is set next to **`x-request-id`** in `proxy.ts`.
+- **Droplet stack (opt-in):** self-hosted Grafana / Prometheus / Loki / Tempo / Alloy / GlitchTip / Uptime Kuma. Farouk starts it; deploy.yml never does. See [`docs/observability/infra.md`](observability/infra.md). SDK, `APP_ENV`, and `/api/health/ready`: [`docs/observability/sentry.md`](observability/sentry.md).
 
 ### Logging (`lib/logger.ts`)
 
 - **Pino** JSON on stdout. Every line includes `service`, `env` (`APP_ENV`, not `NODE_ENV`), and `release` (git SHA). `createRequestLogger(requestId)` adds `requestId` plus OpenTelemetry `traceId`/`spanId` when a span is active.
 - Redaction covers emails, names, passport numbers, phones, addresses, dates of birth, tokens, cookies, authorization, and existing passport/document/OCR globs. **Never log raw webhook payloads.**
-- On the droplet, Grafana Alloy scrapes container stdout into **self-hosted Loki** (shipping is a separate infra PR). See [`docs/observability/logging.md`](observability/logging.md).
+- On the droplet, Grafana Alloy scrapes container stdout (Pino JSON + Caddy JSON access logs) into **self-hosted Loki**. See [`docs/observability/logging.md`](observability/logging.md) and [`docs/observability/infra.md`](observability/infra.md).
 - **GlitchTip** (Sentry SDK, self-hosted): [`docs/observability/sentry.md`](observability/sentry.md). Liveness remains `GET /api/health`; readiness is `GET /api/health/ready`.
 
 ---

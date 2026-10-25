@@ -228,6 +228,10 @@ export async function applyPaymentWebhookEvent(
     const isFirstPaidTransition = paymentBecamePaid.length > 0 || anyMemberBecamePaid;
 
     if (isFirstPaidTransition) {
+      createRequestLogger(ctx?.requestId).info(
+        { provider: event.provider },
+        "[payments] marked_paid",
+      );
       await tx.insert(auditLog).values({
         actorType: "system",
         actorId: null,

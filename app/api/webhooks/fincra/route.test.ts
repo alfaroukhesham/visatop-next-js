@@ -387,7 +387,7 @@ describe("POST /api/webhooks/fincra", () => {
     expect(res.status).toBe(401);
     expect(recordMock).not.toHaveBeenCalled();
     expect(warn).toHaveBeenCalledWith(
-      { hasSignatureHeader: true },
+      { marker: "webhook_signature_rejected", hasSignatureHeader: true },
       "[webhooks/fincra] Invalid webhook signature",
     );
     childSpy.mockRestore();

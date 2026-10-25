@@ -57,7 +57,10 @@ const postFincraWebhook = async (req: Request) => {
   }
 
   if (!verifyFincraWebhookSignature(bodyText, sig, cfg.webhookSecret)) {
-    log.warn({ hasSignatureHeader: Boolean(sig) }, "[webhooks/fincra] Invalid webhook signature");
+    log.warn(
+      { marker: "webhook_signature_rejected", hasSignatureHeader: Boolean(sig) },
+      "[webhooks/fincra] Invalid webhook signature",
+    );
     return jsonError("WEBHOOK_SIGNATURE_INVALID", "Invalid Fincra webhook signature", {
       status: 401,
       requestId,
@@ -99,6 +102,7 @@ const postFincraWebhook = async (req: Request) => {
       log.info(
         {
           ...logCtx,
+          ...(result.matched ? {} : { marker: "webhook_unmatched" }),
           outcome: result.stored ? (result.matched ? "stored" : "stored_unmatched") : "duplicate",
           paymentId: result.paymentId,
           isCurrentAttempt: result.attempt?.isCurrentAttempt ?? null,
@@ -137,7 +141,11 @@ const postFincraWebhook = async (req: Request) => {
       if (!payForAmount) {
         const stored = await recordFincraWebhookEvent(tx, { envelope, payloadHash, payRow: null });
         log.warn(
-          { ...logCtx, outcome: stored ? "stored_unmatched" : "duplicate" },
+          {
+            ...logCtx,
+            marker: "webhook_unmatched",
+            outcome: stored ? "stored_unmatched" : "duplicate",
+          },
           "[webhooks/fincra] Unknown merchant reference; stored unmatched, not marking paid",
         );
         return { kind: "noop" as const, firstPaidApplicationId: null as string | null };

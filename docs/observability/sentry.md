@@ -2,7 +2,7 @@
 
 VisaTop uses the official `@sentry/nextjs` SDK against **self-hosted GlitchTip** on the DigitalOcean droplet. Events stay on our server. There is no Sentry SaaS project, no `sentry.io` ingest, and no Session Replay (GlitchTip does not support it; Microsoft Clarity already covers session UX).
 
-This change is one of several parallel observability PRs. Others may also touch `lib/logger.ts`, `instrumentation.ts`, or deploy scripts. Rebase if those land first.
+Droplet Grafana / Alloy / Loki / Tempo / GlitchTip compose and Uptime Kuma setup live in [`infra.md`](infra.md) (`deploy/observability/`). Others may still touch `lib/logger.ts`, `instrumentation.ts`, or deploy scripts.
 
 ## What is wired
 
@@ -77,7 +77,7 @@ Never point blue-green drain/health at `/api/health/ready` (a new color must pas
 
 ## Uptime Kuma (self-hosted)
 
-Uptime Kuma is deployed on the same droplet (infra PR). Create HTTP(s) monitors — not Grafana Synthetics or Better Stack.
+Uptime Kuma is deployed on the same droplet (`deploy/observability/`, see [`infra.md`](infra.md)). Create HTTP(s) monitors — not Grafana Synthetics or Better Stack.
 
 Suggested monitors (staging and production hosts separately):
 

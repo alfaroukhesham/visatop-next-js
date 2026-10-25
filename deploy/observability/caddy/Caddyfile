@@ -1,0 +1,32 @@
+{
+	admin off
+	auto_https off
+	log {
+		level ERROR
+	}
+}
+
+# Extra lock in front of UIs. Bound to 127.0.0.1 on the host via compose.
+# Grafana native login still applies on :3030; use this when exposing a
+# subdomain through droplet nginx → 127.0.0.1:3080.
+
+:3080 {
+	basic_auth {
+		{$OBS_BASIC_AUTH_USER} {$OBS_BASIC_AUTH_HASH}
+	}
+	reverse_proxy grafana:3000
+}
+
+:3081 {
+	basic_auth {
+		{$OBS_BASIC_AUTH_USER} {$OBS_BASIC_AUTH_HASH}
+	}
+	reverse_proxy glitchtip-web:8000
+}
+
+:3082 {
+	basic_auth {
+		{$OBS_BASIC_AUTH_USER} {$OBS_BASIC_AUTH_HASH}
+	}
+	reverse_proxy kuma:3001
+}

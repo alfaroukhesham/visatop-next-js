@@ -1,0 +1,379 @@
+// VisaTop droplet collector. Host metrics, cAdvisor, Docker logs, Caddy
+// admin /metrics (via socat sidecar), OTLP traces with tail sampling.
+// PII redaction is a second line of defense after app-side logger redact.
+
+livedebugging {
+  enabled = false
+}
+
+prometheus.remote_write "local" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
+// ---- Host metrics (node_exporter embedded in Alloy) ----
+
+prometheus.exporter.unix "node" {
+  procfs_path = "/host/proc"
+  sysfs_path  = "/host/sys"
+  rootfs_path = "/host/root"
+
+  set_collectors = [
+    "cpu",
+    "diskstats",
+    "filesystem",
+    "loadavg",
+    "meminfo",
+    "netdev",
+    "os",
+    "stat",
+    "time",
+    "uname",
+    "vmstat",
+  ]
+
+  filesystem {
+    fs_types_exclude     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs|tmpfs)$"
+    mount_points_exclude = "^/(dev|proc|sys|run/containerd/.+|var/lib/docker/.+)($|/)"
+  }
+}
+
+prometheus.scrape "node" {
+  targets         = prometheus.exporter.unix.node.targets
+  forward_to      = [prometheus.remote_write.local.receiver]
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+}
+
+// ---- Container metrics (cAdvisor embedded in Alloy) ----
+
+prometheus.exporter.cadvisor "docker" {
+  docker_host      = "unix:///var/run/docker.sock"
+  docker_only      = true
+  storage_duration = "2m"
+}
+
+discovery.relabel "cadvisor" {
+  targets = prometheus.exporter.cadvisor.docker.targets
+
+  rule {
+    target_label = "job"
+    replacement  = "cadvisor"
+  }
+}
+
+prometheus.scrape "cadvisor" {
+  targets         = discovery.relabel.cadvisor.output
+  forward_to      = [prometheus.remote_write.local.receiver]
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+}
+
+// ---- Caddy admin /metrics (socat publishes :2020 in the Caddy netns) ----
+
+prometheus.scrape "caddy_prod" {
+  targets = [
+    {
+      __address__     = "visatop-edge-prod:2020",
+      __metrics_path__ = "/metrics",
+      job             = "caddy",
+      env             = "production",
+    },
+  ]
+  forward_to      = [prometheus.remote_write.local.receiver]
+  scrape_interval = "15s"
+  scrape_timeout  = "5s"
+}
+
+prometheus.scrape "caddy_staging" {
+  targets = [
+    {
+      __address__     = "visatop-edge-staging:2020",
+      __metrics_path__ = "/metrics",
+      job             = "caddy",
+      env             = "staging",
+    },
+  ]
+  forward_to      = [prometheus.remote_write.local.receiver]
+  scrape_interval = "15s"
+  scrape_timeout  = "5s"
+}
+
+// ---- Local + public HTTP health probes (site-down alerts) ----
+
+prometheus.exporter.blackbox "health" {
+  config = "{ modules: { http_2xx: { prober: http, timeout: 8s, http: { valid_status_codes: [200], method: GET, follow_redirects: true, fail_if_not_ssl: false, preferred_ip_protocol: ip4 } } } }"
+
+  target {
+    name    = "prod_local"
+    address = "http://visatop-edge-prod:3000/visa-processing/api/health"
+    module  = "http_2xx"
+    labels  = {
+      env    = "production",
+      scope  = "local",
+    }
+  }
+
+  target {
+    name    = "staging_local"
+    address = "http://visatop-edge-staging:3001/visa-processing/api/health"
+    module  = "http_2xx"
+    labels  = {
+      env   = "staging",
+      scope = "local",
+    }
+  }
+
+  target {
+    name    = "prod_public"
+    address = "https://visatop.com/visa-processing/api/health"
+    module  = "http_2xx"
+    labels  = {
+      env   = "production",
+      scope = "public",
+    }
+  }
+
+  target {
+    name    = "staging_public"
+    address = "https://app-staging.visatop.com/visa-processing/api/health"
+    module  = "http_2xx"
+    labels  = {
+      env   = "staging",
+      scope = "public",
+    }
+  }
+}
+
+prometheus.scrape "blackbox" {
+  targets         = prometheus.exporter.blackbox.health.targets
+  forward_to      = [prometheus.remote_write.local.receiver]
+  scrape_interval = "30s"
+  scrape_timeout  = "10s"
+}
+
+prometheus.scrape "alloy_self" {
+  targets = [{
+    __address__ = "127.0.0.1:12345",
+    job         = "alloy",
+  }]
+  forward_to      = [prometheus.remote_write.local.receiver]
+  scrape_interval = "30s"
+}
+
+// ---- Docker logs + PII redaction + log-derived counters ----
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "docker_logs" {
+  targets = []
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container_name"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "compose_service"
+  }
+
+  rule {
+    target_label = "job"
+    replacement  = "docker"
+  }
+}
+
+loki.source.docker "containers" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.containers.targets
+  relabel_rules = discovery.relabel.docker_logs.rules
+  forward_to    = [loki.process.pipeline.receiver]
+}
+
+loki.process "pipeline" {
+  forward_to = [loki.write.local.receiver]
+
+  // Drop noisy health probes (local and public).
+  stage.drop {
+    expression          = "GET /visa-processing/api/health"
+    drop_counter_reason = "health_probe"
+  }
+
+  stage.drop {
+    expression          = "\"path\":\"/visa-processing/api/health\""
+    drop_counter_reason = "health_probe_json"
+  }
+
+  // Redact emails.
+  stage.replace {
+    expression = "([a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,})"
+    replace    = "[email]"
+  }
+
+  // Redact labelled passport numbers (second line of defense; app logger is first).
+  stage.replace {
+    expression = "(?i)(passport[_\\s-]*(?:no|num|number|#)?\\s*[=:]\\s*)([A-Z0-9]{5,12})"
+    replace    = "${1}[passport]"
+  }
+
+  // Generic passport / MRZ-like tokens after common keys.
+  stage.replace {
+    expression = "(?i)(\"(?:passportNumber|passport_number|documentNumber|document_number)\"\\s*:\\s*\")([A-Z0-9]{5,12})"
+    replace    = "${1}[passport]"
+  }
+
+  // Authorization / cookie / bearer leftovers.
+  stage.replace {
+    expression = "(?i)(authorization\\s*[:=]\\s*)(\\S+)"
+    replace    = "${1}[redacted]"
+  }
+
+  stage.regex {
+    expression = "(?P<vt_event>\\[checkout\\] checkout_created|\\[payments\\] marked_paid|webhook_signature_rejected|webhook_unmatched|\\[extract\\] failed)"
+  }
+
+  stage.metrics {
+    metric.counter {
+      name              = "checkout_created_total"
+      description       = "Checkout sessions created"
+      prefix            = "visatop_"
+      source            = "vt_event"
+      value             = "[checkout] checkout_created"
+      action            = "inc"
+      max_idle_duration = "168h"
+    }
+  }
+
+  stage.metrics {
+    metric.counter {
+      name              = "payment_paid_total"
+      description       = "First paid transitions"
+      prefix            = "visatop_"
+      source            = "vt_event"
+      value             = "[payments] marked_paid"
+      action            = "inc"
+      max_idle_duration = "168h"
+    }
+  }
+
+  stage.metrics {
+    metric.counter {
+      name              = "webhook_401_total"
+      description       = "Rejected payment webhooks (bad signature / 401)"
+      prefix            = "visatop_"
+      source            = "vt_event"
+      value             = "webhook_signature_rejected"
+      action            = "inc"
+      max_idle_duration = "168h"
+    }
+  }
+
+  stage.metrics {
+    metric.counter {
+      name              = "webhook_unmatched_total"
+      description       = "Webhooks that did not match a payment row"
+      prefix            = "visatop_"
+      source            = "vt_event"
+      value             = "webhook_unmatched"
+      action            = "inc"
+      max_idle_duration = "168h"
+    }
+  }
+
+  stage.metrics {
+    metric.counter {
+      name              = "ocr_failed_total"
+      description       = "Passport OCR pipeline failures"
+      prefix            = "visatop_"
+      source            = "vt_event"
+      value             = "[extract] failed"
+      action            = "inc"
+      max_idle_duration = "168h"
+    }
+  }
+}
+
+// ---- OTLP receiver + tail sampling (keep errors and slow traces) ----
+
+otelcol.receiver.otlp "app" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces = [otelcol.processor.batch.traces.input]
+  }
+}
+
+otelcol.processor.batch "traces" {
+  timeout          = "5s"
+  send_batch_size  = 256
+  send_batch_max_size = 512
+
+  output {
+    traces = [otelcol.processor.tail_sampling.keep.input]
+  }
+}
+
+otelcol.processor.tail_sampling "keep" {
+  decision_wait               = "10s"
+  num_traces                  = 2048
+  expected_new_traces_per_sec = 20
+  sample_on_first_match       = true
+
+  policy {
+    name = "errors"
+    type = "status_code"
+
+    status_code {
+      status_codes = ["ERROR"]
+    }
+  }
+
+  policy {
+    name = "slow"
+    type = "latency"
+
+    latency {
+      threshold_ms = 2000
+    }
+  }
+
+  policy {
+    name = "small-percent"
+    type = "probabilistic"
+
+    probabilistic {
+      sampling_percentage = 5
+    }
+  }
+
+  output {
+    traces = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+
+    tls {
+      insecure = true
+    }
+  }
+}

@@ -111,3 +111,20 @@ jobs:
             "${DEPLOY_USER}@${DEPLOY_HOST}" \
             "bash -s -- deploy ${ENVIRONMENT} ${image}" \
             < scripts/blue-green-deploy.sh
+
+      - name: Record deploy markers (optional)
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          # Grafana annotation + GlitchTip release via localhost APIs on the droplet.
+          # Never fail the deploy: missing stack/tokens or SSH hiccup after cutover is a skip.
+          install -m 600 /dev/null "$RUNNER_TEMP/deploy_key"
+          printf '%s\n' "$SSH_KEY" > "$RUNNER_TEMP/deploy_key"
+          ssh -i "$RUNNER_TEMP/deploy_key" \
+            -o StrictHostKeyChecking=accept-new \
+            "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "bash -s -- ${ENVIRONMENT} ${{ steps.rev.outputs.sha }}" \
+            < deploy/observability/scripts/record-deploy-markers.sh \
+            || echo "markers: skipped (ssh or remote script)"

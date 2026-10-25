@@ -24,7 +24,7 @@ export const resolveDeploymentEnvironment = (
 export const resolveServiceVersion = (
   env: Record<string, string | undefined> = process.env,
 ): string => {
-  const sha = env.GIT_SHA?.trim() || env.VISATOP_RELEASE_SHA?.trim();
+  const sha = env.GIT_SHA?.trim() || env.RELEASE_SHA?.trim() || env.VISATOP_RELEASE_SHA?.trim();
   if (sha) return sha;
   return "unknown";
 };
