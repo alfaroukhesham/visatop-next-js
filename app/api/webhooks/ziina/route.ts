@@ -15,12 +15,14 @@ import {
 } from "@/lib/payments/ziina-webhook";
 import { ZIINA_WEBHOOK_SOURCE_IPS } from "@/lib/payments/resolve-payment-provider";
 import { markWebhookReceivedNow, PLATFORM_KEY_LAST_WEBHOOK_ZIINA } from "@/lib/payments/webhook-health";
+import { createRequestLogger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   const [bodyText, hdrs] = await Promise.all([req.text(), headers()]);
   const requestId = hdrs.get("x-request-id");
+  const log = createRequestLogger(requestId);
   const sig = req.headers.get("x-hmac-signature") ?? hdrs.get("x-hmac-signature");
 
   const secret = process.env.ZIINA_WEBHOOK_SECRET?.trim() ?? "";
@@ -29,9 +31,7 @@ export async function POST(req: Request) {
 
   if (!secret) {
     if (isProd) {
-      console.error("[webhooks/ziina] WEBHOOK_SECRET_NOT_CONFIGURED — rejecting in production", {
-        requestId,
-      });
+      log.error("[webhooks/ziina] WEBHOOK_SECRET_NOT_CONFIGURED — rejecting in production");
       return jsonError("WEBHOOK_SECRET_NOT_CONFIGURED", "Ziina webhook secret is not configured", {
         status: 503,
         requestId,
@@ -39,18 +39,15 @@ export async function POST(req: Request) {
       });
     }
     if (!allowUnsigned) {
-      console.warn("[webhooks/ziina] Missing webhook secret and unsigned not allowed", { requestId });
+      log.warn("[webhooks/ziina] Missing webhook secret and unsigned not allowed");
       return jsonError("WEBHOOK_SIGNATURE_INVALID", "Invalid or missing Ziina webhook signature", {
         status: 401,
         requestId,
       });
     }
-    console.error("[webhooks/ziina] CRITICAL: ZIINA_WEBHOOK_ALLOW_UNSIGNED=true — webhooks are not authenticated");
+    log.error("[webhooks/ziina] CRITICAL: ZIINA_WEBHOOK_ALLOW_UNSIGNED=true — webhooks are not authenticated");
   } else if (!verifyZiinaWebhookSignature(bodyText, sig, secret)) {
-    console.warn("[webhooks/ziina] Invalid webhook signature", {
-      requestId,
-      hasSignatureHeader: Boolean(sig),
-    });
+    log.warn({ hasSignatureHeader: Boolean(sig) }, "[webhooks/ziina] Invalid webhook signature");
     return jsonError("WEBHOOK_SIGNATURE_INVALID", "Invalid Ziina webhook signature", { status: 401, requestId });
   }
 
@@ -60,11 +57,10 @@ export async function POST(req: Request) {
     const netlifyClientIp = req.headers.get("x-nf-client-connection-ip");
     const ok = assertZiinaWebhookSourceIpAllowed(xff, netlifyClientIp, ZIINA_WEBHOOK_SOURCE_IPS);
     if (!ok) {
-      console.warn("[webhooks/ziina] Webhook source IP not allowlisted", {
-        requestId,
-        xForwardedFor: xff,
-        clientIp: netlifyClientIp,
-      });
+      log.warn(
+        { hasXForwardedFor: Boolean(xff), hasClientIp: Boolean(netlifyClientIp) },
+        "[webhooks/ziina] Webhook source IP not allowlisted",
+      );
       return jsonError("UNAUTHORIZED", "Webhook source IP not allowlisted", { status: 401, requestId });
     }
   }
@@ -75,17 +71,12 @@ export async function POST(req: Request) {
     try {
       const body = JSON.parse(bodyText) as { data?: { id?: string; status?: string } };
       intentId = body.data?.id;
-      console.info("[webhooks/ziina] Webhook ignored (no state change)", {
-        requestId,
-        reason: parsed.reason,
-        intentId,
-        ziinaStatus: body.data?.status,
-      });
+      log.info(
+        { reason: parsed.reason, intentId, ziinaStatus: body.data?.status },
+        "[webhooks/ziina] Webhook ignored (no state change)",
+      );
     } catch {
-      console.info("[webhooks/ziina] Webhook ignored (no state change)", {
-        requestId,
-        reason: parsed.reason,
-      });
+      log.info({ reason: parsed.reason }, "[webhooks/ziina] Webhook ignored (no state change)");
     }
     return jsonOk({ received: true, ignored: parsed.reason }, { requestId });
   }
@@ -124,10 +115,7 @@ export async function POST(req: Request) {
     }
   } catch (e) {
     if (e instanceof PaymentWebhookSchemaDeploymentError || isPostgresOnConflictMissingConstraintError(e)) {
-      console.error("[webhooks/ziina] payment_event idempotency index missing or ON CONFLICT unusable", {
-        requestId,
-        err: e instanceof Error ? e.message : e,
-      });
+      log.error({ err: e }, "[webhooks/ziina] payment_event idempotency index missing or ON CONFLICT unusable");
       return jsonError(
         "SERVICE_UNAVAILABLE",
         "Payment webhook storage is not migrated; cannot record Ziina events safely. Apply database migrations, then retry.",
@@ -141,11 +129,10 @@ export async function POST(req: Request) {
         },
       );
     }
-    console.error("[webhooks/ziina] Unhandled webhook processing error", {
-      requestId,
-      intentId: normalized.providerPaymentId,
-      err: e instanceof Error ? e.message : e,
-    });
+    log.error(
+      { intentId: normalized.providerPaymentId, err: e },
+      "[webhooks/ziina] Unhandled webhook processing error",
+    );
     throw e;
   }
 

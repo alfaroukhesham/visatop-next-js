@@ -267,7 +267,10 @@ Migrated in `drizzle/0002_harsh_wolverine.sql`:
 
 ### Logging (`lib/logger.ts`)
 
-- **Pino** with redaction paths for common secret/PII keys. Prefer **small structured fields**; redaction is a backstop, not primary control.
+- **Pino** JSON on stdout. Every line includes `service`, `env` (`APP_ENV`, not `NODE_ENV`), and `release` (git SHA). `createRequestLogger(requestId)` adds `requestId` plus OpenTelemetry `traceId`/`spanId` when a span is active.
+- Redaction covers emails, names, passport numbers, phones, addresses, dates of birth, tokens, cookies, authorization, and existing passport/document/OCR globs. **Never log raw webhook payloads.**
+- On the droplet, Grafana Alloy scrapes container stdout into **self-hosted Loki** (shipping is a separate infra PR). See [`docs/observability/logging.md`](observability/logging.md).
+- **GlitchTip** (Sentry SDK, self-hosted): [`docs/observability/sentry.md`](observability/sentry.md). Liveness remains `GET /api/health`; readiness is `GET /api/health/ready`.
 
 ---
 

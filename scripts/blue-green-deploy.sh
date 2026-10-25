@@ -336,6 +336,11 @@ write_caddyfile() {
 }
 
 :${HOST_PORT} {
+	# JSON access logs on stdout for Alloy -> self-hosted Loki. Routing unchanged.
+	log {
+		output stdout
+		format json
+	}
 	reverse_proxy ${upstream}:3000 {
 		header_up X-Forwarded-Proto {http.request.header.X-Forwarded-Proto}
 		header_up X-Forwarded-Host {http.request.header.X-Forwarded-Host}

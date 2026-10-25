@@ -10,6 +10,7 @@ import { initiateFincraRefund, FincraProviderError } from "@/lib/payments/fincra
 import * as schema from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import type { PaddleRefundReason } from "@/lib/payments/types";
+import { createRequestLogger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -19,6 +20,7 @@ export async function POST(
 ) {
   const [{ id: applicationId }, hdrs] = await Promise.all([params, headers()]);
   const requestId = hdrs.get("x-request-id");
+  const log = createRequestLogger(requestId);
 
   return runAdminDbJson(
     requestId,
@@ -132,7 +134,7 @@ export async function POST(
             { requestId },
           );
         } catch (err: unknown) {
-          console.error("Fincra refund failed:", err instanceof Error ? err.message : err);
+          log.error({ err }, "[admin/refund] Fincra refund failed");
           const message =
             err instanceof FincraProviderError
               ? err.message
@@ -201,7 +203,7 @@ export async function POST(
             { requestId },
           );
         } catch (err: unknown) {
-          console.error("Ziina refund failed:", err instanceof Error ? err.message : err);
+          log.error({ err }, "[admin/refund] Ziina refund failed");
           if (err instanceof ZiinaProviderError) {
             return jsonError("ZIINA_UNAVAILABLE", err.message, {
               status: err.httpStatus,
@@ -248,7 +250,7 @@ export async function POST(
 
         return jsonOk(result, { requestId });
       } catch (err: unknown) {
-        console.error("Refund failed:", err);
+        log.error({ err }, "[admin/refund] Refund failed");
         if (err instanceof PaddleProviderError) {
           return jsonError("INTERNAL_ERROR", err.message, {
             status: err.httpStatus,

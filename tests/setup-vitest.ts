@@ -8,4 +8,8 @@ if (!process.env.DATABASE_URL) {
     "postgresql://vitest:vitest@127.0.0.1:65432/visatop_vitest_placeholder";
 }
 
+if (!process.env.LOG_LEVEL) {
+  process.env.LOG_LEVEL = "silent";
+}
+
 import "@testing-library/jest-dom/vitest";

@@ -11,6 +11,7 @@ import {
   type ReconcileZiinaAttemptResult,
 } from "@/lib/payments/reconcile-ziina-payments";
 import { scheduleZiinaPaidSideEffects } from "@/lib/payments/ziina-payment-side-effects";
+import { createRequestLogger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -84,11 +85,10 @@ export async function POST(request: Request) {
       !a.outcome.startsWith("skipped"),
   );
   if (critical.length > 0) {
-    console.error("[ziina-reconcile/cron] CRITICAL reconcile failures after 15m probe", {
-      requestId,
-      count: critical.length,
-      paymentIds: critical.map((c) => c.paymentId),
-    });
+    createRequestLogger(requestId).error(
+      { count: critical.length, paymentIds: critical.map((c) => c.paymentId) },
+      "[ziina-reconcile/cron] CRITICAL reconcile failures after 15m probe",
+    );
   }
 
   return jsonOk(

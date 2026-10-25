@@ -1,4 +1,5 @@
 import { and, desc, eq } from "drizzle-orm";
+import { logger } from "@/lib/logger";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { application, payment, visaService } from "@/lib/db/schema";
 import { formatMinorUnitsAmount } from "@/lib/pricing/format-minor-units";
@@ -167,10 +168,10 @@ export async function sendAdminStep2ServiceSelectedEmail(
   requestId: string | null,
 ): Promise<void> {
   if (!isMailgunConfigured()) {
-    console.warn("[email] Mailgun not configured; skipping admin_step2_service_selected", {
+    logger.warn({
       applicationId,
       requestId,
-    });
+    }, "[email] Mailgun not configured; skipping admin_step2_service_selected");
     return;
   }
 
@@ -179,13 +180,13 @@ export async function sendAdminStep2ServiceSelectedEmail(
     TRANSACTIONAL_EMAIL_KINDS.ADMIN_STEP2_SERVICE_SELECTED,
   );
   if (!claimed) {
-    console.info("[email] admin_step2_service_selected already sent", { applicationId, requestId });
+    logger.info({ applicationId, requestId }, "[email] admin_step2_service_selected already sent");
     return;
   }
 
   const payload = await loadApplicationWithService(applicationId);
   if (!payload) {
-    console.warn("[email] Application not found for admin_step2_service_selected", { applicationId, requestId });
+    logger.warn({ applicationId, requestId }, "[email] Application not found for admin_step2_service_selected");
     return;
   }
 
@@ -199,11 +200,11 @@ export async function sendAdminStep2ServiceSelectedEmail(
 
   const sent = await mailgunSendText({ to: ADMIN_NOTIFICATION_EMAIL, subject, text, html });
   if (!sent.ok) {
-    console.error("[email] admin_step2_service_selected Mailgun failed", {
+    logger.error({
       applicationId,
       requestId,
       error: sent.error,
-    });
+    }, "[email] admin_step2_service_selected Mailgun failed");
   }
 }
 
@@ -215,10 +216,10 @@ export async function sendAdminPaymentCompletedEmail(
   requestId: string | null,
 ): Promise<void> {
   if (!isMailgunConfigured()) {
-    console.warn("[email] Mailgun not configured; skipping admin_payment_completed", {
+    logger.warn({
       applicationId,
       requestId,
-    });
+    }, "[email] Mailgun not configured; skipping admin_payment_completed");
     return;
   }
 
@@ -227,13 +228,13 @@ export async function sendAdminPaymentCompletedEmail(
     TRANSACTIONAL_EMAIL_KINDS.ADMIN_PAYMENT_COMPLETED,
   );
   if (!claimed) {
-    console.info("[email] admin_payment_completed already sent", { applicationId, requestId });
+    logger.info({ applicationId, requestId }, "[email] admin_payment_completed already sent");
     return;
   }
 
   const payload = await loadApplicationWithService(applicationId);
   if (!payload?.contactEmail) {
-    console.warn("[email] No contact email for admin_payment_completed", { applicationId, requestId });
+    logger.warn({ applicationId, requestId }, "[email] No contact email for admin_payment_completed");
     return;
   }
 
@@ -249,10 +250,10 @@ export async function sendAdminPaymentCompletedEmail(
 
   const sent = await mailgunSendText({ to: ADMIN_NOTIFICATION_EMAIL, subject, text, html });
   if (!sent.ok) {
-    console.error("[email] admin_payment_completed Mailgun failed", {
+    logger.error({
       applicationId,
       requestId,
       error: sent.error,
-    });
+    }, "[email] admin_payment_completed Mailgun failed");
   }
 }

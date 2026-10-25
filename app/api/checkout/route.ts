@@ -42,6 +42,7 @@ import * as schema from "@/lib/db/schema";
 import { asc, eq, and, or, inArray, isNull } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import type { DbTransaction } from "@/lib/db";
+import { createRequestLogger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,6 +50,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const hdrs = await headers();
   const requestId = hdrs.get("x-request-id");
+  const log = createRequestLogger(requestId);
 
   try {
     const body = await req.json().catch(() => ({} as Record<string, unknown>));
@@ -433,11 +435,10 @@ export async function POST(req: Request) {
               reason: "provider_unavailable",
               requestId,
             });
-            console.error("[api/checkout] Fincra error", {
-              requestId,
-              message: e.message,
-              httpStatus: e.httpStatus,
-            });
+            log.error(
+              { message: e.message, httpStatus: e.httpStatus },
+              "[api/checkout] Fincra error",
+            );
             return jsonError("FINCRA_UNAVAILABLE", e.message, {
               status: e.httpStatus >= 500 ? 502 : e.httpStatus,
               requestId,
@@ -520,12 +521,10 @@ export async function POST(req: Request) {
         return jsonOk(data, { requestId });
       } catch (e) {
         if (e instanceof ZiinaProviderError) {
-          console.error("[api/checkout] Ziina error", {
-            requestId,
-            message: e.message,
-            httpStatus: e.httpStatus,
-            ziinaBody: e.ziinaBody,
-          });
+          log.error(
+            { message: e.message, httpStatus: e.httpStatus },
+            "[api/checkout] Ziina error",
+          );
           return jsonError("ZIINA_UNAVAILABLE", e.message, {
             status: e.httpStatus >= 500 ? 502 : e.httpStatus,
             requestId,
@@ -538,7 +537,7 @@ export async function POST(req: Request) {
 
     return await withSystemDbActor(runTx);
   } catch (err) {
-    console.error("[api/checkout]", err);
+    log.error({ err }, "[api/checkout] Checkout failed");
     if (err instanceof PaddleProviderError) {
       return jsonError("INTERNAL_ERROR", err.message, {
         status: err.httpStatus,

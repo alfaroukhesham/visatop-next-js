@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { logger } from "@/lib/logger";
 import { appHref } from "@/lib/app-href";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { application, nationality, visaService } from "@/lib/db/schema";
@@ -250,10 +251,10 @@ export const sendDocumentUploadFailureEmails = async (
   input: TDocumentUploadFailureEmailInput,
 ): Promise<void> => {
   if (!isMailgunConfigured()) {
-    console.warn("[email] Mailgun not configured; skipping document_upload_failed", {
+    logger.warn({
       applicationId: input.applicationId,
       requestId: input.requestId,
-    });
+    }, "[email] Mailgun not configured; skipping document_upload_failed");
     return;
   }
 
@@ -277,12 +278,12 @@ export const sendDocumentUploadFailureEmails = async (
     locale,
   });
   if (!claimed) {
-    console.info("[email] document_upload_failed already recorded", {
+    logger.info({
       applicationId: input.applicationId,
       documentType,
       failureGroup,
       requestId: input.requestId,
-    });
+    }, "[email] document_upload_failed already recorded");
     return;
   }
 
@@ -318,11 +319,11 @@ export const sendDocumentUploadFailureEmails = async (
     replyTo,
   });
   if (!adminSent.ok) {
-    console.error("[email] document_upload_failed admin Mailgun failed", {
+    logger.error({
       applicationId: input.applicationId,
       requestId: input.requestId,
       error: adminSent.error,
-    });
+    }, "[email] document_upload_failed admin Mailgun failed");
   }
 
   if (!contactEmail) return;
@@ -339,11 +340,11 @@ export const sendDocumentUploadFailureEmails = async (
     replyTo,
   });
   if (!applicantSent.ok) {
-    console.error("[email] document_upload_failed applicant Mailgun failed", {
+    logger.error({
       applicationId: input.applicationId,
       requestId: input.requestId,
       error: applicantSent.error,
-    });
+    }, "[email] document_upload_failed applicant Mailgun failed");
   }
 };
 
@@ -391,11 +392,11 @@ const sendResolvedForRecord = async (
     replyTo,
   });
   if (!adminSent.ok) {
-    console.error("[email] document_upload_resolved admin Mailgun failed", {
+    logger.error({
       applicationId: record.applicationId,
       requestId,
       error: adminSent.error,
-    });
+    }, "[email] document_upload_resolved admin Mailgun failed");
   }
 
   if (!record.applicantNotified || !contactEmail) return;
@@ -412,11 +413,11 @@ const sendResolvedForRecord = async (
     replyTo,
   });
   if (!applicantSent.ok) {
-    console.error("[email] document_upload_resolved applicant Mailgun failed", {
+    logger.error({
       applicationId: record.applicationId,
       requestId,
       error: applicantSent.error,
-    });
+    }, "[email] document_upload_resolved applicant Mailgun failed");
   }
 };
 
@@ -424,10 +425,10 @@ export const sendDocumentUploadResolvedEmails = async (
   input: TDocumentUploadResolvedEmailInput,
 ): Promise<void> => {
   if (!isMailgunConfigured()) {
-    console.warn("[email] Mailgun not configured; skipping document_upload_resolved", {
+    logger.warn({
       applicationId: input.applicationId,
       requestId: input.requestId,
-    });
+    }, "[email] Mailgun not configured; skipping document_upload_resolved");
     return;
   }
 
