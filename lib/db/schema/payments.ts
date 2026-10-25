@@ -34,6 +34,9 @@ export const payment = pgTable(
     fxBaseAmountMinor: bigint("fx_base_amount_minor", { mode: "bigint" }),
     /** `fixed_list` | `snapshot` | `fincra_quote` */
     fxSource: text("fx_source"),
+    /** Provider failure/expiry code (Ziina status, Fincra charge.failed/expired). Observability only. */
+    failureCode: text("failure_code"),
+    failureMessage: text("failure_message"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

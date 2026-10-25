@@ -1,9 +1,23 @@
 import type { TAdminAnalyticsExpansion } from "@/lib/analytics/admin-analytics-expansion";
+import type { TDurationPercentiles } from "@/lib/analytics/admin-analytics-durations";
 
 export type TAnalyticsKpi = {
   current: number;
   previous: number;
   deltaPct: number | null;
+};
+
+export type TAnalyticsDurationPercentiles = TDurationPercentiles;
+
+export type TPaymentFailureRow = {
+  code: string;
+  count: number;
+};
+
+export type TConversionBreakdownRow = {
+  key: string;
+  created: number;
+  paid: number;
 };
 
 export type TFunnelRow = {
@@ -44,6 +58,13 @@ export type TAdminAnalyticsPayload = {
   passportFailures: { code: string; count: number }[];
   weekly: { weekStart: string; created: number; paid: number }[];
   nationalities: { code: string; name: string; created: number; paid: number }[];
+  durations: {
+    timeToPay: TAnalyticsDurationPercentiles;
+    paidToFulfilled: TAnalyticsDurationPercentiles;
+  };
+  paymentFailures: TPaymentFailureRow[];
+  conversionByCountry: TConversionBreakdownRow[];
+  conversionByDevice: TConversionBreakdownRow[];
 } & TAdminAnalyticsExpansion;
 
 export type TFunnelEventExportRow = {
@@ -53,6 +74,8 @@ export type TFunnelEventExportRow = {
   applicationId: string | null;
   nationalityCode: string | null;
   serviceId: string | null;
+  countryCode: string | null;
+  deviceType: string | null;
   source: string;
   failureReason: string | null;
 };

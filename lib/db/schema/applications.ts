@@ -42,6 +42,10 @@ export const application = pgTable(
     applicationStatus: text("application_status").notNull(),
     paymentStatus: text("payment_status").notNull(),
     fulfillmentStatus: text("fulfillment_status").notNull(),
+    /** First transition to paymentStatus=paid. Null for historical rows without a reliable stamp. */
+    paidAt: timestamp("paid_at"),
+    /** First transition to applicationStatus=completed. */
+    fulfilledAt: timestamp("fulfilled_at"),
 
     referenceNumber: text("reference_number"),
     draftExpiresAt: timestamp("draft_expires_at"),
@@ -111,6 +115,8 @@ export const application = pgTable(
     index("application_status_idx").on(t.applicationStatus),
     index("application_paymentStatus_idx").on(t.paymentStatus),
     index("application_fulfillmentStatus_idx").on(t.fulfillmentStatus),
+    index("application_paidAt_idx").on(t.paidAt),
+    index("application_fulfilledAt_idx").on(t.fulfilledAt),
     index("application_draftExpiresAt_idx").on(t.draftExpiresAt),
     index("application_resumeTokenHash_idx").on(t.resumeTokenHash),
     index("application_previousResumeTokenHash_idx").on(t.previousResumeTokenHash),

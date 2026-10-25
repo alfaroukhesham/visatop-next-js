@@ -68,6 +68,13 @@ describe("GET /api/admin/analytics", () => {
       passportFailures: [],
       weekly: [],
       nationalities: [],
+      durations: {
+        timeToPay: { p50Seconds: null, p95Seconds: null, sampleSize: 0 },
+        paidToFulfilled: { p50Seconds: null, p95Seconds: null, sampleSize: 0 },
+      },
+      paymentFailures: [],
+      conversionByCountry: [],
+      conversionByDevice: [],
     });
     const res = await GET(
       new Request(

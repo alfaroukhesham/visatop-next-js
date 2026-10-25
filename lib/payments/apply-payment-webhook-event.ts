@@ -1,4 +1,5 @@
 import { retainRequiredDocuments } from "@/lib/applications/retain-required-documents";
+import { paidAtForFirstPaidTransition } from "@/lib/applications/lifecycle-timestamps";
 import { application, applicationParty, auditLog, payment } from "@/lib/db/schema";
 import type { DbTransaction } from "@/lib/db";
 import { and, asc, desc, eq, inArray, ne, or } from "drizzle-orm";
@@ -9,6 +10,10 @@ import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { serverFunnelEventId } from "@/lib/analytics/funnel-event-names";
 import { recordFunnelEvent } from "@/lib/analytics/record-funnel-event";
 import { createRequestLogger } from "@/lib/logger";
+import {
+  sanitizePaymentFailureCode,
+  sanitizePaymentFailureMessage,
+} from "@/lib/payments/payment-failure-info";
 
 export type ApplyPaymentWebhookContext = {
   requestId?: string | null;
@@ -191,6 +196,8 @@ export async function applyPaymentWebhookEvent(
       .set({
         status: "paid",
         providerTransactionId: event.providerPaymentId || payRow.providerTransactionId,
+        failureCode: null,
+        failureMessage: null,
       })
       .where(and(eq(payment.id, payRow.id), ne(payment.status, "paid")))
       .returning({ id: payment.id });
@@ -208,6 +215,7 @@ export async function applyPaymentWebhookEvent(
           checkoutState: "none",
           applicationStatus: "in_progress",
           fulfillmentStatus: "automation_running",
+          paidAt: paidAtForFirstPaidTransition(member.paidAt),
         })
         .where(and(eq(application.id, member.id), ne(application.paymentStatus, "paid")))
         .returning({ id: application.id });
@@ -286,7 +294,15 @@ export async function applyPaymentWebhookEvent(
   }
 
   if (event.kind === "payment_failed") {
-    await tx.update(payment).set({ status: "failed" }).where(eq(payment.id, payRow.id));
+    const failureCode = sanitizePaymentFailureCode(event.metadata.failureCode) ?? "failed";
+    await tx
+      .update(payment)
+      .set({
+        status: "failed",
+        failureCode,
+        failureMessage: sanitizePaymentFailureMessage(event.metadata.failureMessage),
+      })
+      .where(eq(payment.id, payRow.id));
     const loadMembers = ctx?.loadPartyApplicationRows ?? loadPartyApplicationRows;
     const memberRows = await loadMembers(tx, appRow);
     for (const member of memberRows) {

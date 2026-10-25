@@ -150,6 +150,29 @@ export const analyticsSummaryToCsv = (payload: TAdminAnalyticsPayload): string =
       payload.attentionQueue.flaggedInRange.current,
       payload.attentionQueue.flaggedInRange.previous,
     ]),
+    "",
+    "duration,p50_seconds,p95_seconds,sample_size",
+    csvLine([
+      "time_to_pay",
+      payload.durations.timeToPay.p50Seconds,
+      payload.durations.timeToPay.p95Seconds,
+      payload.durations.timeToPay.sampleSize,
+    ]),
+    csvLine([
+      "paid_to_fulfilled",
+      payload.durations.paidToFulfilled.p50Seconds,
+      payload.durations.paidToFulfilled.p95Seconds,
+      payload.durations.paidToFulfilled.sampleSize,
+    ]),
+    "",
+    "payment_failure_code,count",
+    ...payload.paymentFailures.map((r) => csvLine([r.code, r.count])),
+    "",
+    "country,created,paid",
+    ...payload.conversionByCountry.map((r) => csvLine([r.key, r.created, r.paid])),
+    "",
+    "device,created,paid",
+    ...payload.conversionByDevice.map((r) => csvLine([r.key, r.created, r.paid])),
   ];
   return `${lines.join("\n")}\n`;
 };
@@ -165,6 +188,8 @@ export const funnelEventsToCsv = (
     "application_id",
     "nationality_code",
     "service_id",
+    "country_code",
+    "device_type",
     "source",
     "failure_reason",
   ]);
@@ -176,6 +201,8 @@ export const funnelEventsToCsv = (
       r.applicationId,
       r.nationalityCode,
       r.serviceId,
+      r.countryCode,
+      r.deviceType,
       r.source,
       r.failureReason,
     ]),

@@ -258,6 +258,84 @@ describe("applyPaymentWebhookEvent", () => {
         (u.set as { applicationStatus?: string }).applicationStatus === undefined,
     );
     expect(partyUpdates).toHaveLength(1);
+
+    const paidAppUpdates = updates.filter(
+      (u) => (u.set as { paymentStatus?: string }).paymentStatus === "paid" && (u.set as { paidAt?: Date }).paidAt,
+    );
+    expect(paidAppUpdates).toHaveLength(2);
+  });
+
+  it("stamps paidAt and clears failure fields on first paid transition", async () => {
+    vi.mocked(retainRequiredDocuments).mockResolvedValue({
+      ok: true,
+      retainedDocumentIds: [],
+      retainedAt: new Date(),
+    } as never);
+    const { tx, updates } = makeTx();
+    await applyPaymentWebhookEvent(
+      tx,
+      {
+        provider: "ziina",
+        kind: "payment_completed",
+        providerPaymentId: "intent_1",
+        amountMinor: 1000,
+        currency: "AED",
+        metadata: { applicationId: "app_1" },
+        rawEventType: "payment_intent.status.updated",
+        providerEventId: "intent_1",
+      },
+      { id: "pay_1", provider: "ziina", applicationId: "app_1", amount: 1000, providerTransactionId: null } as never,
+      {
+        id: "app_1",
+        applicationStatus: "ready_for_payment",
+        paymentStatus: "checkout_created",
+        checkoutState: "pending",
+        fulfillmentStatus: "not_started",
+        paidAt: null,
+        adminAttentionRequired: false,
+      } as never,
+      "intent_1",
+      {},
+    );
+    const paymentPaid = updates.find((u) => (u.set as { status?: string }).status === "paid");
+    expect(paymentPaid?.set).toEqual(
+      expect.objectContaining({ status: "paid", failureCode: null, failureMessage: null }),
+    );
+    const appPaid = updates.find((u) => (u.set as { paymentStatus?: string }).paymentStatus === "paid");
+    expect(appPaid?.set).toEqual(expect.objectContaining({ paymentStatus: "paid", paidAt: expect.any(Date) }));
+  });
+
+  it("records Ziina failure_code without changing checkout lock fields on the payment row", async () => {
+    const { tx, updates } = makeTx();
+    await applyPaymentWebhookEvent(
+      tx,
+      {
+        provider: "ziina",
+        kind: "payment_failed",
+        providerPaymentId: "intent_1",
+        amountMinor: 1000,
+        currency: "AED",
+        metadata: { failureCode: "failed", failureMessage: "card declined" },
+        rawEventType: "payment_intent.status.updated",
+        providerEventId: "intent_1",
+      },
+      { id: "pay_1", provider: "ziina", applicationId: "app_1", amount: 1000 } as never,
+      {
+        id: "app_1",
+        applicationStatus: "ready_for_payment",
+        paymentStatus: "checkout_created",
+        checkoutState: "pending",
+        adminAttentionRequired: false,
+      } as never,
+      "intent_1",
+      {},
+    );
+    const paymentFailed = updates.find((u) => (u.set as { status?: string }).status === "failed");
+    expect(paymentFailed?.set).toEqual({
+      status: "failed",
+      failureCode: "failed",
+      failureMessage: "card declined",
+    });
   });
 });
 

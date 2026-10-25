@@ -6,6 +6,7 @@ import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import type { TAdminAnalyticsPayload } from "@/lib/analytics/admin-analytics-types";
 import { AdminAnalyticsObservability } from "@/components/admin/admin-analytics-observability";
 import { Button } from "@/components/ui/button";
+import { AdminAnalyticsTrackingExtras } from "@/components/admin/admin-analytics-tracking-extras";
 import {
   Card,
   CardContent,
@@ -38,8 +39,9 @@ const toDatetimeLocalValue = (d: Date): string => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-const formatNumber = (n: number): string =>
-  new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(n);
+const numberFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
+
+const formatNumber = (n: number): string => numberFormat.format(n);
 
 const formatDelta = (deltaPct: number | null): string => {
   if (deltaPct === null) return "n/a vs prior";
@@ -428,6 +430,7 @@ export const AdminAnalyticsClient: FC = () => {
           </div>
 
           <AdminAnalyticsObservability data={data} />
+          <AdminAnalyticsTrackingExtras data={data} />
         </AnalyticsResultsFrame>
       ) : null}
     </div>

@@ -38,6 +38,30 @@ describe("mapZiinaIntentSnapshotToNormalized", () => {
     }
   });
 
+  it("maps failed with provider error onto payment_failed metadata", () => {
+    const r = mapZiinaIntentSnapshotToNormalized(
+      {
+        id: "intent_1",
+        status: "failed",
+        amountMinor: 1,
+        currencyCode: "AED",
+        operationId: "op_1",
+        errorCode: "card_declined",
+        errorMessage: "Insufficient funds",
+      },
+      "payment_intent.status.updated",
+    );
+    expect(r.kind).toBe("event");
+    if (r.kind === "event") {
+      expect(r.event.kind).toBe("payment_failed");
+      expect(r.event.metadata).toMatchObject({
+        operationId: "op_1",
+        failureCode: "card_declined",
+        failureMessage: "Insufficient funds",
+      });
+    }
+  });
+
   it("logs unknown status as ignored", () => {
     const r = mapZiinaIntentSnapshotToNormalized(
       {

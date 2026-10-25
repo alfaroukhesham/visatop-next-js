@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNotNull, lt, ne, or, sql } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
 import {
   analyticsFunnelEvent,
@@ -6,9 +6,15 @@ import {
   applicationParty,
   nationality,
   payment,
+  paymentEvent,
   user,
   visaService,
 } from "@/lib/db/schema";
+import {
+  mergePaymentFailureBreakdown,
+  toConversionDimensionRows,
+} from "@/lib/analytics/admin-analytics-conversion";
+import { toDurationPercentiles } from "@/lib/analytics/admin-analytics-durations";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { abandonStopFromCursor, type TApplyWizardScreen } from "@/lib/apply/apply-wizard";
 import {
@@ -321,6 +327,102 @@ export const loadAdminAnalytics = async (
     };
   });
 
+  const [
+    timeToPayRows,
+    paidToFulfilledRows,
+    fincraFailureRows,
+    otherFailureRows,
+    countryConversionRows,
+    deviceConversionRows,
+  ] = await Promise.all([
+    tx
+      .select({
+        p50: sql<number | null>`percentile_cont(0.5) within group (order by extract(epoch from (${application.paidAt} - ${application.createdAt})))`,
+        p95: sql<number | null>`percentile_cont(0.95) within group (order by extract(epoch from (${application.paidAt} - ${application.createdAt})))`,
+        n: sql<number>`cast(count(*) as int)`,
+      })
+      .from(application)
+      .where(
+        and(
+          isNotNull(application.paidAt),
+          inRange(application.paidAt, range),
+          sql`${application.paidAt} >= ${application.createdAt}`,
+        ),
+      ),
+    tx
+      .select({
+        p50: sql<number | null>`percentile_cont(0.5) within group (order by extract(epoch from (${application.fulfilledAt} - ${application.paidAt})))`,
+        p95: sql<number | null>`percentile_cont(0.95) within group (order by extract(epoch from (${application.fulfilledAt} - ${application.paidAt})))`,
+        n: sql<number>`cast(count(*) as int)`,
+      })
+      .from(application)
+      .where(
+        and(
+          isNotNull(application.fulfilledAt),
+          isNotNull(application.paidAt),
+          inRange(application.fulfilledAt, range),
+          sql`${application.fulfilledAt} >= ${application.paidAt}`,
+        ),
+      ),
+    tx
+      .select({
+        type: paymentEvent.type,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(paymentEvent)
+      .where(
+        and(
+          inArray(paymentEvent.type, ["charge.failed", "charge.expired"]),
+          inRange(paymentEvent.receivedAt, range),
+        ),
+      )
+      .groupBy(paymentEvent.type),
+    tx
+      .select({
+        provider: payment.provider,
+        code: payment.failureCode,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(payment)
+      .where(
+        and(
+          isNotNull(payment.failureCode),
+          ne(payment.provider, "fincra"),
+          ne(payment.status, "paid"),
+          inRange(payment.updatedAt, range),
+        ),
+      )
+      .groupBy(payment.provider, payment.failureCode),
+    tx
+      .select({
+        key: sql<string>`coalesce(nullif(${analyticsFunnelEvent.countryCode}, ''), ${analyticsFunnelEvent.nationalityCode}, 'unknown')`,
+        created: sql<number>`cast(count(distinct coalesce(${analyticsFunnelEvent.applicationId}, ${analyticsFunnelEvent.sessionId})) as int)`,
+        paid: sql<number>`cast(count(distinct coalesce(${analyticsFunnelEvent.applicationId}, ${analyticsFunnelEvent.sessionId})) filter (where ${analyticsFunnelEvent.eventName} = ${APPLY_FUNNEL_EVENTS.paymentSucceeded}) as int)`,
+      })
+      .from(analyticsFunnelEvent)
+      .where(inRange(analyticsFunnelEvent.occurredAt, range))
+      .groupBy(
+        sql`coalesce(nullif(${analyticsFunnelEvent.countryCode}, ''), ${analyticsFunnelEvent.nationalityCode}, 'unknown')`,
+      )
+      .orderBy(
+        sql`count(distinct coalesce(${analyticsFunnelEvent.applicationId}, ${analyticsFunnelEvent.sessionId})) desc`,
+      )
+      .limit(15),
+    tx
+      .select({
+        key: sql<string>`coalesce(${analyticsFunnelEvent.deviceType}, 'unknown')`,
+        created: sql<number>`cast(count(distinct coalesce(${analyticsFunnelEvent.applicationId}, ${analyticsFunnelEvent.sessionId})) as int)`,
+        paid: sql<number>`cast(count(distinct coalesce(${analyticsFunnelEvent.applicationId}, ${analyticsFunnelEvent.sessionId})) filter (where ${analyticsFunnelEvent.eventName} = ${APPLY_FUNNEL_EVENTS.paymentSucceeded}) as int)`,
+      })
+      .from(analyticsFunnelEvent)
+      .where(inRange(analyticsFunnelEvent.occurredAt, range))
+      .groupBy(sql`coalesce(${analyticsFunnelEvent.deviceType}, 'unknown')`)
+      .orderBy(
+        sql`count(distinct coalesce(${analyticsFunnelEvent.applicationId}, ${analyticsFunnelEvent.sessionId})) desc`,
+      )
+      .limit(15),
+  ]);
+
   return {
     range: { from: range.from.toISOString(), to: range.to.toISOString() },
     kpis: {
@@ -350,6 +452,21 @@ export const loadAdminAnalytics = async (
       paid: asInt(r.paid),
     })),
     ...expansion,
+    durations: {
+      timeToPay: toDurationPercentiles(timeToPayRows[0] ?? { n: 0 }),
+      paidToFulfilled: toDurationPercentiles(paidToFulfilledRows[0] ?? { n: 0 }),
+    },
+    paymentFailures: mergePaymentFailureBreakdown(fincraFailureRows, otherFailureRows),
+    conversionByCountry: toConversionDimensionRows(countryConversionRows).map((row) => ({
+      key: row.key,
+      created: row.created,
+      paid: row.paid,
+    })),
+    conversionByDevice: toConversionDimensionRows(deviceConversionRows).map((row) => ({
+      key: row.key,
+      created: row.created,
+      paid: row.paid,
+    })),
   };
 };
 
@@ -370,6 +487,8 @@ export const loadFunnelEventsForExport = async (
       applicationId: analyticsFunnelEvent.applicationId,
       nationalityCode: analyticsFunnelEvent.nationalityCode,
       serviceId: analyticsFunnelEvent.serviceId,
+      countryCode: analyticsFunnelEvent.countryCode,
+      deviceType: analyticsFunnelEvent.deviceType,
       source: analyticsFunnelEvent.source,
       failureReason: analyticsFunnelEvent.failureReason,
     })
@@ -388,6 +507,8 @@ export const loadFunnelEventsForExport = async (
       applicationId: r.applicationId,
       nationalityCode: r.nationalityCode,
       serviceId: r.serviceId,
+      countryCode: r.countryCode,
+      deviceType: r.deviceType,
       source: r.source,
       failureReason: r.failureReason,
     })),

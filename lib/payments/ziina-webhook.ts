@@ -74,6 +74,9 @@ export function parseZiinaWebhookToNormalized(rawBody: string): ZiinaWebhookPars
   const currency =
     typeof d.currency_code === "string" ? d.currency_code.trim().toUpperCase() : "USD";
   const operationId = typeof d.operation_id === "string" ? d.operation_id : null;
+  const asTrimmed = (value: unknown): string | null =>
+    typeof value === "string" && value.trim() ? value.trim() : null;
+  const errorObj = d.error && typeof d.error === "object" ? (d.error as Record<string, unknown>) : null;
 
   return mapZiinaIntentSnapshotToNormalized(
     {
@@ -82,6 +85,16 @@ export function parseZiinaWebhookToNormalized(rawBody: string): ZiinaWebhookPars
       amountMinor: Number.isFinite(amount) ? amount : 0,
       currencyCode: currency,
       operationId,
+      errorCode:
+        asTrimmed(d.error_code) ??
+        asTrimmed(d.errorCode) ??
+        asTrimmed(errorObj?.code) ??
+        asTrimmed(d.cancellation_reason),
+      errorMessage:
+        asTrimmed(d.error_message) ??
+        asTrimmed(d.message) ??
+        asTrimmed(errorObj?.message) ??
+        asTrimmed(d.failure_reason),
     },
     eventName,
   );

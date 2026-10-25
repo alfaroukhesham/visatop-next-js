@@ -30,6 +30,27 @@ describe("parseZiinaWebhookToNormalized", () => {
     }
   });
 
+  it("maps failed status and error fields", () => {
+    const body = JSON.stringify({
+      event: "payment_intent.status.updated",
+      data: {
+        id: "intent_1",
+        status: "failed",
+        amount: 500,
+        currency_code: "AED",
+        error_code: "card_declined",
+        message: "Insufficient funds",
+      },
+    });
+    const r = parseZiinaWebhookToNormalized(body);
+    expect(r.kind).toBe("event");
+    if (r.kind === "event") {
+      expect(r.event.kind).toBe("payment_failed");
+      expect(r.event.metadata.failureCode).toBe("card_declined");
+      expect(r.event.metadata.failureMessage).toBe("Insufficient funds");
+    }
+  });
+
   it("ignores non-terminal statuses", () => {
     const body = JSON.stringify({
       event: "payment_intent.status.updated",
