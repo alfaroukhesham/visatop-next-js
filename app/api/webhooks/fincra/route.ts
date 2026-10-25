@@ -23,10 +23,16 @@ import { getFincraServerConfig } from "@/lib/payments/resolve-payment-provider";
 import { markWebhookReceivedNow, PLATFORM_KEY_LAST_WEBHOOK_FINCRA } from "@/lib/payments/webhook-health";
 import { findFincraPaymentForWebhookRefs } from "@/lib/payments/fincra-payment-lookup";
 import { createRequestLogger } from "@/lib/logger";
+import { withSpan } from "@/lib/observability/tracing";
 
 export const runtime = "nodejs";
 
-export async function POST(req: Request) {
+export const POST = async (req: Request) =>
+  withSpan("payments.webhook.fincra", { provider: "fincra", operation: "webhook" }, () =>
+    postFincraWebhook(req),
+  );
+
+const postFincraWebhook = async (req: Request) => {
   const [bodyText, hdrs] = await Promise.all([req.text(), headers()]);
   const requestId = hdrs.get("x-request-id");
   const log = createRequestLogger(requestId);
@@ -231,4 +237,4 @@ export async function POST(req: Request) {
   }
 
   return jsonOk({ received: true }, { requestId });
-}
+};

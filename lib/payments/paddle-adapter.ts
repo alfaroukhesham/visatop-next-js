@@ -1,5 +1,6 @@
 import { ApiError, Environment, LogLevel, Paddle, type CurrencyCode } from "@paddle/paddle-node-sdk";
 import type { PaymentProvider, CreateCheckoutParams, ProviderCheckoutResult, ParsedWebhookEvent, RefundResult, PaddleRefundReason } from "./types";
+import { setSafeSpanAttributes, withSpan } from "@/lib/observability/tracing";
 
 const paddle = new Paddle(process.env.PADDLE_API_KEY || "dummy", {
   environment: process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT === "production" ? Environment.production : Environment.sandbox,
@@ -62,6 +63,7 @@ function toPaddleCurrencyCode(raw: string): CurrencyCode {
 
 export const paddleAdapter: PaymentProvider = {
   async createCheckout(params: CreateCheckoutParams): Promise<ProviderCheckoutResult> {
+    return withSpan("paddle.checkout.create", { provider: "paddle", operation: "checkout.create" }, async (span) => {
     try {
       const currencyCode = toPaddleCurrencyCode(params.currency);
       const txn = await paddle.transactions.create({
@@ -86,15 +88,20 @@ export const paddleAdapter: PaymentProvider = {
         customData: params.metadata,
       });
 
+      setSafeSpanAttributes(span, { status: "ok" });
       return {
         transactionId: txn.id,
         clientToken: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN || "",
       };
     } catch (e: unknown) {
       const pe = toPaddleProviderError(e);
-      if (pe) throw pe;
+      if (pe) {
+        setSafeSpanAttributes(span, { status: "error", errorCode: pe.paddleCode, "http.status_code": pe.httpStatus });
+        throw pe;
+      }
       throw e instanceof Error ? e : new Error(String(e));
     }
+    });
   },
 
   async verifyWebhookSignature(body: string, signature: string): Promise<boolean> {
@@ -152,7 +159,9 @@ export const paddleAdapter: PaymentProvider = {
   },
 
   async initiateRefund(transactionId: string, reason: PaddleRefundReason, amountMinor?: number): Promise<RefundResult> {
+    return withSpan("paddle.refund.initiate", { provider: "paddle", operation: "refund.initiate" }, async (span) => {
     if (amountMinor) {
+      setSafeSpanAttributes(span, { status: "error", errorCode: "partial_refund_not_implemented" });
       throw new Error("NotImplemented: Partial refunds are not supported in MVP.");
     }
     // Full refund: omit `items`. Empty `items` is rejected ("Array must have at least one item");
@@ -164,11 +173,16 @@ export const paddleAdapter: PaymentProvider = {
         reason,
         type: "full",
       });
+      setSafeSpanAttributes(span, { status: refund.status });
       return { refundId: refund.id, status: refund.status };
     } catch (e: unknown) {
       const pe = toPaddleProviderError(e);
-      if (pe) throw pe;
+      if (pe) {
+        setSafeSpanAttributes(span, { status: "error", errorCode: pe.paddleCode, "http.status_code": pe.httpStatus });
+        throw pe;
+      }
       throw e instanceof Error ? e : new Error(String(e));
     }
+    });
   }
 };

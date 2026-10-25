@@ -126,6 +126,9 @@ const nextConfig: NextConfig = {
     "heic-convert",
     "heic-decode",
     "libheif-js",
+    "@opentelemetry/sdk-node",
+    "@opentelemetry/auto-instrumentations-node",
+    "@opentelemetry/exporter-trace-otlp-http",
   ],
   // Combine PR #19 (PDF worker) and PR #20 (HEIC WASM) tracing includes.
   // Do not overwrite one object with the other.

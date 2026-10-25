@@ -1,5 +1,6 @@
 import type { FincraFeeBearer } from "@/lib/payments/resolve-payment-provider";
 import { tryFincraMajorToMinor } from "@/lib/payments/fincra-amounts";
+import { setSafeSpanAttributes, withSpan } from "@/lib/observability/tracing";
 
 export class FincraProviderError extends Error {
   readonly httpStatus: number;
@@ -179,7 +180,8 @@ const fincraFetchJson = async (
 
 export const createFincraCheckout = async (
   params: CreateFincraCheckoutParams,
-): Promise<FincraCheckoutCreated> => {
+): Promise<FincraCheckoutCreated> =>
+  withSpan("fincra.checkout.create", { provider: "fincra", operation: "checkout.create" }, async (span) => {
   const url = `${params.apiBaseUrl.replace(/\/$/, "")}/checkout/payments`;
   const customer: Record<string, string> = {
     name: params.customer.name,
@@ -211,14 +213,20 @@ export const createFincraCheckout = async (
     timeoutMs: params.timeoutMs,
   });
   if (!res.ok) {
+    setSafeSpanAttributes(span, {
+      status: "error",
+      errorCode: `http_${res.status}`,
+      "http.status_code": res.status,
+    });
     throw new FincraProviderError(
       `Fincra checkout failed (HTTP ${res.status})`,
       res.status >= 500 ? 502 : res.status >= 400 ? 400 : 502,
       res.text.slice(0, 500),
     );
   }
+  setSafeSpanAttributes(span, { status: "ok", "http.status_code": res.status });
   return parseFincraCheckoutCreated(res.json);
-};
+  });
 
 export const verifyFincraCheckoutByMerchantReference = async (params: {
   apiBaseUrl: string;
@@ -226,7 +234,8 @@ export const verifyFincraCheckoutByMerchantReference = async (params: {
   businessId: string;
   merchantReference: string;
   timeoutMs?: number;
-}): Promise<FincraVerifiedPayment> => {
+}): Promise<FincraVerifiedPayment> =>
+  withSpan("fincra.checkout.verify", { provider: "fincra", operation: "checkout.verify" }, async (span) => {
   const url = `${params.apiBaseUrl.replace(/\/$/, "")}/checkout/payments/merchant-reference/${encodeURIComponent(params.merchantReference)}`;
   const res = await fincraFetchJson(url, {
     method: "GET",
@@ -238,21 +247,29 @@ export const verifyFincraCheckoutByMerchantReference = async (params: {
     timeoutMs: params.timeoutMs,
   });
   if (!res.ok) {
+    setSafeSpanAttributes(span, {
+      status: "error",
+      errorCode: `http_${res.status}`,
+      "http.status_code": res.status,
+    });
     throw new FincraProviderError(
       `Fincra verify failed (HTTP ${res.status})`,
       res.status >= 500 ? 502 : res.status >= 400 ? 400 : 502,
       res.text.slice(0, 500),
     );
   }
-  return parseFincraVerifiedPayment(res.json);
-};
+  const verified = parseFincraVerifiedPayment(res.json);
+  setSafeSpanAttributes(span, { status: verified.status, "http.status_code": res.status });
+  return verified;
+  });
 
 export const initiateFincraRefund = async (params: {
   apiBaseUrl: string;
   secretKey: string;
   transReference: string;
   timeoutMs?: number;
-}): Promise<FincraRefundResult> => {
+}): Promise<FincraRefundResult> =>
+  withSpan("fincra.refund.initiate", { provider: "fincra", operation: "refund.initiate" }, async (span) => {
   const url = `${params.apiBaseUrl.replace(/\/$/, "")}/collections/refund`;
   const controller = new AbortController();
   const timeoutMs = Math.max(500, Math.round(params.timeoutMs ?? 8000));
@@ -288,9 +305,15 @@ export const initiateFincraRefund = async (params: {
   }
 
   if (res.status === 422) {
+    setSafeSpanAttributes(span, { status: "already_initiated", "http.status_code": 422 });
     return parseFincraRefundResult(json, 422);
   }
   if (!res.ok) {
+    setSafeSpanAttributes(span, {
+      status: "error",
+      errorCode: `http_${res.status}`,
+      "http.status_code": res.status,
+    });
     const rec = typeof json === "object" && json !== null ? (json as Record<string, unknown>) : {};
     const errMsg = typeof rec.error === "string" ? rec.error : `Fincra refund failed (HTTP ${res.status})`;
     throw new FincraProviderError(
@@ -300,5 +323,7 @@ export const initiateFincraRefund = async (params: {
       typeof rec.errorType === "string" ? rec.errorType : undefined,
     );
   }
-  return parseFincraRefundResult(json, res.status);
-};
+  const refund = parseFincraRefundResult(json, res.status);
+  setSafeSpanAttributes(span, { status: refund.status, "http.status_code": res.status });
+  return refund;
+  });

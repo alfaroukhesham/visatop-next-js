@@ -363,6 +363,10 @@ validate_caddyfile() {
 start_slot() {
   local name="$1"
   local image="$2"
+  local sha="${3:-}"
+  if [[ -z "$sha" && "$image" =~ :sha-([0-9a-f]{7,40})$ ]]; then
+    sha="${BASH_REMATCH[1]}"
+  fi
   if container_exists "$name"; then
     if container_running "$name"; then
       die "refusing to replace running slot ${name}"
@@ -370,12 +374,20 @@ start_slot() {
     docker rm "$name" >/dev/null
   fi
   log "starting ${name}"
-  docker run -d \
-    --name "$name" \
-    --network "$NETWORK" \
-    --env-file "$ENV_FILE" \
-    --restart unless-stopped \
-    "$image" >/dev/null
+  # APP_ENV is staging|production (not NODE_ENV). GIT_SHA is service.version for traces.
+  # OTEL_EXPORTER_OTLP_ENDPOINT should be http://alloy:4318 in the env file once Alloy is up.
+  local -a run_args=(
+    -d
+    --name "$name"
+    --network "$NETWORK"
+    --env-file "$ENV_FILE"
+    -e "APP_ENV=${ENV_NAME}"
+    --restart unless-stopped
+  )
+  if [[ -n "$sha" ]]; then
+    run_args+=(-e "GIT_SHA=${sha}")
+  fi
+  docker run "${run_args[@]}" "$image" >/dev/null
 }
 
 wait_healthy() {
@@ -593,7 +605,7 @@ cmd_deploy() {
   else
     migrate_sha "$sha"
   fi
-  start_slot "$new_name" "$image"
+  start_slot "$new_name" "$image" "$sha"
   if ! wait_healthy "$new_name"; then
     remove_slot "$new_name"
     die "new slot failed health check; traffic stayed on ${SLOT_PREFIX}-${active}"

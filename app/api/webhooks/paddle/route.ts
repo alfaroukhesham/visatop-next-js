@@ -21,10 +21,16 @@ import { markWebhookReceivedNow, PLATFORM_KEY_LAST_WEBHOOK_PADDLE } from "@/lib/
 import { sendPaymentReceivedInProgressEmail } from "@/lib/email/send-application-transactional-emails";
 import { sendAdminPaymentCompletedEmail } from "@/lib/email/send-admin-notification-emails";
 import { createRequestLogger } from "@/lib/logger";
+import { withSpan } from "@/lib/observability/tracing";
 
 export const runtime = "nodejs";
 
-export async function POST(req: Request) {
+export const POST = async (req: Request) =>
+  withSpan("payments.webhook.paddle", { provider: "paddle", operation: "webhook" }, () =>
+    postPaddleWebhook(req),
+  );
+
+const postPaddleWebhook = async (req: Request) => {
   const [bodyText, hdrs] = await Promise.all([req.text(), headers()]);
   const requestId = hdrs.get("x-request-id");
   const log = createRequestLogger(requestId);
@@ -148,4 +154,4 @@ export async function POST(req: Request) {
   }
 
   return jsonOk({ received: true }, { requestId });
-}
+};

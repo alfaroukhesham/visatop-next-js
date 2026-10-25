@@ -1,6 +1,7 @@
 /**
  * Mailgun HTTP API (EU). Plain multipart messages; no provider IDs leak to clients.
  */
+import { setSafeSpanAttributes, withSpan } from "@/lib/observability/tracing";
 
 const EU_BASE = "https://api.eu.mailgun.net";
 
@@ -14,52 +15,62 @@ export type MailgunSendTextInput = {
   attachments?: { filename: string; contentType: string; bytes: Buffer }[];
 };
 
-export function isMailgunConfigured(): boolean {
+export const isMailgunConfigured = (): boolean => {
   const key = process.env.MAILGUN_API_KEY?.trim();
   const domain = process.env.MAILGUN_DOMAIN?.trim();
   return Boolean(key && domain);
-}
+};
 
-export async function mailgunSendText(input: MailgunSendTextInput): Promise<{ ok: true } | { ok: false; error: string }> {
-  const key = process.env.MAILGUN_API_KEY?.trim();
-  const domain = process.env.MAILGUN_DOMAIN?.trim();
-  const from = process.env.MAILGUN_FROM?.trim() ?? "Visatop <info@visatop.com>";
+export const mailgunSendText = async (
+  input: MailgunSendTextInput,
+): Promise<{ ok: true } | { ok: false; error: string }> =>
+  withSpan("mailgun.send", { provider: "mailgun", operation: "send" }, async (span) => {
+    const key = process.env.MAILGUN_API_KEY?.trim();
+    const domain = process.env.MAILGUN_DOMAIN?.trim();
+    const from = process.env.MAILGUN_FROM?.trim() ?? "Visatop <info@visatop.com>";
 
-  if (!key || !domain) {
-    return { ok: false, error: "MAILGUN_API_KEY or MAILGUN_DOMAIN not configured" };
-  }
+    if (!key || !domain) {
+      setSafeSpanAttributes(span, { status: "error", errorCode: "not_configured" });
+      return { ok: false, error: "MAILGUN_API_KEY or MAILGUN_DOMAIN not configured" };
+    }
 
-  const base = process.env.MAILGUN_API_BASE_URL?.trim() || EU_BASE;
-  const url = `${base.replace(/\/$/, "")}/v3/${encodeURIComponent(domain)}/messages`;
+    const base = process.env.MAILGUN_API_BASE_URL?.trim() || EU_BASE;
+    const url = `${base.replace(/\/$/, "")}/v3/${encodeURIComponent(domain)}/messages`;
 
-  const form = new FormData();
-  form.set("from", from);
-  form.set("to", input.to);
-  form.set("subject", input.subject);
-  form.set("text", input.text);
-  if (input.html) {
-    form.set("html", input.html);
-  }
-  if (input.replyTo?.trim()) {
-    form.set("h:Reply-To", input.replyTo.trim());
-  }
+    const form = new FormData();
+    form.set("from", from);
+    form.set("to", input.to);
+    form.set("subject", input.subject);
+    form.set("text", input.text);
+    if (input.html) {
+      form.set("html", input.html);
+    }
+    if (input.replyTo?.trim()) {
+      form.set("h:Reply-To", input.replyTo.trim());
+    }
 
-  for (const a of input.attachments ?? []) {
-    const blob = new Blob([new Uint8Array(a.bytes)], { type: a.contentType || "application/octet-stream" });
-    form.append("attachment", blob, a.filename);
-  }
+    for (const a of input.attachments ?? []) {
+      const blob = new Blob([new Uint8Array(a.bytes)], { type: a.contentType || "application/octet-stream" });
+      form.append("attachment", blob, a.filename);
+    }
 
-  const auth = Buffer.from(`api:${key}`).toString("base64");
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { Authorization: `Basic ${auth}` },
-    body: form,
+    const auth = Buffer.from(`api:${key}`).toString("base64");
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { Authorization: `Basic ${auth}` },
+      body: form,
+    });
+
+    if (!res.ok) {
+      setSafeSpanAttributes(span, {
+        status: "error",
+        errorCode: `http_${res.status}`,
+        "http.status_code": res.status,
+      });
+      const errText = await res.text().catch(() => "");
+      return { ok: false, error: `Mailgun HTTP ${res.status}: ${errText.slice(0, 500)}` };
+    }
+
+    setSafeSpanAttributes(span, { status: "ok", "http.status_code": res.status });
+    return { ok: true };
   });
-
-  if (!res.ok) {
-    const errText = await res.text().catch(() => "");
-    return { ok: false, error: `Mailgun HTTP ${res.status}: ${errText.slice(0, 500)}` };
-  }
-
-  return { ok: true };
-}

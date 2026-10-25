@@ -6,6 +6,9 @@ import {
   isValidCustomerLocaleParam,
   parseCustomerLocale,
 } from "@/lib/i18n/customer-locale";
+import { ensureTraceContext } from "@/lib/observability/trace-context";
+import { TRACE_ID_HEADER, TRACEPARENT_HEADER } from "@/lib/observability/trace-headers";
+import { resolveTraceSamplerRatio } from "@/lib/observability/sampler-ratio";
 
 export function proxy(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -29,6 +32,13 @@ export function proxy(request: NextRequest) {
 
   requestHeaders.set("x-request-id", requestId);
 
+  const { traceparent, traceId } = ensureTraceContext(
+    requestHeaders.get(TRACEPARENT_HEADER),
+    resolveTraceSamplerRatio(),
+  );
+  requestHeaders.set(TRACEPARENT_HEADER, traceparent);
+  requestHeaders.set(TRACE_ID_HEADER, traceId);
+
   if (appPathname.startsWith("/portal") || appPathname.startsWith("/admin")) {
     requestHeaders.set("x-pathname", appPathname);
   }
@@ -47,6 +57,7 @@ export function proxy(request: NextRequest) {
   });
 
   response.headers.set("x-request-id", requestId);
+  response.headers.set(TRACE_ID_HEADER, traceId);
 
   if (localeSlug) {
     response.cookies.set(CUSTOMER_LOCALE_COOKIE, localeSlug, customerLocaleCookieOptions());

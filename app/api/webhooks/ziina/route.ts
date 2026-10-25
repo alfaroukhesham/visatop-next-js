@@ -16,10 +16,16 @@ import {
 import { ZIINA_WEBHOOK_SOURCE_IPS } from "@/lib/payments/resolve-payment-provider";
 import { markWebhookReceivedNow, PLATFORM_KEY_LAST_WEBHOOK_ZIINA } from "@/lib/payments/webhook-health";
 import { createRequestLogger } from "@/lib/logger";
+import { withSpan } from "@/lib/observability/tracing";
 
 export const runtime = "nodejs";
 
-export async function POST(req: Request) {
+export const POST = async (req: Request) =>
+  withSpan("payments.webhook.ziina", { provider: "ziina", operation: "webhook" }, () =>
+    postZiinaWebhook(req),
+  );
+
+const postZiinaWebhook = async (req: Request) => {
   const [bodyText, hdrs] = await Promise.all([req.text(), headers()]);
   const requestId = hdrs.get("x-request-id");
   const log = createRequestLogger(requestId);
@@ -141,4 +147,4 @@ export async function POST(req: Request) {
   }
 
   return jsonOk({ received: true }, { requestId });
-}
+};

@@ -11,11 +11,17 @@ import {
   type ReconcileFincraAttemptResult,
 } from "@/lib/payments/reconcile-fincra-payments";
 import { scheduleFincraPaidSideEffects } from "@/lib/payments/fincra-payment-side-effects";
+import { withSpan } from "@/lib/observability/tracing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
+export const POST = async (request: Request) =>
+  withSpan("reconcile.fincra", { provider: "fincra", operation: "reconcile" }, () =>
+    postReconcileFincra(request),
+  );
+
+const postReconcileFincra = async (request: Request) => {
   const hdrs = await headers();
   const requestId = hdrs.get("x-request-id");
   const expected = process.env.INTERNAL_CRON_SECRET?.trim();
@@ -87,4 +93,4 @@ export async function POST(request: Request) {
     },
     { requestId },
   );
-}
+};
