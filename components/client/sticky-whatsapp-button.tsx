@@ -1,7 +1,15 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import type { FC } from "react";
+import { matchTouristVisaFlowWhatsAppStep } from "@/lib/client/tourist-visa-flow-whatsapp";
 import { SUPPORT_WHATSAPP_URL } from "@/lib/support-contact";
 
 interface IStickyWhatsAppButtonProps {
+  label: string;
+}
+
+interface IStickyWhatsAppAnchorProps {
   label: string;
 }
 
@@ -16,7 +24,7 @@ const WhatsAppIcon: FC = () => (
   </svg>
 );
 
-export const StickyWhatsAppButton: FC<IStickyWhatsAppButtonProps> = ({ label }) => {
+const StickyWhatsAppAnchor: FC<IStickyWhatsAppAnchorProps> = ({ label }) => {
   return (
     <a
       href={SUPPORT_WHATSAPP_URL}
@@ -30,4 +38,57 @@ export const StickyWhatsAppButton: FC<IStickyWhatsAppButtonProps> = ({ label }) 
       <WhatsAppIcon />
     </a>
   );
+};
+
+export const StickyWhatsAppButton: FC<IStickyWhatsAppButtonProps> = ({ label }) => {
+  const pathname = usePathname() ?? "";
+  const step = matchTouristVisaFlowWhatsAppStep(pathname);
+
+  if (step === null) {
+    return <StickyWhatsAppAnchor label={label} />;
+  }
+
+  switch (step) {
+    case "nationality": {
+      // WA-AB-TEST (2026-10-26): WhatsApp button hidden for A/B test; uncomment to restore
+      // return <StickyWhatsAppAnchor label={label} />;
+      return null;
+    }
+    case "visa": {
+      // WA-AB-TEST (2026-10-26): WhatsApp button hidden for A/B test; uncomment to restore
+      // return <StickyWhatsAppAnchor label={label} />;
+      return null;
+    }
+    case "documents": {
+      // WA-AB-TEST (2026-10-26): WhatsApp button hidden for A/B test; uncomment to restore
+      // return <StickyWhatsAppAnchor label={label} />;
+      return null;
+    }
+    case "checkout": {
+      // WA-AB-TEST (2026-10-26): WhatsApp button hidden for A/B test; uncomment to restore
+      // Week 2: uncomment the next line (and delete `return null`) to restore checkout/payment only.
+      // return <StickyWhatsAppAnchor label={label} />;
+      return null;
+    }
+    case "checkoutReturn": {
+      // WA-AB-TEST (2026-10-26): WhatsApp button hidden for A/B test; uncomment to restore
+      // return <StickyWhatsAppAnchor label={label} />;
+      return null;
+    }
+    case "submitted": {
+      // WA-AB-TEST (2026-10-26): WhatsApp button hidden for A/B test; uncomment to restore
+      // return <StickyWhatsAppAnchor label={label} />;
+      return null;
+    }
+    case "resume": {
+      // WA-AB-TEST (2026-10-26): WhatsApp button hidden for A/B test; uncomment to restore
+      // return <StickyWhatsAppAnchor label={label} />;
+      return null;
+    }
+    case "linkAfterSignup": {
+      // WA-AB-TEST (2026-10-26): WhatsApp button hidden for A/B test; uncomment to restore
+      // return <StickyWhatsAppAnchor label={label} />;
+      return null;
+    }
+  }
 };

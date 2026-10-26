@@ -147,6 +147,11 @@ export default async function ClientLayout({ children }: { children: ReactNode }
         <WpShellFallbackFooter t={t} />
       )}
 
+      {/*
+        Shared client-shell render (home, apply, portal, auth, expert LP).
+        Tourist visa flow steps no-op inside StickyWhatsAppButton (WA-AB-TEST 2026-10-26).
+        Do not comment this out — that would also hide the button outside the tourist flow.
+      */}
       <StickyWhatsAppButton label={t("common.whatsappSupport")} />
     </div>
   );
