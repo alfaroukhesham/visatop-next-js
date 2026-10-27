@@ -13,6 +13,9 @@ import { WP_SHELL_NARROW_HEADER_CSS } from "./wp-shell-header-narrow-css";
 
 const APP_BASE_PATH = "/visa-processing";
 
+const HEADER_PLACEHOLDER_SRCDOC =
+  "<!doctype html><html><head><meta charset=utf-8><style>html,body{margin:0;background:#012031;height:100%}</style></head><body></body></html>";
+
 interface ILanguageSwitcherConfig {
   current: string;
   available: WpShellLanguageOption[];
@@ -657,9 +660,10 @@ export function WpShellFrame(props: {
 
   useOnBfcacheRestore(assignIframeSrcDoc);
 
+  const [shellReady, setShellReady] = useState(false);
   useEffect(() => {
-    assignIframeSrcDoc();
-  }, [assignIframeSrcDoc]);
+    setShellReady(true);
+  }, []);
 
   useLayoutEffect(() => {
     const iframe = iframeRef.current;
@@ -780,6 +784,9 @@ export function WpShellFrame(props: {
       ref={iframeRef}
       title={props.kind === "header" ? "WP Header" : "WP Footer"}
       data-wp-shell={props.kind}
+      srcDoc={
+        shellReady ? srcDoc : props.kind === "header" ? HEADER_PLACEHOLDER_SRCDOC : undefined
+      }
       width={props.kind === "header" ? 412 : 1280}
       height={heightPx}
       sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
