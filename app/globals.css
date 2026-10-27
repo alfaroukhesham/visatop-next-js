@@ -438,25 +438,35 @@
   padding-top: var(--wp-shell-header-height, 0px);
 }
 
-/* Reserve the WP header offset before the iframe posts its height (CLS).
-   Literal padding-top !important beats both the CSS variable and any inline fallback
-   so a late --wp-shell-header-height write cannot shift the hero. */
+/* Desktop WP header is ~130px on prod. Lock that above 414px so the hero
+   does not sit 12px high. Keep the #50 118px reserve at 414px and below. */
 .theme-client-wp-header {
-  --wp-shell-header-height: 118px;
+  --wp-shell-header-height: 130px;
 }
 .theme-client-wp-header .theme-client-main {
-  padding-top: 118px;
+  padding-top: 130px;
 }
-.theme-client-wp-header iframe[data-wp-shell="header"] {
-  min-height: 118px;
+.theme-client-wp-header iframe[data-wp-shell="header"],
+.theme-client-wp-header [data-wp-shell-slot="header"] {
+  min-height: 130px;
+}
+.theme-client-wp-header [data-wp-shell-slot="header"] {
+  height: 130px;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 414px) {
+  .theme-client-wp-header {
+    --wp-shell-header-height: 118px;
+  }
   .theme-client-wp-header .theme-client-main {
     padding-top: 118px !important;
   }
   .theme-client-wp-header iframe[data-wp-shell="header"] {
-    min-height: 118px;
+    min-height: 118px !important;
+    height: 118px !important;
+  }
+  .theme-client-wp-header [data-wp-shell-slot="header"] {
+    min-height: 118px !important;
     height: 118px !important;
   }
 }

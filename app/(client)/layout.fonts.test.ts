@@ -37,9 +37,12 @@ describe("customer font loading", () => {
 
   it("inlines first-paint WP header padding so CLS does not wait on the CSS bundle", () => {
     const layout = read("app/(client)/layout.tsx");
+    expect(layout).toContain("padding-top:130px!important");
+    expect(layout).toContain("--wp-shell-header-height:130px");
+    expect(layout).toContain("paddingTop: 130");
+    expect(layout).toContain("@media (max-width:414px)");
+    expect(layout).toContain("--wp-shell-header-height:118px!important");
     expect(layout).toContain("padding-top:118px!important");
-    expect(layout).toContain("--wp-shell-header-height:118px");
-    expect(layout).toContain("paddingTop: 118");
   });
 
   it("does not load customer fonts from the root layout", () => {

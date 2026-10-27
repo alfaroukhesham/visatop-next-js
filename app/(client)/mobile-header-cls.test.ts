@@ -10,14 +10,17 @@ const combobox = readFileSync(
 );
 
 describe("mobile WP header CLS reservation", () => {
-  it("reserves 118px header offset before the iframe posts its height", () => {
+  it("reserves 130px on desktop and keeps the 118px mobile offset at 414px and below", () => {
+    expect(globals).toContain("--wp-shell-header-height: 130px");
+    expect(globals).toContain("padding-top: 130px");
+    expect(globals).toContain("@media (max-width: 414px)");
     expect(globals).toContain("--wp-shell-header-height: 118px");
-    expect(globals).toContain("min-height: 118px");
+    expect(globals).toContain("min-height: 118px !important");
     expect(globals).toContain("height: 118px !important");
     expect(globals).toContain("padding-top: 118px !important");
-    expect(globals).toContain("@media (max-width: 767px)");
-    expect(layout).toContain("paddingTop: 118");
-    expect(layout).toContain("--wp-shell-header-height");
+    expect(layout).toContain("paddingTop: 130");
+    expect(layout).toContain("--wp-shell-header-height:130px");
+    expect(layout).toContain("@media (max-width:414px)");
     expect(layout).toContain("theme-client-wp-header");
     expect(layout).toContain("theme-client-main");
   });
