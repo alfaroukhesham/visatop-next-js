@@ -9,7 +9,7 @@ interface IMicrosoftClarityProps {
 
 /**
  * Loads Microsoft Clarity on the customer shell only (not admin / API).
- * Do not set Script id="clarity" — Clarity also uses that id internally.
+ * Script id must stay `visatop-clarity`. Clarity also claims the bare `clarity` id.
  */
 export const MicrosoftClarity: FC<IMicrosoftClarityProps> = (props): ReactElement | null => {
   const projectId = props.projectId ?? getClarityProjectId();

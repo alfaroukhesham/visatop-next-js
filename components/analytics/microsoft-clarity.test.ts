@@ -24,8 +24,8 @@ describe("MicrosoftClarity", () => {
 
   it("does not use id=clarity (conflicts with Clarity's own element)", () => {
     const src = read("components/analytics/microsoft-clarity.tsx");
-    expect(src).toContain('id="visatop-clarity"');
-    expect(src).not.toContain('id="clarity"');
+    expect(src).toMatch(/<Script[\s\S]*?\sid="visatop-clarity"/);
+    expect(src).not.toMatch(/<Script[\s\S]*?\sid=["']clarity["']/);
   });
 });
 
