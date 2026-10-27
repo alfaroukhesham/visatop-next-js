@@ -1,6 +1,7 @@
 import { Inter, Noto_Serif } from "next/font/google";
 import { cookies, headers } from "next/headers";
 import type { CSSProperties, ReactNode } from "react";
+import { preload } from "react-dom";
 import { AnalyticsProviders } from "@/components/analytics/analytics-providers";
 import { AnalyticsResourceHints } from "@/components/analytics/analytics-resource-hints";
 import { MarketingTags } from "@/components/analytics/marketing-tags";
@@ -119,6 +120,9 @@ export default async function ClientLayout({ children }: { children: ReactNode }
     formatCustomerMessage(i18n.messages, i18n.fallback, key, vars);
   const marketingTagsEnabled = areMarketingTagsEnabledFromHeaders(requestHeaders);
   const criticalFontHrefs = readCriticalFontPreloadHrefs();
+  for (const href of criticalFontHrefs) {
+    preload(href, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
+  }
 
   return (
     <div
@@ -131,16 +135,6 @@ export default async function ClientLayout({ children }: { children: ReactNode }
           : undefined
       }
     >
-      {criticalFontHrefs.map((href) => (
-        <link
-          key={href}
-          rel="preload"
-          href={href}
-          as="font"
-          type="font/woff2"
-          crossOrigin="anonymous"
-        />
-      ))}
       <span className={`${inter.className} sr-only`} aria-hidden>
         {" "}
       </span>
@@ -151,10 +145,9 @@ export default async function ClientLayout({ children }: { children: ReactNode }
         <style
           dangerouslySetInnerHTML={{
             __html:
-              ".theme-client-wp-header .theme-client-main{padding-top:var(--wp-shell-header-height,118px)}" +
-              "@media (max-width:414px){.theme-client-wp-header{--wp-shell-header-height:118px}" +
-              ".theme-client-wp-header .theme-client-main{padding-top:118px}" +
-              ".theme-client-wp-header iframe[data-wp-shell=header]{min-height:118px}}",
+              ".theme-client-wp-header{--wp-shell-header-height:118px}" +
+              ".theme-client-wp-header .theme-client-main{padding-top:118px!important}" +
+              ".theme-client-wp-header iframe[data-wp-shell=header]{min-height:118px;height:118px!important}",
           }}
         />
       ) : null}
@@ -173,11 +166,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
 
       <div
         className="theme-client-main relative z-0 flex min-h-0 flex-1 flex-col"
-        style={
-          model?.headerHtml
-            ? { paddingTop: "var(--wp-shell-header-height, 118px)" }
-            : undefined
-        }
+        style={model?.headerHtml ? { paddingTop: 118 } : undefined}
       >
         <AnalyticsResourceHints includeMarketing={marketingTagsEnabled} />
         <MarketingTags />

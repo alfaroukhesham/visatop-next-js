@@ -29,7 +29,9 @@ describe("WP_SHELL_NARROW_HEADER_CSS", () => {
     const frame = readFileSync(path.join(__dirname, "wp-shell-frame.tsx"), "utf8");
     expect(frame).toContain("WP_SHELL_NARROW_HEADER_CSS");
     expect(frame).toContain('input.kind === "header" ? WP_SHELL_NARROW_HEADER_CSS : ""');
-    expect(frame).toContain("HEADER_PLACEHOLDER_SRCDOC");
+    expect(frame).toContain("HEADER_SLOT_HEIGHT_PX");
     expect(frame).toContain("useSyncExternalStore");
+    expect(frame).toContain('data-wp-shell-slot="header"');
+    expect(frame).toContain("headerRevealed");
   });
 });

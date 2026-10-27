@@ -27,14 +27,14 @@ describe("customer font loading", () => {
     expect(layout).toContain("inter.className");
     expect(layout).toContain("notoSerif.className");
     expect(layout).toContain("readCriticalFontPreloadHrefs");
-    expect(layout).toContain('rel="preload"');
-    expect(layout).toContain('as="font"');
+    expect(layout).toContain('preload(href, { as: "font", type: "font/woff2", crossOrigin: "anonymous" })');
   });
 
   it("inlines first-paint WP header padding so CLS does not wait on the CSS bundle", () => {
     const layout = read("app/(client)/layout.tsx");
-    expect(layout).toContain("padding-top:118px");
-    expect(layout).toContain("--wp-shell-header-height,118px");
+    expect(layout).toContain("padding-top:118px!important");
+    expect(layout).toContain("--wp-shell-header-height:118px");
+    expect(layout).toContain("paddingTop: 118");
   });
 
   it("does not load Red Hat on every document including visa-processing", () => {
@@ -53,5 +53,6 @@ describe("customer font loading", () => {
     const globals = read("app/globals.css");
     expect(globals).not.toContain("--font-body: ui-sans-serif, system-ui, sans-serif !important");
     expect(globals).not.toContain("--font-display: ui-sans-serif, system-ui, sans-serif !important");
+    expect(globals).toContain("font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif");
   });
 });

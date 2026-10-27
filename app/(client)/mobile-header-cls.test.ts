@@ -10,21 +10,16 @@ const combobox = readFileSync(
 );
 
 describe("mobile WP header CLS reservation", () => {
-  it("reserves header height only inside a max-width 414px query", () => {
-    expect(globals).toContain("@media (max-width: 414px)");
+  it("reserves 118px header offset before the iframe posts its height", () => {
     expect(globals).toContain("--wp-shell-header-height: 118px");
     expect(globals).toContain("min-height: 118px");
     expect(globals).toContain("height: 118px !important");
     expect(globals).toContain("padding-top: 118px !important");
-    expect(layout).toContain("paddingTop");
+    expect(globals).toContain("@media (max-width: 767px)");
+    expect(layout).toContain("paddingTop: 118");
     expect(layout).toContain("--wp-shell-header-height");
     expect(layout).toContain("theme-client-wp-header");
     expect(layout).toContain("theme-client-main");
-    const withoutMobileQuery = globals.replace(
-      /@media \(max-width: 414px\) \{[\s\S]*?\}/,
-      "",
-    );
-    expect(withoutMobileQuery).not.toContain("--wp-shell-header-height: 118px");
   });
 });
 
@@ -34,11 +29,13 @@ describe("narrow passport select icon", () => {
     expect(combobox).toContain("max-[240px]:pl-3");
   });
 
-  it("lets the compact placeholder wrap below 240px", () => {
-    expect(combobox).toContain("max-[240px]:placeholder:whitespace-normal");
-    expect(combobox).toContain("break-words whitespace-normal");
-    expect(combobox).toContain("max-[240px]:flex");
+  it("lets the compact placeholder wrap at max-width 240px inclusive", () => {
+    expect(combobox).toContain("data-nationality-compact-overlay");
     expect(combobox).toContain("compactPlaceholder");
+    expect(combobox).toContain("break-words whitespace-normal");
+    expect(globals).toContain("@media (max-width: 240px)");
+    expect(globals).toContain("[data-nationality-compact-overlay]");
+    expect(globals).toContain("display: flex !important");
   });
 
   it("pins lucide icon width and height so the SVG circle cannot shift", () => {

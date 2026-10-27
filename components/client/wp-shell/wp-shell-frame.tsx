@@ -21,8 +21,7 @@ import { WP_SHELL_NARROW_HEADER_CSS } from "./wp-shell-header-narrow-css";
 
 const APP_BASE_PATH = "/visa-processing";
 
-const HEADER_PLACEHOLDER_SRCDOC =
-  "<!doctype html><html><head><meta charset=utf-8><style>html,body{margin:0;background:#012031;height:100%}</style></head><body></body></html>";
+const HEADER_SLOT_HEIGHT_PX = 118;
 
 interface ILanguageSwitcherConfig {
   current: string;
@@ -611,8 +610,13 @@ export function WpShellFrame(props: {
   const router = useRouter();
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const menuOpenRef = useRef(false);
-  const lastGoodHeightRef = useRef<number>(props.kind === "header" ? 118 : 400);
-  const [heightPx, setHeightPx] = useState<number>(props.kind === "header" ? 118 : 400);
+  const lastGoodHeightRef = useRef<number>(
+    props.kind === "header" ? HEADER_SLOT_HEIGHT_PX : 400,
+  );
+  const [heightPx, setHeightPx] = useState<number>(
+    props.kind === "header" ? HEADER_SLOT_HEIGHT_PX : 400,
+  );
+  const [headerRevealed, setHeaderRevealed] = useState(false);
   const languageSwitcher =
     props.kind === "header" && props.languageSwitcher ? props.languageSwitcher : null;
   const postMessageToken = useMemo(
@@ -736,6 +740,8 @@ export function WpShellFrame(props: {
             : 0;
         if (menuOpen && props.kind === "header" && viewportH > 0) {
           setHeightPx(viewportH);
+        } else if (props.kind === "header") {
+          setHeightPx(HEADER_SLOT_HEIGHT_PX);
         } else if (Number.isFinite(h) && h > 0) {
           lastGoodHeightRef.current = h;
           setHeightPx(h);
@@ -788,35 +794,58 @@ export function WpShellFrame(props: {
     return () => window.removeEventListener("pageshow", onPageShow);
   }, [assignIframeSrcDoc]);
 
+  const headerHidden = props.kind === "header" && !headerRevealed;
+
   return (
-    <iframe
-      ref={iframeRef}
-      title={props.kind === "header" ? "WP Header" : "WP Footer"}
-      data-wp-shell={props.kind}
-      srcDoc={
-        shellReady ? srcDoc : props.kind === "header" ? HEADER_PLACEHOLDER_SRCDOC : undefined
-      }
-      width={props.kind === "header" ? 412 : 1280}
-      height={heightPx}
-      sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
-      style={{
-        width: "100%",
-        height: `${heightPx}px`,
-        border: "0",
-        display: "block",
-        background: props.kind === "header" ? "#012031" : "transparent",
-        ...(props.kind === "header"
-          ? {
-              position: "fixed",
-              top: 0,
-              left: 0,
-              // Intentionally extreme to beat app stacking contexts (dialogs, sticky bars, etc).
-              zIndex: 2147483647,
-            }
-          : null),
-      }}
-      scrolling="no"
-    />
+    <>
+      {props.kind === "header" ? (
+        <div
+          aria-hidden
+          data-wp-shell-slot="header"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: HEADER_SLOT_HEIGHT_PX,
+            background: "#012031",
+            zIndex: 2147483646,
+          }}
+        />
+      ) : null}
+      <iframe
+        ref={iframeRef}
+        title={props.kind === "header" ? "WP Header" : "WP Footer"}
+        data-wp-shell={props.kind}
+        srcDoc={shellReady ? srcDoc : undefined}
+        width={props.kind === "header" ? 412 : 1280}
+        height={heightPx}
+        sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+        onLoad={() => {
+          if (props.kind !== "header") return;
+          if (iframeRef.current?.srcdoc) setHeaderRevealed(true);
+        }}
+        style={{
+          width: "100%",
+          height: `${heightPx}px`,
+          border: "0",
+          display: "block",
+          overflow: "hidden",
+          background: props.kind === "header" ? "#012031" : "transparent",
+          visibility: headerHidden ? "hidden" : "visible",
+          ...(props.kind === "header"
+            ? {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                // Intentionally extreme to beat app stacking contexts (dialogs, sticky bars, etc).
+                zIndex: 2147483647,
+              }
+            : null),
+        }}
+        scrolling="no"
+      />
+    </>
   );
 }
 

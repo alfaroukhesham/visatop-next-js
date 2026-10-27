@@ -93,7 +93,7 @@ describe("HomeNationalityStart", () => {
         <HomeNationalityStart />
       </CustomerI18nProvider>,
     );
-    expect(html).toContain("max-[240px]:flex");
+    expect(html).toContain("data-nationality-compact-overlay");
     expect(html).toMatch(/line-clamp-2[^>]*>Passport</);
   });
 

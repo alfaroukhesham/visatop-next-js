@@ -451,6 +451,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
       ref={wrapRef}
       className={cn("relative w-full", open && "z-[100]", className)}
       data-combobox-query={open ? (draftQuery ?? "") : undefined}
+      data-nationality-compact=""
       style={{
         scrollMarginTop: `calc(var(${WP_SHELL_HEADER_HEIGHT_VAR}, 0px) + ${COMBOBOX_LIST_VIEWPORT_TOP_PADDING_PX}px)`,
       }}
@@ -458,6 +459,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
       <div className="relative">
         {selectedFlag && !open ? (
           <span
+            data-nationality-compact-hide=""
             className={cn(
               "pointer-events-none absolute top-1/2 flex -translate-y-1/2 items-center justify-center leading-none max-[240px]:hidden",
               hero ? "left-4 size-6 text-2xl" : "left-3 size-5 text-lg",
@@ -468,6 +470,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
           </span>
         ) : (
           <span
+            data-nationality-compact-hide=""
             className={cn(
               "text-muted-foreground pointer-events-none absolute top-1/2 flex -translate-y-1/2 items-center justify-center max-[240px]:hidden",
               hero ? "left-4 size-6" : "left-3 size-5",
@@ -493,6 +496,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
           disabled={disabled}
           placeholder={resolvedPlaceholder}
           value={inputValue}
+          data-nationality-compact-input=""
           onChange={(e) => {
             openList(e.target.value);
           }}
@@ -512,6 +516,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
         />
         {!inputValue ? (
           <span
+            data-nationality-compact-overlay=""
             className="text-muted-foreground pointer-events-none absolute inset-y-0 left-3 right-7 hidden items-center overflow-hidden max-[240px]:flex"
             aria-hidden
           >
@@ -521,6 +526,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
           </span>
         ) : null}
         <span
+          data-nationality-compact-chevron=""
           className={cn(
             "text-muted-foreground pointer-events-none absolute top-1/2 flex -translate-y-1/2 items-center justify-center max-[240px]:right-1.5 max-[240px]:size-5",
             hero ? "right-3 size-6" : "right-3 size-5",
