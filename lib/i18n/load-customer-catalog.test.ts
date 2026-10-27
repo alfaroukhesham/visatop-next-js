@@ -38,4 +38,17 @@ describe("getCustomerMessages", () => {
     expect(customerInLanguageTag("en")).toBe("en-GB");
     expect(customerInLanguageTag("ar")).toBe("ar");
   });
+
+  it("uses a shorter home nationality placeholder for narrow viewports in en, ar, and fr", () => {
+    for (const locale of ["en", "ar", "fr"] as const) {
+      const t = createCustomerT(locale);
+      const full = t("home.nationalityPlaceholder");
+      const narrow = t("home.nationalityPlaceholderNarrow");
+      expect(narrow.length, locale).toBeGreaterThan(0);
+      expect(narrow.length, locale).toBeLessThan(full.length);
+    }
+    expect(createCustomerT("en")("home.nationalityPlaceholderNarrow")).toBe("Your passport");
+    expect(createCustomerT("ar")("home.nationalityPlaceholderNarrow")).toBe("جواز سفرك");
+    expect(createCustomerT("fr")("home.nationalityPlaceholderNarrow")).toBe("Votre passeport");
+  });
 });

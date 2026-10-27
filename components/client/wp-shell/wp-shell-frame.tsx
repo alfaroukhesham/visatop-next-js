@@ -9,6 +9,7 @@ import {
 } from "@/lib/i18n/customer-locale";
 import { classifyWpShellNavigateUrl } from "@/lib/wp-headless/classify-shell-navigate-url";
 import type { WpShellLanguageOption } from "@/lib/wp-headless/types";
+import { WP_SHELL_NARROW_HEADER_CSS } from "./wp-shell-header-narrow-css";
 
 const APP_BASE_PATH = "/visa-processing";
 
@@ -333,6 +334,8 @@ function buildSrcDoc(input: {
           right: 0;
         }
       }
+
+      ${input.kind === "header" ? WP_SHELL_NARROW_HEADER_CSS : ""}
     </style>
   </head>
   <body class="${bodyClass}">

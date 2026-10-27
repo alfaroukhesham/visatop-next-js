@@ -7,6 +7,7 @@
     "body": "اختر جواز السفر الذي تسافر به. نعرض لك فقط ما يمكنك التقدّم له، ثم نحتفظ بملفك في مساحة عمل واحدة حتى تدفع وتُرسِل الطلب.",
     "nationalityLabelSrOnly": "اختر جنسية جواز سفرك",
     "nationalityPlaceholder": "اختر جنسية جواز سفرك",
+    "nationalityPlaceholderNarrow": "جواز سفرك",
     "nationalityHelper": "بعد ذلك تختار تأشيرتك وعملتك.",
     "nextButton": "التالي",
     "guestTrackLink": "تتبّع الطلب",

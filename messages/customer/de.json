@@ -7,6 +7,7 @@
     "body": "Wählen Sie den Reisepass, mit dem Sie reisen. Wir zeigen nur, wofür Sie sich bewerben können, und behalten Ihre Unterlagen in einem Arbeitsbereich, bis Sie bezahlen und einreichen.",
     "nationalityLabelSrOnly": "Wählen Sie die Staatsangehörigkeit Ihres Passes",
     "nationalityPlaceholder": "Wählen Sie die Staatsangehörigkeit Ihres Passes",
+    "nationalityPlaceholderNarrow": "Ihr Reisepass",
     "nationalityHelper": "Als Nächstes wählen Sie Ihr Visum und Ihre Währung.",
     "nextButton": "Weiter",
     "guestTrackLink": "Antrag verfolgen",

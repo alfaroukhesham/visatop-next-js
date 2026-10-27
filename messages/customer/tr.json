@@ -7,6 +7,7 @@
     "body": "Seyahat ettiğiniz pasaportu seçin. Yalnızca başvurabileceğiniz seçenekleri gösteriyoruz; ardından ödeme yapıp gönderene kadar dosyanızı tek bir çalışma alanında tutuyoruz.",
     "nationalityLabelSrOnly": "Pasaportunuzun uyruğunu seçin",
     "nationalityPlaceholder": "Pasaportunuzun uyruğunu seçin",
+    "nationalityPlaceholderNarrow": "Pasaportunuz",
     "nationalityHelper": "Sonraki adımda vizenizi ve para biriminizi seçersiniz.",
     "nextButton": "İleri",
     "guestTrackLink": "Başvuruyu takip et",

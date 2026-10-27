@@ -7,6 +7,7 @@
     "body": "Indiquez le passeport avec lequel vous voyagez. Nous n'affichons que les options auxquelles vous pouvez prétendre, puis conservons votre dossier dans un même espace jusqu'au paiement et à la soumission.",
     "nationalityLabelSrOnly": "Sélectionnez la nationalité de votre passeport",
     "nationalityPlaceholder": "Sélectionnez la nationalité de votre passeport",
+    "nationalityPlaceholderNarrow": "Votre passeport",
     "nationalityHelper": "Ensuite, vous choisissez votre visa et votre devise.",
     "nextButton": "Suivant",
     "guestTrackLink": "Suivre ma demande",
