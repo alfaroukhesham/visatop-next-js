@@ -15,7 +15,7 @@ describe("mobile WP header CLS reservation", () => {
     expect(globals).toContain("padding-top: 130px");
     expect(globals).toContain("@media (max-width: 414px)");
     expect(globals).toContain("--wp-shell-header-height: 118px");
-    expect(globals).toContain("min-height: 118px");
+    expect(globals).toContain("min-height: 118px !important");
     expect(globals).toContain("height: 118px !important");
     expect(globals).toContain("padding-top: 118px !important");
     expect(layout).toContain("paddingTop: 130");

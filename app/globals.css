@@ -462,12 +462,12 @@
     padding-top: 118px !important;
   }
   .theme-client-wp-header iframe[data-wp-shell="header"] {
-    min-height: 118px;
+    min-height: 118px !important;
     height: 118px !important;
   }
   .theme-client-wp-header [data-wp-shell-slot="header"] {
-    min-height: 118px;
-    height: 118px;
+    min-height: 118px !important;
+    height: 118px !important;
   }
 }
 

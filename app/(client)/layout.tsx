@@ -157,8 +157,8 @@ export default async function ClientLayout({ children }: { children: ReactNode }
               "@media (max-width:414px){" +
               ".theme-client-wp-header{--wp-shell-header-height:118px!important}" +
               ".theme-client-wp-header .theme-client-main{padding-top:118px!important}" +
-              ".theme-client-wp-header iframe[data-wp-shell=header]{min-height:118px;height:118px!important}" +
-              ".theme-client-wp-header [data-wp-shell-slot=header]{height:118px!important}" +
+              ".theme-client-wp-header iframe[data-wp-shell=header]{min-height:118px!important;height:118px!important}" +
+              ".theme-client-wp-header [data-wp-shell-slot=header]{min-height:118px!important;height:118px!important}" +
               "}",
           }}
         />
