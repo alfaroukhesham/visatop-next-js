@@ -144,6 +144,7 @@
 
 .theme-client {
   color-scheme: light;
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   --background: #ffffff;
   --foreground: #012031;
   --card: #ffffff;
@@ -433,19 +434,52 @@
   outline-offset: 3px;
 }
 
-/* Mobile only: reserve the WP header offset before the iframe posts its height (CLS). */
-@media (max-width: 414px) {
-  .theme-client-wp-header {
-    --wp-shell-header-height: 118px;
+.theme-client-main {
+  padding-top: var(--wp-shell-header-height, 0px);
+}
+
+/* Reserve the WP header offset before the iframe posts its height (CLS).
+   Literal padding-top !important beats both the CSS variable and any inline fallback
+   so a late --wp-shell-header-height write cannot shift the hero. */
+.theme-client-wp-header {
+  --wp-shell-header-height: 118px;
+}
+.theme-client-wp-header .theme-client-main {
+  padding-top: 118px;
+}
+.theme-client-wp-header iframe[data-wp-shell="header"] {
+  min-height: 118px;
+}
+
+@media (max-width: 767px) {
+  .theme-client-wp-header .theme-client-main {
+    padding-top: 118px !important;
   }
   .theme-client-wp-header iframe[data-wp-shell="header"] {
-    min-height: 107px;
+    min-height: 118px;
+    height: 118px !important;
   }
-  /* Lab LCP is the home h1. Override next/font variables so Inter/Noto are
-     unused at this breakpoint and are not downloaded on Slow 4G. */
-  .theme-client {
-    --font-body: ui-sans-serif, system-ui, sans-serif !important;
-    --font-display: ui-sans-serif, system-ui, sans-serif !important;
+}
+
+/* Inclusive of 240px: Tailwind v4 max-[240px] is width < 240px and misses the 240px / 188px zoom cases. */
+@media (max-width: 240px) {
+  [data-nationality-compact-hide] {
+    display: none !important;
+  }
+  [data-nationality-compact-overlay] {
+    display: flex !important;
+  }
+  [data-nationality-compact-input] {
+    padding-left: 0.75rem !important;
+    padding-right: 1.75rem !important;
+  }
+  [data-nationality-compact-input]::placeholder {
+    color: transparent !important;
+  }
+  [data-nationality-compact-chevron] {
+    right: 0.375rem !important;
+    width: 1.25rem !important;
+    height: 1.25rem !important;
   }
 }
 

@@ -1,6 +1,7 @@
-import { Inter, Noto_Serif } from "next/font/google";
+import { Noto_Serif, Red_Hat_Text } from "next/font/google";
 import { cookies, headers } from "next/headers";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { preload } from "react-dom";
 import { AnalyticsProviders } from "@/components/analytics/analytics-providers";
 import { AnalyticsResourceHints } from "@/components/analytics/analytics-resource-hints";
 import { MarketingTags } from "@/components/analytics/marketing-tags";
@@ -12,6 +13,7 @@ import { StickyWhatsAppButton } from "@/components/client/sticky-whatsapp-button
 import { WpShellFallbackFooter, WpShellFallbackHeader } from "@/components/client/wp-shell/wp-shell-fallback";
 import { WpShellFrame } from "@/components/client/wp-shell/wp-shell-frame";
 import { getAppOrigin } from "@/lib/app-url";
+import { readCriticalFontPreloadHrefs } from "@/lib/client/critical-font-preloads";
 import {
   CUSTOMER_LOCALE_COOKIE,
   CUSTOMER_LOCALE_REQUEST_HEADER,
@@ -25,20 +27,26 @@ import { areMarketingTagsEnabledFromHeaders } from "@/lib/analytics/marketing-ta
 import { fetchWpShellModel } from "@/lib/wp-headless/fetch-layout";
 import type { WpShellLanguageOption } from "@/lib/wp-headless/types";
 
-const inter = Inter({
+const redHatText = Red_Hat_Text({
   variable: "--font-body",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  display: "optional",
-  preload: true,
+  weight: ["400", "600"],
+  display: "swap",
+  // CSS still swap-loads Red Hat so body matches prod. Do not preload it:
+  // the extra woff2 contended with Noto on Slow 4G and recast LCP past 3s.
+  preload: false,
+  adjustFontFallback: true,
 });
 
 const notoSerif = Noto_Serif({
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["600"],
+  // optional + preload: desktop still gets Noto; Slow 4G LCP stays on the
+  // size-adjusted fallback instead of recasting the hero after the woff2.
   display: "optional",
-  preload: false,
+  preload: true,
+  adjustFontFallback: true,
 });
 
 const resolveLanguageSwitcherOptions = (input: {
@@ -106,13 +114,48 @@ export default async function ClientLayout({ children }: { children: ReactNode }
   const t = (key: string, vars?: TCustomerMessageVars) =>
     formatCustomerMessage(i18n.messages, i18n.fallback, key, vars);
   const marketingTagsEnabled = areMarketingTagsEnabledFromHeaders(requestHeaders);
+  const criticalFontHrefs = readCriticalFontPreloadHrefs();
+  for (const href of criticalFontHrefs) {
+    preload(href, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
+  }
 
   return (
     <div
       data-ui="client"
       dir={isCustomerLocaleRtl(locale) ? "rtl" : undefined}
-      className={`theme-client theme-client-page-canvas ${inter.variable} ${notoSerif.variable} flex min-h-screen min-h-dvh flex-col text-[18px] leading-[1.6] antialiased${model?.headerHtml ? " theme-client-wp-header" : ""}`}
+      className={`theme-client theme-client-page-canvas ${redHatText.variable} ${notoSerif.variable} flex min-h-screen min-h-dvh flex-col text-[18px] leading-[1.6] antialiased${model?.headerHtml ? " theme-client-wp-header" : ""}`}
+      style={
+        model?.headerHtml
+          ? ({ ["--wp-shell-header-height"]: "118px" } as CSSProperties)
+          : undefined
+      }
     >
+      {criticalFontHrefs.map((href) => (
+        <link
+          key={href}
+          rel="preload"
+          href={href}
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+      ))}
+      <span className={`${redHatText.className} sr-only`} aria-hidden>
+        {" "}
+      </span>
+      <span className={`${notoSerif.className} sr-only`} aria-hidden>
+        {" "}
+      </span>
+      {model?.headerHtml ? (
+        <style
+          dangerouslySetInnerHTML={{
+            __html:
+              ".theme-client-wp-header{--wp-shell-header-height:118px}" +
+              ".theme-client-wp-header .theme-client-main{padding-top:118px!important}" +
+              ".theme-client-wp-header iframe[data-wp-shell=header]{min-height:118px;height:118px!important}",
+          }}
+        />
+      ) : null}
       {model?.headerHtml ? (
         <WpShellFrame
           kind="header"
@@ -127,12 +170,8 @@ export default async function ClientLayout({ children }: { children: ReactNode }
       )}
 
       <div
-        className="flex min-h-0 flex-1 flex-col"
-        style={{
-          paddingTop: "var(--wp-shell-header-height, 0px)",
-          position: "relative",
-          zIndex: 0,
-        }}
+        className="theme-client-main relative z-0 flex min-h-0 flex-1 flex-col"
+        style={model?.headerHtml ? { paddingTop: 118 } : undefined}
       >
         <AnalyticsResourceHints includeMarketing={marketingTagsEnabled} />
         <MarketingTags />

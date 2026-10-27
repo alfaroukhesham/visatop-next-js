@@ -1,7 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 import {
   buildCustomerLocaleSetCookieValue,
@@ -12,6 +20,10 @@ import type { WpShellLanguageOption } from "@/lib/wp-headless/types";
 import { WP_SHELL_NARROW_HEADER_CSS } from "./wp-shell-header-narrow-css";
 
 const APP_BASE_PATH = "/visa-processing";
+
+const HEADER_SLOT_HEIGHT_PX = 118;
+const HEADER_PLACEHOLDER_SRCDOC =
+  "<!doctype html><html><head><meta charset=utf-8><style>html,body{margin:0;background:#012031;height:100%}</style></head><body></body></html>";
 
 interface ILanguageSwitcherConfig {
   current: string;
@@ -81,7 +93,7 @@ const LANG_SWITCHER_STYLES = `
       }
       header#header nav.menu .lang-switcher-label {
         font-size: 14px;
-        font-family: "Inter", sans-serif;
+        font-family: ui-sans-serif, system-ui, sans-serif;
         font-weight: 400;
         line-height: 1;
       }
@@ -169,7 +181,7 @@ function buildSrcDoc(input: {
   languageSwitcher?: ILanguageSwitcherConfig | null;
 }): string {
   const links = input.cssUrls
-    .filter(Boolean)
+    .filter((href) => Boolean(href) && !/fonts\.google(apis|static)/i.test(href))
     .map((href) => `<link rel="stylesheet" href="${escapeAttr(href)}">`)
     .join("\n");
 
@@ -195,11 +207,29 @@ function buildSrcDoc(input: {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    ${
+      input.kind === "header"
+        ? `<meta http-equiv="Content-Security-Policy" content="font-src 'none'">`
+        : ""
+    }
     <base ${baseHref ? `href="${escapeAttr(baseHref)}"` : ""} />
+    <style>
+      header#header .logo picture { display: block; height: 40px; width: auto; max-width: 220px; }
+      header#header .logo img { display: block; height: 40px; width: 180px; max-width: 220px; object-fit: contain; }
+    </style>
     ${links}
     <style>
       html, body { margin: 0; padding: 0; background: transparent !important; }
       body { overflow: hidden; }
+      ${
+        input.kind === "header"
+          ? `@font-face{font-family:Inter;font-style:normal;font-weight:100 900;src:local("Arial"),local("Helvetica Neue"),local("sans-serif");font-display:optional;unicode-range:U+0-10FFFF}
+             @font-face{font-family:Inter;font-style:italic;font-weight:100 900;src:local("Arial"),local("Helvetica Neue"),local("sans-serif");font-display:optional;unicode-range:U+0-10FFFF}
+             html,body,header#header,header#header *{font-family:ui-sans-serif,system-ui,sans-serif !important}`
+          : ""
+      }
+      header#header .logo picture { display: block; height: 40px; width: auto; max-width: 220px; }
+      header#header .logo img { display: block; height: 40px; width: 180px; max-width: 220px; object-fit: contain; }
 
       /* Fallback alignment: in WP this is handled by theme/plugin CSS, but our headless CSS
          bundle may omit those rules. This keeps "Time in UAE" pinned to the right. */
@@ -209,8 +239,8 @@ function buildSrcDoc(input: {
       /* "Featured on" logos: WP theme constrains these; headless CSS path misses it. */
       header#header .featured_on .inner a img {
         height: 16px;
-        width: auto;
-        max-width: 100%;
+        width: 64px;
+        max-width: 64px;
         object-fit: contain;
         filter: brightness(0) invert(1);
       }
@@ -456,6 +486,15 @@ function buildSrcDoc(input: {
 
       injectLanguageSwitcher();
       document.addEventListener("DOMContentLoaded", injectLanguageSwitcher);
+      try {
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(function () { post("wp-shell:fonts-ready"); });
+        } else {
+          post("wp-shell:fonts-ready");
+        }
+      } catch (e) {
+        post("wp-shell:fonts-ready");
+      }
 
       document.addEventListener("keydown", function (e) {
         if (e.key === "Escape" && document.body.classList.contains("show-menu")) {
@@ -594,8 +633,13 @@ export function WpShellFrame(props: {
   const router = useRouter();
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const menuOpenRef = useRef(false);
-  const lastGoodHeightRef = useRef<number>(props.kind === "header" ? 120 : 400);
-  const [heightPx, setHeightPx] = useState<number>(props.kind === "header" ? 120 : 400);
+  const lastGoodHeightRef = useRef<number>(
+    props.kind === "header" ? HEADER_SLOT_HEIGHT_PX : 400,
+  );
+  const [heightPx, setHeightPx] = useState<number>(
+    props.kind === "header" ? HEADER_SLOT_HEIGHT_PX : 400,
+  );
+  const [headerRevealed, setHeaderRevealed] = useState(false);
   const languageSwitcher =
     props.kind === "header" && props.languageSwitcher ? props.languageSwitcher : null;
   const postMessageToken = useMemo(
@@ -610,10 +654,27 @@ export function WpShellFrame(props: {
     [props.html, props.cssUrls, props.kind, props.hideLangSwitcher, languageSwitcher],
   );
 
+  const headerHtmlWithSizedLogo =
+    props.kind === "header"
+      ? props.html
+          .replace(
+            /<img\b([^>]*\balt="VisaTop"[^>]*)>/i,
+            (_full, attrs: string) =>
+              /\bwidth\s*=/.test(attrs) && /\bheight\s*=/.test(attrs)
+                ? `<img${attrs}>`
+                : `<img width="180" height="40"${attrs}>`,
+          )
+          .replace(/<img\b([^>]*)>/gi, (full, attrs: string) =>
+            /\bwidth\s*=/.test(attrs) && /\bheight\s*=/.test(attrs)
+              ? full
+              : `<img width="64" height="16"${attrs}>`,
+          )
+      : props.html;
+
   const srcDoc = useMemo(
     () =>
       buildSrcDoc({
-        html: props.html,
+        html: headerHtmlWithSizedLogo,
         cssUrls: props.cssUrls,
         kind: props.kind,
         baseHref: props.baseHref ?? null,
@@ -622,7 +683,7 @@ export function WpShellFrame(props: {
         languageSwitcher,
       }),
     [
-      props.html,
+      headerHtmlWithSizedLogo,
       props.cssUrls,
       props.kind,
       props.baseHref,
@@ -639,6 +700,12 @@ export function WpShellFrame(props: {
   }, [srcDoc]);
 
   useOnBfcacheRestore(assignIframeSrcDoc);
+
+  const shellReady = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
 
   useLayoutEffect(() => {
     const iframe = iframeRef.current;
@@ -658,6 +725,9 @@ export function WpShellFrame(props: {
         slug?: unknown;
       };
       if (msg.token !== postMessageToken) return;
+      if (msg.type === "wp-shell:fonts-ready" && props.kind === "header") {
+        setHeaderRevealed(true);
+      }
       if (msg.type === "wp-shell:locale" && typeof msg.slug === "string" && msg.slug.trim()) {
         const planned = planCustomerLocaleSwitch({
           href: window.location.href,
@@ -702,6 +772,8 @@ export function WpShellFrame(props: {
             : 0;
         if (menuOpen && props.kind === "header" && viewportH > 0) {
           setHeightPx(viewportH);
+        } else if (props.kind === "header") {
+          setHeightPx(HEADER_SLOT_HEIGHT_PX);
         } else if (Number.isFinite(h) && h > 0) {
           lastGoodHeightRef.current = h;
           setHeightPx(h);
@@ -755,30 +827,57 @@ export function WpShellFrame(props: {
   }, [assignIframeSrcDoc]);
 
   return (
-    <iframe
-      ref={iframeRef}
-      title={props.kind === "header" ? "WP Header" : "WP Footer"}
-      data-wp-shell={props.kind}
-      srcDoc={srcDoc}
-      sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
-      style={{
-        width: "100%",
-        height: `${heightPx}px`,
-        border: "0",
-        display: "block",
-        background: "transparent",
-        ...(props.kind === "header"
-          ? {
-              position: "fixed",
-              top: 0,
-              left: 0,
-              // Intentionally extreme to beat app stacking contexts (dialogs, sticky bars, etc).
-              zIndex: 2147483647,
-            }
-          : null),
-      }}
-      scrolling="no"
-    />
+    <>
+      {props.kind === "header" ? (
+        <div
+          aria-hidden
+          data-wp-shell-slot="header"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: HEADER_SLOT_HEIGHT_PX,
+            background: "#012031",
+            zIndex: 2147483646,
+          }}
+        />
+      ) : null}
+      <iframe
+        ref={iframeRef}
+        title={props.kind === "header" ? "WP Header" : "WP Footer"}
+        data-wp-shell={props.kind}
+        srcDoc={
+          shellReady ? srcDoc : props.kind === "header" ? HEADER_PLACEHOLDER_SRCDOC : undefined
+        }
+        width={props.kind === "header" ? 412 : 1280}
+        height={heightPx}
+        sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+        onLoad={() => {
+          if (props.kind !== "header") return;
+          window.setTimeout(() => setHeaderRevealed(true), 1500);
+        }}
+        style={{
+          width: "100%",
+          height: `${heightPx}px`,
+          minHeight: props.kind === "header" ? HEADER_SLOT_HEIGHT_PX : undefined,
+          border: "0",
+          display: props.kind === "header" && !headerRevealed ? "none" : "block",
+          overflow: "hidden",
+          background: props.kind === "header" ? "#012031" : "transparent",
+          ...(props.kind === "header"
+            ? {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                // Intentionally extreme to beat app stacking contexts (dialogs, sticky bars, etc).
+                zIndex: 2147483647,
+              }
+            : null),
+        }}
+        scrolling="no"
+      />
+    </>
   );
 }
 

@@ -3,6 +3,7 @@ import Script from "next/script";
 import { ThemeClassSync } from "@/components/theme-class-sync";
 import { BFCACHE_BOOTSTRAP_SCRIPT } from "@/lib/client/bfcache-bootstrap-script";
 import { getAppOrigin } from "@/lib/app-url";
+import { readCriticalFontPreloadHrefs } from "@/lib/client/critical-font-preloads";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -33,6 +34,16 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className="h-full antialiased">
       <body className="relative flex min-h-full flex-col">
+        {readCriticalFontPreloadHrefs().map((href) => (
+          <link
+            key={href}
+            rel="preload"
+            href={href}
+            as="font"
+            type="font/woff2"
+            crossOrigin="anonymous"
+          />
+        ))}
         <Script
           id="visatop-bfcache-bootstrap"
           strategy="beforeInteractive"

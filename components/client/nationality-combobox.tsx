@@ -48,6 +48,8 @@ interface INationalityComboboxProps {
   valueCode: string | null;
   onSelectCode: (code: string) => void;
   placeholder?: string;
+  /** One-word label shown in the max-[240px] overlay (Passport / الجواز / Passeport). */
+  compactPlaceholder?: string;
   disabled?: boolean;
   /** Larger padding + text for hero usage */
   size?: "default" | "hero";
@@ -70,6 +72,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
   valueCode,
   onSelectCode,
   placeholder,
+  compactPlaceholder,
   disabled,
   size = "default",
   className,
@@ -79,6 +82,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
   const t = useCustomerT();
   const locale = useCustomerLocale();
   const resolvedPlaceholder = placeholder ?? t("common.nationalityDefaultPlaceholder");
+  const resolvedCompactPlaceholder = compactPlaceholder ?? resolvedPlaceholder;
   const reactId = useId();
   const listId = `${reactId}-listbox`;
   const id = idProp ?? `${reactId}-input`;
@@ -447,6 +451,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
       ref={wrapRef}
       className={cn("relative w-full", open && "z-[100]", className)}
       data-combobox-query={open ? (draftQuery ?? "") : undefined}
+      data-nationality-compact=""
       style={{
         scrollMarginTop: `calc(var(${WP_SHELL_HEADER_HEIGHT_VAR}, 0px) + ${COMBOBOX_LIST_VIEWPORT_TOP_PADDING_PX}px)`,
       }}
@@ -454,22 +459,30 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
       <div className="relative">
         {selectedFlag && !open ? (
           <span
+            data-nationality-compact-hide=""
             className={cn(
-              "pointer-events-none absolute top-1/2 -translate-y-1/2 leading-none max-[240px]:hidden",
-              hero ? "left-4 text-2xl" : "left-3 text-lg",
+              "pointer-events-none absolute top-1/2 flex -translate-y-1/2 items-center justify-center leading-none max-[240px]:hidden",
+              hero ? "left-4 size-6 text-2xl" : "left-3 size-5 text-lg",
             )}
             aria-hidden
           >
             {selectedFlag}
           </span>
         ) : (
-          <Globe
+          <span
+            data-nationality-compact-hide=""
             className={cn(
-              "text-muted-foreground pointer-events-none absolute top-1/2 -translate-y-1/2 max-[240px]:hidden",
+              "text-muted-foreground pointer-events-none absolute top-1/2 flex -translate-y-1/2 items-center justify-center max-[240px]:hidden",
               hero ? "left-4 size-6" : "left-3 size-5",
             )}
             aria-hidden
-          />
+          >
+            <Globe
+              className={hero ? "size-6" : "size-5"}
+              width={hero ? 24 : 20}
+              height={hero ? 24 : 20}
+            />
+          </span>
         )}
         <ClientInput
           ref={inputRef}
@@ -483,6 +496,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
           disabled={disabled}
           placeholder={resolvedPlaceholder}
           value={inputValue}
+          data-nationality-compact-input=""
           onChange={(e) => {
             openList(e.target.value);
           }}
@@ -502,21 +516,29 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
         />
         {!inputValue ? (
           <span
+            data-nationality-compact-overlay=""
             className="text-muted-foreground pointer-events-none absolute inset-y-0 left-3 right-7 hidden items-center overflow-hidden max-[240px]:flex"
             aria-hidden
           >
             <span className="line-clamp-2 w-full text-left text-sm leading-tight break-words whitespace-normal">
-              {resolvedPlaceholder}
+              {resolvedCompactPlaceholder}
             </span>
           </span>
         ) : null}
-        <ChevronDown
+        <span
+          data-nationality-compact-chevron=""
           className={cn(
-            "text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 max-[240px]:right-1.5 max-[240px]:size-5",
-            hero ? "size-6" : "size-5",
+            "text-muted-foreground pointer-events-none absolute top-1/2 flex -translate-y-1/2 items-center justify-center max-[240px]:right-1.5 max-[240px]:size-5",
+            hero ? "right-3 size-6" : "right-3 size-5",
           )}
           aria-hidden
-        />
+        >
+          <ChevronDown
+            className={hero ? "size-6" : "size-5"}
+            width={hero ? 24 : 20}
+            height={hero ? 24 : 20}
+          />
+        </span>
       </div>
       {inlineList ? dropdownShell : portalContent}
     </div>

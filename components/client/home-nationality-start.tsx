@@ -30,10 +30,10 @@ declare global {
 export const HomeNationalityStart: FC = () => {
   const t = useCustomerT();
   const router = useRouter();
-  // Keep the SSR placeholder string stable. Swapping it after matchMedia
-  // recasts LCP on the 412px lab page; 414px sizing is CSS (`placeholder:text-sm`),
-  // and 240px wrapping lives on NationalityCombobox.
+  // 412px LCP uses the long SSR placeholder. The one-word 240px label is a
+  // CSS overlay (compactPlaceholder) so matchMedia cannot recast LCP.
   const nationalityPlaceholder = t("home.nationalityPlaceholder");
+  const compactPlaceholder = t("home.nationalityPlaceholderCompact");
   const [nationalities, setNationalities] = useState<Nationality[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,6 +119,7 @@ export const HomeNationalityStart: FC = () => {
             onSelectCode={setSelectedCode}
             onFirstInteraction={onNationalityFirstInteraction}
             placeholder={nationalityPlaceholder}
+            compactPlaceholder={compactPlaceholder}
             size="hero"
             className="max-[414px]:min-w-0 max-[414px]:max-w-full"
             inputClassName="max-[414px]:placeholder:text-sm"
