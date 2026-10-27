@@ -30,6 +30,6 @@ describe("WP_SHELL_NARROW_HEADER_CSS", () => {
     expect(frame).toContain("WP_SHELL_NARROW_HEADER_CSS");
     expect(frame).toContain('input.kind === "header" ? WP_SHELL_NARROW_HEADER_CSS : ""');
     expect(frame).toContain("HEADER_PLACEHOLDER_SRCDOC");
-    expect(frame).toContain("shellReady");
+    expect(frame).toContain("useSyncExternalStore");
   });
 });

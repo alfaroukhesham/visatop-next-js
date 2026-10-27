@@ -1,7 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 import {
   buildCustomerLocaleSetCookieValue,
@@ -660,10 +668,11 @@ export function WpShellFrame(props: {
 
   useOnBfcacheRestore(assignIframeSrcDoc);
 
-  const [shellReady, setShellReady] = useState(false);
-  useEffect(() => {
-    setShellReady(true);
-  }, []);
+  const shellReady = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
 
   useLayoutEffect(() => {
     const iframe = iframeRef.current;
