@@ -73,6 +73,11 @@ export function sanitizeWpShellHtml(input: string): string {
     allowProtocolRelative: false,
     enforceHtmlBoundary: true,
     transformTags: {
+      img: (tagName, attribs) => {
+        // srcdoc iframes below the fold often never fire native lazy-load, so the
+        // footer VisaTop logo stays blank on staging screenshots. Force eager.
+        return { tagName, attribs: { ...attribs, loading: "eager" } };
+      },
       a: (tagName, attribs) => {
         // Remove javascript: style links even if somehow encoded; sanitize-html already blocks schemes.
         const next: Record<string, string> = { ...attribs };
