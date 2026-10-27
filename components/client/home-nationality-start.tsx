@@ -16,6 +16,7 @@ import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { trackEventOnce } from "@/lib/analytics/gtag-client";
+import { useNarrowViewport } from "@/lib/client/use-narrow-viewport";
 
 type Nationality = { code: string; name: string };
 
@@ -31,6 +32,10 @@ declare global {
 export const HomeNationalityStart: FC = () => {
   const t = useCustomerT();
   const router = useRouter();
+  const narrowViewport = useNarrowViewport();
+  const nationalityPlaceholder = t(
+    narrowViewport ? "home.nationalityPlaceholderNarrow" : "home.nationalityPlaceholder",
+  );
   const [nationalities, setNationalities] = useState<Nationality[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -103,9 +108,9 @@ export const HomeNationalityStart: FC = () => {
   }, []);
 
   return (
-    <div className="mt-10 w-full">
-      <div className="border-secondary/35 bg-card relative z-20 overflow-visible rounded-[12px] border-[3px] shadow-[0_20px_56px_rgba(1,32,49,0.14)]">
-        <div className="p-4 sm:p-6 md:p-8">
+    <div className="mt-10 w-full max-[414px]:mt-4 max-[414px]:min-w-0 max-[414px]:max-w-full">
+      <div className="border-secondary/35 bg-card relative z-20 overflow-visible rounded-[12px] border-[3px] shadow-[0_20px_56px_rgba(1,32,49,0.14)] max-[414px]:min-w-0 max-[414px]:max-w-full">
+        <div className="p-4 sm:p-6 md:p-8 max-[414px]:p-3">
           <label htmlFor="home-nationality-input" className="sr-only">
             {t("home.nationalityLabelSrOnly")}
           </label>
@@ -122,24 +127,25 @@ export const HomeNationalityStart: FC = () => {
               valueCode={selectedCode}
               onSelectCode={setSelectedCode}
               onFirstInteraction={onNationalityFirstInteraction}
-              placeholder={t("home.nationalityPlaceholder")}
+              placeholder={nationalityPlaceholder}
               size="hero"
+              className="max-[414px]:min-w-0 max-[414px]:max-w-full"
             />
           )}
         </div>
       </div>
-      <p className="text-muted-foreground mt-4 max-w-prose text-sm leading-relaxed">
+      <p className="text-muted-foreground mt-4 max-w-prose text-sm leading-relaxed max-[414px]:mt-3">
         {t("home.nationalityHelper")}
       </p>
 
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center max-[414px]:mt-4 max-[414px]:min-w-0 max-[414px]:max-w-full">
         <ClientButton
           type="button"
           brand="cta"
           variant="outline"
           disabled={!selectedCode || selectedCode.length !== 2}
           onClick={onContinue}
-          className="min-w-[148px] justify-center border-secondary/40 text-secondary hover:bg-secondary/10 disabled:pointer-events-none disabled:opacity-50"
+          className="min-w-[148px] justify-center border-secondary/40 text-secondary hover:bg-secondary/10 disabled:pointer-events-none disabled:opacity-50 max-[414px]:min-w-0 max-[414px]:w-full max-[414px]:max-w-full max-[414px]:shrink"
         >
           {t("home.nextButton")}
         </ClientButton>

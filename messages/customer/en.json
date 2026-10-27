@@ -7,6 +7,7 @@
     "body": "Select the passport you travel on. We show only what you can apply for, then keep your file in one workspace until you pay and submit.",
     "nationalityLabelSrOnly": "Select your Passport nationality",
     "nationalityPlaceholder": "Select your Passport nationality",
+    "nationalityPlaceholderNarrow": "Your passport",
     "nationalityHelper": "Next you choose your visa and currency.",
     "nextButton": "Next",
     "guestTrackLink": "Track application",

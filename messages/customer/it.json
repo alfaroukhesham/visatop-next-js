@@ -7,6 +7,7 @@
     "body": "Selezioni il passaporto con cui viaggia. Le mostriamo solo ciò che può richiedere, poi conserviamo il suo fascicolo in un unico spazio fino al pagamento e all'invio.",
     "nationalityLabelSrOnly": "Selezioni la nazionalità del suo passaporto",
     "nationalityPlaceholder": "Selezioni la nazionalità del suo passaporto",
+    "nationalityPlaceholderNarrow": "Il suo passaporto",
     "nationalityHelper": "Poi sceglie il visto e la valuta.",
     "nextButton": "Avanti",
     "guestTrackLink": "Monitora la domanda",
