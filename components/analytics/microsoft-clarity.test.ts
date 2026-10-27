@@ -17,9 +17,7 @@ describe("MicrosoftClarity", () => {
     expect(tree).not.toBeNull();
     expect(tree?.props.id).toBe("visatop-clarity");
     expect(tree?.props.strategy).toBe("afterInteractive");
-    expect(tree?.props.dangerouslySetInnerHTML).toEqual({
-      __html: buildClarityBootstrapScript("waxpllatey"),
-    });
+    expect(tree?.props.children).toBe(buildClarityBootstrapScript("waxpllatey"));
   });
 
   it("does not use id=clarity (conflicts with Clarity's own element)", () => {
