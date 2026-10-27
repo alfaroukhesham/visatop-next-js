@@ -6,25 +6,24 @@ const read = (relativePath: string): string =>
   readFileSync(path.join(process.cwd(), relativePath), "utf8");
 
 describe("customer font loading", () => {
-  it("loads Inter and Noto with swap, size-adjust fallbacks, and preload", () => {
+  it("loads Red Hat Text and Noto to match prod, with size-adjust fallbacks", () => {
     const layout = read("app/(client)/layout.tsx");
     expect(layout).toContain("next/font/google");
-    expect(layout).toContain("Inter");
+    expect(layout).toContain("Red_Hat_Text");
     expect(layout).toContain("Noto_Serif");
+    expect(layout).not.toContain("Inter");
     expect(layout).toContain('display: "swap"');
     expect(layout).toContain('display: "optional"');
     expect(layout).toContain("adjustFontFallback: true");
     expect(layout).toContain("preload: true");
   });
 
-  it("preloads only Inter 400 and Noto 600, not UI weights", () => {
+  it("preloads Red Hat Text 400 and Noto 600, not extra UI families", () => {
     const layout = read("app/(client)/layout.tsx");
-    expect(layout).toContain('weight: ["400"]');
-    expect(layout).toContain('weight: ["500", "600"]');
+    expect(layout).toContain('weight: ["400", "600"]');
     expect(layout).toContain('weight: ["600"]');
-    expect(layout).toContain("preload: false");
-    expect(layout).toContain("interUi.variable");
-    expect(layout).toContain("inter.className");
+    expect(layout).toContain("redHatText.variable");
+    expect(layout).toContain("redHatText.className");
     expect(layout).toContain("notoSerif.className");
     expect(layout).toContain("readCriticalFontPreloadHrefs");
     expect(layout).toContain('preload(href, { as: "font", type: "font/woff2", crossOrigin: "anonymous" })');
@@ -39,17 +38,17 @@ describe("customer font loading", () => {
     expect(layout).toContain("paddingTop: 118");
   });
 
-  it("does not load Red Hat on every document including visa-processing", () => {
+  it("does not load customer fonts from the root layout", () => {
     const root = read("app/layout.tsx");
     expect(root).not.toContain("next/font/google");
-    expect(root).not.toContain("Red_Hat");
     expect(root).toContain("readCriticalFontPreloadHrefs");
     expect(root).toContain('as="font"');
   });
 
-  it("keeps Red Hat on the admin shell only", () => {
+  it("keeps Red Hat on the admin shell", () => {
     const admin = read("app/admin/layout.tsx");
     expect(admin).toContain("Red_Hat_Text");
+    expect(admin).toContain("Red_Hat_Display");
     expect(admin).toContain('display: "swap"');
   });
 

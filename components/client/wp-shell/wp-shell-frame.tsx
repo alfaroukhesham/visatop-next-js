@@ -22,6 +22,8 @@ import { WP_SHELL_NARROW_HEADER_CSS } from "./wp-shell-header-narrow-css";
 const APP_BASE_PATH = "/visa-processing";
 
 const HEADER_SLOT_HEIGHT_PX = 118;
+const HEADER_PLACEHOLDER_SRCDOC =
+  "<!doctype html><html><head><meta charset=utf-8><style>html,body{margin:0;background:#012031;height:100%}</style></head><body></body></html>";
 
 interface ILanguageSwitcherConfig {
   current: string;
@@ -636,7 +638,6 @@ export function WpShellFrame(props: {
   const [heightPx, setHeightPx] = useState<number>(
     props.kind === "header" ? HEADER_SLOT_HEIGHT_PX : 400,
   );
-  const [headerRevealed, setHeaderRevealed] = useState(false);
   const languageSwitcher =
     props.kind === "header" && props.languageSwitcher ? props.languageSwitcher : null;
   const postMessageToken = useMemo(
@@ -752,10 +753,6 @@ export function WpShellFrame(props: {
         }
         return;
       }
-      if (msg.type === "wp-shell:fonts-ready" && props.kind === "header") {
-        setHeaderRevealed(true);
-        return;
-      }
       if (msg.type === "wp-shell:height" && msg.kind === props.kind) {
         const h = Number(msg.height);
         const baseH = Number(msg.baseHeight);
@@ -824,8 +821,6 @@ export function WpShellFrame(props: {
     return () => window.removeEventListener("pageshow", onPageShow);
   }, [assignIframeSrcDoc]);
 
-  const headerHidden = props.kind === "header" && !headerRevealed;
-
   return (
     <>
       {props.kind === "header" ? (
@@ -847,19 +842,18 @@ export function WpShellFrame(props: {
         ref={iframeRef}
         title={props.kind === "header" ? "WP Header" : "WP Footer"}
         data-wp-shell={props.kind}
-        srcDoc={shellReady ? srcDoc : undefined}
+        srcDoc={
+          shellReady ? srcDoc : props.kind === "header" ? HEADER_PLACEHOLDER_SRCDOC : undefined
+        }
         width={props.kind === "header" ? 412 : 1280}
         height={heightPx}
         sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
-        onLoad={() => {
-          if (props.kind !== "header") return;
-          window.setTimeout(() => setHeaderRevealed(true), 1500);
-        }}
         style={{
           width: "100%",
           height: `${heightPx}px`,
+          minHeight: props.kind === "header" ? HEADER_SLOT_HEIGHT_PX : undefined,
           border: "0",
-          display: headerHidden ? "none" : "block",
+          display: "block",
           overflow: "hidden",
           background: props.kind === "header" ? "#012031" : "transparent",
           ...(props.kind === "header"

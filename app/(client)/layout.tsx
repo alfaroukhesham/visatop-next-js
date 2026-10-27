@@ -1,4 +1,4 @@
-import { Inter, Noto_Serif } from "next/font/google";
+import { Noto_Serif, Red_Hat_Text } from "next/font/google";
 import { cookies, headers } from "next/headers";
 import type { CSSProperties, ReactNode } from "react";
 import { preload } from "react-dom";
@@ -27,21 +27,12 @@ import { areMarketingTagsEnabledFromHeaders } from "@/lib/analytics/marketing-ta
 import { fetchWpShellModel } from "@/lib/wp-headless/fetch-layout";
 import type { WpShellLanguageOption } from "@/lib/wp-headless/types";
 
-const inter = Inter({
+const redHatText = Red_Hat_Text({
   variable: "--font-body",
   subsets: ["latin"],
-  weight: ["400"],
+  weight: ["400", "600"],
   display: "swap",
   preload: true,
-  adjustFontFallback: true,
-});
-
-const interUi = Inter({
-  variable: "--font-body-ui",
-  subsets: ["latin"],
-  weight: ["500", "600"],
-  display: "optional",
-  preload: false,
   adjustFontFallback: true,
 });
 
@@ -49,8 +40,8 @@ const notoSerif = Noto_Serif({
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["600"],
-  // optional + preload: desktop/broadband still gets Noto; Slow 4G LCP stays on
-  // the size-adjusted fallback instead of recasting the hero after the woff2.
+  // optional + preload: desktop still gets Noto; Slow 4G LCP stays on the
+  // size-adjusted fallback instead of recasting the hero after the woff2.
   display: "optional",
   preload: true,
   adjustFontFallback: true,
@@ -130,7 +121,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
     <div
       data-ui="client"
       dir={isCustomerLocaleRtl(locale) ? "rtl" : undefined}
-      className={`theme-client theme-client-page-canvas ${inter.variable} ${interUi.variable} ${notoSerif.variable} flex min-h-screen min-h-dvh flex-col text-[18px] leading-[1.6] antialiased${model?.headerHtml ? " theme-client-wp-header" : ""}`}
+      className={`theme-client theme-client-page-canvas ${redHatText.variable} ${notoSerif.variable} flex min-h-screen min-h-dvh flex-col text-[18px] leading-[1.6] antialiased${model?.headerHtml ? " theme-client-wp-header" : ""}`}
       style={
         model?.headerHtml
           ? ({ ["--wp-shell-header-height"]: "118px" } as CSSProperties)
@@ -147,7 +138,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
           crossOrigin="anonymous"
         />
       ))}
-      <span className={`${inter.className} sr-only`} aria-hidden>
+      <span className={`${redHatText.className} sr-only`} aria-hidden>
         {" "}
       </span>
       <span className={`${notoSerif.className} sr-only`} aria-hidden>

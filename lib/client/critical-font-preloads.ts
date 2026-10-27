@@ -4,8 +4,8 @@ import path from "node:path";
 const FACE_RE = /@font-face\{[^}]+\}/g;
 const MEDIA_RE = /url\((?:\.\.\/media\/)([^)]+\.p\.[^)]+\.woff2)\)/;
 
-const isInterLatin400 = (face: string): boolean =>
-  face.includes("font-family:Inter") &&
+const isRedHatTextLatin400 = (face: string): boolean =>
+  /font-family:(?:["']Red Hat Text["']|Red Hat Text)/.test(face) &&
   !face.includes("Fallback") &&
   face.includes("font-weight:400") &&
   face.includes(".p.");
@@ -20,7 +20,7 @@ export const criticalFontHrefsFromCss = (css: string): string[] => {
   const hrefs: string[] = [];
   const seen = new Set<string>();
   for (const face of css.match(FACE_RE) ?? []) {
-    if (!isInterLatin400(face) && !isNotoLatin600(face)) continue;
+    if (!isRedHatTextLatin400(face) && !isNotoLatin600(face)) continue;
     const media = face.match(MEDIA_RE)?.[1];
     if (!media || seen.has(media)) continue;
     seen.add(media);
