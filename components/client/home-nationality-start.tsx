@@ -15,10 +15,6 @@ import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { trackEventOnce } from "@/lib/analytics/gtag-client";
-import {
-  COMPACT_VIEWPORT_MEDIA_QUERY,
-  useNarrowViewport,
-} from "@/lib/client/use-narrow-viewport";
 
 type Nationality = { code: string; name: string };
 
@@ -34,15 +30,10 @@ declare global {
 export const HomeNationalityStart: FC = () => {
   const t = useCustomerT();
   const router = useRouter();
-  const narrowViewport = useNarrowViewport();
-  const compactViewport = useNarrowViewport(COMPACT_VIEWPORT_MEDIA_QUERY);
-  const nationalityPlaceholder = t(
-    compactViewport
-      ? "home.nationalityPlaceholderCompact"
-      : narrowViewport
-        ? "home.nationalityPlaceholderNarrow"
-        : "home.nationalityPlaceholder",
-  );
+  // Keep the SSR placeholder string stable. Swapping it after matchMedia
+  // recasts LCP on the 412px lab page; 414px sizing is CSS (`placeholder:text-sm`),
+  // and 240px wrapping lives on NationalityCombobox.
+  const nationalityPlaceholder = t("home.nationalityPlaceholder");
   const [nationalities, setNationalities] = useState<Nationality[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
