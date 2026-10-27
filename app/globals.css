@@ -429,6 +429,16 @@
   outline-offset: 3px;
 }
 
+/* Mobile only: reserve the WP header offset before the iframe posts its height (CLS). */
+@media (max-width: 414px) {
+  .theme-client-wp-header {
+    --wp-shell-header-height: 118px;
+  }
+  .theme-client-wp-header iframe[data-wp-shell="header"] {
+    min-height: 107px;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

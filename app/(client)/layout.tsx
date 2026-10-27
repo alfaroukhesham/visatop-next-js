@@ -104,7 +104,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
     <div
       data-ui="client"
       dir={isCustomerLocaleRtl(locale) ? "rtl" : undefined}
-      className={`theme-client theme-client-page-canvas ${inter.variable} ${notoSerif.variable} flex min-h-screen min-h-dvh flex-col text-[18px] leading-[1.6] antialiased`}
+      className={`theme-client theme-client-page-canvas ${inter.variable} ${notoSerif.variable} flex min-h-screen min-h-dvh flex-col text-[18px] leading-[1.6] antialiased${model?.headerHtml ? " theme-client-wp-header" : ""}`}
     >
       {model?.headerHtml ? (
         <WpShellFrame
