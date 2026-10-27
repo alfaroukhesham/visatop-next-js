@@ -91,6 +91,26 @@ const countByPeriod = (
     { current: 0, previous: 0 },
   );
 
+/** Expired checkout rows are counted per provider, currency, type, and status. */
+export const expiredPaymentEventCountQuery = (tx: DbTransaction, range: TInstantRange) =>
+  tx
+    .select({
+      provider: sql<string>`coalesce(${paymentEvent.provider}, ${payment.provider}, 'unknown')`,
+      currency: sql<string>`coalesce(${payment.currency}, '')`,
+      type: paymentEvent.type,
+      status: paymentEvent.status,
+      count: sql<number>`cast(count(*) as int)`,
+    })
+    .from(paymentEvent)
+    .leftJoin(payment, eq(payment.id, paymentEvent.paymentId))
+    .where(inRange(paymentEvent.receivedAt, range))
+    .groupBy(
+      sql`coalesce(${paymentEvent.provider}, ${payment.provider}, 'unknown')`,
+      sql`coalesce(${payment.currency}, '')`,
+      paymentEvent.type,
+      paymentEvent.status,
+    );
+
 export const loadAdminAnalyticsExpansion = async (
   tx: DbTransaction,
   range: TInstantRange,
@@ -134,17 +154,7 @@ export const loadAdminAnalyticsExpansion = async (
       })
       .from(payment)
       .groupBy(payment.provider, payment.currency, payment.status),
-    tx
-      .select({
-        provider: sql<string>`coalesce(${paymentEvent.provider}, ${payment.provider}, 'unknown')`,
-        currency: sql<string>`coalesce(${payment.currency}, '')`,
-        type: paymentEvent.type,
-        status: paymentEvent.status,
-        count: sql<number>`cast(count(*) as int)`,
-      })
-      .from(paymentEvent)
-      .leftJoin(payment, eq(payment.id, paymentEvent.paymentId))
-      .where(inRange(paymentEvent.receivedAt, range)),
+    expiredPaymentEventCountQuery(tx, range),
     tx
       .select({
         provider: payment.provider,
