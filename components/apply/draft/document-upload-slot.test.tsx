@@ -124,7 +124,7 @@ describe("DocumentUploadSlot", () => {
   });
 
   it("uses full-width 44px-tall actions and masks the passport example", () => {
-    wrap(
+    const { container } = wrap(
       <DocumentUploadSlot
         label="Passport (bio page)"
         description="JPEG"
@@ -150,6 +150,7 @@ describe("DocumentUploadSlot", () => {
     const specimen = screen.getByRole("img", { name: /fake passport/i });
     expect(specimen).toHaveAttribute("data-clarity-mask", "true");
     expect(specimen).toHaveAttribute("src", "/visa-processing/apply/passport-bio-specimen.svg");
+    expect(container.querySelector('[class*="scroll-mt"]')).toHaveAttribute("data-clarity-mask", "true");
   });
 
   it("shows a passport OCR notice in the slot and not as a duplicate upload error", () => {

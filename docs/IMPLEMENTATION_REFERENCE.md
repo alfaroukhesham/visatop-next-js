@@ -264,6 +264,13 @@ Migrated in `drizzle/0002_harsh_wolverine.sql`:
 - DSN-gated `@sentry/nextjs` against self-hosted GlitchTip. See [`docs/observability/sentry.md`](observability/sentry.md).
 - `register()` calls `registerSentry()` first (including Edge), then Node tracing. `onRequestError` is a no-op without `SENTRY_DSN`.
 
+### Microsoft Clarity (customer shell)
+
+- Loaded with `next/script` (`strategy="afterInteractive"`) from [`app/(client)/layout.tsx`](../app/(client)/layout.tsx) only — **not** `/admin` or `/api`.
+- Project id: `NEXT_PUBLIC_CLARITY_PROJECT_ID` (default `waxpllatey`, same project as visatop.com WordPress). Explicit empty string skips the script. See `.env.example`.
+- Apply form, passport/photo slots, personal-detail review, and payment containers set `data-clarity-mask="true"` so extracted fields and document previews are not recorded. Clarity already masks `<input>` / `<textarea>` by default.
+- There is no Content-Security-Policy in `next.config.ts` or `proxy.ts`. If one is added later, allow `https://www.clarity.ms`, `https://*.clarity.ms`, and `https://c.bing.com` on `script-src` / `connect-src` / `img-src` as needed.
+
 ### OpenTelemetry (`instrumentation.ts` + `lib/observability/`)
 
 - Server-only; skipped on Edge (`NEXT_RUNTIME === edge`).

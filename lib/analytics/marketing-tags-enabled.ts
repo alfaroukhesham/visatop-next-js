@@ -10,6 +10,8 @@
  * `AW-17767633830/THfyCPCPh-wcEKanophC` and its extra trigger is WordPress
  * `form_submit`. Loading it would not reproduce checkout Ads conversions and
  * would add TikTok + Bing tags. See PR-E.
+ * Customer-shell Clarity is loaded separately (not via GTM) with the WordPress
+ * project `waxpllatey` — see `components/analytics/microsoft-clarity.tsx`.
  */
 export const PRODUCTION_MARKETING_HOSTS = ["visatop.com", "www.visatop.com"] as const;
 

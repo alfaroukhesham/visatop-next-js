@@ -361,6 +361,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
         "space-y-4 rounded-3xl border bg-card p-5 shadow-[0_18px_48px_rgba(1,32,49,0.07)] sm:p-6 md:p-8",
         isSecondary ? "border-border/60 bg-muted/15" : "border-border",
       )}
+      data-clarity-mask="true"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="space-y-1">

@@ -636,7 +636,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-8 pb-24">
+    <form onSubmit={onSubmit} className="space-y-8 pb-24" data-clarity-mask="true">
       {error ? (
         <p className="text-error border-error/30 bg-error/5 rounded-2xl border px-4 py-3 text-sm leading-relaxed">
           {error}

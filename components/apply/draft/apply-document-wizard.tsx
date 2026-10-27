@@ -237,7 +237,7 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
   const isLast = ordered[ordered.length - 1]?.applicationId === travellerId;
 
   return (
-    <section className="space-y-5">
+    <section className="space-y-5" data-clarity-mask="true">
       {showTraveller ? (
         <p className="text-secondary text-xs font-bold uppercase tracking-wide">
           {t("wizard.travellerProgress", { current: memberIndex + 1, total: ordered.length })}

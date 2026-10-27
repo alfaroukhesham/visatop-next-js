@@ -218,7 +218,7 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-clarity-mask="true">
       <div className="flex items-end justify-between gap-4">
         <h3 className="font-heading text-foreground text-lg font-bold tracking-tight">{t("payment.orderTitle")}</h3>
       </div>
