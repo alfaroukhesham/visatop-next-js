@@ -118,7 +118,7 @@ export const HomeNationalityStart: FC = () => {
   return (
     <div className="mt-10 w-full max-[414px]:mt-4 max-[414px]:min-w-0 max-[414px]:max-w-full">
       <div className="border-secondary/35 bg-card relative z-20 overflow-visible rounded-[12px] border-[3px] shadow-[0_20px_56px_rgba(1,32,49,0.14)] max-[414px]:min-w-0 max-[414px]:max-w-full">
-        <div className="p-4 sm:p-6 md:p-8 max-[414px]:p-3 max-[240px]:p-2">
+        <div className="p-4 sm:p-6 md:p-8 max-[414px]:p-3 max-[240px]:p-1">
           <label htmlFor="home-nationality-input" className="sr-only">
             {t("home.nationalityLabelSrOnly")}
           </label>
