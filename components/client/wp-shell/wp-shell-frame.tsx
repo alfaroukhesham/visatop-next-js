@@ -483,38 +483,14 @@ function buildSrcDoc(input: {
 
       injectLanguageSwitcher();
       document.addEventListener("DOMContentLoaded", injectLanguageSwitcher);
-      function postShellReady() {
-        post("wp-shell:fonts-ready");
-      }
-      function whenImagesReady(done) {
-        try {
-          var imgs = Array.prototype.slice.call(document.images || []);
-          var pending = imgs.filter(function (img) { return img && !img.complete; });
-          if (pending.length === 0) {
-            done();
-            return;
-          }
-          var left = pending.length;
-          var finish = function () {
-            left -= 1;
-            if (left <= 0) done();
-          };
-          pending.forEach(function (img) {
-            img.addEventListener("load", finish);
-            img.addEventListener("error", finish);
-          });
-        } catch (e) {
-          done();
-        }
-      }
       try {
         if (document.fonts && document.fonts.ready) {
-          document.fonts.ready.then(function () { whenImagesReady(postShellReady); });
+          document.fonts.ready.then(function () { post("wp-shell:fonts-ready"); });
         } else {
-          whenImagesReady(postShellReady);
+          post("wp-shell:fonts-ready");
         }
       } catch (e) {
-        postShellReady();
+        post("wp-shell:fonts-ready");
       }
 
       document.addEventListener("keydown", function (e) {

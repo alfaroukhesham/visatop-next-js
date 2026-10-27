@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { criticalFontHrefsFromCss, notoInlineCssFromWoff2 } from "./critical-font-preloads";
+import { criticalFontHrefsFromCss } from "./critical-font-preloads";
 
 const css = `
 @font-face{font-family:Inter;font-style:normal;font-weight:400;font-display:swap;src:url(../media/inter400-s.p.abc.woff2)format("woff2");unicode-range:U+??}
@@ -15,15 +15,5 @@ describe("criticalFontHrefsFromCss", () => {
       "/visa-processing/_next/static/media/inter400-s.p.abc.woff2",
       "/visa-processing/_next/static/media/noto600-s.p.ghi.woff2",
     ]);
-  });
-});
-
-describe("notoInlineCssFromWoff2", () => {
-  it("inlines Noto 600 as a swap data URI so LCP does not wait on a second request", () => {
-    const css = notoInlineCssFromWoff2(Buffer.from("woff2-bytes"));
-    expect(css).toContain('font-family:"Noto Serif"');
-    expect(css).toContain("font-weight:600");
-    expect(css).toContain("font-display:swap");
-    expect(css).toContain("data:font/woff2;base64,");
   });
 });

@@ -44,7 +44,6 @@ describe("customer font loading", () => {
     expect(root).not.toContain("next/font/google");
     expect(root).not.toContain("Red_Hat");
     expect(root).toContain("readCriticalFontPreloadHrefs");
-    expect(root).toContain("readCriticalNotoInlineCss");
     expect(root).toContain('as="font"');
   });
 
