@@ -39,7 +39,10 @@ export const WP_SHELL_NARROW_HEADER_CSS = `
           max-height: 28px;
           height: auto;
         }
-        /* Drop in-bar Apply Now so it cannot overlap the logo; restore it in the open drawer. */
+        /* Drop the in-bar Apply Now sibling (a.header-apply-now) so it cannot overlap the logo.
+           Apply Visa remains in the hamburger drawer. Also hide a leftover li.button CTA. */
+        header#header a.header-whatsapp,
+        header#header a.header-apply-now,
         header#header nav.menu ul li.button {
           display: none !important;
         }

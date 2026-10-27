@@ -15,12 +15,11 @@ describe("WP_SHELL_NARROW_HEADER_CSS", () => {
     expect(WP_SHELL_NARROW_HEADER_CSS).not.toMatch(/@media[^{]+max-width:\s*(4\d{2}|[5-9]\d{2}|[1-9]\d{3})px/);
   });
 
-  it("drops in-bar Apply Now, keeps it in the open drawer, and lets featured-on logos wrap", () => {
+  it("drops in-bar Apply Now (header-apply-now sibling) and lets featured-on logos wrap", () => {
+    expect(WP_SHELL_NARROW_HEADER_CSS).toContain("header#header a.header-apply-now");
+    expect(WP_SHELL_NARROW_HEADER_CSS).toContain("header#header a.header-whatsapp");
     expect(WP_SHELL_NARROW_HEADER_CSS).toContain("header#header nav.menu ul li.button");
     expect(WP_SHELL_NARROW_HEADER_CSS).toContain("display: none !important");
-    expect(WP_SHELL_NARROW_HEADER_CSS).toContain(
-      "body.show-menu header#header nav.menu ul li.button",
-    );
     expect(WP_SHELL_NARROW_HEADER_CSS).toContain("header#header .featured_on .inner");
     expect(WP_SHELL_NARROW_HEADER_CSS).toContain("flex-wrap: wrap");
     expect(WP_SHELL_NARROW_HEADER_CSS).toContain("overflow: visible");
