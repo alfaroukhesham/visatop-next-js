@@ -64,7 +64,7 @@ Tags added when available:
 
 ## Session Replay
 
-Not enabled. GlitchTip cannot store Sentry Session Replay. Do not add `replayIntegration`. Clarity remains the session product; it already respects apply-screen tags in `lib/analytics/clarity-apply-screen.ts`. Consent Mode regions in `lib/analytics/consent-regions.ts` apply to marketing tags, not to this operational error pipeline.
+Not enabled. GlitchTip cannot store Sentry Session Replay. Do not add `replayIntegration`. Microsoft Clarity is the session product: `components/analytics/microsoft-clarity.tsx` loads the standard snippet (`next/script`, `afterInteractive`) from the **customer layout only** (`app/(client)/layout.tsx`). Admin (`/visa-processing/admin/**`) and API routes do not mount it. Project id is `NEXT_PUBLIC_CLARITY_PROJECT_ID` (default `waxpllatey`, the visatop.com WordPress project); an explicit empty value skips the script. Apply-screen tags live in `lib/analytics/clarity-apply-screen.ts`. Applicant / passport / personal-detail / payment containers set `data-clarity-mask="true"` (Clarity already masks inputs). Consent Mode regions in `lib/analytics/consent-regions.ts` apply to marketing tags, not to this operational error pipeline.
 
 ## Readiness vs liveness
 

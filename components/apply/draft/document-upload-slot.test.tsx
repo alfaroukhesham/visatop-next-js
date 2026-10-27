@@ -150,6 +150,10 @@ describe("DocumentUploadSlot", () => {
     const specimen = screen.getByRole("img", { name: /fake passport/i });
     expect(specimen).toHaveAttribute("data-clarity-mask", "true");
     expect(specimen).toHaveAttribute("src", "/visa-processing/apply/passport-bio-specimen.svg");
+    expect(screen.getByText("Passport (bio page)").closest("[data-clarity-mask='true']")).toHaveAttribute(
+      "data-clarity-mask",
+      "true",
+    );
   });
 
   it("shows a passport OCR notice in the slot and not as a duplicate upload error", () => {

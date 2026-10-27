@@ -123,7 +123,7 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
   );
 
   return (
-    <section id="draft-payment-section" className="space-y-4">
+    <section id="draft-payment-section" className="space-y-4" data-clarity-mask="true">
       {paymentReadiness !== "ready" && app.paymentStatus === "unpaid" && (
         <div className="rounded-[12px] border border-border bg-muted/20 p-5 sm:p-6">
           <p className="text-muted-foreground text-sm">{t("pay.blockedMissingDocs")}</p>

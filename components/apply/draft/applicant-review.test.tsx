@@ -59,6 +59,12 @@ const renderReview = (ocrMissingFields: string[]) =>
   );
 
 describe("ApplicantReview OCR highlight", () => {
+  it("masks the personal-detail container for Clarity", () => {
+    const { container } = renderReview(["dateOfBirth"]);
+    expect(container.querySelector("section")).toHaveAttribute("data-clarity-mask", "true");
+    expect(container.querySelector("dl")).toHaveAttribute("data-clarity-mask", "true");
+  });
+
   it("highlights empty OCR-missing fields and describes them", () => {
     renderReview(["dateOfBirth", "passportExpiryDate"]);
     expect(screen.getByText(/Please fill these in/i)).toBeInTheDocument();

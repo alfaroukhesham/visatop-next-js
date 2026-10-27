@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 import type { ReactNode } from "react";
 import { AnalyticsProviders } from "@/components/analytics/analytics-providers";
 import { MarketingTags } from "@/components/analytics/marketing-tags";
+import { MicrosoftClarity } from "@/components/analytics/microsoft-clarity";
 import { ClientAuthStoreSync } from "@/components/client/client-auth-store-sync";
 import { BfcacheRestoreSync } from "@/components/client/bfcache-restore-sync";
 import { CustomerI18nProvider } from "@/components/client/customer-i18n-provider";
@@ -127,6 +128,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
         }}
       >
         <MarketingTags />
+        <MicrosoftClarity />
         <AnalyticsProviders />
         <BfcacheRestoreSync />
         <ClientAuthStoreSync />

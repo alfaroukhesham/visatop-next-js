@@ -30,6 +30,8 @@ describe("MarketingTags wiring", () => {
     expect(src).toContain("GoogleTag");
     expect(src).toContain("MetaPixel");
     expect(src).not.toContain("googletagmanager.com/gtm.js");
+    expect(src).not.toContain("MicrosoftClarity");
+    expect(src).not.toContain("clarity.ms");
   });
 });
 
