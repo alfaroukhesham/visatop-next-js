@@ -64,13 +64,13 @@ const Home = async () => {
               <p className="text-secondary text-[11px] text-center font-bold uppercase tracking-[0.28em]">
                 {t("home.eyebrow")}
               </p>
-              <h1 className="font-heading text-foreground mt-6 text-center text-[2.25rem]! leading-[1.2]! font-semibold md:text-[2.25rem]! max-[414px]:mt-3 max-[414px]:max-w-full max-[414px]:min-w-0 max-[414px]:break-words max-[414px]:font-sans max-[414px]:text-[1.375rem]! max-[414px]:leading-[1.25]!">
+              <h1 className="font-heading text-foreground mt-6 text-center text-[2.25rem]! leading-[1.2]! font-semibold md:text-[2.25rem]! max-[414px]:mt-3 max-[414px]:max-w-full max-[414px]:min-w-0 max-[414px]:break-words max-[414px]:text-[1.375rem]! max-[414px]:leading-[1.25]!">
                 <span className="block">{t("home.headlineLine1")} </span>
                 <span className="text-secondary mt-3 block font-semibold leading-snug tracking-tight text-center max-[414px]:mt-2">
                   {t("home.headlineLine2")}
                 </span>
               </h1>
-              <h2 className="font-heading text-foreground mt-6 text-center text-[1.25rem]! leading-[1.35]! font-semibold max-[414px]:mt-3 max-[414px]:max-w-full max-[414px]:min-w-0 max-[414px]:break-words max-[414px]:font-sans max-[414px]:text-[1.0625rem]!">
+              <h2 className="font-heading text-foreground mt-6 text-center text-[1.25rem]! leading-[1.35]! font-semibold max-[414px]:mt-3 max-[414px]:max-w-full max-[414px]:min-w-0 max-[414px]:break-words max-[414px]:text-[1.0625rem]!">
                 {t("home.subheadline")}
               </h2>
 

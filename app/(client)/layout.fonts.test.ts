@@ -24,4 +24,12 @@ describe("customer font loading", () => {
     expect(admin).toContain("Red_Hat_Text");
     expect(admin).toContain('display: "swap"');
   });
+
+  it("uses the body face for customer headings at max-width 414px", () => {
+    const globals = read("app/globals.css");
+    expect(globals).toContain("@media (max-width: 414px)");
+    expect(globals).toContain(
+      "font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif",
+    );
+  });
 });
