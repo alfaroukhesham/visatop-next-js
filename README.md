@@ -2,7 +2,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Requirements
 
-- **Node.js** [20.19+](https://nodejs.org/) (20.x LTS) or **22.x** (22.x LTS). Use **22.13+** if you see `EBADENGINE` from ESLint-related packages on older 22.0.x. Node **24+** is excluded by this repo’s `engines` field (tooling targets 20/22 LTS). Use [nvm](https://github.com/nvm-sh/nvm) / [fnm](https://github.com/Schniz/fnm): `nvm use` (reads [`.nvmrc`](.nvmrc)).
+- **Node.js** [22.12+](https://nodejs.org/) (22.x LTS; this repo pins **22.23.4** in [`.nvmrc`](.nvmrc) / [`.node-version`](.node-version)). Use **22.13+** if you see `EBADENGINE` from ESLint-related packages on 22.12.x. Node **20** and **24+** are excluded by this repo’s `engines` field. Use [nvm](https://github.com/nvm-sh/nvm) / [fnm](https://github.com/Schniz/fnm): `nvm use` (reads [`.nvmrc`](.nvmrc)).
 - **pnpm** 9+ ([enable Corepack](https://nodejs.org/api/corepack.html): `corepack enable`).
 
 ## Getting Started
