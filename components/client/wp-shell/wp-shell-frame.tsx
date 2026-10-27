@@ -24,23 +24,6 @@ const APP_BASE_PATH = "/visa-processing";
 const HEADER_SLOT_HEIGHT_PX = 118;
 const HEADER_PLACEHOLDER_SRCDOC =
   "<!doctype html><html><head><meta charset=utf-8><style>html,body{margin:0;background:#012031;height:100%}</style></head><body></body></html>";
-const HEADER_WP_HTML_DELAY_MS = 1800;
-
-function useLateTrue(ms: number, enabled: boolean): boolean {
-  const storeRef = useRef({ value: false });
-  return useSyncExternalStore(
-    (onChange) => {
-      if (!enabled) return () => undefined;
-      const id = window.setTimeout(() => {
-        storeRef.current.value = true;
-        onChange();
-      }, ms);
-      return () => window.clearTimeout(id);
-    },
-    () => storeRef.current.value,
-    () => false,
-  );
-}
 
 interface ILanguageSwitcherConfig {
   current: string;
@@ -657,11 +640,6 @@ export function WpShellFrame(props: {
     props.kind === "header" ? HEADER_SLOT_HEIGHT_PX : 400,
   );
   const [headerRevealed, setHeaderRevealed] = useState(false);
-  const injectWpHtml = useLateTrue(HEADER_WP_HTML_DELAY_MS, props.kind === "header");
-  const headerRevealTimeout = useLateTrue(
-    HEADER_WP_HTML_DELAY_MS + 2000,
-    props.kind === "header",
-  );
   const languageSwitcher =
     props.kind === "header" && props.languageSwitcher ? props.languageSwitcher : null;
   const postMessageToken = useMemo(
@@ -870,26 +848,21 @@ export function WpShellFrame(props: {
         title={props.kind === "header" ? "WP Header" : "WP Footer"}
         data-wp-shell={props.kind}
         srcDoc={
-          props.kind === "header"
-            ? injectWpHtml
-              ? srcDoc
-              : HEADER_PLACEHOLDER_SRCDOC
-            : shellReady
-              ? srcDoc
-              : undefined
+          shellReady ? srcDoc : props.kind === "header" ? HEADER_PLACEHOLDER_SRCDOC : undefined
         }
         width={props.kind === "header" ? 412 : 1280}
         height={heightPx}
         sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+        onLoad={() => {
+          if (props.kind !== "header") return;
+          window.setTimeout(() => setHeaderRevealed(true), 1500);
+        }}
         style={{
           width: "100%",
           height: `${heightPx}px`,
           minHeight: props.kind === "header" ? HEADER_SLOT_HEIGHT_PX : undefined,
           border: "0",
-          display:
-            props.kind === "header" && !headerRevealed && !headerRevealTimeout
-              ? "none"
-              : "block",
+          display: props.kind === "header" && !headerRevealed ? "none" : "block",
           overflow: "hidden",
           background: props.kind === "header" ? "#012031" : "transparent",
           ...(props.kind === "header"
