@@ -20,6 +20,7 @@ describe("home hero narrow layout", () => {
     expect(source).toContain("max-[414px]:min-w-0");
     expect(source).toContain("max-[414px]:max-w-full");
     expect(source).toContain("max-[414px]:text-[1.375rem]!");
+    expect(source).toContain("max-[414px]:font-sans");
     expect(source).toContain("max-[414px]:p-4");
     expect(source).toMatch(/\bp-8 shadow-/);
   });
