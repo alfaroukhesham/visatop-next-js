@@ -135,6 +135,16 @@ export default async function ClientLayout({ children }: { children: ReactNode }
           : undefined
       }
     >
+      {criticalFontHrefs.map((href) => (
+        <link
+          key={href}
+          rel="preload"
+          href={href}
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+      ))}
       <span className={`${inter.className} sr-only`} aria-hidden>
         {" "}
       </span>

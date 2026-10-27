@@ -28,6 +28,8 @@ describe("customer font loading", () => {
     expect(layout).toContain("notoSerif.className");
     expect(layout).toContain("readCriticalFontPreloadHrefs");
     expect(layout).toContain('preload(href, { as: "font", type: "font/woff2", crossOrigin: "anonymous" })');
+    expect(layout).toContain('rel="preload"');
+    expect(layout).toContain('as="font"');
   });
 
   it("inlines first-paint WP header padding so CLS does not wait on the CSS bundle", () => {
@@ -41,6 +43,8 @@ describe("customer font loading", () => {
     const root = read("app/layout.tsx");
     expect(root).not.toContain("next/font/google");
     expect(root).not.toContain("Red_Hat");
+    expect(root).toContain("readCriticalFontPreloadHrefs");
+    expect(root).toContain('as="font"');
   });
 
   it("keeps Red Hat on the admin shell only", () => {
