@@ -50,5 +50,6 @@ describe("WP_SHELL_NARROW_HEADER_CSS", () => {
     expect(frame).not.toContain("fonts.google(apis|static)");
     expect(frame).not.toContain('width={props.kind === "header" ? 412 : 1280}');
     expect(frame).toContain("compactHeader");
+    expect(frame).toContain("ssrCompact");
   });
 });

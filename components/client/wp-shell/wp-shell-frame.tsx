@@ -624,6 +624,8 @@ export function WpShellFrame(props: {
   hideLangSwitcher?: boolean;
   /** Injected lookalike switcher for Next locale (header only). */
   languageSwitcher?: ILanguageSwitcherConfig;
+  /** SSR stand-in for matchMedia(414px); desktop UAs stay false so prod fonts paint. */
+  ssrCompact?: boolean;
 }) {
   const router = useRouter();
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -638,7 +640,7 @@ export function WpShellFrame(props: {
   const compactHeader = useSyncExternalStore(
     subscribeCompactHeader,
     getCompactHeaderSnapshot,
-    () => false,
+    () => props.ssrCompact === true,
   );
   const languageSwitcher =
     props.kind === "header" && props.languageSwitcher ? props.languageSwitcher : null;

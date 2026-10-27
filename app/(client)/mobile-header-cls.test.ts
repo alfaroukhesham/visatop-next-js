@@ -23,6 +23,8 @@ describe("mobile WP header CLS reservation", () => {
     expect(layout).toContain("@media (max-width:414px)");
     expect(layout).toContain("theme-client-wp-header");
     expect(layout).toContain("theme-client-main");
+    expect(layout).toContain("ssrCompact={ssrCompact}");
+    expect(layout).toContain("isCompactWpShellUserAgent");
   });
 });
 

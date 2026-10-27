@@ -9,6 +9,11 @@ function escapeAttr(value: string): string {
 
 export const WP_SHELL_COMPACT_MQ = `(max-width: ${WP_SHELL_COMPACT_MAX_WIDTH_PX}px)`;
 
+/** SSR stand-in for matchMedia(414px) so mobile Lighthouse gets the compact iframe path. */
+export function isCompactWpShellUserAgent(ua: string | null | undefined): boolean {
+  return /(?:Mobile|Android|iPhone|iPod|webOS|BlackBerry|IEMobile|Opera Mini)/i.test(ua ?? "");
+}
+
 /**
  * Prod (#50) featured-logo rules. Staging #53 replaced width:auto with a 64×16 lock
  * that shrank Khaleej Times on desktop; keep the prod rule as the default.

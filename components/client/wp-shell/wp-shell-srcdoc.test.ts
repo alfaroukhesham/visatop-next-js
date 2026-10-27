@@ -5,6 +5,7 @@ import {
   WP_SHELL_COMPACT_MAX_WIDTH_PX,
   WP_SHELL_COMPACT_HEADER_OVERRIDES_CSS,
   WP_SHELL_DESKTOP_FEATURED_LOGO_CSS,
+  isCompactWpShellUserAgent,
   sizeWpShellHeaderImages,
   wpShellHeaderCspMeta,
   wpShellStylesheetLinks,
@@ -18,6 +19,22 @@ const ICON_CSS = "https://visatop.com/wp-content/plugins/elementor/assets/lib/fo
 describe("WP_SHELL_COMPACT_MAX_WIDTH_PX", () => {
   it("matches the 414px header-height breakpoint", () => {
     expect(WP_SHELL_COMPACT_MAX_WIDTH_PX).toBe(414);
+  });
+});
+
+describe("isCompactWpShellUserAgent", () => {
+  it("treats Lighthouse/Android phones as compact and desktop Chrome as not", () => {
+    expect(
+      isCompactWpShellUserAgent(
+        "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+      ),
+    ).toBe(true);
+    expect(
+      isCompactWpShellUserAgent(
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      ),
+    ).toBe(false);
+    expect(isCompactWpShellUserAgent(null)).toBe(false);
   });
 });
 
