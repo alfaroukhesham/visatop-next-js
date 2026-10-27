@@ -18,6 +18,14 @@ import {
 import { classifyWpShellNavigateUrl } from "@/lib/wp-headless/classify-shell-navigate-url";
 import type { WpShellLanguageOption } from "@/lib/wp-headless/types";
 import { WP_SHELL_NARROW_HEADER_CSS } from "./wp-shell-header-narrow-css";
+import {
+  WP_SHELL_COMPACT_HEADER_OVERRIDES_CSS,
+  WP_SHELL_COMPACT_MQ,
+  WP_SHELL_DESKTOP_FEATURED_LOGO_CSS,
+  sizeWpShellHeaderImages,
+  wpShellHeaderCspMeta,
+  wpShellStylesheetLinks,
+} from "./wp-shell-srcdoc";
 
 const APP_BASE_PATH = "/visa-processing";
 
@@ -171,6 +179,16 @@ function buildInjectedLanguageSwitcherHtml(config: ILanguageSwitcherConfig): str
   </li>`;
 }
 
+function subscribeCompactHeader(onStoreChange: () => void) {
+  const mq = window.matchMedia(WP_SHELL_COMPACT_MQ);
+  mq.addEventListener("change", onStoreChange);
+  return () => mq.removeEventListener("change", onStoreChange);
+}
+
+function getCompactHeaderSnapshot() {
+  return window.matchMedia(WP_SHELL_COMPACT_MQ).matches;
+}
+
 function buildSrcDoc(input: {
   html: string;
   cssUrls: string[];
@@ -179,11 +197,10 @@ function buildSrcDoc(input: {
   postMessageToken: string;
   hideLangSwitcher?: boolean;
   languageSwitcher?: ILanguageSwitcherConfig | null;
+  compactHeader?: boolean;
 }): string {
-  const links = input.cssUrls
-    .filter((href) => Boolean(href) && !/fonts\.google(apis|static)/i.test(href))
-    .map((href) => `<link rel="stylesheet" href="${escapeAttr(href)}">`)
-    .join("\n");
+  const links = wpShellStylesheetLinks({ cssUrls: input.cssUrls, kind: input.kind });
+  const compactHeader = input.compactHeader === true;
 
   const baseHref = input.baseHref
     ? input.baseHref.endsWith("/")
@@ -207,43 +224,21 @@ function buildSrcDoc(input: {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    ${
-      input.kind === "header"
-        ? `<meta http-equiv="Content-Security-Policy" content="font-src 'none'">`
-        : ""
-    }
+    ${wpShellHeaderCspMeta({ kind: input.kind, compactHeader })}
     <base ${baseHref ? `href="${escapeAttr(baseHref)}"` : ""} />
-    <style>
-      header#header .logo picture { display: block; height: 40px; width: auto; max-width: 220px; }
-      header#header .logo img { display: block; height: 40px; width: 180px; max-width: 220px; object-fit: contain; }
-    </style>
     ${links}
     <style>
       html, body { margin: 0; padding: 0; background: transparent !important; }
       body { overflow: hidden; }
-      ${
-        input.kind === "header"
-          ? `@font-face{font-family:Inter;font-style:normal;font-weight:100 900;src:local("Arial"),local("Helvetica Neue"),local("sans-serif");font-display:optional;unicode-range:U+0-10FFFF}
-             @font-face{font-family:Inter;font-style:italic;font-weight:100 900;src:local("Arial"),local("Helvetica Neue"),local("sans-serif");font-display:optional;unicode-range:U+0-10FFFF}
-             html,body,header#header,header#header *{font-family:ui-sans-serif,system-ui,sans-serif !important}`
-          : ""
-      }
-      header#header .logo picture { display: block; height: 40px; width: auto; max-width: 220px; }
-      header#header .logo img { display: block; height: 40px; width: 180px; max-width: 220px; object-fit: contain; }
 
       /* Fallback alignment: in WP this is handled by theme/plugin CSS, but our headless CSS
          bundle may omit those rules. This keeps "Time in UAE" pinned to the right. */
       header#header .featured_on .inner { display: flex; align-items: center; }
       header#header .featured_on .uae-time { margin-left: auto; }
 
-      /* "Featured on" logos: WP theme constrains these; headless CSS path misses it. */
-      header#header .featured_on .inner a img {
-        height: 16px;
-        width: 64px;
-        max-width: 64px;
-        object-fit: contain;
-        filter: brightness(0) invert(1);
-      }
+      /* Prod (#50) featured-logo size. Compact 64×16 lock follows so it wins at ≤414px. */
+      ${input.kind === "header" ? WP_SHELL_DESKTOP_FEATURED_LOGO_CSS : ""}
+      ${input.kind === "header" ? WP_SHELL_COMPACT_HEADER_OVERRIDES_CSS : ""}
 
       /* Polylang language switcher (headless markup differs on prod: href="#pll_switcher" with no class). */
       header#header nav.menu a[href="#pll_switcher"] {
@@ -640,6 +635,11 @@ export function WpShellFrame(props: {
     props.kind === "header" ? HEADER_SLOT_HEIGHT_PX : 400,
   );
   const [headerRevealed, setHeaderRevealed] = useState(false);
+  const compactHeader = useSyncExternalStore(
+    subscribeCompactHeader,
+    getCompactHeaderSnapshot,
+    () => false,
+  );
   const languageSwitcher =
     props.kind === "header" && props.languageSwitcher ? props.languageSwitcher : null;
   const postMessageToken = useMemo(
@@ -655,21 +655,7 @@ export function WpShellFrame(props: {
   );
 
   const headerHtmlWithSizedLogo =
-    props.kind === "header"
-      ? props.html
-          .replace(
-            /<img\b([^>]*\balt="VisaTop"[^>]*)>/i,
-            (_full, attrs: string) =>
-              /\bwidth\s*=/.test(attrs) && /\bheight\s*=/.test(attrs)
-                ? `<img${attrs}>`
-                : `<img width="180" height="40"${attrs}>`,
-          )
-          .replace(/<img\b([^>]*)>/gi, (full, attrs: string) =>
-            /\bwidth\s*=/.test(attrs) && /\bheight\s*=/.test(attrs)
-              ? full
-              : `<img width="64" height="16"${attrs}>`,
-          )
-      : props.html;
+    props.kind === "header" ? sizeWpShellHeaderImages(props.html, compactHeader) : props.html;
 
   const srcDoc = useMemo(
     () =>
@@ -681,6 +667,7 @@ export function WpShellFrame(props: {
         postMessageToken,
         hideLangSwitcher: props.hideLangSwitcher === true,
         languageSwitcher,
+        compactHeader: props.kind === "header" && compactHeader,
       }),
     [
       headerHtmlWithSizedLogo,
@@ -690,6 +677,7 @@ export function WpShellFrame(props: {
       postMessageToken,
       props.hideLangSwitcher,
       languageSwitcher,
+      compactHeader,
     ],
   );
 
@@ -848,13 +836,15 @@ export function WpShellFrame(props: {
         title={props.kind === "header" ? "WP Header" : "WP Footer"}
         data-wp-shell={props.kind}
         srcDoc={
-          shellReady ? srcDoc : props.kind === "header" ? HEADER_PLACEHOLDER_SRCDOC : undefined
+          shellReady || props.kind !== "header" || !compactHeader
+            ? srcDoc
+            : HEADER_PLACEHOLDER_SRCDOC
         }
-        width={props.kind === "header" ? 412 : 1280}
+        width={props.kind === "header" && compactHeader ? 412 : 1280}
         height={heightPx}
         sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
         onLoad={() => {
-          if (props.kind !== "header") return;
+          if (props.kind !== "header" || !compactHeader) return;
           window.setTimeout(() => setHeaderRevealed(true), 1500);
         }}
         style={{
@@ -862,7 +852,7 @@ export function WpShellFrame(props: {
           height: `${heightPx}px`,
           minHeight: props.kind === "header" ? HEADER_SLOT_HEIGHT_PX : undefined,
           border: "0",
-          display: props.kind === "header" && !headerRevealed ? "none" : "block",
+          display: props.kind === "header" && compactHeader && !headerRevealed ? "none" : "block",
           overflow: "hidden",
           background: props.kind === "header" ? "#012031" : "transparent",
           ...(props.kind === "header"

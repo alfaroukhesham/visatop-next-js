@@ -35,8 +35,20 @@ describe("WP_SHELL_NARROW_HEADER_CSS", () => {
     expect(frame).toContain('data-wp-shell-slot="header"');
     expect(frame).toContain("headerRevealed");
     expect(frame).toContain(': "block"');
-    expect(frame).toContain("font-src 'none'");
-    expect(frame).toContain("width={props.kind === \"header\" ? 412 : 1280}");
     expect(frame).toContain("height={heightPx}");
+  });
+
+  it("scopes #53 header iframe locks and Google Fonts gating to compact viewports", () => {
+    const frame = readFileSync(path.join(__dirname, "wp-shell-frame.tsx"), "utf8");
+    expect(frame).toContain("wpShellStylesheetLinks");
+    expect(frame).toContain("wpShellHeaderCspMeta");
+    expect(frame).toContain("WP_SHELL_COMPACT_HEADER_OVERRIDES_CSS");
+    expect(frame).toContain("WP_SHELL_DESKTOP_FEATURED_LOGO_CSS");
+    expect(frame).toContain("sizeWpShellHeaderImages");
+    expect(frame).toContain("WP_SHELL_COMPACT_MQ");
+    expect(frame).toContain("matchMedia");
+    expect(frame).not.toContain("fonts.google(apis|static)");
+    expect(frame).not.toContain('width={props.kind === "header" ? 412 : 1280}');
+    expect(frame).toContain("compactHeader");
   });
 });
