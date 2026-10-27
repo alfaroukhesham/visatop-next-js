@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FC } from "react";
 import { useRouter } from "next/navigation";
-import { ClientComboboxSkeleton } from "@/components/client/client-loading";
 import { ClientButton } from "@/components/client/client-button";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { NationalityCombobox } from "@/components/client/nationality-combobox";
@@ -16,10 +15,6 @@ import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { trackEventOnce } from "@/lib/analytics/gtag-client";
-import {
-  COMPACT_VIEWPORT_MEDIA_QUERY,
-  useNarrowViewport,
-} from "@/lib/client/use-narrow-viewport";
 
 type Nationality = { code: string; name: string };
 
@@ -35,15 +30,10 @@ declare global {
 export const HomeNationalityStart: FC = () => {
   const t = useCustomerT();
   const router = useRouter();
-  const narrowViewport = useNarrowViewport();
-  const compactViewport = useNarrowViewport(COMPACT_VIEWPORT_MEDIA_QUERY);
-  const nationalityPlaceholder = t(
-    compactViewport
-      ? "home.nationalityPlaceholderCompact"
-      : narrowViewport
-        ? "home.nationalityPlaceholderNarrow"
-        : "home.nationalityPlaceholder",
-  );
+  // Keep the SSR placeholder string stable. Swapping it after matchMedia
+  // recasts LCP on the 412px lab page; 414px sizing is CSS (`placeholder:text-sm`),
+  // and 240px wrapping lives on NationalityCombobox.
+  const nationalityPlaceholder = t("home.nationalityPlaceholder");
   const [nationalities, setNationalities] = useState<Nationality[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -118,28 +108,26 @@ export const HomeNationalityStart: FC = () => {
   return (
     <div className="mt-10 w-full max-[414px]:mt-4 max-[414px]:min-w-0 max-[414px]:max-w-full">
       <div className="border-secondary/35 bg-card relative z-20 overflow-visible rounded-[12px] border-[3px] shadow-[0_20px_56px_rgba(1,32,49,0.14)] max-[414px]:min-w-0 max-[414px]:max-w-full">
-        <div className="p-4 sm:p-6 md:p-8 max-[414px]:p-3 max-[240px]:p-1">
+        <div className="p-4 sm:p-6 md:p-8 max-[414px]:p-3 max-[240px]:p-1" aria-busy={loading}>
           <label htmlFor="home-nationality-input" className="sr-only">
             {t("home.nationalityLabelSrOnly")}
           </label>
-          {loading ? (
-            <ClientComboboxSkeleton />
-          ) : error ? (
-            <p className="text-error min-h-[3.5rem] px-2 text-sm leading-relaxed" role="alert">
+          <NationalityCombobox
+            id="home-nationality-input"
+            nationalities={nationalities}
+            valueCode={selectedCode}
+            onSelectCode={setSelectedCode}
+            onFirstInteraction={onNationalityFirstInteraction}
+            placeholder={nationalityPlaceholder}
+            size="hero"
+            className="max-[414px]:min-w-0 max-[414px]:max-w-full"
+            inputClassName="max-[414px]:placeholder:text-sm"
+          />
+          {error ? (
+            <p className="text-error mt-3 px-2 text-sm leading-relaxed" role="alert">
               {error}
             </p>
-          ) : (
-            <NationalityCombobox
-              id="home-nationality-input"
-              nationalities={nationalities}
-              valueCode={selectedCode}
-              onSelectCode={setSelectedCode}
-              onFirstInteraction={onNationalityFirstInteraction}
-              placeholder={nationalityPlaceholder}
-              size="hero"
-              className="max-[414px]:min-w-0 max-[414px]:max-w-full"
-            />
-          )}
+          ) : null}
         </div>
       </div>
       <p className="text-muted-foreground mt-4 max-w-prose text-sm leading-relaxed max-[414px]:mt-3">

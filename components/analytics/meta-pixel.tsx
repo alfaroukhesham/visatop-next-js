@@ -12,7 +12,7 @@ export const MetaPixel: FC = () => {
     <>
       <Script
         id="visatop-meta-pixel"
-        strategy="afterInteractive"
+        strategy="lazyOnload"
         dangerouslySetInnerHTML={{ __html: buildMetaPixelBootstrapScript() }}
       />
       <noscript>

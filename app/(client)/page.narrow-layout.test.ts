@@ -23,4 +23,8 @@ describe("home hero narrow layout", () => {
     expect(source).toContain("max-[414px]:p-4");
     expect(source).toMatch(/\bp-8 shadow-/);
   });
+
+  it("does not run the opacity-0 rise animation on the LCP hero", () => {
+    expect(source).not.toContain("theme-client-rise");
+  });
 });

@@ -2,6 +2,7 @@ import { Inter, Noto_Serif } from "next/font/google";
 import { cookies, headers } from "next/headers";
 import type { ReactNode } from "react";
 import { AnalyticsProviders } from "@/components/analytics/analytics-providers";
+import { AnalyticsResourceHints } from "@/components/analytics/analytics-resource-hints";
 import { MarketingTags } from "@/components/analytics/marketing-tags";
 import { MicrosoftClarity } from "@/components/analytics/microsoft-clarity";
 import { ClientAuthStoreSync } from "@/components/client/client-auth-store-sync";
@@ -20,6 +21,7 @@ import {
 import { formatCustomerMessage, type TCustomerMessageVars } from "@/lib/i18n/customer-messages";
 import { getCustomerI18nBundle } from "@/lib/i18n/load-customer-catalog";
 import { fetchPolylangLanguages } from "@/lib/i18n/fetch-polylang-languages";
+import { areMarketingTagsEnabledFromHeaders } from "@/lib/analytics/marketing-tags-enabled";
 import { fetchWpShellModel } from "@/lib/wp-headless/fetch-layout";
 import type { WpShellLanguageOption } from "@/lib/wp-headless/types";
 
@@ -27,12 +29,16 @@ const inter = Inter({
   variable: "--font-body",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
+  display: "optional",
+  preload: true,
 });
 
 const notoSerif = Noto_Serif({
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["600"],
+  display: "optional",
+  preload: false,
 });
 
 const resolveLanguageSwitcherOptions = (input: {
@@ -99,6 +105,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
   const i18n = getCustomerI18nBundle(locale);
   const t = (key: string, vars?: TCustomerMessageVars) =>
     formatCustomerMessage(i18n.messages, i18n.fallback, key, vars);
+  const marketingTagsEnabled = areMarketingTagsEnabledFromHeaders(requestHeaders);
 
   return (
     <div
@@ -127,6 +134,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
           zIndex: 0,
         }}
       >
+        <AnalyticsResourceHints includeMarketing={marketingTagsEnabled} />
         <MarketingTags />
         <MicrosoftClarity />
         <AnalyticsProviders />

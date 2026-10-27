@@ -62,6 +62,10 @@
  * Light / dark palettes: hex in sRGB (Tailwind reads via var()).
  */
 :root {
+  --font-body: ui-sans-serif, system-ui, sans-serif;
+  --font-display: ui-serif, Georgia, "Times New Roman", serif;
+  --font-code: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
   --background: #f2f2f2;
   --foreground: #151515;
   --card: #ffffff;
@@ -436,6 +440,12 @@
   }
   .theme-client-wp-header iframe[data-wp-shell="header"] {
     min-height: 107px;
+  }
+  /* Lab LCP is the home h1. Override next/font variables so Inter/Noto are
+     unused at this breakpoint and are not downloaded on Slow 4G. */
+  .theme-client {
+    --font-body: ui-sans-serif, system-ui, sans-serif !important;
+    --font-display: ui-sans-serif, system-ui, sans-serif !important;
   }
 }
 

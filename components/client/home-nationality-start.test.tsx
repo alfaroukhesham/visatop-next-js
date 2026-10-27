@@ -5,10 +5,7 @@ import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CustomerI18nProvider } from "@/components/client/customer-i18n-provider";
 import { getEnglishCustomerMessages } from "@/lib/i18n/load-customer-catalog";
-import {
-  COMPACT_VIEWPORT_MEDIA_QUERY,
-  NARROW_VIEWPORT_MEDIA_QUERY,
-} from "@/lib/client/use-narrow-viewport";
+import { NARROW_VIEWPORT_MEDIA_QUERY } from "@/lib/client/use-narrow-viewport";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
@@ -18,20 +15,13 @@ import { HomeNationalityStart } from "./home-nationality-start";
 
 const en = getEnglishCustomerMessages();
 
-const installMatchMedia = (opts: { narrow?: boolean; compact?: boolean } | boolean) => {
-  const narrow = typeof opts === "boolean" ? opts : Boolean(opts.narrow);
-  const compact = typeof opts === "boolean" ? false : Boolean(opts.compact);
+const installMatchMedia = (matches: boolean) => {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     writable: true,
     value: (query: string) =>
       ({
-        matches:
-          query === COMPACT_VIEWPORT_MEDIA_QUERY
-            ? compact
-            : query === NARROW_VIEWPORT_MEDIA_QUERY
-              ? narrow
-              : false,
+        matches: query === NARROW_VIEWPORT_MEDIA_QUERY ? matches : false,
         media: query,
         onchange: null,
         addEventListener: () => undefined,
@@ -72,24 +62,41 @@ describe("HomeNationalityStart", () => {
     vi.unstubAllGlobals();
   });
 
+  it("renders the passport placeholder before the catalog responds", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise(() => undefined)),
+    );
+    wrap(<HomeNationalityStart />);
+    expect(screen.getByRole("combobox")).toHaveAttribute(
+      "placeholder",
+      "Select your Passport nationality",
+    );
+  });
+
+  it("includes the passport placeholder in server HTML", async () => {
+    const { renderToString } = await import("react-dom/server");
+    const html = renderToString(
+      <CustomerI18nProvider locale="en" messages={en} fallback={en}>
+        <HomeNationalityStart />
+      </CustomerI18nProvider>,
+    );
+    expect(html).toContain("Select your Passport nationality");
+    expect(html).toContain("home-nationality-input");
+  });
+
   it("keeps the full passport placeholder at desktop widths", async () => {
     wrap(<HomeNationalityStart />);
     const input = await screen.findByRole("combobox");
     expect(input).toHaveAttribute("placeholder", "Select your Passport nationality");
   });
 
-  it("uses the short passport placeholder only at max-width 414px", async () => {
-    installMatchMedia({ narrow: true, compact: false });
+  it("keeps the SSR passport placeholder at max-width 414px so LCP does not wait on JS", async () => {
+    installMatchMedia(true);
     wrap(<HomeNationalityStart />);
     const input = await screen.findByRole("combobox");
-    expect(input).toHaveAttribute("placeholder", "Your passport");
-  });
-
-  it("uses the one-word passport placeholder at max-width 240px", async () => {
-    installMatchMedia({ narrow: true, compact: true });
-    wrap(<HomeNationalityStart />);
-    const input = await screen.findByRole("combobox");
-    expect(input).toHaveAttribute("placeholder", "Passport");
+    expect(input).toHaveAttribute("placeholder", "Select your Passport nationality");
+    expect(input.className).toContain("max-[414px]:placeholder:text-sm");
   });
 
   it("scopes NEXT width overrides to max-[414px] without dropping the desktop min-width", async () => {
