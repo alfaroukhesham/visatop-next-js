@@ -4,12 +4,6 @@ import path from "node:path";
 const FACE_RE = /@font-face\{[^}]+\}/g;
 const MEDIA_RE = /url\((?:\.\.\/media\/)([^)]+\.p\.[^)]+\.woff2)\)/;
 
-const isRedHatTextLatin400 = (face: string): boolean =>
-  /font-family:(?:["']Red Hat Text["']|Red Hat Text)/.test(face) &&
-  !face.includes("Fallback") &&
-  face.includes("font-weight:400") &&
-  face.includes(".p.");
-
 const isNotoLatin600 = (face: string): boolean =>
   face.includes("font-family:Noto Serif") &&
   !face.includes("Fallback") &&
@@ -20,7 +14,9 @@ export const criticalFontHrefsFromCss = (css: string): string[] => {
   const hrefs: string[] = [];
   const seen = new Set<string>();
   for (const face of css.match(FACE_RE) ?? []) {
-    if (!isRedHatTextLatin400(face) && !isNotoLatin600(face)) continue;
+    // Preload only the LCP heading face. Red Hat Text still loads via CSS
+    // (display:swap) so the body matches prod without stealing Slow 4G from Noto.
+    if (!isNotoLatin600(face)) continue;
     const media = face.match(MEDIA_RE)?.[1];
     if (!media || seen.has(media)) continue;
     seen.add(media);

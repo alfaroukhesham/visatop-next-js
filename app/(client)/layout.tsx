@@ -32,7 +32,9 @@ const redHatText = Red_Hat_Text({
   subsets: ["latin"],
   weight: ["400", "600"],
   display: "swap",
-  preload: true,
+  // CSS still swap-loads Red Hat so body matches prod. Do not preload it:
+  // the extra woff2 contended with Noto on Slow 4G and recast LCP past 3s.
+  preload: false,
   adjustFontFallback: true,
 });
 

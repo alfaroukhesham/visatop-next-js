@@ -18,17 +18,21 @@ describe("customer font loading", () => {
     expect(layout).toContain("preload: true");
   });
 
-  it("preloads Red Hat Text 400 and Noto 600, not extra UI families", () => {
+  it("preloads Noto 600 for LCP; Red Hat Text still swap-loads from CSS", () => {
     const layout = read("app/(client)/layout.tsx");
     expect(layout).toContain('weight: ["400", "600"]');
     expect(layout).toContain('weight: ["600"]');
     expect(layout).toContain("redHatText.variable");
     expect(layout).toContain("redHatText.className");
     expect(layout).toContain("notoSerif.className");
+    expect(layout).toContain("preload: false");
     expect(layout).toContain("readCriticalFontPreloadHrefs");
     expect(layout).toContain('preload(href, { as: "font", type: "font/woff2", crossOrigin: "anonymous" })');
     expect(layout).toContain('rel="preload"');
     expect(layout).toContain('as="font"');
+    const preloads = read("lib/client/critical-font-preloads.ts");
+    expect(preloads).toContain("isNotoLatin600");
+    expect(preloads).not.toContain("isRedHatTextLatin400");
   });
 
   it("inlines first-paint WP header padding so CLS does not wait on the CSS bundle", () => {

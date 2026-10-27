@@ -10,9 +10,8 @@ const css = `
 `;
 
 describe("criticalFontHrefsFromCss", () => {
-  it("preloads only Red Hat Text 400 and Noto 600 latin files", () => {
+  it("preloads only Noto 600 so Red Hat Text does not steal LCP bandwidth", () => {
     expect(criticalFontHrefsFromCss(css)).toEqual([
-      "/visa-processing/_next/static/media/redhat400-s.p.abc.woff2",
       "/visa-processing/_next/static/media/noto600-s.p.ghi.woff2",
     ]);
   });

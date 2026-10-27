@@ -93,7 +93,7 @@ const LANG_SWITCHER_STYLES = `
       }
       header#header nav.menu .lang-switcher-label {
         font-size: 14px;
-        font-family: "Inter", sans-serif;
+        font-family: ui-sans-serif, system-ui, sans-serif;
         font-weight: 400;
         line-height: 1;
       }
@@ -181,7 +181,7 @@ function buildSrcDoc(input: {
   languageSwitcher?: ILanguageSwitcherConfig | null;
 }): string {
   const links = input.cssUrls
-    .filter(Boolean)
+    .filter((href) => Boolean(href) && !/fonts\.google(apis|static)/i.test(href))
     .map((href) => `<link rel="stylesheet" href="${escapeAttr(href)}">`)
     .join("\n");
 
@@ -223,7 +223,8 @@ function buildSrcDoc(input: {
       body { overflow: hidden; }
       ${
         input.kind === "header"
-          ? `@font-face{font-family:Inter;font-style:normal;font-weight:100 900;src:local("Inter");font-display:optional}
+          ? `@font-face{font-family:Inter;font-style:normal;font-weight:100 900;src:local("Arial"),local("Helvetica Neue"),local("sans-serif");font-display:optional;unicode-range:U+0-10FFFF}
+             @font-face{font-family:Inter;font-style:italic;font-weight:100 900;src:local("Arial"),local("Helvetica Neue"),local("sans-serif");font-display:optional;unicode-range:U+0-10FFFF}
              html,body,header#header,header#header *{font-family:ui-sans-serif,system-ui,sans-serif !important}`
           : ""
       }
