@@ -33,5 +33,7 @@ describe("WP_SHELL_NARROW_HEADER_CSS", () => {
     expect(frame).toContain("useSyncExternalStore");
     expect(frame).toContain('data-wp-shell-slot="header"');
     expect(frame).toContain("headerRevealed");
+    expect(frame).toContain("font-src 'none'");
+    expect(frame).toContain("wp-shell:fonts-ready");
   });
 });

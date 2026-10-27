@@ -205,6 +205,11 @@ function buildSrcDoc(input: {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    ${
+      input.kind === "header"
+        ? `<meta http-equiv="Content-Security-Policy" content="font-src 'none'">`
+        : ""
+    }
     <base ${baseHref ? `href="${escapeAttr(baseHref)}"` : ""} />
     <style>
       header#header .logo picture { display: block; height: 40px; width: auto; max-width: 220px; }
@@ -214,6 +219,12 @@ function buildSrcDoc(input: {
     <style>
       html, body { margin: 0; padding: 0; background: transparent !important; }
       body { overflow: hidden; }
+      ${
+        input.kind === "header"
+          ? `@font-face{font-family:Inter;font-style:normal;font-weight:100 900;src:local("Inter");font-display:optional}
+             html,body,header#header,header#header *{font-family:ui-sans-serif,system-ui,sans-serif !important}`
+          : ""
+      }
       header#header .logo picture { display: block; height: 40px; width: auto; max-width: 220px; }
       header#header .logo img { display: block; height: 40px; width: 180px; max-width: 220px; object-fit: contain; }
 
@@ -472,6 +483,15 @@ function buildSrcDoc(input: {
 
       injectLanguageSwitcher();
       document.addEventListener("DOMContentLoaded", injectLanguageSwitcher);
+      try {
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(function () { post("wp-shell:fonts-ready"); });
+        } else {
+          post("wp-shell:fonts-ready");
+        }
+      } catch (e) {
+        post("wp-shell:fonts-ready");
+      }
 
       document.addEventListener("keydown", function (e) {
         if (e.key === "Escape" && document.body.classList.contains("show-menu")) {
@@ -726,6 +746,10 @@ export function WpShellFrame(props: {
         }
         return;
       }
+      if (msg.type === "wp-shell:fonts-ready" && props.kind === "header") {
+        setHeaderRevealed(true);
+        return;
+      }
       if (msg.type === "wp-shell:height" && msg.kind === props.kind) {
         const h = Number(msg.height);
         const baseH = Number(msg.baseHeight);
@@ -823,16 +847,15 @@ export function WpShellFrame(props: {
         sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
         onLoad={() => {
           if (props.kind !== "header") return;
-          if (iframeRef.current?.srcdoc) setHeaderRevealed(true);
+          window.setTimeout(() => setHeaderRevealed(true), 1500);
         }}
         style={{
           width: "100%",
           height: `${heightPx}px`,
           border: "0",
-          display: "block",
+          display: headerHidden ? "none" : "block",
           overflow: "hidden",
           background: props.kind === "header" ? "#012031" : "transparent",
-          visibility: headerHidden ? "hidden" : "visible",
           ...(props.kind === "header"
             ? {
                 position: "fixed",
