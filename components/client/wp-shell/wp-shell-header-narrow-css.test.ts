@@ -33,7 +33,9 @@ describe("WP_SHELL_NARROW_HEADER_CSS", () => {
     expect(frame).toContain("HEADER_PLACEHOLDER_SRCDOC");
     expect(frame).toContain("useSyncExternalStore");
     expect(frame).toContain('data-wp-shell-slot="header"');
-    expect(frame).toContain('display: "block"');
+    expect(frame).toContain("headerRevealed");
+    expect(frame).toContain("HEADER_WP_HTML_DELAY_MS");
+    expect(frame).toContain(': "block"');
     expect(frame).toContain("font-src 'none'");
     expect(frame).toContain("width={props.kind === \"header\" ? 412 : 1280}");
     expect(frame).toContain("height={heightPx}");
