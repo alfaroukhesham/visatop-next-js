@@ -62,6 +62,12 @@ function mergeAllowedDevOrigins(): string[] {
 const devTunnelHosts =
   process.env.NODE_ENV === "development" ? mergeAllowedDevOrigins() : [];
 
+/** Hashed CSS/JS/fonts under `.next/static`. Clarity replays fetch these cross-origin. */
+const NEXT_STATIC_ASSET_HEADERS = [
+  { key: "Access-Control-Allow-Origin", value: "*" },
+  { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+];
+
 const nextConfig: NextConfig = {
   basePath: "/visa-processing",
   output: "standalone",
@@ -104,6 +110,17 @@ const nextConfig: NextConfig = {
       {
         source: "/admin/:path*",
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      // Next prefixes `source` with `basePath` unless `basePath: false`.
+      // Cover both `/visa-processing/_next/static/*` and `/_next/static/*`.
+      {
+        source: "/_next/static/:path*",
+        headers: NEXT_STATIC_ASSET_HEADERS,
+      },
+      {
+        source: "/_next/static/:path*",
+        basePath: false,
+        headers: NEXT_STATIC_ASSET_HEADERS,
       },
     ];
   },
