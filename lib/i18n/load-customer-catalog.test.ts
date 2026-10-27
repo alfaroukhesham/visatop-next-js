@@ -44,11 +44,17 @@ describe("getCustomerMessages", () => {
       const t = createCustomerT(locale);
       const full = t("home.nationalityPlaceholder");
       const narrow = t("home.nationalityPlaceholderNarrow");
+      const compact = t("home.nationalityPlaceholderCompact");
       expect(narrow.length, locale).toBeGreaterThan(0);
       expect(narrow.length, locale).toBeLessThan(full.length);
+      expect(compact.length, locale).toBeGreaterThan(0);
+      expect(compact.length, locale).toBeLessThanOrEqual(narrow.length);
     }
     expect(createCustomerT("en")("home.nationalityPlaceholderNarrow")).toBe("Your passport");
     expect(createCustomerT("ar")("home.nationalityPlaceholderNarrow")).toBe("جواز سفرك");
     expect(createCustomerT("fr")("home.nationalityPlaceholderNarrow")).toBe("Votre passeport");
+    expect(createCustomerT("en")("home.nationalityPlaceholderCompact")).toBe("Passport");
+    expect(createCustomerT("ar")("home.nationalityPlaceholderCompact")).toBe("الجواز");
+    expect(createCustomerT("fr")("home.nationalityPlaceholderCompact")).toBe("Passeport");
   });
 });

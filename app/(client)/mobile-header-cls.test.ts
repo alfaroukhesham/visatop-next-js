@@ -28,4 +28,10 @@ describe("narrow passport select icon", () => {
     expect(combobox).toContain("max-[240px]:hidden");
     expect(combobox).toContain("max-[240px]:pl-3");
   });
+
+  it("lets the compact placeholder wrap below 240px", () => {
+    expect(combobox).toContain("max-[240px]:placeholder:whitespace-normal");
+    expect(combobox).toContain("break-words whitespace-normal");
+    expect(combobox).toContain("max-[240px]:flex");
+  });
 });

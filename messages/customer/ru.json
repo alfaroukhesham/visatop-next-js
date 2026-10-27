@@ -8,6 +8,7 @@
     "nationalityLabelSrOnly": "Выберите гражданство вашего паспорта",
     "nationalityPlaceholder": "Выберите гражданство вашего паспорта",
     "nationalityPlaceholderNarrow": "Ваш паспорт",
+    "nationalityPlaceholderCompact": "Паспорт",
     "nationalityHelper": "Далее вы выберете визу и валюту.",
     "nextButton": "Далее",
     "guestTrackLink": "Отследить заявку",

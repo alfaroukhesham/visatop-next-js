@@ -5,6 +5,9 @@ import { useLayoutEffect, useState } from "react";
 /** Phone portrait and 200% zoom of a 375px frame (~188px CSS viewport). */
 export const NARROW_VIEWPORT_MAX_WIDTH_PX = 414;
 export const NARROW_VIEWPORT_MEDIA_QUERY = `(max-width: ${NARROW_VIEWPORT_MAX_WIDTH_PX}px)`;
+/** Ultra-narrow / 200% zoom: one-word passport label so the field stays readable. */
+export const COMPACT_VIEWPORT_MAX_WIDTH_PX = 240;
+export const COMPACT_VIEWPORT_MEDIA_QUERY = `(max-width: ${COMPACT_VIEWPORT_MAX_WIDTH_PX}px)`;
 
 export const useNarrowViewport = (query: string = NARROW_VIEWPORT_MEDIA_QUERY): boolean => {
   const [matches, setMatches] = useState(false);
