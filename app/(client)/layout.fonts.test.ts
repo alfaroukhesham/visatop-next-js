@@ -10,6 +10,7 @@ describe("customer font loading", () => {
     const layout = read("app/(client)/layout.tsx");
     expect(layout).toContain('display: "optional"');
     expect(layout).not.toContain('display: "swap"');
+    expect(layout).toContain("preload: true");
     expect(layout).toContain("preload: false");
   });
 

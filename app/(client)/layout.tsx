@@ -30,6 +30,7 @@ const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   display: "optional",
+  preload: true,
 });
 
 const notoSerif = Noto_Serif({
