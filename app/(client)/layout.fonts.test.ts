@@ -12,9 +12,9 @@ describe("customer font loading", () => {
     expect(layout).toContain("Inter");
     expect(layout).toContain("Noto_Serif");
     expect(layout).toContain('display: "swap"');
+    expect(layout).toContain('display: "optional"');
     expect(layout).toContain("adjustFontFallback: true");
     expect(layout).toContain("preload: true");
-    expect(layout).not.toContain('display: "optional"');
   });
 
   it("preloads only Inter 400 and Noto 600, not UI weights", () => {

@@ -49,7 +49,9 @@ const notoSerif = Noto_Serif({
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["600"],
-  display: "swap",
+  // optional + preload: desktop/broadband still gets Noto; Slow 4G LCP stays on
+  // the size-adjusted fallback instead of recasting the hero after the woff2.
+  display: "optional",
   preload: true,
   adjustFontFallback: true,
 });
