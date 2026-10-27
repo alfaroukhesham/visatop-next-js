@@ -236,8 +236,8 @@ function buildSrcDoc(input: {
       /* "Featured on" logos: WP theme constrains these; headless CSS path misses it. */
       header#header .featured_on .inner a img {
         height: 16px;
-        width: auto;
-        max-width: 100%;
+        width: 64px;
+        max-width: 64px;
         object-fit: contain;
         filter: brightness(0) invert(1);
       }
@@ -483,14 +483,38 @@ function buildSrcDoc(input: {
 
       injectLanguageSwitcher();
       document.addEventListener("DOMContentLoaded", injectLanguageSwitcher);
+      function postShellReady() {
+        post("wp-shell:fonts-ready");
+      }
+      function whenImagesReady(done) {
+        try {
+          var imgs = Array.prototype.slice.call(document.images || []);
+          var pending = imgs.filter(function (img) { return img && !img.complete; });
+          if (pending.length === 0) {
+            done();
+            return;
+          }
+          var left = pending.length;
+          var finish = function () {
+            left -= 1;
+            if (left <= 0) done();
+          };
+          pending.forEach(function (img) {
+            img.addEventListener("load", finish);
+            img.addEventListener("error", finish);
+          });
+        } catch (e) {
+          done();
+        }
+      }
       try {
         if (document.fonts && document.fonts.ready) {
-          document.fonts.ready.then(function () { post("wp-shell:fonts-ready"); });
+          document.fonts.ready.then(function () { whenImagesReady(postShellReady); });
         } else {
-          post("wp-shell:fonts-ready");
+          whenImagesReady(postShellReady);
         }
       } catch (e) {
-        post("wp-shell:fonts-ready");
+        postShellReady();
       }
 
       document.addEventListener("keydown", function (e) {
@@ -653,13 +677,19 @@ export function WpShellFrame(props: {
 
   const headerHtmlWithSizedLogo =
     props.kind === "header"
-      ? props.html.replace(
-          /<img\b([^>]*\balt="VisaTop"[^>]*)>/i,
-          (_full, attrs: string) =>
+      ? props.html
+          .replace(
+            /<img\b([^>]*\balt="VisaTop"[^>]*)>/i,
+            (_full, attrs: string) =>
+              /\bwidth\s*=/.test(attrs) && /\bheight\s*=/.test(attrs)
+                ? `<img${attrs}>`
+                : `<img width="180" height="40"${attrs}>`,
+          )
+          .replace(/<img\b([^>]*)>/gi, (full, attrs: string) =>
             /\bwidth\s*=/.test(attrs) && /\bheight\s*=/.test(attrs)
-              ? `<img${attrs}>`
-              : `<img width="180" height="40"${attrs}>`,
-        )
+              ? full
+              : `<img width="64" height="16"${attrs}>`,
+          )
       : props.html;
 
   const srcDoc = useMemo(
@@ -853,10 +883,9 @@ export function WpShellFrame(props: {
           width: "100%",
           height: `${heightPx}px`,
           border: "0",
-          display: "block",
+          display: headerHidden ? "none" : "block",
           overflow: "hidden",
           background: props.kind === "header" ? "#012031" : "transparent",
-          visibility: headerHidden ? "hidden" : "visible",
           ...(props.kind === "header"
             ? {
                 position: "fixed",
