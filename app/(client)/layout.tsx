@@ -12,6 +12,7 @@ import { CustomerI18nProvider } from "@/components/client/customer-i18n-provider
 import { StickyWhatsAppButton } from "@/components/client/sticky-whatsapp-button";
 import { WpShellFallbackFooter, WpShellFallbackHeader } from "@/components/client/wp-shell/wp-shell-fallback";
 import { WpShellFrame } from "@/components/client/wp-shell/wp-shell-frame";
+import { isCompactWpShellUserAgent } from "@/components/client/wp-shell/wp-shell-srcdoc";
 import { getAppOrigin } from "@/lib/app-url";
 import { readCriticalFontPreloadHrefs } from "@/lib/client/critical-font-preloads";
 import {
@@ -114,6 +115,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
   const t = (key: string, vars?: TCustomerMessageVars) =>
     formatCustomerMessage(i18n.messages, i18n.fallback, key, vars);
   const marketingTagsEnabled = areMarketingTagsEnabledFromHeaders(requestHeaders);
+  const ssrCompact = isCompactWpShellUserAgent(requestHeaders.get("user-agent"));
   const criticalFontHrefs = readCriticalFontPreloadHrefs();
   for (const href of criticalFontHrefs) {
     preload(href, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
@@ -171,6 +173,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
           baseHref={wpOrigin}
           hideLangSwitcher={hideNativeWpLangSwitcher}
           languageSwitcher={languageSwitcher ?? undefined}
+          ssrCompact={ssrCompact}
         />
       ) : (
         <WpShellFallbackHeader t={t} />
