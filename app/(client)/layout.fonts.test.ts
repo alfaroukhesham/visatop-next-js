@@ -6,9 +6,10 @@ const read = (relativePath: string): string =>
   readFileSync(path.join(process.cwd(), relativePath), "utf8");
 
 describe("customer font loading", () => {
-  it("uses font-display swap on the tourist shell and does not preload the heading face", () => {
+  it("uses font-display optional so webfonts cannot recast LCP", () => {
     const layout = read("app/(client)/layout.tsx");
-    expect(layout).toContain('display: "swap"');
+    expect(layout).toContain('display: "optional"');
+    expect(layout).not.toContain('display: "swap"');
     expect(layout).toContain("preload: false");
   });
 

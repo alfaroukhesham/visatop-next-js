@@ -121,22 +121,22 @@ export const HomeNationalityStart: FC = () => {
           <label htmlFor="home-nationality-input" className="sr-only">
             {t("home.nationalityLabelSrOnly")}
           </label>
+          <NationalityCombobox
+            id="home-nationality-input"
+            nationalities={nationalities}
+            valueCode={selectedCode}
+            onSelectCode={setSelectedCode}
+            onFirstInteraction={onNationalityFirstInteraction}
+            placeholder={nationalityPlaceholder}
+            size="hero"
+            className="max-[414px]:min-w-0 max-[414px]:max-w-full"
+            inputClassName="max-[414px]:placeholder:text-sm"
+          />
           {error ? (
-            <p className="text-error min-h-[3.5rem] px-2 text-sm leading-relaxed" role="alert">
+            <p className="text-error mt-3 px-2 text-sm leading-relaxed" role="alert">
               {error}
             </p>
-          ) : (
-            <NationalityCombobox
-              id="home-nationality-input"
-              nationalities={nationalities}
-              valueCode={selectedCode}
-              onSelectCode={setSelectedCode}
-              onFirstInteraction={onNationalityFirstInteraction}
-              placeholder={nationalityPlaceholder}
-              size="hero"
-              className="max-[414px]:min-w-0 max-[414px]:max-w-full"
-            />
-          )}
+          ) : null}
         </div>
       </div>
       <p className="text-muted-foreground mt-4 max-w-prose text-sm leading-relaxed max-[414px]:mt-3">

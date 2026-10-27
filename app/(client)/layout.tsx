@@ -29,14 +29,14 @@ const inter = Inter({
   variable: "--font-body",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  display: "swap",
+  display: "optional",
 });
 
 const notoSerif = Noto_Serif({
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["600"],
-  display: "swap",
+  display: "optional",
   preload: false,
 });
 

@@ -58,7 +58,7 @@ const Home = async () => {
           >
             <ClientHeroPanel
               className={cn(
-                "theme-client-rise border-secondary/40 from-card via-card to-muted/60 relative border-[3px] p-8 shadow-[0_28px_72px_rgba(1,32,49,0.16)] md:p-12 lg:p-14 max-[414px]:min-w-0 max-[414px]:max-w-full max-[414px]:p-4",
+                "border-secondary/40 from-card via-card to-muted/60 relative border-[3px] p-8 shadow-[0_28px_72px_rgba(1,32,49,0.16)] md:p-12 lg:p-14 max-[414px]:min-w-0 max-[414px]:max-w-full max-[414px]:p-4",
               )}
             >
               <p className="text-secondary text-[11px] text-center font-bold uppercase tracking-[0.28em]">

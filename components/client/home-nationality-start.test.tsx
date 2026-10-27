@@ -106,6 +106,7 @@ describe("HomeNationalityStart", () => {
     wrap(<HomeNationalityStart />);
     const input = await screen.findByRole("combobox");
     expect(input).toHaveAttribute("placeholder", "Your passport");
+    expect(input.className).toContain("max-[414px]:placeholder:text-sm");
   });
 
   it("uses the one-word passport placeholder at max-width 240px", async () => {
