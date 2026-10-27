@@ -449,7 +449,7 @@
   }
   .theme-client-wp-header iframe[data-wp-shell="header"] {
     min-height: 118px;
-    height: 118px;
+    height: 118px !important;
   }
 }
 

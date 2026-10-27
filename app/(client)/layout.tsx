@@ -1,6 +1,6 @@
 import { Inter, Noto_Serif } from "next/font/google";
 import { cookies, headers } from "next/headers";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { AnalyticsProviders } from "@/components/analytics/analytics-providers";
 import { AnalyticsResourceHints } from "@/components/analytics/analytics-resource-hints";
 import { MarketingTags } from "@/components/analytics/marketing-tags";
@@ -125,6 +125,11 @@ export default async function ClientLayout({ children }: { children: ReactNode }
       data-ui="client"
       dir={isCustomerLocaleRtl(locale) ? "rtl" : undefined}
       className={`theme-client theme-client-page-canvas ${inter.variable} ${interUi.variable} ${notoSerif.variable} flex min-h-screen min-h-dvh flex-col text-[18px] leading-[1.6] antialiased${model?.headerHtml ? " theme-client-wp-header" : ""}`}
+      style={
+        model?.headerHtml
+          ? ({ ["--wp-shell-header-height"]: "118px" } as CSSProperties)
+          : undefined
+      }
     >
       {criticalFontHrefs.map((href) => (
         <link
@@ -166,7 +171,14 @@ export default async function ClientLayout({ children }: { children: ReactNode }
         <WpShellFallbackHeader t={t} />
       )}
 
-      <div className="theme-client-main relative z-0 flex min-h-0 flex-1 flex-col">
+      <div
+        className="theme-client-main relative z-0 flex min-h-0 flex-1 flex-col"
+        style={
+          model?.headerHtml
+            ? { paddingTop: "var(--wp-shell-header-height, 118px)" }
+            : undefined
+        }
+      >
         <AnalyticsResourceHints includeMarketing={marketingTagsEnabled} />
         <MarketingTags />
         <MicrosoftClarity />

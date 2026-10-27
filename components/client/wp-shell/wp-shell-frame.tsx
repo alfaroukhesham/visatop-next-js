@@ -657,6 +657,10 @@ export function WpShellFrame(props: {
 
   useOnBfcacheRestore(assignIframeSrcDoc);
 
+  useEffect(() => {
+    assignIframeSrcDoc();
+  }, [assignIframeSrcDoc]);
+
   useLayoutEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
@@ -776,7 +780,6 @@ export function WpShellFrame(props: {
       ref={iframeRef}
       title={props.kind === "header" ? "WP Header" : "WP Footer"}
       data-wp-shell={props.kind}
-      srcDoc={srcDoc}
       width={props.kind === "header" ? 412 : 1280}
       height={heightPx}
       sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
@@ -785,7 +788,7 @@ export function WpShellFrame(props: {
         height: `${heightPx}px`,
         border: "0",
         display: "block",
-        background: "transparent",
+        background: props.kind === "header" ? "#012031" : "transparent",
         ...(props.kind === "header"
           ? {
               position: "fixed",
