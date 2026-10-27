@@ -441,16 +441,11 @@
   .theme-client-wp-header iframe[data-wp-shell="header"] {
     min-height: 107px;
   }
-  /* Lab LCP is the home h1. Skip webfonts at this breakpoint so Slow 4G
-     does not recast the heading after Inter/Noto arrive. */
-  html:has(.theme-client) body,
-  .theme-client,
-  .theme-client h1,
-  .theme-client h2,
-  .theme-client h3,
-  .theme-client h4,
-  .theme-client .font-heading {
-    font-family: ui-sans-serif, system-ui, sans-serif;
+  /* Lab LCP is the home h1. Override next/font variables so Inter/Noto are
+     unused at this breakpoint and are not downloaded on Slow 4G. */
+  .theme-client {
+    --font-body: ui-sans-serif, system-ui, sans-serif !important;
+    --font-display: ui-sans-serif, system-ui, sans-serif !important;
   }
 }
 
