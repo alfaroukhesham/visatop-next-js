@@ -441,13 +441,16 @@
   .theme-client-wp-header iframe[data-wp-shell="header"] {
     min-height: 107px;
   }
-  /* Lab LCP is the home h1; don't wait on Noto at this breakpoint. */
+  /* Lab LCP is the home h1. Skip webfonts at this breakpoint so Slow 4G
+     does not recast the heading after Inter/Noto arrive. */
+  html:has(.theme-client) body,
+  .theme-client,
   .theme-client h1,
   .theme-client h2,
   .theme-client h3,
   .theme-client h4,
   .theme-client .font-heading {
-    font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+    font-family: ui-sans-serif, system-ui, sans-serif;
   }
 }
 

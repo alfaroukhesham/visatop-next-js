@@ -29,8 +29,7 @@ describe("customer font loading", () => {
   it("uses the body face for customer headings at max-width 414px", () => {
     const globals = read("app/globals.css");
     expect(globals).toContain("@media (max-width: 414px)");
-    expect(globals).toContain(
-      "font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif",
-    );
+    expect(globals).toContain("html:has(.theme-client) body");
+    expect(globals).toContain("font-family: ui-sans-serif, system-ui, sans-serif");
   });
 });
