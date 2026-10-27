@@ -6,12 +6,16 @@ const read = (relativePath: string): string =>
   readFileSync(path.join(process.cwd(), relativePath), "utf8");
 
 describe("customer font loading", () => {
-  it("uses font-display optional so webfonts cannot recast LCP", () => {
+  it("loads Inter and Noto with swap, size-adjust fallbacks, and preload", () => {
     const layout = read("app/(client)/layout.tsx");
-    expect(layout).toContain('display: "optional"');
-    expect(layout).not.toContain('display: "swap"');
+    expect(layout).toContain("next/font/google");
+    expect(layout).toContain("Inter");
+    expect(layout).toContain("Noto_Serif");
+    expect(layout).toContain('display: "swap"');
+    expect(layout).toContain("adjustFontFallback: true");
     expect(layout).toContain("preload: true");
-    expect(layout).toContain("preload: false");
+    expect(layout).not.toContain('display: "optional"');
+    expect(layout).not.toContain("preload: false");
   });
 
   it("does not load Red Hat on every document including visa-processing", () => {
@@ -26,10 +30,9 @@ describe("customer font loading", () => {
     expect(admin).toContain('display: "swap"');
   });
 
-  it("uses the body face for customer headings at max-width 414px", () => {
+  it("does not swap customer pages to system sans at max-width 414px", () => {
     const globals = read("app/globals.css");
-    expect(globals).toContain("@media (max-width: 414px)");
-    expect(globals).toContain("--font-body: ui-sans-serif, system-ui, sans-serif !important");
-    expect(globals).toContain("--font-display: ui-sans-serif, system-ui, sans-serif !important");
+    expect(globals).not.toContain("--font-body: ui-sans-serif, system-ui, sans-serif !important");
+    expect(globals).not.toContain("--font-display: ui-sans-serif, system-ui, sans-serif !important");
   });
 });

@@ -13,8 +13,10 @@ describe("mobile WP header CLS reservation", () => {
   it("reserves header height only inside a max-width 414px query", () => {
     expect(globals).toContain("@media (max-width: 414px)");
     expect(globals).toContain("--wp-shell-header-height: 118px");
-    expect(globals).toContain("min-height: 107px");
+    expect(globals).toContain("min-height: 118px");
+    expect(globals).toContain("padding-top: 118px");
     expect(layout).toContain("theme-client-wp-header");
+    expect(layout).toContain("theme-client-main");
     const withoutMobileQuery = globals.replace(
       /@media \(max-width: 414px\) \{[\s\S]*?\}/,
       "",
@@ -33,5 +35,6 @@ describe("narrow passport select icon", () => {
     expect(combobox).toContain("max-[240px]:placeholder:whitespace-normal");
     expect(combobox).toContain("break-words whitespace-normal");
     expect(combobox).toContain("max-[240px]:flex");
+    expect(combobox).toContain("compactPlaceholder");
   });
 });

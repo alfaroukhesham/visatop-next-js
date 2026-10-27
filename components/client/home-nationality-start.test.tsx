@@ -83,6 +83,18 @@ describe("HomeNationalityStart", () => {
     );
     expect(html).toContain("Select your Passport nationality");
     expect(html).toContain("home-nationality-input");
+    expect(html).toContain("Passport");
+  });
+
+  it("puts the compact Passport overlay in server HTML for max-width 240px", async () => {
+    const { renderToString } = await import("react-dom/server");
+    const html = renderToString(
+      <CustomerI18nProvider locale="en" messages={en} fallback={en}>
+        <HomeNationalityStart />
+      </CustomerI18nProvider>,
+    );
+    expect(html).toContain("max-[240px]:flex");
+    expect(html).toMatch(/line-clamp-2[^>]*>Passport</);
   });
 
   it("keeps the full passport placeholder at desktop widths", async () => {

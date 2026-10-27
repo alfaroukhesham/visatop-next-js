@@ -48,6 +48,8 @@ interface INationalityComboboxProps {
   valueCode: string | null;
   onSelectCode: (code: string) => void;
   placeholder?: string;
+  /** One-word label shown in the max-[240px] overlay (Passport / الجواز / Passeport). */
+  compactPlaceholder?: string;
   disabled?: boolean;
   /** Larger padding + text for hero usage */
   size?: "default" | "hero";
@@ -70,6 +72,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
   valueCode,
   onSelectCode,
   placeholder,
+  compactPlaceholder,
   disabled,
   size = "default",
   className,
@@ -79,6 +82,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
   const t = useCustomerT();
   const locale = useCustomerLocale();
   const resolvedPlaceholder = placeholder ?? t("common.nationalityDefaultPlaceholder");
+  const resolvedCompactPlaceholder = compactPlaceholder ?? resolvedPlaceholder;
   const reactId = useId();
   const listId = `${reactId}-listbox`;
   const id = idProp ?? `${reactId}-input`;
@@ -455,21 +459,23 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
         {selectedFlag && !open ? (
           <span
             className={cn(
-              "pointer-events-none absolute top-1/2 -translate-y-1/2 leading-none max-[240px]:hidden",
-              hero ? "left-4 text-2xl" : "left-3 text-lg",
+              "pointer-events-none absolute top-1/2 flex -translate-y-1/2 items-center justify-center leading-none max-[240px]:hidden",
+              hero ? "left-4 size-6 text-2xl" : "left-3 size-5 text-lg",
             )}
             aria-hidden
           >
             {selectedFlag}
           </span>
         ) : (
-          <Globe
+          <span
             className={cn(
-              "text-muted-foreground pointer-events-none absolute top-1/2 -translate-y-1/2 max-[240px]:hidden",
+              "text-muted-foreground pointer-events-none absolute top-1/2 flex -translate-y-1/2 items-center justify-center max-[240px]:hidden",
               hero ? "left-4 size-6" : "left-3 size-5",
             )}
             aria-hidden
-          />
+          >
+            <Globe className={hero ? "size-6" : "size-5"} />
+          </span>
         )}
         <ClientInput
           ref={inputRef}
@@ -506,17 +512,19 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
             aria-hidden
           >
             <span className="line-clamp-2 w-full text-left text-sm leading-tight break-words whitespace-normal">
-              {resolvedPlaceholder}
+              {resolvedCompactPlaceholder}
             </span>
           </span>
         ) : null}
-        <ChevronDown
+        <span
           className={cn(
-            "text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 max-[240px]:right-1.5 max-[240px]:size-5",
-            hero ? "size-6" : "size-5",
+            "text-muted-foreground pointer-events-none absolute top-1/2 flex -translate-y-1/2 items-center justify-center max-[240px]:right-1.5 max-[240px]:size-5",
+            hero ? "right-3 size-6" : "right-3 size-5",
           )}
           aria-hidden
-        />
+        >
+          <ChevronDown className={hero ? "size-6" : "size-5"} />
+        </span>
       </div>
       {inlineList ? dropdownShell : portalContent}
     </div>

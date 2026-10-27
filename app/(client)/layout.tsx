@@ -29,16 +29,18 @@ const inter = Inter({
   variable: "--font-body",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-  display: "optional",
+  display: "swap",
   preload: true,
+  adjustFontFallback: true,
 });
 
 const notoSerif = Noto_Serif({
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["600"],
-  display: "optional",
-  preload: false,
+  display: "swap",
+  preload: true,
+  adjustFontFallback: true,
 });
 
 const resolveLanguageSwitcherOptions = (input: {
@@ -126,14 +128,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
         <WpShellFallbackHeader t={t} />
       )}
 
-      <div
-        className="flex min-h-0 flex-1 flex-col"
-        style={{
-          paddingTop: "var(--wp-shell-header-height, 0px)",
-          position: "relative",
-          zIndex: 0,
-        }}
-      >
+      <div className="theme-client-main relative z-0 flex min-h-0 flex-1 flex-col">
         <AnalyticsResourceHints includeMarketing={marketingTagsEnabled} />
         <MarketingTags />
         <MicrosoftClarity />

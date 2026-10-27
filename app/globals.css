@@ -433,19 +433,21 @@
   outline-offset: 3px;
 }
 
-/* Mobile only: reserve the WP header offset before the iframe posts its height (CLS). */
+.theme-client-main {
+  padding-top: var(--wp-shell-header-height, 0px);
+}
+
+/* Mobile only: reserve the WP header offset before the iframe posts its height (CLS).
+   Literal padding-top beats the iframe's later --wp-shell-header-height write. */
 @media (max-width: 414px) {
   .theme-client-wp-header {
     --wp-shell-header-height: 118px;
   }
-  .theme-client-wp-header iframe[data-wp-shell="header"] {
-    min-height: 107px;
+  .theme-client-wp-header .theme-client-main {
+    padding-top: 118px;
   }
-  /* Lab LCP is the home h1. Override next/font variables so Inter/Noto are
-     unused at this breakpoint and are not downloaded on Slow 4G. */
-  .theme-client {
-    --font-body: ui-sans-serif, system-ui, sans-serif !important;
-    --font-display: ui-sans-serif, system-ui, sans-serif !important;
+  .theme-client-wp-header iframe[data-wp-shell="header"] {
+    min-height: 118px;
   }
 }
 

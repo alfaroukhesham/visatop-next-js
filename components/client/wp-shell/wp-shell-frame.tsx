@@ -594,8 +594,8 @@ export function WpShellFrame(props: {
   const router = useRouter();
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const menuOpenRef = useRef(false);
-  const lastGoodHeightRef = useRef<number>(props.kind === "header" ? 120 : 400);
-  const [heightPx, setHeightPx] = useState<number>(props.kind === "header" ? 120 : 400);
+  const lastGoodHeightRef = useRef<number>(props.kind === "header" ? 118 : 400);
+  const [heightPx, setHeightPx] = useState<number>(props.kind === "header" ? 118 : 400);
   const languageSwitcher =
     props.kind === "header" && props.languageSwitcher ? props.languageSwitcher : null;
   const postMessageToken = useMemo(
