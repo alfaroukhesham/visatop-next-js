@@ -9,8 +9,8 @@ describe("next.config static asset CORS", () => {
     const src = read("next.config.ts");
 
     expect(src).toContain('key: "Access-Control-Allow-Origin", value: "*"');
-    expect(src).toContain(
-      'key: "Cache-Control", value: "public, max-age=31536000, immutable"',
+    expect(src).not.toMatch(
+      /NEXT_STATIC_ASSET_HEADERS[\s\S]{0,240}Cache-Control/,
     );
     expect(src).toContain('source: "/_next/static/:path*"');
     expect(src).toContain("basePath: false");

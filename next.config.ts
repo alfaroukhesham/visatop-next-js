@@ -65,7 +65,6 @@ const devTunnelHosts =
 /** Hashed CSS/JS/fonts under `.next/static`. Clarity replays fetch these cross-origin. */
 const NEXT_STATIC_ASSET_HEADERS = [
   { key: "Access-Control-Allow-Origin", value: "*" },
-  { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
 ];
 
 const nextConfig: NextConfig = {
