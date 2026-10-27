@@ -196,10 +196,16 @@ function buildSrcDoc(input: {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <base ${baseHref ? `href="${escapeAttr(baseHref)}"` : ""} />
+    <style>
+      header#header .logo picture { display: block; height: 40px; width: auto; max-width: 220px; }
+      header#header .logo img { display: block; height: 40px; width: 180px; max-width: 220px; object-fit: contain; }
+    </style>
     ${links}
     <style>
       html, body { margin: 0; padding: 0; background: transparent !important; }
       body { overflow: hidden; }
+      header#header .logo picture { display: block; height: 40px; width: auto; max-width: 220px; }
+      header#header .logo img { display: block; height: 40px; width: 180px; max-width: 220px; object-fit: contain; }
 
       /* Fallback alignment: in WP this is handled by theme/plugin CSS, but our headless CSS
          bundle may omit those rules. This keeps "Time in UAE" pinned to the right. */
@@ -610,10 +616,21 @@ export function WpShellFrame(props: {
     [props.html, props.cssUrls, props.kind, props.hideLangSwitcher, languageSwitcher],
   );
 
+  const headerHtmlWithSizedLogo =
+    props.kind === "header"
+      ? props.html.replace(
+          /<img\b([^>]*\balt="VisaTop"[^>]*)>/i,
+          (_full, attrs: string) =>
+            /\bwidth\s*=/.test(attrs) && /\bheight\s*=/.test(attrs)
+              ? `<img${attrs}>`
+              : `<img width="180" height="40"${attrs}>`,
+        )
+      : props.html;
+
   const srcDoc = useMemo(
     () =>
       buildSrcDoc({
-        html: props.html,
+        html: headerHtmlWithSizedLogo,
         cssUrls: props.cssUrls,
         kind: props.kind,
         baseHref: props.baseHref ?? null,
@@ -622,7 +639,7 @@ export function WpShellFrame(props: {
         languageSwitcher,
       }),
     [
-      props.html,
+      headerHtmlWithSizedLogo,
       props.cssUrls,
       props.kind,
       props.baseHref,
@@ -760,6 +777,8 @@ export function WpShellFrame(props: {
       title={props.kind === "header" ? "WP Header" : "WP Footer"}
       data-wp-shell={props.kind}
       srcDoc={srcDoc}
+      width={props.kind === "header" ? 412 : 1280}
+      height={heightPx}
       sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
       style={{
         width: "100%",

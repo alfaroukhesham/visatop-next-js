@@ -12,6 +12,7 @@ import { StickyWhatsAppButton } from "@/components/client/sticky-whatsapp-button
 import { WpShellFallbackFooter, WpShellFallbackHeader } from "@/components/client/wp-shell/wp-shell-fallback";
 import { WpShellFrame } from "@/components/client/wp-shell/wp-shell-frame";
 import { getAppOrigin } from "@/lib/app-url";
+import { readCriticalFontPreloadHrefs } from "@/lib/client/critical-font-preloads";
 import {
   CUSTOMER_LOCALE_COOKIE,
   CUSTOMER_LOCALE_REQUEST_HEADER,
@@ -117,6 +118,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
   const t = (key: string, vars?: TCustomerMessageVars) =>
     formatCustomerMessage(i18n.messages, i18n.fallback, key, vars);
   const marketingTagsEnabled = areMarketingTagsEnabledFromHeaders(requestHeaders);
+  const criticalFontHrefs = readCriticalFontPreloadHrefs();
 
   return (
     <div
@@ -124,8 +126,22 @@ export default async function ClientLayout({ children }: { children: ReactNode }
       dir={isCustomerLocaleRtl(locale) ? "rtl" : undefined}
       className={`theme-client theme-client-page-canvas ${inter.variable} ${interUi.variable} ${notoSerif.variable} flex min-h-screen min-h-dvh flex-col text-[18px] leading-[1.6] antialiased${model?.headerHtml ? " theme-client-wp-header" : ""}`}
     >
-      <span className={inter.className} hidden aria-hidden />
-      <span className={notoSerif.className} hidden aria-hidden />
+      {criticalFontHrefs.map((href) => (
+        <link
+          key={href}
+          rel="preload"
+          href={href}
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
+      ))}
+      <span className={`${inter.className} sr-only`} aria-hidden>
+        {" "}
+      </span>
+      <span className={`${notoSerif.className} sr-only`} aria-hidden>
+        {" "}
+      </span>
       {model?.headerHtml ? (
         <style
           dangerouslySetInnerHTML={{
