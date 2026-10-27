@@ -72,6 +72,29 @@ describe("HomeNationalityStart", () => {
     vi.unstubAllGlobals();
   });
 
+  it("renders the passport placeholder before the catalog responds", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise(() => undefined)),
+    );
+    wrap(<HomeNationalityStart />);
+    expect(screen.getByRole("combobox")).toHaveAttribute(
+      "placeholder",
+      "Select your Passport nationality",
+    );
+  });
+
+  it("includes the passport placeholder in server HTML", async () => {
+    const { renderToString } = await import("react-dom/server");
+    const html = renderToString(
+      <CustomerI18nProvider locale="en" messages={en} fallback={en}>
+        <HomeNationalityStart />
+      </CustomerI18nProvider>,
+    );
+    expect(html).toContain("Select your Passport nationality");
+    expect(html).toContain("home-nationality-input");
+  });
+
   it("keeps the full passport placeholder at desktop widths", async () => {
     wrap(<HomeNationalityStart />);
     const input = await screen.findByRole("combobox");

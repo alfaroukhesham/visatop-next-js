@@ -1,5 +1,8 @@
-defaults
+# Match Next.js 16 supported browsers so SWC skips legacy polyfills
+# (Array.prototype.at, Object.hasOwn, …) on the customer bundle.
+chrome >= 111
+edge >= 111
+firefox >= 111
+safari >= 16.4
+ios >= 16.4
 not dead
-Safari >= 14
-Firefox >= 78
-iOS >= 14

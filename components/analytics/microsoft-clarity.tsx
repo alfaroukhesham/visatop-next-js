@@ -16,7 +16,7 @@ export const MicrosoftClarity: FC<IMicrosoftClarityProps> = (props): ReactElemen
   if (!projectId) return null;
 
   return (
-    <Script id="visatop-clarity" strategy="afterInteractive">
+    <Script id="visatop-clarity" strategy="lazyOnload">
       {buildClarityBootstrapScript(projectId)}
     </Script>
   );

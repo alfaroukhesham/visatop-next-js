@@ -12,11 +12,11 @@ describe("MicrosoftClarity", () => {
     expect(MicrosoftClarity({ projectId: "" })).toBeNull();
   });
 
-  it("renders next/script afterInteractive with the standard snippet", () => {
+  it("renders next/script lazyOnload with the standard snippet", () => {
     const tree = MicrosoftClarity({ projectId: "waxpllatey" });
     expect(tree).not.toBeNull();
     expect(tree?.props.id).toBe("visatop-clarity");
-    expect(tree?.props.strategy).toBe("afterInteractive");
+    expect(tree?.props.strategy).toBe("lazyOnload");
     expect(tree?.props.children).toBe(buildClarityBootstrapScript("waxpllatey"));
   });
 

@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
-import { ResumeDraftModal } from "@/components/apply/resume-draft-modal";
-import { ClientAppHeader } from "@/components/client/client-app-header";
 import { ClientHeroPanel } from "@/components/client/client-surface";
+import { HomeDeferredShell } from "@/components/client/home-deferred-shell";
 import { HomeNationalityStart } from "@/components/client/home-nationality-start";
 import { JsonLdScript } from "@/components/seo/json-ld-script";
 import { appHref } from "@/lib/app-href";
@@ -43,9 +42,8 @@ const Home = async () => {
 
   return (
     <div className="text-foreground flex min-h-0 flex-1 flex-col">
-      <ResumeDraftModal />
+      <HomeDeferredShell />
       <JsonLdScript id="visatop-home-jsonld" data={buildHomePageJsonLd({ locale })} />
-      <ClientAppHeader hideWhenSignedOut />
 
       <div className="relative flex-1 overflow-x-hidden">
         <div
