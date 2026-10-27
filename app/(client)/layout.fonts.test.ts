@@ -15,7 +15,21 @@ describe("customer font loading", () => {
     expect(layout).toContain("adjustFontFallback: true");
     expect(layout).toContain("preload: true");
     expect(layout).not.toContain('display: "optional"');
-    expect(layout).not.toContain("preload: false");
+  });
+
+  it("preloads only Inter 400 and Noto 600, not UI weights", () => {
+    const layout = read("app/(client)/layout.tsx");
+    expect(layout).toContain('weight: ["400"]');
+    expect(layout).toContain('weight: ["500", "600"]');
+    expect(layout).toContain('weight: ["600"]');
+    expect(layout).toContain("preload: false");
+    expect(layout).toContain("interUi.variable");
+  });
+
+  it("inlines first-paint WP header padding so CLS does not wait on the CSS bundle", () => {
+    const layout = read("app/(client)/layout.tsx");
+    expect(layout).toContain("padding-top:118px");
+    expect(layout).toContain("--wp-shell-header-height,118px");
   });
 
   it("does not load Red Hat on every document including visa-processing", () => {

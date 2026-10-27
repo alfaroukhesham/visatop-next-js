@@ -28,10 +28,19 @@ import type { WpShellLanguageOption } from "@/lib/wp-headless/types";
 const inter = Inter({
   variable: "--font-body",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400"],
   display: "swap",
   preload: true,
   adjustFontFallback: true,
+});
+
+const interUi = Inter({
+  variable: "--font-body-ui",
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  display: "swap",
+  preload: false,
+  adjustFontFallback: false,
 });
 
 const notoSerif = Noto_Serif({
@@ -113,8 +122,19 @@ export default async function ClientLayout({ children }: { children: ReactNode }
     <div
       data-ui="client"
       dir={isCustomerLocaleRtl(locale) ? "rtl" : undefined}
-      className={`theme-client theme-client-page-canvas ${inter.variable} ${notoSerif.variable} flex min-h-screen min-h-dvh flex-col text-[18px] leading-[1.6] antialiased${model?.headerHtml ? " theme-client-wp-header" : ""}`}
+      className={`theme-client theme-client-page-canvas ${inter.variable} ${interUi.variable} ${notoSerif.variable} flex min-h-screen min-h-dvh flex-col text-[18px] leading-[1.6] antialiased${model?.headerHtml ? " theme-client-wp-header" : ""}`}
     >
+      {model?.headerHtml ? (
+        <style
+          dangerouslySetInnerHTML={{
+            __html:
+              ".theme-client-wp-header .theme-client-main{padding-top:var(--wp-shell-header-height,118px)}" +
+              "@media (max-width:414px){.theme-client-wp-header{--wp-shell-header-height:118px}" +
+              ".theme-client-wp-header .theme-client-main{padding-top:118px}" +
+              ".theme-client-wp-header iframe[data-wp-shell=header]{min-height:118px}}",
+          }}
+        />
+      ) : null}
       {model?.headerHtml ? (
         <WpShellFrame
           kind="header"

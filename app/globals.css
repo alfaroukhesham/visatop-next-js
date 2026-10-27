@@ -438,16 +438,18 @@
 }
 
 /* Mobile only: reserve the WP header offset before the iframe posts its height (CLS).
-   Literal padding-top beats the iframe's later --wp-shell-header-height write. */
+   Literal padding-top !important beats both the CSS variable and any inline fallback
+   so a late --wp-shell-header-height write cannot shift the hero. */
 @media (max-width: 414px) {
   .theme-client-wp-header {
     --wp-shell-header-height: 118px;
   }
   .theme-client-wp-header .theme-client-main {
-    padding-top: 118px;
+    padding-top: 118px !important;
   }
   .theme-client-wp-header iframe[data-wp-shell="header"] {
     min-height: 118px;
+    height: 118px;
   }
 }
 

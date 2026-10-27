@@ -14,7 +14,7 @@ describe("mobile WP header CLS reservation", () => {
     expect(globals).toContain("@media (max-width: 414px)");
     expect(globals).toContain("--wp-shell-header-height: 118px");
     expect(globals).toContain("min-height: 118px");
-    expect(globals).toContain("padding-top: 118px");
+    expect(globals).toContain("padding-top: 118px !important");
     expect(layout).toContain("theme-client-wp-header");
     expect(layout).toContain("theme-client-main");
     const withoutMobileQuery = globals.replace(
@@ -36,5 +36,10 @@ describe("narrow passport select icon", () => {
     expect(combobox).toContain("break-words whitespace-normal");
     expect(combobox).toContain("max-[240px]:flex");
     expect(combobox).toContain("compactPlaceholder");
+  });
+
+  it("pins lucide icon width and height so the SVG circle cannot shift", () => {
+    expect(combobox).toContain("width={hero ? 24 : 20}");
+    expect(combobox).toContain("height={hero ? 24 : 20}");
   });
 });

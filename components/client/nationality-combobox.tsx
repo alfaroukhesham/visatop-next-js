@@ -474,7 +474,11 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
             )}
             aria-hidden
           >
-            <Globe className={hero ? "size-6" : "size-5"} />
+            <Globe
+              className={hero ? "size-6" : "size-5"}
+              width={hero ? 24 : 20}
+              height={hero ? 24 : 20}
+            />
           </span>
         )}
         <ClientInput
@@ -523,7 +527,11 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
           )}
           aria-hidden
         >
-          <ChevronDown className={hero ? "size-6" : "size-5"} />
+          <ChevronDown
+            className={hero ? "size-6" : "size-5"}
+            width={hero ? 24 : 20}
+            height={hero ? 24 : 20}
+          />
         </span>
       </div>
       {inlineList ? dropdownShell : portalContent}
