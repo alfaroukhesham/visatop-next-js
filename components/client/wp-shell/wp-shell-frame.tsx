@@ -21,7 +21,7 @@ import { WP_SHELL_NARROW_HEADER_CSS } from "./wp-shell-header-narrow-css";
 
 const APP_BASE_PATH = "/visa-processing";
 
-const HEADER_SLOT_HEIGHT_PX = 118;
+const HEADER_SLOT_HEIGHT_PX = 130;
 const HEADER_PLACEHOLDER_SRCDOC =
   "<!doctype html><html><head><meta charset=utf-8><style>html,body{margin:0;background:#012031;height:100%}</style></head><body></body></html>";
 
