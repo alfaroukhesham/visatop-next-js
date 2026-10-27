@@ -455,7 +455,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
         {selectedFlag && !open ? (
           <span
             className={cn(
-              "pointer-events-none absolute top-1/2 -translate-y-1/2 leading-none",
+              "pointer-events-none absolute top-1/2 -translate-y-1/2 leading-none max-[240px]:hidden",
               hero ? "left-4 text-2xl" : "left-3 text-lg",
             )}
             aria-hidden
@@ -465,7 +465,7 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
         ) : (
           <Globe
             className={cn(
-              "text-muted-foreground pointer-events-none absolute top-1/2 -translate-y-1/2",
+              "text-muted-foreground pointer-events-none absolute top-1/2 -translate-y-1/2 max-[240px]:hidden",
               hero ? "left-4 size-6" : "left-3 size-5",
             )}
             aria-hidden
@@ -495,14 +495,24 @@ export const NationalityCombobox: FC<INationalityComboboxProps> = ({
           }}
           onKeyDown={onKeyDown}
           className={cn(
-            "w-full border-border pr-11 shadow-sm",
+            "w-full border-border pr-11 shadow-sm max-[240px]:pl-3 max-[240px]:pr-7 max-[240px]:text-base max-[240px]:placeholder:whitespace-normal max-[240px]:placeholder:break-words max-[240px]:placeholder:text-transparent",
             hero ? "min-h-[3.5rem] rounded-[10px] py-4 pl-12 text-lg md:min-h-[4rem] md:text-xl" : "pl-10",
             inputClassName,
           )}
         />
+        {!inputValue ? (
+          <span
+            className="text-muted-foreground pointer-events-none absolute inset-y-0 left-3 right-7 hidden items-center overflow-hidden max-[240px]:flex"
+            aria-hidden
+          >
+            <span className="line-clamp-2 w-full text-left text-sm leading-tight break-words whitespace-normal">
+              {resolvedPlaceholder}
+            </span>
+          </span>
+        ) : null}
         <ChevronDown
           className={cn(
-            "text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2",
+            "text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 max-[240px]:right-1.5 max-[240px]:size-5",
             hero ? "size-6" : "size-5",
           )}
           aria-hidden

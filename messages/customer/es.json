@@ -8,6 +8,7 @@
     "nationalityLabelSrOnly": "Seleccione la nacionalidad de su pasaporte",
     "nationalityPlaceholder": "Seleccione la nacionalidad de su pasaporte",
     "nationalityPlaceholderNarrow": "Su pasaporte",
+    "nationalityPlaceholderCompact": "Pasaporte",
     "nationalityHelper": "A continuación elige su visado y la moneda.",
     "nextButton": "Siguiente",
     "guestTrackLink": "Consultar solicitud",

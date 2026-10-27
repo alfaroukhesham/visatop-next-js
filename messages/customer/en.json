@@ -8,6 +8,7 @@
     "nationalityLabelSrOnly": "Select your Passport nationality",
     "nationalityPlaceholder": "Select your Passport nationality",
     "nationalityPlaceholderNarrow": "Your passport",
+    "nationalityPlaceholderCompact": "Passport",
     "nationalityHelper": "Next you choose your visa and currency.",
     "nextButton": "Next",
     "guestTrackLink": "Track application",
