@@ -40,9 +40,9 @@ const interUi = Inter({
   variable: "--font-body-ui",
   subsets: ["latin"],
   weight: ["500", "600"],
-  display: "swap",
+  display: "optional",
   preload: false,
-  adjustFontFallback: false,
+  adjustFontFallback: true,
 });
 
 const notoSerif = Noto_Serif({

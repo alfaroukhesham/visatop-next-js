@@ -853,9 +853,10 @@ export function WpShellFrame(props: {
           width: "100%",
           height: `${heightPx}px`,
           border: "0",
-          display: headerHidden ? "none" : "block",
+          display: "block",
           overflow: "hidden",
           background: props.kind === "header" ? "#012031" : "transparent",
+          visibility: headerHidden ? "hidden" : "visible",
           ...(props.kind === "header"
             ? {
                 position: "fixed",
