@@ -24,6 +24,8 @@ describe("customer font loading", () => {
     expect(layout).toContain('weight: ["600"]');
     expect(layout).toContain("preload: false");
     expect(layout).toContain("interUi.variable");
+    expect(layout).toContain("inter.className");
+    expect(layout).toContain("notoSerif.className");
   });
 
   it("inlines first-paint WP header padding so CLS does not wait on the CSS bundle", () => {
