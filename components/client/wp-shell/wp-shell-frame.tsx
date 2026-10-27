@@ -842,7 +842,7 @@ export function WpShellFrame(props: {
             ? srcDoc
             : HEADER_PLACEHOLDER_SRCDOC
         }
-        width={props.kind === "header" && compactHeader ? 412 : 1280}
+        width={props.kind === "header" ? 412 : 1280}
         height={heightPx}
         sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
         onLoad={() => {
