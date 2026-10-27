@@ -122,8 +122,9 @@ export default async function ClientLayout({ children }: { children: ReactNode }
     <div
       data-ui="client"
       dir={isCustomerLocaleRtl(locale) ? "rtl" : undefined}
-      className={`theme-client theme-client-page-canvas ${inter.variable} ${inter.className} ${interUi.variable} ${notoSerif.variable} flex min-h-screen min-h-dvh flex-col text-[18px] leading-[1.6] antialiased${model?.headerHtml ? " theme-client-wp-header" : ""}`}
+      className={`theme-client theme-client-page-canvas ${inter.variable} ${interUi.variable} ${notoSerif.variable} flex min-h-screen min-h-dvh flex-col text-[18px] leading-[1.6] antialiased${model?.headerHtml ? " theme-client-wp-header" : ""}`}
     >
+      <span className={inter.className} hidden aria-hidden />
       <span className={notoSerif.className} hidden aria-hidden />
       {model?.headerHtml ? (
         <style
