@@ -461,9 +461,19 @@
   .theme-client-wp-header .theme-client-main {
     padding-top: 118px !important;
   }
-  .theme-client-wp-header iframe[data-wp-shell="header"] {
+  .theme-client-wp-header iframe[data-wp-shell="header"]:not([data-wp-menu-open="true"]) {
     min-height: 118px !important;
     height: 118px !important;
+  }
+  .theme-client-wp-header iframe[data-wp-shell="header"][data-wp-menu-open="true"] {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: none !important;
+    overflow: visible !important;
+    z-index: 2147483647 !important;
   }
   .theme-client-wp-header [data-wp-shell-slot="header"] {
     min-height: 118px !important;

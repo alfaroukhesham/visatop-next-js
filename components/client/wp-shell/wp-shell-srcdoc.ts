@@ -95,6 +95,37 @@ export function wpShellHeaderCspMeta(input: {
   return `<meta http-equiv="Content-Security-Policy" content="font-src 'none'">`;
 }
 
+/** Parent iframe attribute toggled when the WP burger drawer is open. */
+export const WP_SHELL_MENU_OPEN_ATTR = "data-wp-menu-open";
+
+/**
+ * Closed header stays 118px at ≤414px (CLS lock). Open burger expands the
+ * iframe to a full-viewport overlay. Slot height stays 118px either way.
+ * Desktop (>414px) is unchanged — these rules live inside max-width: 414px.
+ */
+export const WP_SHELL_COMPACT_MENU_OPEN_CSS = `
+@media (max-width: ${WP_SHELL_COMPACT_MAX_WIDTH_PX}px) {
+  .theme-client-wp-header iframe[data-wp-shell="header"]:not([data-wp-menu-open="true"]) {
+    min-height: 118px !important;
+    height: 118px !important;
+  }
+  .theme-client-wp-header iframe[data-wp-shell="header"][data-wp-menu-open="true"] {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: none !important;
+    overflow: visible !important;
+    z-index: 2147483647 !important;
+  }
+  .theme-client-wp-header [data-wp-shell-slot="header"] {
+    min-height: 118px !important;
+    height: 118px !important;
+  }
+}
+`;
+
 export function sizeWpShellHeaderImages(html: string, compactHeader: boolean): string {
   if (!compactHeader) return html;
   return html

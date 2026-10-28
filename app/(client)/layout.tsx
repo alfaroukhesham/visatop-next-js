@@ -12,7 +12,10 @@ import { CustomerI18nProvider } from "@/components/client/customer-i18n-provider
 import { StickyWhatsAppButton } from "@/components/client/sticky-whatsapp-button";
 import { WpShellFallbackFooter, WpShellFallbackHeader } from "@/components/client/wp-shell/wp-shell-fallback";
 import { WpShellFrame } from "@/components/client/wp-shell/wp-shell-frame";
-import { isCompactWpShellUserAgent } from "@/components/client/wp-shell/wp-shell-srcdoc";
+import {
+  isCompactWpShellUserAgent,
+  WP_SHELL_COMPACT_MENU_OPEN_CSS,
+} from "@/components/client/wp-shell/wp-shell-srcdoc";
 import { getAppOrigin } from "@/lib/app-url";
 import { readCriticalFontPreloadHrefs } from "@/lib/client/critical-font-preloads";
 import {
@@ -159,9 +162,8 @@ export default async function ClientLayout({ children }: { children: ReactNode }
               "@media (max-width:414px){" +
               ".theme-client-wp-header{--wp-shell-header-height:118px!important}" +
               ".theme-client-wp-header .theme-client-main{padding-top:118px!important}" +
-              ".theme-client-wp-header iframe[data-wp-shell=header]{min-height:118px!important;height:118px!important}" +
-              ".theme-client-wp-header [data-wp-shell-slot=header]{min-height:118px!important;height:118px!important}" +
-              "}",
+              "}" +
+              WP_SHELL_COMPACT_MENU_OPEN_CSS,
           }}
         />
       ) : null}

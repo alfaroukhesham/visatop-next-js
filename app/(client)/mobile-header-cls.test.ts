@@ -26,6 +26,15 @@ describe("mobile WP header CLS reservation", () => {
     expect(layout).toContain("ssrCompact={ssrCompact}");
     expect(layout).toContain("isCompactWpShellUserAgent");
   });
+
+  it("does not lock the header iframe to 118px while the burger menu is open at 414px", () => {
+    expect(globals).toContain('iframe[data-wp-shell="header"]:not([data-wp-menu-open="true"])');
+    expect(globals).toContain('iframe[data-wp-shell="header"][data-wp-menu-open="true"]');
+    expect(globals).toContain("height: 100dvh !important");
+    expect(globals).toContain("width: 100vw !important");
+    expect(globals).toContain("inset: 0 !important");
+    expect(layout).toContain("WP_SHELL_COMPACT_MENU_OPEN_CSS");
+  });
 });
 
 describe("narrow passport select icon", () => {
