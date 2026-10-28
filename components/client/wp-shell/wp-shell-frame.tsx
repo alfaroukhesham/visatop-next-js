@@ -484,6 +484,32 @@ function buildSrcDoc(input: {
       }
 
       injectLanguageSwitcher();
+
+      // WP bakes "Time in UAE" into the cached layout HTML; refresh it live (WP format "D, d M y H:i", Asia/Dubai). en-US keeps "Sep" (en-GB gives "Sept").
+      function updateUaeClock() {
+        try {
+          var nodes = document.querySelectorAll(".uae-time");
+          if (!nodes.length) return;
+          var parts = {};
+          new Intl.DateTimeFormat("en-US", {
+            timeZone: "Asia/Dubai", weekday: "short", day: "2-digit", month: "short",
+            year: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+          }).formatToParts(new Date()).forEach(function (p) { parts[p.type] = p.value; });
+          var text = parts.weekday + ", " + parts.day + " " + parts.month + " " + parts.year + " " + parts.hour + ":" + parts.minute;
+          for (var n = 0; n < nodes.length; n += 1) {
+            var label = nodes[n].querySelector(".uae-time-label");
+            var tail = label ? label.nextSibling : nodes[n].firstChild;
+            if (tail && tail.nodeType === 3) {
+              tail.nodeValue = text;
+            } else {
+              nodes[n].insertBefore(document.createTextNode(text), tail || null);
+            }
+          }
+        } catch (e) {}
+      }
+      updateUaeClock();
+      document.addEventListener("DOMContentLoaded", updateUaeClock);
+      setInterval(updateUaeClock, 30000);
       document.addEventListener("DOMContentLoaded", injectLanguageSwitcher);
       try {
         if (document.fonts && document.fonts.ready) {
