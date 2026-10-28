@@ -27,6 +27,19 @@ describe("mobile WP header CLS reservation", () => {
     expect(layout).toContain("isCompactWpShellUserAgent");
   });
 
+  it("gives the header iframe explicit width and height above 414px so unsized-media CLS stays 0", () => {
+    expect(globals).toContain(".theme-client-wp-header iframe[data-wp-shell=\"header\"]");
+    expect(globals).toMatch(
+      /\.theme-client-wp-header iframe\[data-wp-shell="header"\][^{]*\{[^}]*height:\s*130px/,
+    );
+    expect(globals).toMatch(
+      /\.theme-client-wp-header iframe\[data-wp-shell="header"\][^{]*\{[^}]*width:\s*100%/,
+    );
+    expect(layout).toContain(
+      ".theme-client-wp-header iframe[data-wp-shell=header]{min-height:130px;height:130px;width:100%}",
+    );
+  });
+
   it("does not lock the header iframe to 118px while the burger menu is open at 414px", () => {
     expect(globals).toContain('iframe[data-wp-shell="header"]:not([data-wp-menu-open="true"])');
     expect(globals).toContain('iframe[data-wp-shell="header"][data-wp-menu-open="true"]');

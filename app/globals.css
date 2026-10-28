@@ -446,11 +446,14 @@
 .theme-client-wp-header .theme-client-main {
   padding-top: 130px;
 }
-.theme-client-wp-header iframe[data-wp-shell="header"],
-.theme-client-wp-header [data-wp-shell-slot="header"] {
+.theme-client-wp-header iframe[data-wp-shell="header"] {
+  width: 100%;
+  height: 130px;
   min-height: 130px;
 }
 .theme-client-wp-header [data-wp-shell-slot="header"] {
+  width: 100%;
+  min-height: 130px;
   height: 130px;
 }
 

@@ -70,3 +70,25 @@ export const WP_SHELL_NARROW_HEADER_CSS = `
         }
       }
 `;
+
+/** Open-drawer collision: close X vs "Apply Visa" at ~188px zoom. 320+ unchanged. */
+export const WP_SHELL_OPEN_MENU_NARROW_MAX_WIDTH_PX = 240;
+
+export const WP_SHELL_OPEN_MENU_NARROW_CSS = `
+      @media screen and (max-width: ${WP_SHELL_OPEN_MENU_NARROW_MAX_WIDTH_PX}px) {
+        body.show-menu header#header nav.menu {
+          padding-right: 4.5rem;
+          box-sizing: border-box;
+        }
+        body.show-menu header#header nav.menu ul {
+          padding-right: 2.75rem;
+          max-width: 100%;
+          box-sizing: border-box;
+        }
+        body.show-menu header#header nav.menu ul li,
+        body.show-menu header#header nav.menu ul li a {
+          max-width: 100%;
+          box-sizing: border-box;
+        }
+      }
+`;

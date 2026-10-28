@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import {
   WP_SHELL_HEADER_COLLISION_MAX_WIDTH_PX,
   WP_SHELL_NARROW_HEADER_CSS,
+  WP_SHELL_OPEN_MENU_NARROW_CSS,
+  WP_SHELL_OPEN_MENU_NARROW_MAX_WIDTH_PX,
 } from "./wp-shell-header-narrow-css";
 
 describe("WP_SHELL_NARROW_HEADER_CSS", () => {
@@ -54,6 +56,30 @@ describe("WP_SHELL_NARROW_HEADER_CSS", () => {
     expect(frame).toContain("compactHeader");
     expect(frame).toContain("ssrCompact");
     expect(frame).not.toContain("width={props.kind === \"header\" && compactHeader ? 412 : 1280}");
+  });
+
+  it("pads the open burger list away from the close X only at max-width 240px", () => {
+    expect(WP_SHELL_OPEN_MENU_NARROW_MAX_WIDTH_PX).toBe(240);
+    expect(WP_SHELL_OPEN_MENU_NARROW_CSS).toContain(
+      `@media screen and (max-width: ${WP_SHELL_OPEN_MENU_NARROW_MAX_WIDTH_PX}px)`,
+    );
+    expect(WP_SHELL_OPEN_MENU_NARROW_CSS).toContain("body.show-menu header#header nav.menu ul");
+    expect(WP_SHELL_OPEN_MENU_NARROW_CSS).toContain("padding-right:");
+    expect(WP_SHELL_OPEN_MENU_NARROW_CSS).not.toMatch(
+      /@media[^{]+max-width:\s*(4\d{2}|[5-9]\d{2}|[1-9]\d{3})px/,
+    );
+    const frame = readFileSync(path.join(__dirname, "wp-shell-frame.tsx"), "utf8");
+    expect(frame).toContain("WP_SHELL_OPEN_MENU_NARROW_CSS");
+  });
+
+  it("keeps the header iframe a sized box while compact fonts load (no display:none)", () => {
+    const frame = readFileSync(path.join(__dirname, "wp-shell-frame.tsx"), "utf8");
+    expect(frame).toContain('display: "block"');
+    expect(frame).toContain('? "hidden" : "visible"');
+    expect(frame).toContain("compactHeader && !headerRevealed");
+    expect(frame).not.toContain(
+      'display: props.kind === "header" && compactHeader && !headerRevealed ? "none" : "block"',
+    );
   });
 
   it("posts wp-menu open/close and expands the compact header iframe via data-wp-menu-open", () => {
