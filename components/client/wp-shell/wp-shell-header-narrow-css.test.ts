@@ -55,4 +55,13 @@ describe("WP_SHELL_NARROW_HEADER_CSS", () => {
     expect(frame).toContain("ssrCompact");
     expect(frame).not.toContain("width={props.kind === \"header\" && compactHeader ? 412 : 1280}");
   });
+
+  it("posts wp-menu open/close and expands the compact header iframe via data-wp-menu-open", () => {
+    const frame = readFileSync(path.join(__dirname, "wp-shell-frame.tsx"), "utf8");
+    expect(frame).toContain('post("wp-menu"');
+    expect(frame).toContain("WP_SHELL_MENU_OPEN_ATTR");
+    expect(frame).toContain('headerMenuOpen ? "true" : "false"');
+    expect(frame).toContain("header#header .mobile_menu");
+    expect(frame).toContain("wp-menu-close");
+  });
 });

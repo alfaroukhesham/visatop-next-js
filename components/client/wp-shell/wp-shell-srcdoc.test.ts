@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 import {
   WP_SHELL_COMPACT_MAX_WIDTH_PX,
   WP_SHELL_COMPACT_HEADER_OVERRIDES_CSS,
+  WP_SHELL_COMPACT_MENU_OPEN_CSS,
   WP_SHELL_DESKTOP_FEATURED_LOGO_CSS,
+  WP_SHELL_MENU_OPEN_ATTR,
   isCompactWpShellUserAgent,
   sizeWpShellHeaderImages,
   wpShellHeaderCspMeta,
@@ -117,6 +119,29 @@ describe("WP_SHELL_DESKTOP_FEATURED_LOGO_CSS", () => {
     expect(WP_SHELL_DESKTOP_FEATURED_LOGO_CSS).toContain("filter: brightness(0) invert(1)");
     expect(WP_SHELL_DESKTOP_FEATURED_LOGO_CSS).not.toContain("width: 64px");
     expect(WP_SHELL_DESKTOP_FEATURED_LOGO_CSS).not.toContain("@media");
+  });
+});
+
+describe("WP_SHELL_COMPACT_MENU_OPEN_CSS", () => {
+  it("expands the header iframe to a full-viewport overlay only at max-width 414px while the menu is open", () => {
+    const css = WP_SHELL_COMPACT_MENU_OPEN_CSS;
+    expect(WP_SHELL_MENU_OPEN_ATTR).toBe("data-wp-menu-open");
+    expect(css).toContain(`@media (max-width: ${WP_SHELL_COMPACT_MAX_WIDTH_PX}px)`);
+    expect(css).toContain('iframe[data-wp-shell="header"]:not([data-wp-menu-open="true"])');
+    expect(css).toContain("height: 118px !important");
+    expect(css).toContain('iframe[data-wp-shell="header"][data-wp-menu-open="true"]');
+    expect(css).toContain("position: fixed !important");
+    expect(css).toContain("inset: 0 !important");
+    expect(css).toContain("height: 100dvh !important");
+    expect(css).toContain("width: 100vw !important");
+    expect(css).not.toMatch(/@media[^{]+max-width:\s*(767|991)px/);
+  });
+
+  it("keeps the 118px header slot when the menu is open so load CLS stays 0", () => {
+    const css = WP_SHELL_COMPACT_MENU_OPEN_CSS;
+    expect(css).toContain('[data-wp-shell-slot="header"]');
+    expect(css).toContain("height: 118px !important");
+    expect(css).not.toContain('[data-wp-shell-slot="header"][data-wp-menu-open');
   });
 });
 

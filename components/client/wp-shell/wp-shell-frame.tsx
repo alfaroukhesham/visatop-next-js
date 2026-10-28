@@ -22,6 +22,7 @@ import {
   WP_SHELL_COMPACT_HEADER_OVERRIDES_CSS,
   WP_SHELL_COMPACT_MQ,
   WP_SHELL_DESKTOP_FEATURED_LOGO_CSS,
+  WP_SHELL_MENU_OPEN_ATTR,
   sizeWpShellHeaderImages,
   wpShellHeaderCspMeta,
   wpShellStylesheetLinks,
@@ -434,6 +435,9 @@ function buildSrcDoc(input: {
             baseHeight: baseHeight,
             menuOpen: menuOpen,
           });
+          if (KIND === "header") {
+            post("wp-menu", { open: menuOpen });
+          }
 
           if (baseHeight === 0) {
             requestAnimationFrame(function () {
@@ -491,11 +495,32 @@ function buildSrcDoc(input: {
         post("wp-shell:fonts-ready");
       }
 
+      function setMenuOpen(open) {
+        if (KIND !== "header") return;
+        var next = !!open;
+        if (next) document.body.classList.add("show-menu");
+        else document.body.classList.remove("show-menu");
+        post("wp-menu", { open: next });
+        notifyParentLayout();
+      }
+
       document.addEventListener("keydown", function (e) {
         if (e.key === "Escape" && document.body.classList.contains("show-menu")) {
-          document.body.classList.remove("show-menu");
-          notifyParentLayout();
+          setMenuOpen(false);
         }
+      });
+
+      window.addEventListener("message", function (event) {
+        try {
+          var data = event.data;
+          if (!data || typeof data !== "object") return;
+          if (data.token && data.token !== WP_SHELL_TOKEN) return;
+          if (data.type === "wp-menu-close" || (data.type === "wp-menu" && data.open === false)) {
+            if (document.body.classList.contains("show-menu")) {
+              setMenuOpen(false);
+            }
+          }
+        } catch (err) {}
       });
 
       document.addEventListener("click", (e) => {
@@ -529,20 +554,18 @@ function buildSrcDoc(input: {
           }
           closeLangMenus(null);
           if (document.body.classList.contains("show-menu")) {
-            document.body.classList.remove("show-menu");
-            notifyParentLayout();
+            setMenuOpen(false);
           }
           return;
         }
 
         const mobileBtn =
           e.target && e.target.closest
-            ? e.target.closest("header#header .mobile_menu, header#header button.mobile_menu")
+            ? e.target.closest("header#header .mobile_menu, header#header button.mobile_menu, header#header .menu-close")
             : null;
         if (mobileBtn) {
           e.preventDefault();
-          document.body.classList.toggle("show-menu");
-          notifyParentLayout();
+          setMenuOpen(!document.body.classList.contains("show-menu"));
           setTimeout(notifyParentLayout, 220);
           return;
         }
@@ -556,8 +579,7 @@ function buildSrcDoc(input: {
             !(nav && nav.contains(e.target)) &&
             !e.target.closest("header#header .mobile_menu");
           if (onBackdrop) {
-            document.body.classList.remove("show-menu");
-            notifyParentLayout();
+            setMenuOpen(false);
             return;
           }
         }
@@ -604,8 +626,7 @@ function buildSrcDoc(input: {
         e.stopPropagation();
 
         if (document.body.classList.contains("show-menu")) {
-          document.body.classList.remove("show-menu");
-          notifyParentLayout();
+          setMenuOpen(false);
         }
 
         post("wp-shell:navigate", { href: href });
@@ -630,12 +651,14 @@ export function WpShellFrame(props: {
   const router = useRouter();
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const menuOpenRef = useRef(false);
+  const sameOriginObserverRef = useRef<MutationObserver | null>(null);
   const lastGoodHeightRef = useRef<number>(
     props.kind === "header" ? HEADER_SLOT_HEIGHT_PX : 400,
   );
   const [heightPx, setHeightPx] = useState<number>(
     props.kind === "header" ? HEADER_SLOT_HEIGHT_PX : 400,
   );
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [headerRevealed, setHeaderRevealed] = useState(false);
   const compactHeader = useSyncExternalStore(
     subscribeCompactHeader,
@@ -691,6 +714,58 @@ export function WpShellFrame(props: {
 
   useOnBfcacheRestore(assignIframeSrcDoc);
 
+  const applyHeaderMenuOpen = useCallback((open: boolean) => {
+    menuOpenRef.current = open;
+    setHeaderMenuOpen(open);
+    if (props.kind !== "header") return;
+    if (!open) {
+      setHeightPx(HEADER_SLOT_HEIGHT_PX);
+      return;
+    }
+    const viewportH =
+      typeof window !== "undefined"
+        ? (window.visualViewport?.height ??
+          window.innerHeight ??
+          document.documentElement.clientHeight ??
+          0)
+        : 0;
+    if (viewportH > 0) setHeightPx(viewportH);
+  }, [props.kind]);
+
+  const postMenuCloseToIframe = useCallback(() => {
+    iframeRef.current?.contentWindow?.postMessage(
+      { type: "wp-menu-close", token: postMessageToken },
+      "*",
+    );
+  }, [postMessageToken]);
+
+  const attachSameOriginMenuListeners = useCallback(
+    (iframe: HTMLIFrameElement | null) => {
+      sameOriginObserverRef.current?.disconnect();
+      sameOriginObserverRef.current = null;
+      if (!iframe || props.kind !== "header") return;
+      try {
+        const doc = iframe.contentDocument;
+        if (!doc?.body) return;
+        const sync = () => {
+          applyHeaderMenuOpen(doc.body.classList.contains("show-menu"));
+        };
+        const observer = new MutationObserver(sync);
+        observer.observe(doc.body, { attributes: true, attributeFilter: ["class"] });
+        sameOriginObserverRef.current = observer;
+        const burgers = doc.querySelectorAll(
+          "header#header .mobile_menu, header#header button.mobile_menu, header#header .menu-close",
+        );
+        burgers.forEach((el) => {
+          el.addEventListener("click", () => window.setTimeout(sync, 0));
+        });
+      } catch {
+        // Sandbox without allow-same-origin is opaque; srcdoc postMessage is the path.
+      }
+    },
+    [applyHeaderMenuOpen, props.kind],
+  );
+
   const shellReady = useSyncExternalStore(
     () => () => undefined,
     () => true,
@@ -713,8 +788,13 @@ export function WpShellFrame(props: {
         menuOpen?: unknown;
         href?: unknown;
         slug?: unknown;
+        open?: unknown;
       };
       if (msg.token !== postMessageToken) return;
+      if (msg.type === "wp-menu" && props.kind === "header") {
+        applyHeaderMenuOpen(msg.open === true);
+        return;
+      }
       if (msg.type === "wp-shell:fonts-ready" && props.kind === "header") {
         setHeaderRevealed(true);
       }
@@ -752,7 +832,9 @@ export function WpShellFrame(props: {
         const h = Number(msg.height);
         const baseH = Number(msg.baseHeight);
         const menuOpen = msg.menuOpen === true;
-        menuOpenRef.current = menuOpen && props.kind === "header";
+        if (props.kind === "header") {
+          applyHeaderMenuOpen(menuOpen);
+        }
         const viewportH =
           typeof window !== "undefined"
             ? window.visualViewport?.height ??
@@ -785,27 +867,44 @@ export function WpShellFrame(props: {
     return () => {
       window.removeEventListener("message", onMessage);
     };
-  }, [props.baseHref, props.kind, postMessageToken, router]);
+  }, [applyHeaderMenuOpen, props.baseHref, props.kind, postMessageToken, router]);
 
   useEffect(() => {
     if (props.kind !== "header") return;
-    const onResize = () => {
-      if (menuOpenRef.current) {
-        const viewportH =
-          window.visualViewport?.height ??
-          window.innerHeight ??
-          document.documentElement.clientHeight ??
-          0;
-        setHeightPx(viewportH);
-      }
+    const closeOverlay = () => {
+      if (!menuOpenRef.current) return;
+      applyHeaderMenuOpen(false);
+      postMenuCloseToIframe();
     };
-    window.addEventListener("resize", onResize);
-    window.visualViewport?.addEventListener("resize", onResize);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeOverlay();
+    };
+    const onViewportChange = () => {
+      if (!menuOpenRef.current) return;
+      const viewportH =
+        window.visualViewport?.height ??
+        window.innerHeight ??
+        document.documentElement.clientHeight ??
+        0;
+      if (viewportH > 0) setHeightPx(viewportH);
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("resize", onViewportChange);
+    window.addEventListener("orientationchange", onViewportChange);
+    window.visualViewport?.addEventListener("resize", onViewportChange);
     return () => {
-      window.removeEventListener("resize", onResize);
-      window.visualViewport?.removeEventListener("resize", onResize);
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onViewportChange);
+      window.removeEventListener("orientationchange", onViewportChange);
+      window.visualViewport?.removeEventListener("resize", onViewportChange);
     };
-  }, [props.kind]);
+  }, [applyHeaderMenuOpen, postMenuCloseToIframe, props.kind]);
+
+  useEffect(() => {
+    return () => {
+      sameOriginObserverRef.current?.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     const onPageShow = (event: PageTransitionEvent) => {
@@ -837,6 +936,9 @@ export function WpShellFrame(props: {
         ref={iframeRef}
         title={props.kind === "header" ? "WP Header" : "WP Footer"}
         data-wp-shell={props.kind}
+        {...(props.kind === "header"
+          ? { [WP_SHELL_MENU_OPEN_ATTR]: headerMenuOpen ? "true" : "false" }
+          : null)}
         srcDoc={
           shellReady || props.kind !== "header" || !compactHeader
             ? srcDoc
@@ -846,25 +948,37 @@ export function WpShellFrame(props: {
         height={heightPx}
         sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
         onLoad={() => {
+          attachSameOriginMenuListeners(iframeRef.current);
           if (props.kind !== "header" || !compactHeader) return;
           window.setTimeout(() => setHeaderRevealed(true), 1500);
         }}
         style={{
-          width: "100%",
-          height: `${heightPx}px`,
-          minHeight: props.kind === "header" ? HEADER_SLOT_HEIGHT_PX : undefined,
+          width: compactHeader && headerMenuOpen ? "100vw" : "100%",
+          height: compactHeader && headerMenuOpen ? "100dvh" : `${heightPx}px`,
+          minHeight:
+            compactHeader && headerMenuOpen
+              ? "100dvh"
+              : props.kind === "header"
+                ? HEADER_SLOT_HEIGHT_PX
+                : undefined,
           border: "0",
           display: props.kind === "header" && compactHeader && !headerRevealed ? "none" : "block",
-          overflow: "hidden",
+          overflow: compactHeader && headerMenuOpen ? "visible" : "hidden",
           background: props.kind === "header" ? "#012031" : "transparent",
           ...(props.kind === "header"
-            ? {
-                position: "fixed",
-                top: 0,
-                left: 0,
-                // Intentionally extreme to beat app stacking contexts (dialogs, sticky bars, etc).
-                zIndex: 2147483647,
-              }
+            ? compactHeader && headerMenuOpen
+              ? {
+                  position: "fixed",
+                  inset: 0,
+                  zIndex: 2147483647,
+                }
+              : {
+                  position: "fixed",
+                  top: 0,
+                  left: 0,
+                  // Intentionally extreme to beat app stacking contexts (dialogs, sticky bars, etc).
+                  zIndex: 2147483647,
+                }
             : null),
         }}
         scrolling="no"
