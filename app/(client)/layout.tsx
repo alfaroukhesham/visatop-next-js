@@ -78,6 +78,9 @@ const resolveLanguageSwitcherOptions = (input: {
   };
 };
 
+/** WP header/footer + language list rarely change; serve from the Next data cache for 1h (stale-while-revalidate). */
+const WP_SHELL_REVALIDATE_SECONDS = 3600;
+
 export default async function ClientLayout({ children }: { children: ReactNode }) {
   const wpOrigin = process.env.WP_ORIGIN ?? "";
   const disableWpLangSwitcher =
@@ -85,7 +88,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
     process.env.DISABLE_WP_LANG_SWITCHER === "1";
 
   const [cookieStore, requestHeaders] = await Promise.all([cookies(), headers()]);
-  const polylang = wpOrigin.trim().length > 0 ? await fetchPolylangLanguages({ wpOrigin }) : [];
+  const polylang = wpOrigin.trim().length > 0 ? await fetchPolylangLanguages({ wpOrigin, revalidateSeconds: WP_SHELL_REVALIDATE_SECONDS }) : [];
   const knownSlugs = polylang.map((item) => item.slug);
   const locale = resolveCustomerLocale({
     headerValue: requestHeaders.get(CUSTOMER_LOCALE_REQUEST_HEADER),
@@ -100,7 +103,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
           appOrigin: getAppOrigin(),
           appBasePath: "/visa-processing",
           lang: locale,
-          revalidateSeconds: 60,
+          revalidateSeconds: WP_SHELL_REVALIDATE_SECONDS,
           includeHtml: true,
         })
       : null;
