@@ -71,24 +71,23 @@ export const WP_SHELL_NARROW_HEADER_CSS = `
       }
 `;
 
-/** Open-drawer collision: close X vs "Apply Visa" at ~188px zoom. 320+ unchanged. */
+/**
+ * Open-drawer collision: close X vs "Apply Visa" at ~188px zoom. 320+ unchanged.
+ * Push the list below the X (padding-top) instead of squeezing it with padding-right,
+ * which made labels wrap ("Apply / Visa") and the English pill overflow its border.
+ */
 export const WP_SHELL_OPEN_MENU_NARROW_MAX_WIDTH_PX = 240;
 
 export const WP_SHELL_OPEN_MENU_NARROW_CSS = `
       @media screen and (max-width: ${WP_SHELL_OPEN_MENU_NARROW_MAX_WIDTH_PX}px) {
-        body.show-menu header#header nav.menu {
-          padding-right: 4.5rem;
-          box-sizing: border-box;
-        }
         body.show-menu header#header nav.menu ul {
-          padding-right: 2.75rem;
+          padding-top: 1.5rem;
           max-width: 100%;
           box-sizing: border-box;
         }
-        body.show-menu header#header nav.menu ul li,
-        body.show-menu header#header nav.menu ul li a {
-          max-width: 100%;
-          box-sizing: border-box;
+        body.show-menu header#header nav.menu ul li > a,
+        body.show-menu header#header nav.menu .lang-switcher-trigger {
+          white-space: nowrap;
         }
       }
 `;

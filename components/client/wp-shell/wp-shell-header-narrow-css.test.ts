@@ -58,13 +58,15 @@ describe("WP_SHELL_NARROW_HEADER_CSS", () => {
     expect(frame).not.toContain("width={props.kind === \"header\" && compactHeader ? 412 : 1280}");
   });
 
-  it("pads the open burger list away from the close X only at max-width 240px", () => {
+  it("moves the open burger list below the close X only at max-width 240px, without wrapping labels", () => {
     expect(WP_SHELL_OPEN_MENU_NARROW_MAX_WIDTH_PX).toBe(240);
     expect(WP_SHELL_OPEN_MENU_NARROW_CSS).toContain(
       `@media screen and (max-width: ${WP_SHELL_OPEN_MENU_NARROW_MAX_WIDTH_PX}px)`,
     );
     expect(WP_SHELL_OPEN_MENU_NARROW_CSS).toContain("body.show-menu header#header nav.menu ul");
-    expect(WP_SHELL_OPEN_MENU_NARROW_CSS).toContain("padding-right:");
+    expect(WP_SHELL_OPEN_MENU_NARROW_CSS).toContain("padding-top:");
+    expect(WP_SHELL_OPEN_MENU_NARROW_CSS).toContain("white-space: nowrap");
+    expect(WP_SHELL_OPEN_MENU_NARROW_CSS).not.toContain("padding-right");
     expect(WP_SHELL_OPEN_MENU_NARROW_CSS).not.toMatch(
       /@media[^{]+max-width:\s*(4\d{2}|[5-9]\d{2}|[1-9]\d{3})px/,
     );
