@@ -17,7 +17,10 @@ import {
 } from "@/lib/i18n/customer-locale";
 import { classifyWpShellNavigateUrl } from "@/lib/wp-headless/classify-shell-navigate-url";
 import type { WpShellLanguageOption } from "@/lib/wp-headless/types";
-import { WP_SHELL_NARROW_HEADER_CSS } from "./wp-shell-header-narrow-css";
+import {
+  WP_SHELL_NARROW_HEADER_CSS,
+  WP_SHELL_OPEN_MENU_NARROW_CSS,
+} from "./wp-shell-header-narrow-css";
 import {
   WP_SHELL_COMPACT_HEADER_OVERRIDES_CSS,
   WP_SHELL_COMPACT_MQ,
@@ -362,6 +365,7 @@ function buildSrcDoc(input: {
       }
 
       ${input.kind === "header" ? WP_SHELL_NARROW_HEADER_CSS : ""}
+      ${input.kind === "header" ? WP_SHELL_OPEN_MENU_NARROW_CSS : ""}
     </style>
   </head>
   <body class="${bodyClass}">
@@ -962,7 +966,9 @@ export function WpShellFrame(props: {
                 ? HEADER_SLOT_HEIGHT_PX
                 : undefined,
           border: "0",
-          display: props.kind === "header" && compactHeader && !headerRevealed ? "none" : "block",
+          display: "block",
+          visibility:
+            props.kind === "header" && compactHeader && !headerRevealed ? "hidden" : "visible",
           overflow: compactHeader && headerMenuOpen ? "visible" : "hidden",
           background: props.kind === "header" ? "#012031" : "transparent",
           ...(props.kind === "header"
