@@ -21,11 +21,15 @@ describe("GoogleTag", () => {
     );
   });
 
-  it("defers the remote gtag.js until idle", () => {
+  it("defers the remote gtag.js to first interaction or load + idle", () => {
     const tree = GoogleTag({ googleTagId: "GT-TEST" });
-    const remote = childById(tree, "visatop-gtag");
-    expect(remote).not.toBeNull();
-    expect(remote?.props.strategy).toBe("lazyOnload");
-    expect(remote?.props.src).toContain("googletagmanager.com/gtag/js");
+    const loader = childById(tree, "visatop-gtag-loader");
+    expect(loader).not.toBeNull();
+    expect(loader?.props.strategy).toBe("afterInteractive");
+    const html = loader?.props.dangerouslySetInnerHTML.__html as string;
+    expect(html).toContain("googletagmanager.com/gtag/js?id=GT-TEST");
+    expect(html).toContain('"visatop-gtag"');
+    expect(html).toContain("pointerdown");
+    expect(html).toContain("requestIdleCallback");
   });
 });

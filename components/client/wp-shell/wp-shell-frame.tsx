@@ -230,6 +230,7 @@ function buildSrcDoc(input: {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     ${wpShellHeaderCspMeta({ kind: input.kind, compactHeader })}
     <base ${baseHref ? `href="${escapeAttr(baseHref)}"` : ""} />
+    ${input.kind === "header" ? '<style id="wp-shell-boot">html{visibility:hidden}</style>' : ""}
     ${links}
     <style>
       html, body { margin: 0; padding: 0; background: transparent !important; }
@@ -373,6 +374,23 @@ function buildSrcDoc(input: {
     <script>
       var WP_SHELL_TOKEN = ${JSON.stringify(input.postMessageToken)};
       var KIND = ${JSON.stringify(input.kind)};
+      // Keep the header document hidden until its WP CSS/fonts/images have loaded, so the
+      // in-frame reflow (featured_on row + main bar) is not a visible layout shift (CLS).
+      (function () {
+        var boot = document.getElementById("wp-shell-boot");
+        if (!boot) return;
+        var shown = false;
+        function show() {
+          if (shown) return; shown = true;
+          if (boot.parentNode) boot.parentNode.removeChild(boot);
+        }
+        function afterLoad() {
+          requestAnimationFrame(function () { requestAnimationFrame(show); });
+        }
+        if (document.readyState === "complete") afterLoad();
+        else window.addEventListener("load", afterLoad, { once: true });
+        setTimeout(show, 2500);
+      })();
       var INJECT_LANG_SWITCHER = ${injectLangSwitcher ? "true" : "false"};
       var INJECTED_LANG_SWITCHER_HTML = ${JSON.stringify(injectedSwitcherHtml)};
 

@@ -6,13 +6,15 @@ import { buildMetaPixelNoscriptSrc } from "@/lib/analytics/meta-pixel-id";
 /**
  * Loads Meta Pixel on customer pages (Events Manager base code).
  * Admin is out of this tree — same placement as Google Tag.
+ * The tiny fbq stub runs afterInteractive so early events queue; fbevents.js itself is
+ * deferred to first interaction / load + idle (see deferred-script-loader).
  */
 export const MetaPixel: FC = () => {
   return (
     <>
       <Script
         id="visatop-meta-pixel"
-        strategy="lazyOnload"
+        strategy="afterInteractive"
         dangerouslySetInnerHTML={{ __html: buildMetaPixelBootstrapScript() }}
       />
       <noscript>
