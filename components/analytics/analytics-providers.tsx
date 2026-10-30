@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect } from "react";
 import { AnalyticsRouteTracker } from "@/components/analytics/analytics-route-tracker";
+import { MetaPixelAdvancedMatching } from "@/components/analytics/meta-pixel-advanced-matching";
 import { trackEvent } from "@/lib/analytics/gtag-client";
 
 /**
@@ -33,6 +34,7 @@ export function AnalyticsProviders() {
   return (
     <>
       <VisatopAnalyticsBridge />
+      <MetaPixelAdvancedMatching />
       <Suspense fallback={null}>
         <AnalyticsRouteTracker />
       </Suspense>

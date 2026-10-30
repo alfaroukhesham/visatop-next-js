@@ -16,7 +16,10 @@ import type { PublicApplication } from "@/lib/applications/public-application";
 import type { TPublicPartyMember } from "@/lib/applications/load-party-members";
 import { DEFAULT_APPLY_PRICE_BADGES, type TApplyPriceBadges } from "@/lib/apply/apply-config";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
+import { rememberCheckoutRecapTotal } from "@/lib/analytics/checkout-recap-total";
 import { trackEventOnce } from "@/lib/analytics/gtag-client";
+import { setMetaAdvancedMatchingPhone } from "@/lib/analytics/meta-pixel-advanced-matching";
+import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { formatIsoDateAsDdMmYyyy } from "@/lib/documents/validation-readiness";
 import type { TCustomerMessageVars } from "@/lib/i18n/customer-messages";
 
@@ -70,6 +73,7 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
   trackCheckoutViewed = false,
 }) => {
   const t = useCustomerT();
+  const signedInUserId = useClientAuthStore((s) => s.session?.user?.id);
   const [services, setServices] = useState<CatalogService[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [badges, setBadges] = useState<TApplyPriceBadges>(DEFAULT_APPLY_PRICE_BADGES);
@@ -175,20 +179,43 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
   const totalText = totalMinor === null ? null : formatDisplayMinor(totalMinor.toString(), currency);
 
   useEffect(() => {
-    if (!trackCheckoutViewed || totalMinor === null) return;
+    if (totalMinor === null) return;
+    rememberCheckoutRecapTotal({
+      applicationId: application.id,
+      value: Number(totalMinor) / 100,
+      currency,
+      nationality: application.nationalityCode,
+      serviceId: application.serviceId,
+    });
+    if (!trackCheckoutViewed) return;
     trackEventOnce(
       APPLY_FUNNEL_EVENTS.checkoutViewed,
       {
         application_id: application.id,
+        nationality: application.nationalityCode,
+        service_id: application.serviceId,
         currency,
         value: Number(totalMinor) / 100,
         traveler_count: Math.max(members.length, 1),
       },
       `${APPLY_FUNNEL_EVENTS.checkoutViewed}:${application.id}`,
     );
-  }, [trackCheckoutViewed, totalMinor, application.id, currency, members.length]);
+  }, [
+    trackCheckoutViewed,
+    totalMinor,
+    application.id,
+    application.nationalityCode,
+    application.serviceId,
+    currency,
+    members.length,
+  ]);
 
   const recapApplicant = applicantForPaymentRecap(application.applicant, liveApplicant);
+
+  useEffect(() => {
+    if (!signedInUserId) return;
+    setMetaAdvancedMatchingPhone(recapApplicant.phone);
+  }, [signedInUserId, recapApplicant.phone]);
   const fullName = recapApplicant.fullName?.trim() ?? "";
   const passportNo = recapApplicant.passportNumber?.trim() ?? "";
   const dob = formatIsoDateAsDdMmYyyy(recapApplicant.dateOfBirth ?? null) ?? "";

@@ -10,6 +10,8 @@ import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { trackEventOnce } from "@/lib/analytics/gtag-client";
+import { setMetaAdvancedMatchingPhone } from "@/lib/analytics/meta-pixel-advanced-matching";
+import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { APPLY_STEP3_VALIDATION_DISABLED } from "@/lib/apply/apply-flow-config";
 import { reviewHighlightFields, type TApplicantFieldMeta } from "@/lib/apply/ocr-review-fields";
 import { paymentReviewNavState } from "@/lib/apply/payment-review-nav";
@@ -163,6 +165,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
 }) => {
   const t = useCustomerT();
   const router = useRouter();
+  const signedInUserId = useClientAuthStore((s) => s.session?.user?.id);
   const prefilled = nonEmptyPrefillKeys(extraction?.prefill ?? null);
 
   const initial: Record<string, string> = {};
@@ -203,6 +206,11 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
     );
   }, [applicationId, dirty]);
 
+  useEffect(() => {
+    if (!signedInUserId) return;
+    setMetaAdvancedMatchingPhone(values.phone);
+  }, [signedInUserId, values.phone]);
+
   const paymentPath = `/apply/applications/${encodeURIComponent(paymentApplicationId ?? applicationId)}/payment`;
   const canContinueToPayment = !locked && paymentReadiness === "ready";
 
@@ -211,7 +219,10 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
     if (!canContinueToPayment) return;
     trackEventOnce(
       APPLY_FUNNEL_EVENTS.applicantVerified,
-      { application_id: paymentApplicationId ?? applicationId },
+      {
+        application_id: paymentApplicationId ?? applicationId,
+        nationality: nationalityCode,
+      },
       `${APPLY_FUNNEL_EVENTS.applicantVerified}:${paymentApplicationId ?? applicationId}`,
     );
     if (onFinished) {
