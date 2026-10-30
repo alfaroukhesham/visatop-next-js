@@ -12,6 +12,7 @@ import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { Loader2 } from "lucide-react";
 import { apiHref } from "@/lib/app-href";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
+import { checkoutRecapTotalFor } from "@/lib/analytics/checkout-recap-total";
 import { trackApplyPaymentCompleted, trackEventOnce } from "@/lib/analytics/gtag-client";
 import { checkoutErrorToUserMessage } from "@/lib/payments/checkout-client-messages";
 import type { TFincraInlineCheckoutData } from "@/lib/payments/fincra-inline";
@@ -118,13 +119,33 @@ export function PaddleCheckoutButton({
       }
 
       const data = envelope.data;
+      const recap = checkoutRecapTotalFor(applicationId);
+      const liveCheckoutParams = (input: {
+        provider: "ziina" | "fincra";
+        value?: number;
+        currency?: string;
+      }) => {
+        const value = input.value ?? recap?.value;
+        const currency = input.currency ?? recap?.currency;
+        return {
+          application_id: applicationId,
+          payment_provider: input.provider,
+          ...(recap?.nationality ? { nationality: recap.nationality } : {}),
+          ...(recap?.serviceId ? { service_id: recap.serviceId } : {}),
+          ...(typeof value === "number" && Number.isFinite(value) ? { value } : {}),
+          ...(currency ? { currency } : {}),
+        };
+      };
       if ("provider" in data && data.provider === "fincra") {
+        const fincraAmount = "amount" in data && typeof data.amount === "number" ? data.amount : undefined;
+        const fincraCurrency = "currency" in data && typeof data.currency === "string" ? data.currency : undefined;
         trackEventOnce(
           APPLY_FUNNEL_EVENTS.paymentStarted,
-          {
-            application_id: applicationId,
-            payment_provider: "fincra",
-          },
+          liveCheckoutParams({
+            provider: "fincra",
+            value: fincraAmount,
+            currency: fincraCurrency,
+          }),
           `${APPLY_FUNNEL_EVENTS.paymentStarted}:${applicationId}:fincra`,
         );
         if (data.mode === "inline" || ("key" in data && typeof data.key === "string" && data.key)) {
@@ -150,10 +171,7 @@ export function PaddleCheckoutButton({
         }
         trackEventOnce(
           APPLY_FUNNEL_EVENTS.paymentStarted,
-          {
-            application_id: applicationId,
-            payment_provider: "ziina",
-          },
+          liveCheckoutParams({ provider: "ziina" }),
           `${APPLY_FUNNEL_EVENTS.paymentStarted}:${applicationId}:ziina`,
         );
         onZiinaEmbedded?.(data.embeddedUrl);

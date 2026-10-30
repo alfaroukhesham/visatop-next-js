@@ -7,6 +7,8 @@ import {
   trackApplyPaymentCompleted,
   trackGadsCheckoutConversion,
 } from "@/lib/analytics/gtag-client";
+import { resetMetaAdvancedMatching } from "@/lib/analytics/meta-pixel-client";
+import { WEBISTE_VISA_PIXEL_ID } from "@/lib/analytics/meta-pixel-id";
 
 const paid = {
   applicationId: "app_123",
@@ -14,12 +16,12 @@ const paid = {
   currency: "usd",
 };
 
-const setHostname = (hostname: string): void => {
+const setHostname = (hostname: string, pathname = "/visa-processing/apply/applications/app_123/submitted"): void => {
   Object.defineProperty(window, "location", {
     configurable: true,
     value: {
       hostname,
-      pathname: "/visa-processing/apply/applications/app_123/submitted",
+      pathname,
       origin: `https://${hostname}`,
       protocol: "https:",
       search: "",
@@ -34,15 +36,18 @@ const TEST_SEND_TO = "AW-TEST/label";
 
 beforeEach(() => {
   resetGadsCheckoutConversionClaims();
+  resetMetaAdvancedMatching();
   sessionStorage.clear();
   process.env.NEXT_PUBLIC_GADS_CHECKOUT_CONVERSION_SEND_TO = TEST_SEND_TO;
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
   window.gtag = vi.fn();
+  window.fbq = vi.fn();
   setHostname("visatop.com");
 });
 
 afterEach(() => {
   resetGadsCheckoutConversionClaims();
+  resetMetaAdvancedMatching();
   sessionStorage.clear();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -171,5 +176,37 @@ describe("trackApplyPaymentCompleted", () => {
       currency: paid.currency,
     });
     expect(conversionCalls(window.gtag as ReturnType<typeof vi.fn>)).toEqual([]);
+  });
+
+  it("forwards purchase to WebisteVisa once with eventID after the tab guard", () => {
+    trackApplyPaymentCompleted({
+      applicationId: paid.applicationId,
+      paymentProvider: "ziina",
+      value: paid.value,
+      currency: paid.currency,
+    });
+    trackApplyPaymentCompleted({
+      applicationId: paid.applicationId,
+      paymentProvider: "ziina",
+      value: paid.value,
+      currency: paid.currency,
+    });
+    const fbq = window.fbq as ReturnType<typeof vi.fn>;
+    const purchases = fbq.mock.calls.filter((call) => call[2] === "Purchase");
+    expect(purchases).toEqual([
+      [
+        "trackSingle",
+        WEBISTE_VISA_PIXEL_ID,
+        "Purchase",
+        expect.objectContaining({
+          content_ids: ["app_123"],
+          value: 169,
+          currency: "USD",
+          content_type: "product",
+        }),
+        { eventID: "app_123" },
+      ],
+    ]);
+    expect(fbq.mock.calls.some((call) => call[2] === "AddPaymentInfo")).toBe(false);
   });
 });

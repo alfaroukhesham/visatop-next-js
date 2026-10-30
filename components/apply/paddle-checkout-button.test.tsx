@@ -16,6 +16,12 @@ vi.mock("@/components/client/customer-i18n-provider", () => ({
   },
 }));
 
+const trackEventOnce = vi.fn();
+vi.mock("@/lib/analytics/gtag-client", () => ({
+  trackEventOnce: (...args: unknown[]) => trackEventOnce(...args),
+  trackApplyPaymentCompleted: vi.fn(),
+}));
+
 vi.mock("@paddle/paddle-js", () => ({
   initializePaddle: vi.fn(),
   CheckoutEventNames: {
@@ -34,15 +40,22 @@ vi.mock("@paddle/paddle-js", () => ({
   },
 }));
 
+import {
+  rememberCheckoutRecapTotal,
+  resetCheckoutRecapTotal,
+} from "@/lib/analytics/checkout-recap-total";
 import { PaddleCheckoutButton } from "./paddle-checkout-button";
 
 describe("PaddleCheckoutButton terms gate", () => {
   beforeEach(() => {
+    trackEventOnce.mockReset();
+    resetCheckoutRecapTotal();
     vi.stubGlobal("fetch", vi.fn());
   });
 
   afterEach(() => {
     cleanup();
+    resetCheckoutRecapTotal();
     vi.unstubAllGlobals();
   });
 
@@ -110,5 +123,54 @@ describe("PaddleCheckoutButton terms gate", () => {
     await user.click(screen.getByRole("button", { name: /pay & submit/i }));
     expect(onFincraInline).toHaveBeenCalledWith(inline);
     expect(onFincraRedirect).not.toHaveBeenCalled();
+    expect(trackEventOnce).toHaveBeenCalledWith(
+      "apply_payment_started",
+      expect.objectContaining({
+        application_id: "app-1",
+        payment_provider: "fincra",
+        value: 185000,
+        currency: "NGN",
+      }),
+      "apply_payment_started:app-1:fincra",
+    );
+    expect(trackEventOnce.mock.calls.some((call) => call[0] === "purchase")).toBe(false);
+  });
+
+  it("sends Ziina apply_payment_started with the recap total and no Purchase", async () => {
+    const user = userEvent.setup();
+    rememberCheckoutRecapTotal({
+      applicationId: "app-1",
+      value: 169,
+      currency: "AED",
+      nationality: "IN",
+      serviceId: "svc_1",
+    });
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({ ok: true, data: { provider: "ziina", embeddedUrl: "https://pay.ziina.com/x" } }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    render(
+      <PaddleCheckoutButton
+        applicationId="app-1"
+        termsAccepted
+        onZiinaEmbedded={() => undefined}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: /pay & submit/i }));
+    expect(trackEventOnce).toHaveBeenCalledWith(
+      "apply_payment_started",
+      {
+        application_id: "app-1",
+        payment_provider: "ziina",
+        nationality: "IN",
+        service_id: "svc_1",
+        value: 169,
+        currency: "AED",
+      },
+      "apply_payment_started:app-1:ziina",
+    );
+    expect(trackEventOnce.mock.calls.some((call) => call[0] === "purchase")).toBe(false);
   });
 });

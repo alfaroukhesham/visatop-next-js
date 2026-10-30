@@ -12,6 +12,7 @@ import {
   type TGadsCheckoutConversionInput,
 } from "@/lib/analytics/gads-checkout-conversion";
 import { areMarketingTagsEnabledInBrowser } from "@/lib/analytics/marketing-tags-enabled";
+import { trackMetaPixelFunnelEvent } from "@/lib/analytics/meta-pixel-events";
 import { claimAnalyticsOnce } from "@/lib/analytics/track-once";
 import { sendFunnelBeacon } from "@/lib/analytics/funnel-beacon-client";
 import { funnelIdsFromTrackParams } from "@/lib/analytics/funnel-beacon-params";
@@ -59,6 +60,7 @@ export function trackEvent(eventName: string, params?: GtagEventParams): void {
   }
   gtagCommand("event", eventName, cleaned);
   sendFunnelBeacon(eventName, funnelIdsFromTrackParams(cleaned));
+  trackMetaPixelFunnelEvent(eventName, cleaned);
 }
 
 /** Same as `trackEvent`, but skips if this dedupe key already fired in the tab. */

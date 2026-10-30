@@ -394,6 +394,16 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   }, [nationality, displayCurrency, catalogReloadEpoch]);
 
   useEffect(() => {
+    const code = nationality.trim().toUpperCase();
+    if (code.length !== 2) return;
+    trackEventOnce(
+      APPLY_FUNNEL_EVENTS.applicationStarted,
+      { step: 2, step_name: "currency_visa", nationality: code },
+      APPLY_FUNNEL_EVENTS.applicationStarted,
+    );
+  }, [nationality]);
+
+  useEffect(() => {
     if (loadingServices || !nationality) return;
     if (services.length === 0) return;
     trackEventOnce(
@@ -428,6 +438,8 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     if (!serviceId || !nationality) return;
     const selected = services.find((s) => s.id === serviceId);
     if (!selected) return;
+    if (!displayCurrency && selected.displayPriceMinor) return;
+    const priceMinor = toDisplayMinor(selected, displayCurrency);
     trackEventOnce(
       APPLY_FUNNEL_EVENTS.visaSelected,
       {
@@ -437,6 +449,8 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
         entry: answers.entry,
         duration_days: selected.durationDays,
         currency: displayCurrency,
+        visa_name: selected.name,
+        ...(priceMinor !== null ? { value: priceMinor / 100 } : {}),
       },
       `${APPLY_FUNNEL_EVENTS.visaSelected}:${nationality}:${serviceId}`,
     );
