@@ -1,7 +1,7 @@
 const FILTERED = "[Filtered]";
 
 const PII_KEY_RE =
-  /^(email|guestemail|useremail|name|fullname|firstname|lastname|givenname|surname|familyname|passport|passportnumber|passportno|phone|telephone|mobile|phonenumber|dob|dateofbirth|birthdate|date_of_birth|ip_address|ipaddress|username)$/i;
+  /^(email|guestemail|useremail|name|fullname|firstname|lastname|givenname|surname|familyname|passport|passportnumber|passportno|phone|telephone|mobile|phonenumber|dob|dateofbirth|birthdate|date_of_birth|ip_address|ipaddress|username|token|tokens|accesstoken|capitoken|metacapitoken|fbp|fbc|fbclid|useragent|clientip|clientipaddress|clientuseragent)$/i;
 
 const REQUEST_STRIP_KEYS = new Set(["data", "cookies", "headers", "query_string", "env", "body"]);
 

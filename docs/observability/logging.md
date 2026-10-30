@@ -44,7 +44,8 @@ Redaction is a **backstop**. Prefer small structured fields (ids, statuses, hash
 Serialized values matching these keys (top-level and one nested level, plus a recursive key walk) are replaced with `[redacted]`:
 
 - Identity: `email`, `guestEmail`, `fullName`, `firstName`, `lastName`, `name`, `passportNumber`, `phone`, `address`, `dateOfBirth`
-- Secrets: `token`, `tokens`, `accessToken`, `refreshToken`, `idToken`, `password`, `cookie`, `cookies`, `set-cookie`, `authorization`
+- Secrets: `token`, `tokens`, `accessToken`, `access_token`, `capiToken`, `metaCapiToken`, `refreshToken`, `idToken`, `password`, `cookie`, `cookies`, `set-cookie`, `authorization`
+- Meta CAPI: `fbp`, `fbc`, `fbclid`, `clientIp`, `client_ip_address` (never log `META_CAPI_TOKEN`)
 - Webhook bodies (safety net): `rawBody`, `bodyText`, `rawPayload`, `webhookPayload`
 - Existing globs: keys matching `passport`, `ocr`, `extraction`, `pii*`, and document *content* keys (`documentBlob`, …). `documentId` and `documentType` stay visible.
 

@@ -51,6 +51,7 @@ Staging containers still run `NODE_ENV=production`. Tag GlitchTip with a real en
 
 - Drop request bodies, cookies, headers, and query strings
 - Redact email, name, passport, phone, DOB (and close variants) anywhere in the payload
+- Redact tokens (`token`, `accessToken`, `capiToken`) and Meta click ids (`fbp`, `fbc`, `fbclid`) so `META_CAPI_TOKEN` never appears in GlitchTip
 - Keep `applicationId` and `payment_provider` tags
 
 `sendDefaultPii` is false. Do not log passport images, OCR fields, or webhook bodies into GlitchTip extras.

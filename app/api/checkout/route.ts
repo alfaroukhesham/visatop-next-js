@@ -42,6 +42,7 @@ import * as schema from "@/lib/db/schema";
 import { asc, eq, and, or, inArray, isNull } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import type { DbTransaction } from "@/lib/db";
+import { persistMetaCapiAttribution, readMetaCapiAttribution } from "@/lib/payments/meta-capi";
 import { createRequestLogger } from "@/lib/logger";
 
 export const runtime = "nodejs";
@@ -94,6 +95,7 @@ export async function POST(req: Request) {
     }
 
     const defaultProvider = getActivePaymentProvider();
+    const capiAttribution = readMetaCapiAttribution(req.headers);
 
     const runTx = async (tx: DbTransaction) => {
       const [requestedApp] = await tx
@@ -161,6 +163,7 @@ export async function POST(req: Request) {
             requestId: requestId ?? null,
           });
           if (rotated) {
+            await persistMetaCapiAttribution(tx, openFincra.applicationId, capiAttribution);
             const data: CheckoutSessionData = rotated;
             return jsonOk(data, { requestId });
           }
@@ -229,6 +232,9 @@ export async function POST(req: Request) {
       }
       const provider = offer.decision.provider;
       const catalogCurrency = offer.decision.quoteCurrency;
+      if (provider !== "paddle") {
+        await persistMetaCapiAttribution(tx, primary.id, capiAttribution);
+      }
 
       if (provider === "fincra") {
         try {

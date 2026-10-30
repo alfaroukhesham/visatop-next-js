@@ -274,6 +274,13 @@
       "when": 1782410000000,
       "tag": "0038_observability_analytics_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1782420000000,
+      "tag": "0039_meta_capi_purchase",
+      "breakpoints": true
     }
   ]
 }

@@ -56,6 +56,13 @@ Include stable internal identifiers so webhooks can reconcile:
 - **IP allowlist:** Fincra only accepts API calls from the portal server (`138.68.184.84`). Mock Fincra in CI; sandbox testing is on staging.
 - **Underpayments** never auto-mark paid (`payment.status = underpaid`, admin attention). Migration `0035_payment_fincra` is expand-contract (nullable columns + webhook-health RLS key).
 
+### Meta Conversions API (server Purchase)
+
+- **Pixel:** WebisteVisa `1098702859698634` (`META_PIXEL_ID_CAPI`, same id as the browser pixel). **Event:** `Purchase`. **`event_id`:** paying application id (the same string the browser sends). One event per payment; a group booking is not one event per traveller.
+- **Env (runtime, server-only, droplet `.env` / `.env.staging`):** `META_CAPI_TOKEN` (Graph API access token — never `NEXT_PUBLIC_*`, never logged, never in GlitchTip). Optional `META_PIXEL_ID_CAPI` (defaults to WebisteVisa). Optional `META_TEST_EVENT_CODE` — when set, requests include `test_event_code` so Events Manager → Test events can show the hit. Missing token skips with one safe log line.
+- **When:** Checkout `POST /api/checkout` stores `_fbp` / `_fbc` (or `fbclid` → `fbc`), client IP, user agent, and page URL on the paying application. The shared Ziina/Fincra `didFirstPaidTransition` side-effect path (`scheduleZiinaPaidSideEffects` / `scheduleFincraPaidSideEffects`) sends CAPI via Next `after()` — webhooks and `POST /api/internal/reconcile-{ziina,fincra}-payments` both go through it. Paddle is not wired.
+- **Once-only:** `application.capi_purchase_sent_at` is claimed atomically before the Graph call and cleared on failure. Retry: `POST /api/internal/retry-meta-capi-purchases` (`x-internal-secret: INTERNAL_CRON_SECRET`) resends paid Ziina/Fincra applications from the last 7 days with no marker. Migration `0039_meta_capi_purchase`.
+
 ---
 
 ## 2) Pricing + quotes + reference data (admin import)

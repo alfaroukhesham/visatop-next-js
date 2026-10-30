@@ -89,6 +89,31 @@ describe("scrubSentryEvent", () => {
     expect(event?.user?.ip_address).toBe("[Filtered]");
   });
 
+  it("redacts Meta CAPI token and click-id fields", () => {
+    const event = scrubSentryEvent({
+      extra: {
+        access_token: "EAAB-capi-secret",
+        capiToken: "EAAB-capi-secret",
+        fbp: "fb.1.1.abc",
+        fbc: "fb.1.1.def",
+        fbclid: "IwAR0click",
+        applicationId: "app_safe_id",
+      },
+    });
+    const serialized = JSON.stringify(event);
+    expect(serialized).not.toMatch(/EAAB-capi-secret/);
+    expect(serialized).not.toMatch(/fb\.1\.1\.abc/);
+    expect(serialized).not.toMatch(/IwAR0click/);
+    expect(event.extra).toMatchObject({
+      access_token: "[Filtered]",
+      capiToken: "[Filtered]",
+      fbp: "[Filtered]",
+      fbc: "[Filtered]",
+      fbclid: "[Filtered]",
+      applicationId: "app_safe_id",
+    });
+  });
+
   it("keeps operational tags such as applicationId and payment provider", () => {
     const event = scrubSentryEvent(piiPayload());
     expect(event?.tags).toEqual({

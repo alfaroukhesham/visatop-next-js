@@ -210,6 +210,36 @@ describe("redaction", () => {
     }
   });
 
+  it("redacts Meta CAPI token and click-id fields", async () => {
+    const { log, lines, restore } = captureLogger();
+    try {
+      log.info(
+        {
+          access_token: "EAAB-capi-secret",
+          capiToken: "EAAB-capi-secret",
+          metaCapiToken: "EAAB-capi-secret",
+          fbp: "fb.1.1.abc",
+          fbc: "fb.1.1.def",
+          fbclid: "IwAR0click",
+          applicationId: "app_1",
+        },
+        "capi",
+      );
+      await flush(log);
+      const raw = serialized(lines[0] ?? {});
+      expect(raw).not.toContain("EAAB-capi-secret");
+      expect(raw).not.toContain("fb.1.1.abc");
+      expect(raw).not.toContain("IwAR0click");
+      expect(lines[0]?.access_token).toBe(CENSOR);
+      expect(lines[0]?.capiToken).toBe(CENSOR);
+      expect(lines[0]?.metaCapiToken).toBe(CENSOR);
+      expect(lines[0]?.fbp).toBe(CENSOR);
+      expect(lines[0]?.applicationId).toBe("app_1");
+    } finally {
+      restore();
+    }
+  });
+
   it("does not redact documentId or documentType correlation fields", async () => {
     const { log, lines, restore } = captureLogger();
     try {
