@@ -101,6 +101,16 @@ export const application = pgTable(
     /** Free-form ops label (e.g. embassy step); set from admin UI only. */
     adminOpsStep: text("admin_ops_step"),
 
+    /** Meta `_fbp` cookie captured on Pay. Server CAPI only. */
+    metaFbp: text("meta_fbp"),
+    /** Meta `_fbc` cookie, or `fb.1.{ts}.{fbclid}` when the cookie is missing. */
+    metaFbc: text("meta_fbc"),
+    metaClientIp: text("meta_client_ip"),
+    metaClientUserAgent: text("meta_client_user_agent"),
+    metaEventSourceUrl: text("meta_event_source_url"),
+    /** Set atomically after a successful CAPI Purchase; null means retry may send. */
+    capiPurchaseSentAt: timestamp("capi_purchase_sent_at"),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -124,6 +134,7 @@ export const application = pgTable(
     index("application_passportExtractionLeaseExpiresAt_idx").on(
       t.passportExtractionLeaseExpiresAt,
     ),
+    index("application_capiPurchaseSentAt_idx").on(t.capiPurchaseSentAt),
   ],
 );
 
