@@ -14,9 +14,10 @@ on:
           - production
         required: true
       git_sha:
-        description: Commit to build. Use the staging sha when promoting to production.
+        description: Commit or branch to build. Leave as main to deploy the latest main, or paste the staging sha to promote exactly what was tested.
         type: string
-        required: true
+        required: false
+        default: main
 
 # GitHub secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN, DEPLOY_SSH_KEY,
 # DEPLOY_HOST, DEPLOY_USER, STAGING_BUILD_ENV, PROD_BUILD_ENV.
@@ -44,7 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.git_sha || github.event.workflow_run.head_sha }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && (inputs.git_sha || 'main') || github.event.workflow_run.head_sha }}
 
       - name: Resolve commit
         id: rev
