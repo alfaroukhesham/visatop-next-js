@@ -26,21 +26,29 @@ export type TGuestResumeTokenState = {
   previousResumeTokenExpiresAt?: Date | null;
 };
 
+export type TGuestResumeTokenMatchKind = "current" | "previous";
+
 /** Current hash, or previous hash still inside its grace window. */
-export const guestResumeTokenMatches = (
+export const guestResumeTokenMatchKind = (
   plainToken: string,
   state: TGuestResumeTokenState,
   now: Date = new Date(),
-): boolean => {
+): TGuestResumeTokenMatchKind | null => {
   if (state.resumeTokenHash && verifyResumeToken(plainToken, state.resumeTokenHash)) {
-    return true;
+    return "current";
   }
   if (
     !state.previousResumeTokenHash ||
     !state.previousResumeTokenExpiresAt ||
     state.previousResumeTokenExpiresAt.getTime() <= now.getTime()
   ) {
-    return false;
+    return null;
   }
-  return verifyResumeToken(plainToken, state.previousResumeTokenHash);
+  return verifyResumeToken(plainToken, state.previousResumeTokenHash) ? "previous" : null;
 };
+
+export const guestResumeTokenMatches = (
+  plainToken: string,
+  state: TGuestResumeTokenState,
+  now: Date = new Date(),
+): boolean => guestResumeTokenMatchKind(plainToken, state, now) !== null;

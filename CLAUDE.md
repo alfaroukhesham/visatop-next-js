@@ -1,5 +1,9 @@
 @AGENTS.md
 
+## Ziina webhook (staging vs prod)
+
+Staging and production share **one Ziina token**. Never run Admin → Payments → Register webhook from staging. If Ziina webhooks stop, first check whether the webhook URL was taken by staging, then re-register from **production** admin. Detection: `GET /api/internal/health/payments` (see `docs/ops/host-cron-and-payment-health.md`).
+
 <!-- rtk-instructions v2 -->
 # RTK (Rust Token Killer) - Token-Optimized Commands
 

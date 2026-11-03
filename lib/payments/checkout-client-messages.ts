@@ -11,6 +11,7 @@ export type CheckoutBlockReason =
   | "terms_not_accepted"
   | "pricing_unavailable"
   | "provider_unavailable"
+  | "below_minimum"
   | "unknown";
 
 export type CheckoutApiErrorShape = {
@@ -50,6 +51,8 @@ export const checkoutErrorToUserMessage = (
       return t("checkout.errors.pricingUnavailable");
     case "provider_unavailable":
       return t("checkout.errors.providerUnavailable");
+    case "below_minimum":
+      return t("checkout.errors.belowMinimum");
     case "unknown":
     default:
       if (
@@ -76,6 +79,8 @@ const inferReasonFromCode = (code: string | undefined): CheckoutBlockReason => {
       return "unknown";
     case "TERMS_NOT_ACCEPTED":
       return "terms_not_accepted";
+    case "ZIINA_CLIENT_ERROR":
+      return "below_minimum";
     case "ZIINA_UNAVAILABLE":
     case "FINCRA_UNAVAILABLE":
     case "SERVICE_UNAVAILABLE":

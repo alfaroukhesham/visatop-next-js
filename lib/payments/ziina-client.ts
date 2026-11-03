@@ -244,6 +244,54 @@ async function ziinaFetchJson(
   }
 }
 
+const readWebhookUrlFromJson = (json: Record<string, unknown>): string | null => {
+  const direct = json.url;
+  if (typeof direct === "string" && direct.trim()) return direct.trim();
+  const webhookUrl = json.webhook_url;
+  if (typeof webhookUrl === "string" && webhookUrl.trim()) return webhookUrl.trim();
+  const data = json.data;
+  if (data && typeof data === "object") {
+    const nested = (data as Record<string, unknown>).url;
+    if (typeof nested === "string" && nested.trim()) return nested.trim();
+  }
+  const webhook = json.webhook;
+  if (webhook && typeof webhook === "object") {
+    const nested = (webhook as Record<string, unknown>).url;
+    if (typeof nested === "string" && nested.trim()) return nested.trim();
+  }
+  return null;
+};
+
+/**
+ * Best-effort read of the account webhook URL.
+ * Ziina's public OpenAPI only documents POST/DELETE `/webhook`; GET is attempted and
+ * treated as unreadable when the API rejects it.
+ */
+export const getZiinaWebhook = async (params: {
+  baseUrl: string;
+  accessToken: string;
+  timeoutMs?: number;
+}): Promise<{ url: string | null; httpStatus: number; unreadable: boolean }> => {
+  const endpoint = `${params.baseUrl.replace(/\/$/, "")}/webhook`;
+  try {
+    const res = await ziinaFetchJson(endpoint, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${params.accessToken}`,
+        Accept: "application/json",
+      },
+      timeoutMs: params.timeoutMs,
+    });
+    if (!res.ok) {
+      return { url: null, httpStatus: res.status, unreadable: true };
+    }
+    const url = readWebhookUrlFromJson(res.json);
+    return { url, httpStatus: 200, unreadable: !url };
+  } catch {
+    return { url: null, httpStatus: 0, unreadable: true };
+  }
+};
+
 export async function setZiinaWebhook(params: {
   baseUrl: string;
   accessToken: string;

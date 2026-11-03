@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth";
 import { createDraftBodySchema, normalizeCreateDraftBody } from "@/lib/applications/create-draft-body";
 import { createPartyDraft, CreatePartyDraftValidationError } from "@/lib/applications/create-party-draft";
 import { toPublicApplication } from "@/lib/applications/public-application";
-import { buildResumeSetCookieValue } from "@/lib/applications/resume-cookie";
+import { buildResumeCookieHeaders } from "@/lib/applications/resume-cookie";
 import { generateResumeToken } from "@/lib/applications/resume-token";
 import { parseJsonBody } from "@/lib/api/parse-json-body";
 import { jsonError, jsonOk } from "@/lib/api/response";
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
 
     if (isGuest) {
       const maxAge = result.ttlHours * 3600;
-      const setCookie = buildResumeSetCookieValue(plainToken!, maxAge, {
+      const cookieHeaders = buildResumeCookieHeaders(plainToken!, maxAge, {
         secure: process.env.NODE_ENV === "production",
       });
       return jsonOk(
@@ -105,7 +105,7 @@ export async function POST(req: Request) {
         {
           status: 201,
           requestId,
-          headers: { "Set-Cookie": setCookie },
+          headers: cookieHeaders,
         },
       );
     }

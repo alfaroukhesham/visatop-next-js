@@ -47,6 +47,28 @@ export function assertZiinaWebhookSourceIpAllowed(
   return false;
 }
 
+export type TZiinaWebhookEnvelope = {
+  eventName: string;
+  intentId: string | null;
+  status: string | null;
+};
+
+export const parseZiinaWebhookEnvelope = (rawBody: string): TZiinaWebhookEnvelope | null => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawBody);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  const rec = parsed as Record<string, unknown>;
+  const eventName = typeof rec.event === "string" ? rec.event : "";
+  const data = rec.data && typeof rec.data === "object" ? (rec.data as Record<string, unknown>) : null;
+  const intentId = data && typeof data.id === "string" && data.id.trim() ? data.id.trim() : null;
+  const status = data && typeof data.status === "string" && data.status.trim() ? data.status.trim() : null;
+  return { eventName, intentId, status };
+};
+
 export function parseZiinaWebhookToNormalized(rawBody: string): ZiinaWebhookParseResult {
   let parsed: unknown;
   try {

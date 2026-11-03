@@ -6,7 +6,7 @@ import {
   normalizeSignedInTrackEmail,
   signedInPortalTrackRowFilter,
 } from "@/lib/applications/portal-track-application-access";
-import { readResumeTokenFromRequestCookies } from "@/lib/applications/resume-cookie";
+import { readResumeTokensFromRequestCookies } from "@/lib/applications/resume-cookie";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { application } from "@/lib/db/schema/applications";
 
@@ -24,10 +24,10 @@ export async function loadApplicationRowForRequest(
 ): Promise<ApplicationRow | null> {
   const hdrs = await headers();
   const session = await auth.api.getSession({ headers: hdrs });
-  const token = readResumeTokenFromRequestCookies(cookieHeader);
+  const tokens = readResumeTokensFromRequestCookies(cookieHeader);
 
-  if (token) {
-    const guestRow = await loadGuestApplicationRowByResumeCookie(applicationId, token);
+  if (tokens.length > 0) {
+    const guestRow = await loadGuestApplicationRowByResumeCookie(applicationId, tokens);
     if (guestRow) return guestRow;
   }
 

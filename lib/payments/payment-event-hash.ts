@@ -30,6 +30,12 @@ export function computeZiinaReconcileProbePayloadHash(paymentId: string, slot: s
   return crypto.createHash("sha256").update(input, "utf8").digest("hex");
 }
 
+/** Once per payment: checkout-session returned an open Ziina widget URL to a live page. */
+export const computeZiinaWidgetOpenedPayloadHash = (paymentId: string): string => {
+  const input = `ziina-widget-opened\n${paymentId}`;
+  return crypto.createHash("sha256").update(input, "utf8").digest("hex");
+};
+
 export const computeFincraReconcilePayloadHash = (
   paymentId: string,
   source: string,

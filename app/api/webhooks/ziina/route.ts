@@ -5,14 +5,18 @@ import { computePaymentEventPayloadHash } from "@/lib/payments/payment-event-has
 import {
   isPostgresOnConflictMissingConstraintError,
   PaymentWebhookSchemaDeploymentError,
+  requirePaymentEventPayloadHashDedupeIndex,
 } from "@/lib/payments/payment-webhook-db-guard";
 import { processZiinaPaymentInTransaction } from "@/lib/payments/process-ziina-payment";
+import { resolvePaymentRowForWebhook } from "@/lib/payments/apply-payment-webhook-event";
 import { scheduleZiinaPaidSideEffects } from "@/lib/payments/ziina-payment-side-effects";
 import {
   assertZiinaWebhookSourceIpAllowed,
+  parseZiinaWebhookEnvelope,
   parseZiinaWebhookToNormalized,
   verifyZiinaWebhookSignature,
 } from "@/lib/payments/ziina-webhook";
+import { recordZiinaWebhookEvent } from "@/lib/payments/ziina-webhook-record";
 import { ZIINA_WEBHOOK_SOURCE_IPS } from "@/lib/payments/resolve-payment-provider";
 import { markWebhookReceivedNow, PLATFORM_KEY_LAST_WEBHOOK_ZIINA } from "@/lib/payments/webhook-health";
 import { createRequestLogger } from "@/lib/logger";
@@ -77,24 +81,66 @@ const postZiinaWebhook = async (req: Request) => {
     }
   }
 
+  const envelope = parseZiinaWebhookEnvelope(bodyText) ?? {
+    eventName: "",
+    intentId: null,
+    status: null,
+  };
   const parsed = parseZiinaWebhookToNormalized(bodyText);
+  const payloadHash = computePaymentEventPayloadHash("ziina", bodyText);
+
   if (parsed.kind === "ignored") {
-    let intentId: string | undefined;
     try {
-      const body = JSON.parse(bodyText) as { data?: { id?: string; status?: string } };
-      intentId = body.data?.id;
+      const stored = await withSystemDbActor(async (tx) => {
+        await markWebhookReceivedNow(tx, PLATFORM_KEY_LAST_WEBHOOK_ZIINA);
+        await requirePaymentEventPayloadHashDedupeIndex(tx);
+        const payRow = envelope.intentId
+          ? ((await resolvePaymentRowForWebhook(tx, {
+              provider: "ziina",
+              kind: "payment_completed",
+              providerPaymentId: envelope.intentId,
+              amountMinor: 0,
+              currency: "USD",
+              metadata: {},
+              rawEventType: envelope.eventName || "payment_intent.status.updated",
+              providerEventId: envelope.intentId,
+            })) ?? null)
+          : null;
+        const inserted = await recordZiinaWebhookEvent(tx, { envelope, payloadHash, payRow });
+        return { inserted, matched: Boolean(payRow), paymentId: payRow?.id ?? null };
+      });
       log.info(
-        { reason: parsed.reason, intentId, ziinaStatus: body.data?.status },
-        "[webhooks/ziina] Webhook ignored (no state change)",
+        {
+          reason: parsed.reason,
+          intentId: envelope.intentId,
+          ziinaStatus: envelope.status,
+          matched: stored.matched,
+          paymentId: stored.paymentId,
+          duplicate: !stored.inserted,
+        },
+        "[webhooks/ziina] Webhook recorded (no state change)",
       );
-    } catch {
-      log.info({ reason: parsed.reason }, "[webhooks/ziina] Webhook ignored (no state change)");
+    } catch (e) {
+      if (e instanceof PaymentWebhookSchemaDeploymentError || isPostgresOnConflictMissingConstraintError(e)) {
+        return jsonError(
+          "SERVICE_UNAVAILABLE",
+          "Payment webhook storage is not migrated; cannot record Ziina events safely. Apply database migrations, then retry.",
+          {
+            status: 503,
+            requestId,
+            details: {
+              code: "payment_event_dedupe_index_missing",
+              requiredIndex: "payment_event_payload_hash_unique",
+            },
+          },
+        );
+      }
+      throw e;
     }
     return jsonOk({ received: true, ignored: parsed.reason }, { requestId });
   }
 
   const normalized = parsed.event;
-  const payloadHash = computePaymentEventPayloadHash("ziina", bodyText);
   const eventType = normalized.rawEventType;
 
   let firstPaidApplicationId: string | null = null;

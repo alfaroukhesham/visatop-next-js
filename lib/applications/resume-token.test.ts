@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   generateResumeToken,
+  guestResumeTokenMatchKind,
   guestResumeTokenMatches,
   hashResumeToken,
   verifyResumeToken,
@@ -32,6 +33,18 @@ describe("resume-token", () => {
         previousResumeTokenExpiresAt: null,
       }),
     ).toBe(true);
+  });
+
+  it("guestResumeTokenMatchKind distinguishes current from previous", () => {
+    const previous = generateResumeToken();
+    const current = generateResumeToken();
+    const state = {
+      resumeTokenHash: current.hash,
+      previousResumeTokenHash: previous.hash,
+      previousResumeTokenExpiresAt: new Date(Date.now() + 60_000),
+    };
+    expect(guestResumeTokenMatchKind(current.plainToken, state)).toBe("current");
+    expect(guestResumeTokenMatchKind(previous.plainToken, state)).toBe("previous");
   });
 
   it("guestResumeTokenMatches accepts the previous hash inside the grace window", () => {

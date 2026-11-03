@@ -12,4 +12,5 @@ alwaysApply: true
 - Webhook handling must be **idempotent** (store provider event ids / hashes; ignore duplicates).
 - Refunds are an **admin intent** → provider call → webhook-confirmed state. Support full/partial.
 - Never expose affiliate cost/margin breakdown to the client; show one total only.
+- Staging and production share **one Ziina token**. Never run Admin → Payments → Register webhook from staging. If Ziina webhooks stop on prod, first check whether staging overwrote the webhook URL, then re-register from production admin. Health: `GET /api/internal/health/payments` (`x-internal-secret`). See `docs/ops/host-cron-and-payment-health.md`.
 

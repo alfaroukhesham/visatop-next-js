@@ -19,11 +19,15 @@ import {
 } from "@/lib/payments/payment-webhook-db-guard";
 import { createRequestLogger } from "@/lib/logger";
 import { setSafeSpanAttributes, withSpan } from "@/lib/observability/tracing";
+import { abandonZiinaCheckoutLock } from "@/lib/payments/ziina-checkout-lock";
+import { loadPartyMemberIds } from "@/lib/payments/party-member-ids";
+import { isZiinaIntentOpen } from "@/lib/payments/ziina-embedded";
 
 const ZIINA_RECONCILE_SLOTS = [
   { slot: "5m", delayMs: 5 * 60 * 1000 },
   { slot: "10m", delayMs: 10 * 60 * 1000 },
   { slot: "15m", delayMs: 15 * 60 * 1000 },
+  { slot: "24h", delayMs: 24 * 60 * 60 * 1000 },
 ] as const;
 
 export type ZiinaReconcileSlot = (typeof ZIINA_RECONCILE_SLOTS)[number]["slot"];
@@ -250,8 +254,37 @@ const reconcileZiinaPaymentRowUntraced = async (
           ziinaStatus: intent.status,
           reason: mapped.reason,
         },
-        "[ziina-reconcile] Final reconcile probe: payment still not terminal on Ziina",
+        "[ziina-reconcile] Final short-window reconcile probe: payment still not terminal on Ziina",
       );
+    }
+    if (slot === "24h" && isZiinaIntentOpen(intent.status)) {
+      const memberIds = await loadPartyMemberIds(tx, payRow.applicationId);
+      if (memberIds) {
+        await abandonZiinaCheckoutLock(tx, {
+          memberIds,
+          paymentId: payRow.id,
+          reason: "stale_intent",
+          failureCode: "expired",
+          failureMessage: `Ziina intent still ${intent.status} after 24h`,
+          requestId,
+        });
+      }
+      log.info(
+        {
+          paymentId: payRow.id,
+          applicationId: payRow.applicationId,
+          intentId,
+          ziinaStatus: intent.status,
+        },
+        "[ziina-reconcile] Stale open Ziina intent expired after 24h; checkout released",
+      );
+      return {
+        paymentId: payRow.id,
+        applicationId: payRow.applicationId,
+        slot,
+        ziinaStatus: intent.status,
+        outcome: "expired",
+      };
     }
     return {
       paymentId: payRow.id,

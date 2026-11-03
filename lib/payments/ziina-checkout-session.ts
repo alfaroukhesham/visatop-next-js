@@ -1,7 +1,10 @@
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { createId } from "@paralleldrive/cuid2";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import type { TZiinaCheckoutSession } from "@/lib/payments/checkout-types";
+import { computeZiinaWidgetOpenedPayloadHash } from "@/lib/payments/payment-event-hash";
+import { requirePaymentEventPayloadHashDedupeIndex } from "@/lib/payments/payment-webhook-db-guard";
 import { getZiinaPaymentIntent, ZiinaProviderError } from "@/lib/payments/ziina-client";
 import {
   isTrustedZiinaEmbeddedUrl,
@@ -10,25 +13,28 @@ import {
 import { getActivePaymentProvider, getZiinaServerConfig } from "@/lib/payments/resolve-payment-provider";
 import { reconcileZiinaPaymentFromReturn } from "@/lib/payments/reconcile-ziina-payments";
 import { createRequestLogger } from "@/lib/logger";
+import { loadPartyMemberIds } from "@/lib/payments/party-member-ids";
 
-export const loadPartyMemberIds = async (tx: DbTransaction, applicationId: string): Promise<string[] | null> => {
-  const [requestedApp] = await tx
-    .select({
-      id: schema.application.id,
-      partyId: schema.application.partyId,
-      paymentStatus: schema.application.paymentStatus,
+export { loadPartyMemberIds } from "@/lib/payments/party-member-ids";
+
+export const ZIINA_WIDGET_OPENED_EVENT_TYPE = "ziina.widget.opened";
+
+const recordZiinaWidgetOpened = async (tx: DbTransaction, payRow: typeof schema.payment.$inferSelect) => {
+  await requirePaymentEventPayloadHashDedupeIndex(tx);
+  await tx
+    .insert(schema.paymentEvent)
+    .values({
+      id: createId(),
+      paymentId: payRow.id,
+      providerEventId: payRow.providerCheckoutId,
+      type: ZIINA_WIDGET_OPENED_EVENT_TYPE,
+      payloadHash: computeZiinaWidgetOpenedPayloadHash(payRow.id),
+      provider: "ziina",
+      status: "widget_opened",
+      signatureValid: true,
+      matched: true,
     })
-    .from(schema.application)
-    .where(eq(schema.application.id, applicationId))
-    .limit(1);
-  if (!requestedApp) return null;
-  if (!requestedApp.partyId) return [requestedApp.id];
-  const members = await tx
-    .select({ id: schema.application.id })
-    .from(schema.application)
-    .where(eq(schema.application.partyId, requestedApp.partyId))
-    .orderBy(asc(schema.application.travelerIndex));
-  return members.map((m) => m.id);
+    .onConflictDoNothing({ target: schema.paymentEvent.payloadHash });
 };
 
 export const loadOpenZiinaPayment = async (tx: DbTransaction, memberIds: string[]) => {
@@ -132,6 +138,7 @@ export const resolveZiinaCheckoutSession = async (
   if (isZiinaIntentOpen(intent.status)) {
     const embeddedUrl = intent.embeddedUrl?.trim() ?? "";
     if (!isTrustedZiinaEmbeddedUrl(embeddedUrl)) return result({ kind: "unavailable" });
+    await recordZiinaWidgetOpened(tx, payRow);
     return result({ kind: "open", embeddedUrl });
   }
 

@@ -14,7 +14,8 @@
  */
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
-import { readResumeTokenFromRequestCookies } from "@/lib/applications/resume-cookie";
+import { promotePreviousResumeTokenIfMatched } from "@/lib/applications/promote-previous-resume-token";
+import { readResumeTokensFromRequestCookies } from "@/lib/applications/resume-cookie";
 import { guestResumeTokenMatches } from "@/lib/applications/resume-token";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { application } from "@/lib/db/schema";
@@ -57,13 +58,14 @@ export async function resolveApplicationAccess(
   applicationId: string,
 ): Promise<{ ok: true; access: ApplicationAccess } | { ok: false; failure: ApplicationAccessFailure }> {
   const session = await auth.api.getSession({ headers: hdrs });
-  const token = readResumeTokenFromRequestCookies(req.headers.get("cookie"));
+  const tokens = readResumeTokensFromRequestCookies(req.headers.get("cookie"));
 
-  if (token) {
+  if (tokens.length > 0) {
     const verified = await withSystemDbActor(async (tx) => {
       const rows = await tx
         .select({
           id: application.id,
+          partyId: application.partyId,
           resumeTokenHash: application.resumeTokenHash,
           previousResumeTokenHash: application.previousResumeTokenHash,
           previousResumeTokenExpiresAt: application.previousResumeTokenExpiresAt,
@@ -77,9 +79,11 @@ export async function resolveApplicationAccess(
       if (!row.isGuest) {
         return { present: true, verified: false } as const;
       }
-      if (!guestResumeTokenMatches(token, row)) {
+      const token = tokens.find((plain) => guestResumeTokenMatches(plain, row));
+      if (!token) {
         return { present: true, verified: false } as const;
       }
+      await promotePreviousResumeTokenIfMatched(tx, row, token);
       return { present: true, verified: true } as const;
     });
 
