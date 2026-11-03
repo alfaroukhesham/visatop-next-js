@@ -90,6 +90,8 @@ export function useApplicationDraft(applicationId: string) {
   const [memberStates, setMemberStates] = useState<Record<string, TMemberState>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lostCheckoutSession, setLostCheckoutSession] = useState(false);
+  const appRef = useRef<PublicApplication | null>(null);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [nationalities, setNationalities] = useState<CatalogNationality[]>([]);
@@ -152,12 +154,18 @@ export function useApplicationDraft(applicationId: string) {
         wizardCursor: TApplyWizardCursor | null;
       }>(apiHref(`/applications/${applicationId}`));
       if (!appRes.ok) {
+        const lostCheckout =
+          appRes.error.code === "NOT_FOUND" && appRef.current?.paymentStatus === "checkout_created";
         setApp(null);
-        setError(appRes.error.message);
+        appRef.current = null;
+        setLostCheckoutSession(lostCheckout);
+        setError(lostCheckout ? tRef.current("draft.reopenFromEmail") : appRes.error.message);
         if (!silent) setLoading(false);
         return null;
       }
+      setLostCheckoutSession(false);
       const nextApp = appRes.data.application;
+      appRef.current = nextApp;
       const nextMembers = appRes.data.members ?? [];
       setApp(nextApp);
       setMembers(nextMembers);
@@ -478,6 +486,7 @@ export function useApplicationDraft(applicationId: string) {
     app,
     loading,
     error,
+    lostCheckoutSession,
     actionMsg,
     setActionMsg,
     countdown,

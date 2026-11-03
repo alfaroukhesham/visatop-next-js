@@ -21,7 +21,8 @@ export type TFincraVerifyDecision =
       feeMinor: bigint | null;
     }
   | { kind: "unknown_reference" }
-  | { kind: "pending"; reason: string };
+  | { kind: "pending"; reason: string }
+  | { kind: "expired"; reason: string };
 
 const receivedMinor = (verified: FincraVerifiedPayment): bigint | null =>
   verified.amountReceivedMinor ?? verified.amountMinor;
@@ -45,6 +46,9 @@ export const decideFincraVerifiedPayment = (params: {
   }
 
   const status = verified.status.trim().toLowerCase();
+  if (status === "expired") {
+    return { kind: "expired", reason: "status:expired" };
+  }
   if (status !== "success") {
     return { kind: "pending", reason: `status:${status || "missing"}` };
   }

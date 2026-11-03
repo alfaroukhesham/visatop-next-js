@@ -4,8 +4,15 @@ import { writeAdminAudit } from "@/lib/admin-api/write-admin-audit";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { apiHref } from "@/lib/app-href";
 import { getAppOrigin } from "@/lib/app-url";
+import * as schema from "@/lib/db/schema";
+import { createRequestLogger } from "@/lib/logger";
 import { getZiinaServerConfig, isHttpsOrigin } from "@/lib/payments/resolve-payment-provider";
 import { deleteZiinaWebhook, setZiinaWebhook, ZiinaProviderError } from "@/lib/payments/ziina-client";
+import {
+  buildZiinaWebhookRegistrationRecord,
+  isNonProdZiinaWebhookRegistrar,
+  PLATFORM_KEY_ZIINA_WEBHOOK_LAST_REGISTRATION,
+} from "@/lib/payments/ziina-webhook-url";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,13 +60,42 @@ export async function POST() {
           timeoutMs: 8000,
         });
 
+        const registration = buildZiinaWebhookRegistrationRecord(url);
+        await tx
+          .insert(schema.platformSetting)
+          .values({
+            key: PLATFORM_KEY_ZIINA_WEBHOOK_LAST_REGISTRATION,
+            value: JSON.stringify(registration),
+          })
+          .onConflictDoUpdate({
+            target: schema.platformSetting.key,
+            set: { value: JSON.stringify(registration) },
+          });
+
         await writeAdminAudit(tx, {
           adminUserId,
           action: "payments.ziina.webhook.set",
           entityType: "platform_setting",
           entityId: "ziina_webhook",
-          afterJson: JSON.stringify({ url, success: res.success, error: res.error }),
+          afterJson: JSON.stringify({
+            url,
+            host: registration.host,
+            success: res.success,
+            error: res.error,
+            nonProdRegistrar: registration.nonProdRegistrar,
+          }),
         });
+
+        if (isNonProdZiinaWebhookRegistrar()) {
+          createRequestLogger(requestId).warn(
+            {
+              marker: "ziina_webhook_registered_from_non_prod",
+              host: registration.host,
+              url,
+            },
+            "[admin/ziina-webhook] Register webhook ran from a non-prod host; staging and prod share one Ziina token",
+          );
+        }
 
         return jsonOk({ success: res.success, error: res.error, url }, { requestId });
       } catch (e) {

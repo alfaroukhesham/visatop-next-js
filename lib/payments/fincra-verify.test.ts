@@ -96,4 +96,12 @@ describe("decideFincraVerifiedPayment", () => {
     });
     expect(d.kind).toBe("pending");
   });
+
+  it("treats provider expired as expired so reconcile can release the lock", () => {
+    const d = decideFincraVerifiedPayment({
+      verified: base({ status: "expired" }),
+      payment,
+    });
+    expect(d).toEqual({ kind: "expired", reason: "status:expired" });
+  });
 });

@@ -211,7 +211,13 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
   }
 
   if (draft.error || !app) {
-    return <DraftPanelError error={draft.error} onRetry={() => void draft.load()} />;
+    return (
+      <DraftPanelError
+        error={draft.error}
+        lostCheckoutSession={draft.lostCheckoutSession}
+        onRetry={() => void draft.load()}
+      />
+    );
   }
 
   const validationEmail = app.isGuest ? app.guestEmail : "signed-in";

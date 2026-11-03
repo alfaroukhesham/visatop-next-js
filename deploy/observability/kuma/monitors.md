@@ -13,6 +13,10 @@ Kuma has no first-class “monitors as code” in this repo. After `./scripts/up
      Expect HTTP 200. `/apply/start` without `nationality` redirects home.
    - **Readiness** — `https://<host>/visa-processing/api/health/ready`
      Expect HTTP 200. Treat 503 as down. Never point blue-green drain/health here.
+   - **Payment health (production only)** — `https://visatop.com/visa-processing/api/internal/health/payments`
+     Method GET. Header `x-internal-secret: <INTERNAL_CRON_SECRET from /root/visatop/.env>`.
+     Expect HTTP 200. Treat 503 as down (webhook URL not prod, webhooks silent after widget open, or Ziina completed but local row still `checkout_created`).
+     See [`docs/ops/host-cron-and-payment-health.md`](../../../docs/ops/host-cron-and-payment-health.md).
 3. Notification: email + the same WhatsApp-compatible webhook as Grafana (`GRAFANA_ALERT_WEBHOOK_URL`).
 4. Optional Docker-network monitor: `http://visatop-edge-prod:3000/visa-processing/api/health` (Kuma is attached to `visatop_edge`).
 

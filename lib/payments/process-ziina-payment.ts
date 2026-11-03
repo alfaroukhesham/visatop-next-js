@@ -118,6 +118,10 @@ export async function processZiinaPaymentInTransaction(
       providerEventId,
       type: eventType,
       payloadHash,
+      provider: "ziina",
+      status: normalized.kind === "payment_completed" ? "completed" : "failed",
+      signatureValid: true,
+      matched: true,
     })
     .onConflictDoNothing({ target: paymentEvent.payloadHash })
     .returning();

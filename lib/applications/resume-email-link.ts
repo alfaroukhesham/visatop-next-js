@@ -112,6 +112,7 @@ export type TConsumeResumeEmailLinkResult =
       maxAgeSeconds: number;
       primaryApplicationId: string;
       rotated: boolean;
+      skipCookie?: boolean;
     }
   | { ok: false };
 
@@ -119,27 +120,28 @@ export type TGuestResumeRedeemPlan =
   | { action: "reuse"; plainToken: string }
   | { action: "rotate" };
 
+const incomingResumePlains = (incomingPlain: string | readonly string[] | null | undefined): string[] => {
+  if (!incomingPlain) return [];
+  return typeof incomingPlain === "string" ? [incomingPlain] : [...incomingPlain];
+};
+
 export const planGuestResumeRedeem = (input: {
-  incomingPlain: string | null;
+  incomingPlain: string | readonly string[] | null;
   currentHash: string | null;
   previousHash: string | null;
   previousExpiresAt: Date | null;
   now?: Date;
 }): TGuestResumeRedeemPlan => {
   const now = input.now ?? new Date();
-  if (
-    input.incomingPlain &&
-    guestResumeTokenMatches(
-      input.incomingPlain,
-      {
-        resumeTokenHash: input.currentHash,
-        previousResumeTokenHash: input.previousHash,
-        previousResumeTokenExpiresAt: input.previousExpiresAt,
-      },
-      now,
-    )
-  ) {
-    return { action: "reuse", plainToken: input.incomingPlain };
+  const state = {
+    resumeTokenHash: input.currentHash,
+    previousResumeTokenHash: input.previousHash,
+    previousResumeTokenExpiresAt: input.previousExpiresAt,
+  };
+  for (const plain of incomingResumePlains(input.incomingPlain)) {
+    if (guestResumeTokenMatches(plain, state, now)) {
+      return { action: "reuse", plainToken: plain };
+    }
   }
   return { action: "rotate" };
 };
@@ -148,6 +150,7 @@ export type TLockedGuestResumeParty = {
   id: string;
   draftExpiresAt: Date | null;
   paymentStatus: string;
+  checkoutState?: string | null;
   resumeTokenHash: string | null;
   previousResumeTokenHash: string | null;
   previousResumeTokenExpiresAt: Date | null;
@@ -163,6 +166,7 @@ export type TRedeemLockedGuestResumePartyResult =
       previousHash: string | null;
       previousExpiresAt: Date | null;
       rotated: boolean;
+      skipCookie?: boolean;
     }
   | { ok: false };
 
@@ -171,7 +175,7 @@ export const redeemLockedGuestResumeParty = (input: {
   party: TLockedGuestResumeParty;
   memberIds: Set<string>;
   primaryApplicationId: string;
-  incomingPlain: string | null;
+  incomingPlain: string | readonly string[] | null;
   now?: Date;
   generateToken?: () => { plainToken: string; hash: string };
 }): TRedeemLockedGuestResumePartyResult => {
@@ -191,6 +195,21 @@ export const redeemLockedGuestResumeParty = (input: {
     previousExpiresAt: input.party.previousResumeTokenExpiresAt,
     now,
   });
+
+  if (input.party.checkoutState === "pending" && plan.action === "rotate") {
+    if (!input.party.resumeTokenHash) return { ok: false };
+    return {
+      ok: true,
+      plainToken: incomingResumePlains(input.incomingPlain)[0] ?? "",
+      maxAgeSeconds,
+      primaryApplicationId: input.primaryApplicationId,
+      nextHash: input.party.resumeTokenHash,
+      previousHash: input.party.previousResumeTokenHash,
+      previousExpiresAt: input.party.previousResumeTokenExpiresAt,
+      rotated: false,
+      skipCookie: true,
+    };
+  }
 
   if (plan.action === "reuse") {
     if (!input.party.resumeTokenHash) return { ok: false };
@@ -221,7 +240,7 @@ export const redeemLockedGuestResumeParty = (input: {
 
 export const consumeResumeEmailLink = async (
   signedToken: string,
-  incomingPlain?: string | null,
+  incomingPlain?: string | readonly string[] | null,
 ): Promise<TConsumeResumeEmailLinkResult> => {
   const verified = verifyResumeEmailLink(signedToken);
   if (!verified.ok) return { ok: false };
@@ -236,13 +255,17 @@ export const consumeResumeEmailLink = async (
     if (!party) return { ok: false };
 
     const members = await tx
-      .select({ id: application.id })
+      .select({ id: application.id, checkoutState: application.checkoutState })
       .from(application)
       .where(eq(application.partyId, party.id));
     const memberIds = new Set(members.map((m) => m.id));
+    const primaryCheckoutState =
+      members.find((m) => m.id === verified.primaryApplicationId)?.checkoutState ??
+      members[0]?.checkoutState ??
+      null;
 
     const redeemed = redeemLockedGuestResumeParty({
-      party,
+      party: { ...party, checkoutState: primaryCheckoutState },
       memberIds,
       primaryApplicationId: verified.primaryApplicationId,
       incomingPlain: incomingPlain ?? null,
@@ -277,6 +300,7 @@ export const consumeResumeEmailLink = async (
       maxAgeSeconds: redeemed.maxAgeSeconds,
       primaryApplicationId: redeemed.primaryApplicationId,
       rotated: redeemed.rotated,
+      skipCookie: redeemed.skipCookie,
     };
   });
 };

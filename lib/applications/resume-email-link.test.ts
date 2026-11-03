@@ -129,6 +129,32 @@ describe("guest resume redeem", () => {
     ).toBe(true);
   });
 
+  it("reuses a matching cookie when a stale Path=/ leftover is listed first", () => {
+    const plan = planGuestResumeRedeem({
+      incomingPlain: ["stale-other", original.plainToken],
+      currentHash: original.hash,
+      previousHash: null,
+      previousExpiresAt: null,
+      now,
+    });
+    expect(plan).toEqual({ action: "reuse", plainToken: original.plainToken });
+  });
+
+  it("does not rotate while checkout_state is pending", () => {
+    const redeemed = redeemLockedGuestResumeParty({
+      party: { ...partyBase, checkoutState: "pending", paymentStatus: "checkout_created" },
+      memberIds: new Set(["app-1"]),
+      primaryApplicationId: "app-1",
+      incomingPlain: null,
+      now,
+    });
+    expect(redeemed.ok).toBe(true);
+    if (!redeemed.ok) return;
+    expect(redeemed.rotated).toBe(false);
+    expect(redeemed.skipCookie).toBe(true);
+    expect(redeemed.nextHash).toBe(original.hash);
+  });
+
   it("rejects expired drafts", () => {
     const redeemed = redeemLockedGuestResumeParty({
       party: { ...partyBase, draftExpiresAt: new Date(now.getTime() - 1000) },

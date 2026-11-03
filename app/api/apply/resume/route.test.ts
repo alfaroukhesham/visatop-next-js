@@ -56,8 +56,9 @@ describe("GET/POST /api/apply/resume", () => {
     );
     expect(res.status).toBe(303);
     expect(res.headers.get("location")).toContain("/apply/applications/app-1");
-    expect(res.headers.get("set-cookie")).toContain("vt_resume=new-plain");
-    expect(consumeMock).toHaveBeenCalledWith("signed-token", "old-plain");
+    expect(res.headers.getSetCookie().join(";")).toContain("vt_resume=new-plain");
+    expect(res.headers.getSetCookie().join(";")).toContain("Path=/visa-processing");
+    expect(consumeMock).toHaveBeenCalledWith("signed-token", ["old-plain"]);
   });
 
   it("POST with an invalid token redirects to invalid", async () => {

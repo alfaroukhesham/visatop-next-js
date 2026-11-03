@@ -17,7 +17,14 @@ import {
   requireCheckoutAppOrigin,
 } from "@/lib/payments/resolve-payment-provider";
 import { createZiinaPaymentIntent, ZiinaProviderError } from "@/lib/payments/ziina-client";
+import { abandonZiinaCheckoutLock } from "@/lib/payments/ziina-checkout-lock";
+import {
+  isBelowZiinaMinimum,
+  sanitizeZiinaProviderBody,
+  ziinaProviderBodyLooksLikeMinimum,
+} from "@/lib/payments/ziina-min-amount";
 import { isTrustedZiinaEmbeddedUrl } from "@/lib/payments/ziina-embedded";
+import { peekResolvedFxRateFromTx } from "@/lib/pricing/fx-usd-aed";
 import { resolveCheckoutOfferDecision } from "@/lib/payments/resolve-checkout-provider";
 import { createFincraCheckout, FincraProviderError } from "@/lib/payments/fincra-client";
 import { isTrustedFincraCheckoutUrl } from "@/lib/payments/fincra-embedded";
@@ -487,7 +494,46 @@ export async function POST(req: Request) {
         ziinaCfg = getZiinaServerConfig();
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Ziina is not configured";
+        await abandonZiinaCheckoutLock(tx, {
+          memberIds,
+          paymentId,
+          reason: "ziina_not_configured",
+          failureCode: "provider_unavailable",
+          failureMessage: msg,
+          requestId,
+        });
         return jsonError("PAYMENT_PROVIDER_ERROR", msg, { status: 503, requestId });
+      }
+
+      const fxPeek = await peekResolvedFxRateFromTx(tx);
+      if (
+        isBelowZiinaMinimum({
+          amountMinor: totalMinor,
+          currency,
+          aedPerUsd: fxPeek.fxAedPerUsd,
+        })
+      ) {
+        await abandonZiinaCheckoutLock(tx, {
+          memberIds,
+          paymentId,
+          reason: "below_minimum",
+          failureCode: "below_minimum",
+          failureMessage: "Amount is below Ziina's 2 AED minimum",
+          requestId,
+        });
+        log.warn(
+          { amountMinor: totalMinor.toString(), currency },
+          "[api/checkout] Amount below Ziina 2 AED minimum; checkout lock released",
+        );
+        return jsonError(
+          "ZIINA_CLIENT_ERROR",
+          "This amount is below our payment partner's 2 AED minimum. No charge was made.",
+          {
+            status: 400,
+            requestId,
+            details: { reason: "below_minimum" },
+          },
+        );
       }
 
       const operationId = randomUUID();
@@ -529,15 +575,47 @@ export async function POST(req: Request) {
         return jsonOk(data, { requestId });
       } catch (e) {
         if (e instanceof ZiinaProviderError) {
+          const ziinaBody = sanitizeZiinaProviderBody(e.ziinaBody);
+          const belowMinimum = ziinaProviderBodyLooksLikeMinimum(ziinaBody);
+          await abandonZiinaCheckoutLock(tx, {
+            memberIds,
+            paymentId,
+            reason: belowMinimum ? "below_minimum" : "provider_unavailable",
+            failureCode: belowMinimum ? "below_minimum" : "provider_unavailable",
+            failureMessage: belowMinimum
+              ? "Amount is below Ziina's 2 AED minimum"
+              : e.message,
+            requestId,
+          });
           log.error(
-            { message: e.message, httpStatus: e.httpStatus },
+            {
+              message: e.message,
+              httpStatus: e.httpStatus,
+              ziinaHttpStatus: e.httpStatus,
+              ziinaResponse: ziinaBody,
+            },
             "[api/checkout] Ziina error",
           );
-          return jsonError("ZIINA_UNAVAILABLE", e.message, {
-            status: e.httpStatus >= 500 ? 502 : e.httpStatus,
-            requestId,
-            details: { reason: "provider_unavailable" },
-          });
+          if (belowMinimum) {
+            return jsonError(
+              "ZIINA_CLIENT_ERROR",
+              "This amount is below our payment partner's 2 AED minimum. No charge was made.",
+              {
+                status: 400,
+                requestId,
+                details: { reason: "below_minimum" },
+              },
+            );
+          }
+          return jsonError(
+            "ZIINA_UNAVAILABLE",
+            "We couldn't start payment. No charge was made. Please try again.",
+            {
+              status: e.httpStatus >= 500 ? 502 : e.httpStatus,
+              requestId,
+              details: { reason: "provider_unavailable" },
+            },
+          );
         }
         throw e;
       }

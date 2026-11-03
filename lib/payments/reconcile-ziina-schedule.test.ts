@@ -12,11 +12,20 @@ describe("dueZiinaReconcileSlots", () => {
     expect(dueZiinaReconcileSlots(base, base.getTime() + 5 * 60 * 1000)).toEqual(["5m"]);
   });
 
-  it("returns all slots at fifteen minutes", () => {
+  it("returns short-window slots at fifteen minutes", () => {
     expect(dueZiinaReconcileSlots(base, base.getTime() + 15 * 60 * 1000)).toEqual([
       "5m",
       "10m",
       "15m",
+    ]);
+  });
+
+  it("adds the 24h stale-intent slot after a day", () => {
+    expect(dueZiinaReconcileSlots(base, base.getTime() + 24 * 60 * 60 * 1000)).toEqual([
+      "5m",
+      "10m",
+      "15m",
+      "24h",
     ]);
   });
 });

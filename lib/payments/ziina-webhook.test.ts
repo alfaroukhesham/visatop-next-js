@@ -1,6 +1,10 @@
 import crypto from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { parseZiinaWebhookToNormalized, verifyZiinaWebhookSignature } from "./ziina-webhook";
+import {
+  parseZiinaWebhookEnvelope,
+  parseZiinaWebhookToNormalized,
+  verifyZiinaWebhookSignature,
+} from "./ziina-webhook";
 
 describe("verifyZiinaWebhookSignature", () => {
   it("accepts a valid hex HMAC of raw body", () => {
@@ -49,6 +53,19 @@ describe("parseZiinaWebhookToNormalized", () => {
       expect(r.event.metadata.failureCode).toBe("card_declined");
       expect(r.event.metadata.failureMessage).toBe("Insufficient funds");
     }
+  });
+
+  it("extracts intent id and status for ignored events so they can still be stamped", () => {
+    const body = JSON.stringify({
+      event: "payment_intent.status.updated",
+      data: { id: "intent_1", status: "requires_user_action", amount: 1, currency_code: "USD" },
+    });
+    expect(parseZiinaWebhookEnvelope(body)).toEqual({
+      eventName: "payment_intent.status.updated",
+      intentId: "intent_1",
+      status: "requires_user_action",
+    });
+    expect(parseZiinaWebhookToNormalized(body).kind).toBe("ignored");
   });
 
   it("ignores non-terminal statuses", () => {

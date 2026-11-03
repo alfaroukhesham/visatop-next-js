@@ -43,6 +43,14 @@ describe("checkoutErrorToUserMessage", () => {
     expect(msg).toMatch(/passport copy/i);
   });
 
+  it("maps below_minimum to the Ziina minimum copy", () => {
+    const msg = checkoutErrorToUserMessage({
+      code: "ZIINA_CLIENT_ERROR",
+      details: { reason: "below_minimum" },
+    });
+    expect(msg).toMatch(/2 AED minimum/i);
+  });
+
   it("maps FINCRA_UNAVAILABLE to the generic provider copy", () => {
     const msg = checkoutErrorToUserMessage({
       code: "FINCRA_UNAVAILABLE",

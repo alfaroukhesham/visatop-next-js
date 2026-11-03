@@ -2,10 +2,13 @@ import { headers } from "next/headers";
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
-import { loadGuestApplicationRowByResumeCookie } from "@/lib/applications/guest-resume-access";
+import { loadGuestApplicationByResumeCookie } from "@/lib/applications/guest-resume-access";
 import { loadApplicationRowForRequest } from "@/lib/applications/load-application-row-for-request";
 import { loadPartyMembers } from "@/lib/applications/load-party-members";
-import { readResumeTokenFromRequestCookies } from "@/lib/applications/resume-cookie";
+import {
+  buildResumeCookieHeaders,
+  readResumeTokensFromRequestCookies,
+} from "@/lib/applications/resume-cookie";
 import { toPublicApplication } from "@/lib/applications/public-application";
 import { toPublicApplicationWithCharge } from "@/lib/applications/load-application-charge";
 import { readCustomerLocaleFromCookieHeader } from "@/lib/i18n/customer-locale";
@@ -25,12 +28,13 @@ const patchBody = z.strictObject({
   guestEmail: z.email().max(320),
 });
 
-async function loadApplicationForGuest(
+const loadApplicationForGuest = async (
   applicationId: string,
-  resumePlain: string,
-): Promise<typeof application.$inferSelect | null> {
-  return loadGuestApplicationRowByResumeCookie(applicationId, resumePlain);
-}
+  resumePlain: string | readonly string[],
+): Promise<typeof application.$inferSelect | null> => {
+  const loaded = await loadGuestApplicationByResumeCookie(applicationId, resumePlain);
+  return loaded?.row ?? null;
+};
 
 async function applicationWithMembers(
   row: typeof application.$inferSelect,
@@ -82,17 +86,26 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   }
 
   const cookieHeader = req.headers.get("cookie");
-  const token = readResumeTokenFromRequestCookies(cookieHeader);
-  if (!token) {
+  const tokens = readResumeTokensFromRequestCookies(cookieHeader);
+  if (tokens.length === 0) {
     // Guest without cookie: 403 (distinct from 404) so clients can distinguish
     // “no possession proof” from unknown id. RSC `/submitted` uses unified 404.
     return jsonError("FORBIDDEN", "Missing resume session", { status: 403, requestId });
   }
-  const row = await loadApplicationForGuest(id, token);
-  if (!row) {
+  const loaded = await loadGuestApplicationByResumeCookie(id, tokens);
+  if (!loaded) {
     return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
   }
-  return jsonOk(await applicationWithMembers(row, t), { requestId });
+  const maxAge = loaded.row.draftExpiresAt
+    ? Math.max(0, Math.floor((loaded.row.draftExpiresAt.getTime() - Date.now()) / 1000))
+    : 0;
+  const headersOut =
+    maxAge > 0
+      ? buildResumeCookieHeaders(loaded.resumePlain, maxAge, {
+          secure: process.env.NODE_ENV === "production",
+        })
+      : undefined;
+  return jsonOk(await applicationWithMembers(loaded.row, t), { requestId, headers: headersOut });
 }
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -174,11 +187,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   }
 
   const cookieHeader = req.headers.get("cookie");
-  const token = readResumeTokenFromRequestCookies(cookieHeader);
-  if (!token) {
+  const tokens = readResumeTokensFromRequestCookies(cookieHeader);
+  if (tokens.length === 0) {
     return jsonError("FORBIDDEN", "Missing resume session", { status: 403, requestId });
   }
-  const row = await loadApplicationForGuest(id, token);
+  const row = await loadApplicationForGuest(id, tokens);
   if (!row) {
     return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
   }

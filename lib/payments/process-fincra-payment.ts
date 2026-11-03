@@ -10,6 +10,9 @@ import type { NormalizedPaymentWebhookEvent } from "@/lib/payments/normalized-we
 import { requirePaymentEventPayloadHashDedupeIndex } from "@/lib/payments/payment-webhook-db-guard";
 import { computeFincraUnderpayPayloadHash } from "@/lib/payments/payment-event-hash";
 import type { TFincraVerifyDecision } from "@/lib/payments/fincra-verify";
+import { abandonFincraCheckoutLock } from "@/lib/payments/fincra-checkout-lock";
+import { recordPaymentFailureInfo } from "@/lib/payments/payment-failure-info";
+import { loadPartyMemberIds } from "@/lib/payments/party-member-ids";
 import { createRequestLogger } from "@/lib/logger";
 
 export type ProcessFincraPaymentOutcome =
@@ -17,6 +20,7 @@ export type ProcessFincraPaymentOutcome =
   | "duplicate"
   | "mismatch"
   | "pending"
+  | "expired"
   | "unknown_reference"
   | "noop_no_payment"
   | "noop_no_application"
@@ -217,6 +221,28 @@ export const processFincraVerifiedPaymentInTransaction = async (
 
   if (decision.kind === "pending") {
     return { outcome: "pending", firstPaidApplicationId: null, paymentId: payRow.id };
+  }
+
+  if (decision.kind === "expired") {
+    const memberIds = await loadPartyMemberIds(tx, payRow.applicationId);
+    if (memberIds) {
+      await abandonFincraCheckoutLock(tx, {
+        memberIds,
+        paymentId: payRow.id,
+        reason: "provider_expired",
+        requestId,
+      });
+    }
+    await recordPaymentFailureInfo(tx, {
+      paymentId: payRow.id,
+      failureCode: "expired",
+      failureMessage: "expired",
+    });
+    log.info(
+      { paymentId: payRow.id, applicationId: appRow.id, scope: logLabel },
+      `[${logLabel}] Fincra checkout expired; lock released`,
+    );
+    return { outcome: "expired", firstPaidApplicationId: null, paymentId: payRow.id };
   }
 
   if (decision.kind === "mismatch") {

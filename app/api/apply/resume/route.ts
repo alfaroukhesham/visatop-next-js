@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
 import { consumeResumeEmailLink } from "@/lib/applications/resume-email-link";
 import {
-  buildResumeSetCookieValue,
-  readResumeTokenFromRequestCookies,
+  buildResumeCookieHeaders,
+  readResumeTokensFromRequestCookies,
 } from "@/lib/applications/resume-cookie";
 import { appHref } from "@/lib/app-href";
 
@@ -52,26 +52,27 @@ export const POST = async (req: Request) => {
     return Response.redirect(invalidRedirect(), 303);
   }
 
-  const incomingPlain = readResumeTokenFromRequestCookies(req.headers.get("cookie"));
-  const consumed = await consumeResumeEmailLink(token, incomingPlain);
+  const incomingPlains = readResumeTokensFromRequestCookies(req.headers.get("cookie"));
+  const consumed = await consumeResumeEmailLink(token, incomingPlains);
   if (!consumed.ok) {
     return Response.redirect(invalidRedirect(), 303);
   }
 
   const hdrs = await headers();
-  const secure = process.env.NODE_ENV === "production";
-  const setCookie = buildResumeSetCookieValue(consumed.plainToken, consumed.maxAgeSeconds, {
-    secure,
-  });
   const destination = appHref(`/apply/applications/${consumed.primaryApplicationId}`);
+  const out = new Headers();
+  out.set("Location", destination);
+  out.set("Cache-Control", "no-store");
+  if (hdrs.get("x-request-id")) out.set("x-request-id", hdrs.get("x-request-id")!);
+  if (!consumed.skipCookie && consumed.plainToken) {
+    const cookieHeaders = buildResumeCookieHeaders(consumed.plainToken, consumed.maxAgeSeconds, {
+      secure: process.env.NODE_ENV === "production",
+    });
+    for (const cookie of cookieHeaders.getSetCookie()) out.append("Set-Cookie", cookie);
+  }
 
   return new Response(null, {
     status: 303,
-    headers: {
-      Location: destination,
-      "Set-Cookie": setCookie,
-      "Cache-Control": "no-store",
-      ...(hdrs.get("x-request-id") ? { "x-request-id": hdrs.get("x-request-id")! } : {}),
-    },
+    headers: out,
   });
 };
