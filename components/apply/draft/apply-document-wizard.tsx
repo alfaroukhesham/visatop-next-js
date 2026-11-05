@@ -34,6 +34,7 @@ import { ApplyOrderTotal } from "@/components/apply/apply-order-total";
 import {
   APPLY_STICKY_CTA_MEDIA_QUERY,
   ApplyReadyContinue,
+  ApplyReadyPreviousButton,
 } from "@/components/apply/apply-ready-continue";
 import { useNarrowViewport } from "@/lib/client/use-narrow-viewport";
 import { ReadyDocumentAccordion, type TReadyDocumentIcon } from "./ready-document-accordion";
@@ -210,17 +211,9 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
           currency={primaryApp.catalogCurrency}
           serviceIds={ordered.map((member) => member.serviceId)}
         />
-        <ClientButton
-          variant="outline"
-          brand="white"
-          className="h-12 w-full"
-          data-apply-ready-inline-previous=""
-          hidden={compactCta}
-          type="button"
-          onClick={() => router.push(tripHref)}
-        >
+        <ApplyReadyPreviousButton inline hidden={compactCta} onClick={() => router.push(tripHref)}>
           {t("common.previous")}
-        </ClientButton>
+        </ApplyReadyPreviousButton>
         <ApplyReadyContinue
           previousLabel={t("common.previous")}
           onPrevious={() => router.push(tripHref)}

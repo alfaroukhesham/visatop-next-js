@@ -5,8 +5,8 @@ import { ShieldCheck } from "lucide-react";
 import {
   APPLY_STICKY_CTA_MEDIA_QUERY,
   ApplyReadyContinue,
+  ApplyReadyPreviousButton,
 } from "@/components/apply/apply-ready-continue";
-import { ClientButton } from "@/components/client/client-button";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { ReadyDocumentAccordion } from "@/components/apply/draft/ready-document-accordion";
 import { PHOTO_SLOT } from "@/lib/apply/document-slot-catalog";
@@ -45,16 +45,9 @@ export const UxReadyRouteMirrorClient: FC = () => {
         <ShieldCheck className="size-4 shrink-0" aria-hidden />
         {t("wizard.encrypted")}
       </p>
-      <ClientButton
-        variant="outline"
-        brand="white"
-        className="h-12 w-full"
-        type="button"
-        data-apply-ready-inline-previous=""
-        hidden={compactCta}
-      >
+      <ApplyReadyPreviousButton inline hidden={compactCta} onClick={() => undefined}>
         {t("common.previous")}
-      </ClientButton>
+      </ApplyReadyPreviousButton>
       <ApplyReadyContinue previousLabel={t("common.previous")} onPrevious={() => undefined} onClick={() => undefined}>
         {t("wizard.continueWithDocuments")}
       </ApplyReadyContinue>

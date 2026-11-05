@@ -23,8 +23,14 @@ const DESKTOP_VIEWPORTS = [
   { name: "1920x1080", width: 1920, height: 1080 },
 ] as const;
 
+const REQUESTED_BAR_SHOTS = new Set(["320x568", "390x664", "390x844", "440x956", "1024x768"]);
+const REQUESTED_DESKTOP_SHOTS = new Set(["1280x800", "1440x900"]);
+
 const saveShot = async (page: Page, name: string) => {
   mkdirSync(ARTIFACT_DIR, { recursive: true });
+  await page.evaluate(() => {
+    document.querySelectorAll("nextjs-portal").forEach((node) => node.remove());
+  });
   await page.screenshot({
     path: join(ARTIFACT_DIR, `${name}.png`),
     fullPage: false,
@@ -69,6 +75,28 @@ const measureContinue = async (page: Page) =>
     };
   });
 
+const measureBarButtons = async (page: Page) =>
+  page.evaluate(() => {
+    const bar = document.querySelector<HTMLElement>("[data-apply-sticky-cta-portal]");
+    if (!bar) return [];
+    return [...bar.querySelectorAll("button")].map((btn) => {
+      const rect = btn.getBoundingClientRect();
+      const style = getComputedStyle(btn);
+      return {
+        text: (btn.textContent ?? "").trim(),
+        x: rect.x,
+        y: rect.y,
+        width: rect.width,
+        height: rect.height,
+        borderRadius: style.borderRadius,
+        background: style.backgroundColor,
+        borderTopWidth: style.borderTopWidth,
+        fontSize: style.fontSize,
+        fontWeight: style.fontWeight,
+      };
+    });
+  });
+
 test.describe("apply ready Continue bar", () => {
   test.skip(({ browserName }) => browserName !== "chromium", "viewport matrix is chromium-only");
 
@@ -86,10 +114,30 @@ test.describe("apply ready Continue bar", () => {
         expect(metrics.parentUi).toBe("client");
         expect(metrics.bottom).toBeLessThanOrEqual(metrics.vh + 1);
         expect(metrics.top).toBeGreaterThanOrEqual(0);
+        const buttons = await measureBarButtons(page);
+        expect(buttons).toHaveLength(2);
+        const previous = buttons[0];
+        const continueBtn = buttons[1];
+        expect(previous.height).toBeGreaterThanOrEqual(46);
+        expect(previous.height).toBeLessThanOrEqual(50);
+        expect(continueBtn.height).toBeGreaterThanOrEqual(46);
+        expect(continueBtn.height).toBeLessThanOrEqual(50);
+        expect(Math.abs(previous.y - continueBtn.y)).toBeLessThan(2);
+        expect(previous.borderRadius).toMatch(/^5px/);
+        expect(continueBtn.borderRadius).toMatch(/^5px/);
+        expect(Number.parseFloat(previous.borderTopWidth)).toBeGreaterThan(0);
+        expect(previous.fontSize).toBe("15px");
+        expect(continueBtn.fontSize).toBe("16px");
         if (locale === "ar") {
           await expect(page.locator("[data-ui='client']")).toHaveAttribute("dir", "rtl");
+          expect(previous.x).toBeGreaterThan(continueBtn.x);
+        } else {
+          expect(previous.x).toBeLessThan(continueBtn.x);
         }
         await saveShot(page, `after-${locale}-${viewport.name}`);
+        if (REQUESTED_BAR_SHOTS.has(viewport.name)) {
+          await saveShot(page, `bar-${locale}-${viewport.name}`);
+        }
       });
     }
 
@@ -104,6 +152,9 @@ test.describe("apply ready Continue bar", () => {
         expect(metrics.portal).toBe(false);
         expect(metrics.inRise).toBe(true);
         await saveShot(page, `after-${locale}-${viewport.name}`);
+        if (REQUESTED_DESKTOP_SHOTS.has(viewport.name)) {
+          await saveShot(page, `desktop-${locale}-${viewport.name}`);
+        }
       });
     }
   }

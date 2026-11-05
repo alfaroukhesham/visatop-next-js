@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApplyJumpAheadProvider, useApplyJumpAhead } from "./apply-jump-ahead";
 import {
   APPLY_READY_CONTINUE_INLINE_CLASS,
+  APPLY_READY_PREVIOUS_CLASS,
   APPLY_STICKY_CTA_MEDIA_QUERY,
   ApplyReadyContinue,
 } from "./apply-ready-continue";
@@ -114,9 +115,22 @@ describe("ApplyReadyContinue compact (<=1024px)", () => {
     expect(bar?.hasAttribute("data-apply-sticky-cta-portal")).toBe(true);
     expect(bar?.style.position).toBe("fixed");
     expect(bar?.style.bottom).toBe("0px");
-    expect(screen.getByRole("button", { name: "Previous" })).toHaveClass("self-start");
-    expect(screen.getByRole("button", { name: "Previous" })).toHaveClass("text-start");
-    expect(screen.getByRole("button", { name: /i have these - continue/i })).toHaveClass("w-full");
+    const previous = screen.getByRole("button", { name: "Previous" });
+    const continueBtn = screen.getByRole("button", { name: /i have these - continue/i });
+    expect(APPLY_READY_PREVIOUS_CLASS).toBe("h-12 w-full");
+    expect(previous).toHaveClass("h-12");
+    expect(previous).toHaveClass("w-full");
+    expect(previous).toHaveClass("rounded-[5px]");
+    expect(previous).toHaveClass("!bg-white");
+    expect(previous).toHaveClass("border-border");
+    expect(previous.className).not.toMatch(/self-start/);
+    expect(previous.className).not.toMatch(/text-sm font-semibold/);
+    expect(continueBtn).toHaveClass("h-12");
+    expect(continueBtn).toHaveClass("w-full");
+    expect(continueBtn).toHaveClass("normal-case");
+    expect(continueBtn).toHaveClass("!bg-primary");
+    expect(previous.parentElement?.className).toMatch(/flex-1/);
+    expect(continueBtn.parentElement?.className).toMatch(/flex-\[1\.75\]/);
   });
 
   it("uses the compact media query inclusive of 1024px", () => {
@@ -145,11 +159,19 @@ describe("sticky Continue CSS contracts", () => {
     );
     expect(wizard).toMatch(/docsReadyViewed/);
     expect(wizard).toMatch(/wizard\.continueWithDocuments/);
-    expect(wizard).toMatch(/data-apply-ready-inline-previous/);
+    expect(wizard).toMatch(/ApplyReadyPreviousButton/);
     expect(wizard).toMatch(/previousLabel/);
     expect(wizard).toMatch(/data-apply-ready-section/);
     expect(css).toMatch(/\[data-apply-sticky-cta-portal\]/);
     expect(css).toMatch(/\[data-apply-ready-inline-previous\]/);
+    const continueSrc = readFileSync(
+      join(process.cwd(), "components/apply/apply-ready-continue.tsx"),
+      "utf8",
+    );
+    expect(continueSrc).toMatch(/data-apply-ready-inline-previous=\{inline \? "" : undefined\}/);
+    expect(continueSrc).toMatch(/brand="white"/);
+    expect(continueSrc).toMatch(/variant="outline"/);
+    expect(continueSrc).toMatch(/items-stretch gap-2/);
     const applyPage = readFileSync(
       join(process.cwd(), "app/(client)/apply/applications/[id]/page.tsx"),
       "utf8",

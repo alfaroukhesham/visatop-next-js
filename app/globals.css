@@ -447,16 +447,16 @@ html:has([data-apply-sticky-cta]) a[data-whatsapp-fab] {
    Tailwind max-[1024px] compiles to (width < 1024px) and would miss 1024x768. */
 @media (max-width: 1024px) {
   html:has([data-apply-sticky-cta]) {
-    --apply-sticky-cta-height: calc(7.5rem + env(safe-area-inset-bottom, 0px));
+    --apply-sticky-cta-height: calc(5.5rem + env(safe-area-inset-bottom, 0px));
     scroll-padding-bottom: var(--apply-sticky-cta-height);
   }
 
   html:has([data-apply-sticky-cta]) a[data-whatsapp-fab] {
-    bottom: calc(9.25rem + env(safe-area-inset-bottom, 0px)) !important;
+    bottom: calc(7rem + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   [data-apply-ready-section] {
-    padding-bottom: var(--apply-sticky-cta-height, 7.5rem);
+    padding-bottom: var(--apply-sticky-cta-height, 5.5rem);
   }
 
   [data-apply-ready-inline-previous] {
