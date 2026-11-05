@@ -46,6 +46,19 @@ const appRow = {
   adminAttentionRequired: false,
 };
 
+const amountAudit = {
+  amount: "18500000",
+  amountReceived: "10000",
+  amountExpected: "18500000",
+  amountToSettle: null,
+  fee: null,
+  varianceType: null,
+  currency: "NGN",
+  reference: "fcr-p-abc",
+  merchantReference: "pay_1",
+  status: "success",
+};
+
 const makeTx = (opts?: { duplicateEvent?: boolean }) => {
   const updates: Array<{ set: Record<string, unknown> }> = [];
   const inserts: Array<{ values: Record<string, unknown> }> = [];
@@ -100,6 +113,7 @@ describe("processFincraVerifiedPaymentInTransaction", () => {
         expectedCurrency: "NGN",
         reportedCurrency: "NGN",
         feeMinor: null,
+        amountAudit,
       },
       payloadHash: "hash-under",
       eventType: "charge.successful",
@@ -111,13 +125,39 @@ describe("processFincraVerifiedPaymentInTransaction", () => {
     expect(applyPaymentWebhookEvent).not.toHaveBeenCalled();
     expect(updates.some((u) => u.set.status === "mismatch")).toBe(true);
     expect(updates.some((u) => u.set.varianceType === "amount_mismatch")).toBe(true);
-    expect(updates.some((u) => u.set.adminAttentionRequired === true && u.set.checkoutState === "none")).toBe(
+    expect(updates.some((u) => u.set.adminAttentionRequired === true && u.set.adminAttentionReason === "fincra_amount_mismatch")).toBe(
       true,
     );
+    expect(updates.some((u) => u.set.checkoutState === "none")).toBe(false);
     expect(inserts.some((i) => i.values.action === "payment_fincra_mismatch_flagged")).toBe(true);
     expect(String(inserts.find((i) => i.values.action === "payment_fincra_mismatch_flagged")?.values.afterJson)).toContain(
       "req-mismatch",
     );
+  });
+
+  it("holds underpayment variance for admin without abandoning checkout", async () => {
+    const { tx, updates } = makeTx();
+    const result = await processFincraVerifiedPaymentInTransaction(tx, {
+      normalized: event,
+      decision: {
+        kind: "mismatch",
+        reason: "variance_underpayment",
+        amountReceivedMinor: BigInt(7300),
+        expectedMinor: BigInt(18500000),
+        expectedCurrency: "NGN",
+        reportedCurrency: "NGN",
+        feeMinor: null,
+        amountAudit: { ...amountAudit, amountReceived: "7300", varianceType: "underpayment" },
+      },
+      payloadHash: "hash-under-var",
+      eventType: "charge.successful",
+      logLabel: "test",
+      requestId: "req-under-var",
+    });
+    expect(result.outcome).toBe("mismatch");
+    expect(applyPaymentWebhookEvent).not.toHaveBeenCalled();
+    expect(updates.some((u) => u.set.adminAttentionReason === "fincra_variance_underpayment")).toBe(true);
+    expect(updates.some((u) => u.set.checkoutState === "none")).toBe(false);
   });
 
   it("does not mark paid on currency mismatch", async () => {
@@ -132,6 +172,7 @@ describe("processFincraVerifiedPaymentInTransaction", () => {
         expectedCurrency: "NGN",
         reportedCurrency: "USD",
         feeMinor: null,
+        amountAudit: { ...amountAudit, currency: "USD", amountReceived: "18500000" },
       },
       payloadHash: "hash-ccy",
       eventType: "charge.successful",
@@ -179,9 +220,13 @@ describe("processFincraVerifiedPaymentInTransaction", () => {
     expect(resolvePaymentRowForWebhook).not.toHaveBeenCalled();
   });
 
-  it("ignores a later attempt once the payment row is already paid", async () => {
-    vi.mocked(resolvePaymentRowForWebhook).mockResolvedValue({ ...payRow, status: "paid" } as never);
-    const { tx } = makeTx();
+  it("flags extra collection when a different reference succeeds after the row is paid", async () => {
+    vi.mocked(resolvePaymentRowForWebhook).mockResolvedValue({
+      ...payRow,
+      status: "paid",
+      settledMerchantReference: "pay_1-a1",
+    } as never);
+    const { tx, updates, inserts } = makeTx();
     const result = await processFincraVerifiedPaymentInTransaction(tx, {
       normalized: { ...event, metadata: { ...event.metadata, operationId: "pay_1-a2" } },
       decision: {
@@ -194,8 +239,64 @@ describe("processFincraVerifiedPaymentInTransaction", () => {
       eventType: "charge.successful",
       logLabel: "test",
     });
+    expect(result.outcome).toBe("extra_collection");
+    expect(applyPaymentWebhookEvent).not.toHaveBeenCalled();
+    expect(updates.some((u) => u.set.adminAttentionReason === "fincra_extra_collection")).toBe(true);
+    expect(inserts.some((i) => i.values.action === "payment_fincra_extra_collection")).toBe(true);
+  });
+
+  it("keeps same-reference webhook replays as idempotent duplicates", async () => {
+    vi.mocked(resolvePaymentRowForWebhook).mockResolvedValue({
+      ...payRow,
+      status: "paid",
+      settledMerchantReference: "pay_1",
+    } as never);
+    const { tx } = makeTx();
+    const result = await processFincraVerifiedPaymentInTransaction(tx, {
+      normalized: event,
+      decision: {
+        kind: "paid",
+        amountReceivedMinor: BigInt(18500000),
+        varianceType: "exact",
+        feeMinor: BigInt(301),
+      },
+      payloadHash: "hash-replay",
+      eventType: "charge.successful",
+      logLabel: "test",
+    });
     expect(result.outcome).toBe("duplicate");
     expect(applyPaymentWebhookEvent).not.toHaveBeenCalled();
+  });
+
+  it("flags paid-after-cancel for admin refund and does not mark paid", async () => {
+    const { tx, updates, inserts } = makeTx();
+    const cancelled = { ...appRow, applicationStatus: "cancelled" };
+    const txCancelled = {
+      ...tx,
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [cancelled],
+          }),
+        }),
+      }),
+    };
+    const result = await processFincraVerifiedPaymentInTransaction(txCancelled as never, {
+      normalized: event,
+      decision: {
+        kind: "paid",
+        amountReceivedMinor: BigInt(18500000),
+        varianceType: "exact",
+        feeMinor: BigInt(301),
+      },
+      payloadHash: "hash-cancel",
+      eventType: "charge.successful",
+      logLabel: "test",
+    });
+    expect(result.outcome).toBe("paid_after_cancel");
+    expect(applyPaymentWebhookEvent).not.toHaveBeenCalled();
+    expect(updates.some((u) => u.set.adminAttentionReason === "fincra_paid_after_cancel")).toBe(true);
+    expect(inserts.some((i) => i.values.action === "payment_fincra_paid_after_cancel")).toBe(true);
   });
 
   it("skips apply when the payload hash already exists", async () => {

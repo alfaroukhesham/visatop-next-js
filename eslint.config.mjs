@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     ".worktrees/**",
     ".agents/**",
     ".cursor/**",
+    // Third-party self-hosted checkout widget — do not lint vendor minified JS.
+    "public/vendor/**",
   ]),
 ]);
 

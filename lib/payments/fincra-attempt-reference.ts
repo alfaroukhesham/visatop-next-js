@@ -27,6 +27,15 @@ export const nextFincraAttemptReference = (
   return fincraAttemptReference(paymentId, 1);
 };
 
+export const fincraAttemptNumberForReference = (
+  paymentId: string,
+  reference: string | null | undefined,
+): number => {
+  const parsed = parseFincraAttemptReference(reference);
+  if (parsed && parsed.paymentId === paymentId) return parsed.attempt;
+  return 1;
+};
+
 export const fincraWebhookLookupIds = (params: {
   merchantReference?: string | null;
   paymentIdFromMetadata?: string | null;

@@ -43,6 +43,7 @@ describe("parseFincraVerifiedPayment", () => {
         reference: "fcr-p-abc",
         merchantReference: "pay_1",
         varianceType: null,
+        amountToSettle: 184996.99,
         fee: 3.01,
       },
     });
@@ -50,6 +51,7 @@ describe("parseFincraVerifiedPayment", () => {
     expect(v.amountReceivedMinor).toBe(BigInt(18500050));
     expect(v.amountExpectedMinor).toBe(BigInt(18500000));
     expect(v.feeMinor).toBe(BigInt(301));
+    expect(v.amountToSettleMinor).toBe(BigInt(18499699));
     expect(v.merchantReference).toBe("pay_1");
   });
 });

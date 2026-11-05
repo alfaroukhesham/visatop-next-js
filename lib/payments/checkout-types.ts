@@ -4,7 +4,8 @@ export type CheckoutSessionData =
   | { provider: "paddle"; transactionId: string; clientToken: string }
   | { provider: "ziina"; embeddedUrl: string }
   | TFincraInlineCheckoutData
-  | TFincraHostedCheckoutData;
+  | TFincraHostedCheckoutData
+  | { provider: "fincra"; mode: "paid" };
 
 export type TZiinaCheckoutSession =
   | { kind: "open"; embeddedUrl: string }

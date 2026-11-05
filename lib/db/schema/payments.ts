@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { pgTable, text, timestamp, index, bigint, uniqueIndex, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, index, bigint, uniqueIndex, boolean, integer } from "drizzle-orm/pg-core";
 import { application } from "./applications";
 
 export const payment = pgTable(
@@ -34,6 +34,8 @@ export const payment = pgTable(
     fxBaseAmountMinor: bigint("fx_base_amount_minor", { mode: "bigint" }),
     /** `fixed_list` | `snapshot` | `fincra_quote` */
     fxSource: text("fx_source"),
+    /** Merchant reference that first settled this Fincra payment. */
+    settledMerchantReference: text("settled_merchant_reference"),
     /** Provider failure/expiry code (Ziina status, Fincra charge.failed/expired). Observability only. */
     failureCode: text("failure_code"),
     failureMessage: text("failure_message"),
@@ -76,15 +78,43 @@ export const paymentEvent = pgTable(
   ],
 );
 
+export const paymentEventRelations = relations(paymentEvent, ({ one }) => ({
+  payment: one(payment, { fields: [paymentEvent.paymentId], references: [payment.id] }),
+}));
+
+/**
+ * Every Fincra merchant reference minted for a payment, including rotated
+ * `-aN` attempts that are no longer `payment.provider_operation_id`.
+ */
+export const paymentFincraAttempt = pgTable(
+  "payment_fincra_attempt",
+  {
+    id: text("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    paymentId: text("payment_id")
+      .notNull()
+      .references(() => payment.id, { onDelete: "cascade" }),
+    merchantReference: text("merchant_reference").notNull(),
+    attemptNumber: integer("attempt_number").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("payment_fincra_attempt_merchant_reference_uidx").on(t.merchantReference),
+    index("payment_fincra_attempt_paymentId_idx").on(t.paymentId),
+  ],
+);
+
+export const paymentFincraAttemptRelations = relations(paymentFincraAttempt, ({ one }) => ({
+  payment: one(payment, { fields: [paymentFincraAttempt.paymentId], references: [payment.id] }),
+}));
+
 export const paymentRelations = relations(payment, ({ one, many }) => ({
   application: one(application, {
     fields: [payment.applicationId],
     references: [application.id],
   }),
   events: many(paymentEvent),
-}));
-
-export const paymentEventRelations = relations(paymentEvent, ({ one }) => ({
-  payment: one(payment, { fields: [paymentEvent.paymentId], references: [payment.id] }),
+  fincraAttempts: many(paymentFincraAttempt),
 }));
 

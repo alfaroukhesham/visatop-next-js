@@ -11,6 +11,16 @@ import { requirePaymentEventPayloadHashDedupeIndex } from "@/lib/payments/paymen
 import { computeFincraUnderpayPayloadHash } from "@/lib/payments/payment-event-hash";
 import type { TFincraVerifyDecision } from "@/lib/payments/fincra-verify";
 import { abandonFincraCheckoutLock } from "@/lib/payments/fincra-checkout-lock";
+import {
+  FINCRA_ATTENTION_EXTRA_COLLECTION,
+  FINCRA_ATTENTION_PAID_AFTER_CANCEL,
+  fincraAttentionReasonFromMismatch,
+  recordFincraAdminAttention,
+} from "@/lib/payments/fincra-admin-attention";
+import {
+  listFincraMerchantReferencesForPayment,
+  listStoredFincraAttemptReferences,
+} from "@/lib/payments/fincra-attempt-store";
 import { recordPaymentFailureInfo } from "@/lib/payments/payment-failure-info";
 import { loadPartyMemberIds } from "@/lib/payments/party-member-ids";
 import { createRequestLogger } from "@/lib/logger";
@@ -18,9 +28,12 @@ import { createRequestLogger } from "@/lib/logger";
 export type ProcessFincraPaymentOutcome =
   | "applied"
   | "duplicate"
+  | "extra_collection"
+  | "paid_after_cancel"
   | "mismatch"
   | "pending"
   | "expired"
+  | "failed"
   | "unknown_reference"
   | "noop_no_payment"
   | "noop_no_application"
@@ -80,62 +93,53 @@ const flagMismatch = async (
     })
     .where(eq(payment.id, payRow.id));
 
-  const mismatchAppPatch = {
-    adminAttentionRequired: true as const,
-    checkoutState: "none",
-    paymentStatus: "unpaid",
-  };
+  const attentionReason = fincraAttentionReasonFromMismatch(decision.reason);
+  await recordFincraAdminAttention(tx, {
+    appRow,
+    reason: attentionReason,
+    providerReference: providerEventId,
+    merchantReference: payRow.providerOperationId ?? payRow.id,
+    amountMinor: decision.amountReceivedMinor ?? payRow.amount,
+    currency: payRow.currency,
+    requestId,
+    amountAudit: decision.amountAudit,
+  });
   if (appRow.partyId) {
     await tx
       .update(application)
-      .set(mismatchAppPatch)
+      .set({ adminAttentionRequired: true, adminAttentionReason: attentionReason })
       .where(and(eq(application.partyId, appRow.partyId), ne(application.paymentStatus, "paid")));
-  } else {
-    await tx
-      .update(application)
-      .set(mismatchAppPatch)
-      .where(and(eq(application.id, appRow.id), ne(application.paymentStatus, "paid")));
   }
-
-  await tx.insert(auditLog).values({
-    actorType: "system",
-    actorId: null,
-    action: "payment_fincra_mismatch_flagged",
-    entityType: "application",
-    entityId: appRow.id,
-    beforeJson: JSON.stringify({
-      paymentStatus: appRow.paymentStatus,
-      adminAttentionRequired: appRow.adminAttentionRequired,
-      expectedAmountMinor: payRow.amount.toString(),
-      expectedCurrency: payRow.currency,
-    }),
-    afterJson: JSON.stringify({
-      providerEventId,
-      paymentId: payRow.id,
-      reason: decision.reason,
-      expectedAmountMinor: payRow.amount.toString(),
-      expectedCurrency: payRow.currency,
-      receivedAmountMinor: received,
-      reportedCurrency: decision.reportedCurrency,
-      requestId: requestId ?? null,
-    }),
-  });
 
   createRequestLogger(requestId).warn(
     {
       paymentId: payRow.id,
-      applicationId: appRow.id,
-      reason: decision.reason,
-      expectedAmountMinor: payRow.amount.toString(),
-      expectedCurrency: payRow.currency,
-      receivedAmountMinor: received,
-      reportedCurrency: decision.reportedCurrency,
+      reason: attentionReason,
+      ...decision.amountAudit,
       scope: logLabel,
     },
-    `[${logLabel}] Fincra charge mismatch held for admin review (not marked paid)`,
+    `[${logLabel}] Fincra charge mismatch held for admin review (not marked paid, not abandoned)`,
   );
 
   return { outcome: "mismatch", firstPaidApplicationId: null, paymentId: payRow.id };
+};
+
+const incomingMerchantReference = (
+  normalized: NormalizedPaymentWebhookEvent,
+  payRow: typeof payment.$inferSelect,
+): string =>
+  (normalized.metadata?.operationId ?? payRow.providerOperationId ?? payRow.id).trim();
+
+const isSameSettledReference = (
+  payRow: typeof payment.$inferSelect,
+  incomingReference: string,
+): boolean => {
+  const incoming = incomingReference.trim();
+  if (!incoming) return true;
+  const settled = payRow.settledMerchantReference?.trim() ?? "";
+  if (settled) return incoming === settled;
+  const current = payRow.providerOperationId?.trim() || payRow.id;
+  return incoming === current || incoming === payRow.id;
 };
 
 export const processFincraVerifiedPaymentInTransaction = async (
@@ -209,7 +213,64 @@ export const processFincraVerifiedPaymentInTransaction = async (
     };
   }
 
+  const providerEventId = normalized.providerEventId ?? normalized.providerPaymentId;
+  const merchantReference = incomingMerchantReference(normalized, payRow);
+
+  const flagCollectionAttention = async (
+    reason: typeof FINCRA_ATTENTION_EXTRA_COLLECTION | typeof FINCRA_ATTENTION_PAID_AFTER_CANCEL,
+  ): Promise<ProcessFincraPaymentResult> => {
+    await requirePaymentEventPayloadHashDedupeIndex(tx);
+    const [inserted] = await tx
+      .insert(paymentEvent)
+      .values({
+        id: createId(),
+        paymentId: payRow.id,
+        providerEventId,
+        type: eventType,
+        payloadHash,
+      })
+      .onConflictDoNothing({ target: paymentEvent.payloadHash })
+      .returning();
+    if (!inserted) {
+      return { outcome: "duplicate", firstPaidApplicationId: null, paymentId: payRow.id };
+    }
+    await recordFincraAdminAttention(tx, {
+      appRow,
+      reason,
+      providerReference: verifiedIds?.fincraId || verifiedIds?.payCode || normalized.providerPaymentId || null,
+      merchantReference,
+      amountMinor: decision.kind === "paid" || decision.kind === "extra_collection"
+        ? decision.amountReceivedMinor
+        : payRow.amount,
+      currency: payRow.currency,
+      requestId,
+    });
+    log.warn(
+      { paymentId: payRow.id, applicationId: appRow.id, reason, merchantReference, scope: logLabel },
+      `[${logLabel}] Fincra collection held for admin refund (not auto-refunded)`,
+    );
+    return {
+      outcome: reason === FINCRA_ATTENTION_EXTRA_COLLECTION ? "extra_collection" : "paid_after_cancel",
+      firstPaidApplicationId: null,
+      paymentId: payRow.id,
+    };
+  };
+
+  if (decision.kind === "extra_collection") {
+    return flagCollectionAttention(FINCRA_ATTENTION_EXTRA_COLLECTION);
+  }
+
+  if (decision.kind === "paid" && appRow.applicationStatus === "cancelled") {
+    return flagCollectionAttention(FINCRA_ATTENTION_PAID_AFTER_CANCEL);
+  }
+
   if (payRow.status === "paid") {
+    if (
+      decision.kind === "paid" &&
+      !isSameSettledReference(payRow, merchantReference)
+    ) {
+      return flagCollectionAttention(FINCRA_ATTENTION_EXTRA_COLLECTION);
+    }
     return {
       outcome: "duplicate",
       firstPaidApplicationId: null,
@@ -217,32 +278,45 @@ export const processFincraVerifiedPaymentInTransaction = async (
     };
   }
 
-  const providerEventId = normalized.providerEventId ?? normalized.providerPaymentId;
-
   if (decision.kind === "pending") {
     return { outcome: "pending", firstPaidApplicationId: null, paymentId: payRow.id };
   }
 
-  if (decision.kind === "expired") {
-    const memberIds = await loadPartyMemberIds(tx, payRow.applicationId);
-    if (memberIds) {
-      await abandonFincraCheckoutLock(tx, {
-        memberIds,
+  if (decision.kind === "expired" || decision.kind === "failed") {
+    const storedRefs = await listStoredFincraAttemptReferences(tx, payRow.id);
+    const refs = listFincraMerchantReferencesForPayment(payRow, storedRefs);
+    if (refs.length <= 1) {
+      const memberIds = await loadPartyMemberIds(tx, payRow.applicationId);
+      if (memberIds) {
+        await abandonFincraCheckoutLock(tx, {
+          memberIds,
+          paymentId: payRow.id,
+          reason: decision.kind === "failed" ? "provider_failed" : "provider_expired",
+          requestId,
+        });
+      }
+      await recordPaymentFailureInfo(tx, {
         paymentId: payRow.id,
-        reason: "provider_expired",
-        requestId,
+        failureCode: decision.kind,
+        failureMessage: decision.kind,
       });
+      log.info(
+        { paymentId: payRow.id, applicationId: appRow.id, scope: logLabel },
+        `[${logLabel}] Fincra checkout ${decision.kind}; lock released`,
+      );
+    } else {
+      log.info(
+        {
+          paymentId: payRow.id,
+          applicationId: appRow.id,
+          merchantReference,
+          remainingReferences: refs.length,
+          scope: logLabel,
+        },
+        `[${logLabel}] Fincra attempt ${decision.kind}; other references still open`,
+      );
     }
-    await recordPaymentFailureInfo(tx, {
-      paymentId: payRow.id,
-      failureCode: "expired",
-      failureMessage: "expired",
-    });
-    log.info(
-      { paymentId: payRow.id, applicationId: appRow.id, scope: logLabel },
-      `[${logLabel}] Fincra checkout expired; lock released`,
-    );
-    return { outcome: "expired", firstPaidApplicationId: null, paymentId: payRow.id };
+    return { outcome: decision.kind, firstPaidApplicationId: null, paymentId: payRow.id };
   }
 
   if (decision.kind === "mismatch") {
@@ -287,6 +361,7 @@ export const processFincraVerifiedPaymentInTransaction = async (
       varianceType: decision.varianceType,
       providerCheckoutId: verifiedIds?.payCode || payRow.providerCheckoutId,
       providerTransactionId: verifiedIds?.fincraId || payRow.providerTransactionId,
+      settledMerchantReference: merchantReference || payRow.settledMerchantReference,
     })
     .where(eq(payment.id, payRow.id));
 

@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { and, desc, eq, or } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { payment } from "@/lib/db/schema";
@@ -8,6 +8,7 @@ import {
   dueFincraReconcileSlots,
   hasFincraReconcileProbe,
   reconcileFincraPaymentRow,
+  reconcileFincraPaymentRowsSequentially,
   type ReconcileFincraAttemptResult,
 } from "@/lib/payments/reconcile-fincra-payments";
 import { scheduleFincraPaidSideEffects } from "@/lib/payments/fincra-payment-side-effects";
@@ -40,46 +41,44 @@ const postReconcileFincra = async (request: Request) => {
     return jsonOk({ skipped: true, reason: "fincra_disabled" }, { requestId });
   }
 
-  const paidApplicationIds: string[] = [];
-  const attempts: ReconcileFincraAttemptResult[] = [];
-
-  await withSystemDbActor(async (tx) => {
-    const rows = await tx
+  // Underpaid is never written by the Fincra paid path (mismatch is). Selecting it
+  // and skipping hid rows without reconciling them. Do not select underpaid.
+  // Mismatch / variance rows are held for admin (not auto-paid, not abandoned).
+  const rows = await withSystemDbActor(async (tx) =>
+    tx
       .select()
       .from(payment)
-      .where(
-        and(
-          eq(payment.provider, "fincra"),
-          or(eq(payment.status, "checkout_created"), eq(payment.status, "underpaid")),
-        ),
-      )
+      .where(and(eq(payment.provider, "fincra"), eq(payment.status, "checkout_created")))
       .orderBy(desc(payment.createdAt))
-      .limit(50);
+      .limit(50),
+  );
 
-    const nowMs = Date.now();
-
-    await Promise.all(
-      rows.map(async (payRow) => {
-        if (payRow.status === "underpaid") return;
-        const createdAt =
-          payRow.createdAt instanceof Date ? payRow.createdAt : new Date(payRow.createdAt);
-        const dueSlots = dueFincraReconcileSlots(createdAt, nowMs);
-        const probed = await Promise.all(
-          dueSlots.map((slot) => hasFincraReconcileProbe(tx, payRow.id, slot)),
-        );
-        const slotIndex = probed.findIndex((alreadyProbed) => !alreadyProbed);
-        if (slotIndex < 0) return;
-
-        const slot = dueSlots[slotIndex]!;
-        const attempt = await reconcileFincraPaymentRow(tx, payRow, slot, requestId);
-        attempts.push(attempt);
-
-        if (attempt.process?.firstPaidApplicationId) {
-          paidApplicationIds.push(attempt.process.firstPaidApplicationId);
-        }
-      }),
-    );
+  const nowMs = Date.now();
+  const attempts = await reconcileFincraPaymentRowsSequentially(rows, async (payRow) => {
+    const createdAt =
+      payRow.createdAt instanceof Date ? payRow.createdAt : new Date(payRow.createdAt);
+    const dueSlots = dueFincraReconcileSlots(createdAt, nowMs);
+    const slot = await withSystemDbActor(async (tx) => {
+      for (const candidate of dueSlots) {
+        if (!(await hasFincraReconcileProbe(tx, payRow.id, candidate))) return candidate;
+      }
+      return null;
+    });
+    if (!slot) {
+      return {
+        paymentId: payRow.id,
+        applicationId: payRow.applicationId,
+        slot: "5m",
+        fincraStatus: null,
+        outcome: "skipped_probe_already_ran",
+      } satisfies ReconcileFincraAttemptResult;
+    }
+    return reconcileFincraPaymentRow(payRow, slot, requestId);
   });
+
+  const paidApplicationIds = attempts
+    .map((attempt) => attempt.process?.firstPaidApplicationId)
+    .filter((id): id is string => Boolean(id));
 
   for (const appId of paidApplicationIds) {
     scheduleFincraPaidSideEffects(appId, requestId);
@@ -87,7 +86,7 @@ const postReconcileFincra = async (request: Request) => {
 
   return jsonOk(
     {
-      checked: attempts.length,
+      checked: attempts.filter((attempt) => attempt.outcome !== "skipped_probe_already_ran").length,
       attempts,
       markedPaid: paidApplicationIds.length,
     },
