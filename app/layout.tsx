@@ -1,10 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { ThemeClassSync } from "@/components/theme-class-sync";
 import { BFCACHE_BOOTSTRAP_SCRIPT } from "@/lib/client/bfcache-bootstrap-script";
 import { getAppOrigin } from "@/lib/app-url";
 import { readCriticalFontPreloadHrefs } from "@/lib/client/critical-font-preloads";
 import "./globals.css";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(`${getAppOrigin()}/`),

@@ -34,6 +34,46 @@ describe("getCustomerMessages", () => {
     }
   });
 
+  it("localizes ready-step copy in EN, AR, and FR", () => {
+    const en = createCustomerT("en");
+    const ar = createCustomerT("ar");
+    const fr = createCustomerT("fr");
+    expect(en("wizard.readyTitle")).toBe("What you'll need");
+    expect(ar("wizard.readyTitle")).toBe("ما ستحتاج إليه");
+    expect(fr("wizard.readyTitle")).toBe("Ce dont vous aurez besoin");
+    expect(en("wizard.continueWithDocuments")).toBe("I have these - Continue");
+    expect(ar("wizard.continueWithDocuments")).toBe("لديّ هذه المستندات - متابعة");
+    expect(fr("wizard.continueWithDocuments")).toBe("J'ai ces documents - Continuer");
+    expect(en("wizard.jumpAheadHint")).toMatch(/Finish this step first/);
+    expect(ar("wizard.jumpAheadHint")).toMatch(/أكمل هذه الخطوة أولاً/);
+    expect(fr("wizard.jumpAheadHint")).toMatch(/Terminez d'abord/);
+    expect(en("steps.trip")).toBe("Trip");
+    expect(ar("steps.trip")).toBe("الرحلة");
+    expect(fr("steps.trip")).toBe("Voyage");
+    expect(ar("steps.details")).toBe("البيانات");
+    expect(fr("steps.details")).toBe("Infos");
+    expect(en("steps.meta", { n: 2, label: "Documents" })).toBe("Step 2 of 5 · Documents");
+    expect(en("wizard.readyInstruction")).toMatch(/Tap a name for formats/);
+    expect(ar("wizard.readyInstruction")).toMatch(/اضغط على الاسم/);
+    expect(fr("wizard.readyInstruction")).toMatch(/Touchez un nom/);
+    expect(ar("wizard.neededNow")).toBe("مطلوب الآن");
+    expect(fr("wizard.neededNow")).toBe("Nécessaire maintenant");
+    expect(ar("wizard.addLater")).toBe("يمكن إضافته لاحقاً");
+    expect(fr("wizard.addLater")).toBe("Peut être ajouté plus tard");
+    expect(ar("wizard.otherTitle")).toBe("مستندات أخرى");
+    expect(fr("wizard.otherTitle")).toBe("Autres documents");
+    expect(ar("wizard.detailsTitle")).toBe("تحقق من بياناتك");
+    expect(fr("wizard.detailsTitle")).toBe("Vérifiez vos informations");
+    expect(ar("steps.pay")).toBe("الدفع");
+    expect(fr("steps.pay")).toBe("Payer");
+    expect(ar("steps.finish")).toBe("إنهاء");
+    expect(fr("steps.finish")).toBe("Fin");
+    expect(ar("common.previous")).toBe("السابق");
+    expect(fr("common.previous")).toBe("Précédent");
+    expect(ar("documents.slots.personalPhoto.label")).toBe("صورة شخصية");
+    expect(fr("documents.slots.personalPhoto.label")).toBe("Photo d'identité");
+  });
+
   it("maps English to en-GB for JSON-LD", () => {
     expect(customerInLanguageTag("en")).toBe("en-GB");
     expect(customerInLanguageTag("ar")).toBe("ar");

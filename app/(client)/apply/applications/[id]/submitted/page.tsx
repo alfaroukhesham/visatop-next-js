@@ -10,6 +10,7 @@ import { withSystemDbActor } from "@/lib/db/actor-context";
 import { toPublicApplicationWithCharge } from "@/lib/applications/load-application-charge";
 import { CUSTOMER_LOCALE_COOKIE, parseCustomerLocale } from "@/lib/i18n/customer-locale";
 import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
+import { applyTripStepHref } from "@/lib/apply/apply-wizard";
 
 interface ISubmittedApplicationPageProps {
   params: Promise<{ id: string }>;
@@ -39,6 +40,7 @@ const SubmittedApplicationPage = async ({ params }: ISubmittedApplicationPagePro
       <ApplyTwoColumn
         currentStep={5}
         applicationId={id}
+        tripHref={applyTripStepHref(row.nationalityCode)}
         hasSelectedVisa
         visaSummary={<CheckoutOrderRecap application={publicApp} members={members} />}
         contentClassName="theme-client-rise mx-auto w-full max-w-2xl"

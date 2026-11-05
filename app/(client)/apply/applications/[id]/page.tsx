@@ -12,6 +12,7 @@ import { withSystemDbActor } from "@/lib/db/actor-context";
 import { toPublicApplication } from "@/lib/applications/public-application";
 import { CUSTOMER_LOCALE_COOKIE, parseCustomerLocale } from "@/lib/i18n/customer-locale";
 import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
+import { applyTripStepHref } from "@/lib/apply/apply-wizard";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -45,6 +46,7 @@ const ApplyApplicationPage = async ({ params, searchParams }: Props) => {
         currentStep={3}
         phase={query.screen === "details" ? "details" : "documents"}
         applicationId={id}
+        tripHref={applyTripStepHref(row.nationalityCode)}
         hasSelectedVisa
         contentFirstOnMobile
         visaSummary={<CheckoutOrderRecap application={toPublicApplication(row, undefined, t)} members={members} />}

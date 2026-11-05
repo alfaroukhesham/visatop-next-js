@@ -27,6 +27,7 @@ describe("StickyWhatsAppButton", () => {
       const { unmount } = render(<StickyWhatsAppButton label="WhatsApp support" />);
       const link = screen.getByRole("link", { name: "WhatsApp support" });
       expect(link).toHaveAttribute("href", SUPPORT_WHATSAPP_URL);
+      expect(link).toHaveAttribute("data-whatsapp-fab", "");
       unmount();
     }
   });

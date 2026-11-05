@@ -533,7 +533,9 @@
     "documentsShort": "Docs",
     "detailsShort": "Dati",
     "payShort": "Paga",
-    "finishShort": "Fine"
+    "finishShort": "Fine",
+    "meta": "Step {n} of 5 · {label}",
+    "completedGoBack": "{label}, completed. Go back."
   },
   "common": {
     "continue": "Continua",
@@ -651,6 +653,11 @@
     "pleaseFill": "Please fill these in.",
     "replacePassport": "Passport photo wrong? Replace it",
     "continueToPayment": "Looks right, continue to payment",
-    "travellerProgress": "Traveller {current} of {total}"
+    "travellerProgress": "Traveller {current} of {total}",
+    "readyInstruction": "Review the documents for this application. Tap a name for formats and tips, then continue when you have them ready.",
+    "continueWithDocuments": "I have these - Continue",
+    "jumpAheadHint": "Finish this step first, then tap Continue",
+    "docShowDetails": "{name}, show details",
+    "docHideDetails": "{name}, hide details"
   }
 }

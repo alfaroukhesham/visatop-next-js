@@ -131,7 +131,7 @@ export default async function ClientLayout({ children }: { children: ReactNode }
     <div
       data-ui="client"
       dir={isCustomerLocaleRtl(locale) ? "rtl" : undefined}
-      className={`theme-client theme-client-page-canvas ${redHatText.variable} ${notoSerif.variable} flex min-h-screen min-h-dvh flex-col text-[18px] leading-[1.6] antialiased${model?.headerHtml ? " theme-client-wp-header" : ""}`}
+      className={`theme-client theme-client-page-canvas ${redHatText.variable} ${notoSerif.variable} flex min-h-screen min-h-dvh min-h-svh flex-col text-[18px] leading-[1.6] antialiased${model?.headerHtml ? " theme-client-wp-header" : ""}`}
       style={
         model?.headerHtml
           ? ({ ["--wp-shell-header-height"]: "130px" } as CSSProperties)

@@ -215,7 +215,7 @@
         "description": "JPEG, PNG, HEIC ou PDF d'une page · 8 Mo max"
       },
       "personalPhoto": {
-        "label": "Photo personnelle",
+        "label": "Photo d'identité",
         "description": "JPEG, PNG ou HEIC · 8 Mo max"
       },
       "bankStatement6m": {
@@ -525,15 +525,17 @@
     "status": "Statut",
     "stepBadge": "Étape {step}/{total}",
     "hideProgressAria": "Masquer le résumé de progression",
-    "trip": "Trip",
-    "details": "Details",
-    "pay": "Pay",
-    "finish": "Finish",
+    "trip": "Voyage",
+    "details": "Infos",
+    "pay": "Payer",
+    "finish": "Fin",
     "tripShort": "Voyage",
     "documentsShort": "Docs",
     "detailsShort": "Infos",
     "payShort": "Payer",
-    "finishShort": "Fin"
+    "finishShort": "Fin",
+    "meta": "Étape {n} sur 5 · {label}",
+    "completedGoBack": "{label}, terminée. Retour."
   },
   "common": {
     "continue": "Continuer",
@@ -637,20 +639,25 @@
     "needsReview": "Nous n'avons pas pu lire certaines informations clairement. Vérifiez les champs surlignés."
   },
   "wizard": {
-    "readyTitle": "What you'll need",
-    "neededNow": "Needed now",
-    "addLater": "Can add later",
-    "passportNow": "Passport bio page (photo, or single-page PDF).",
-    "takesTwoMinutes": "Takes about 2 minutes. Your phone camera works.",
-    "encrypted": "Encrypted and used only for your visa application.",
-    "orderTotal": "Order total {total}",
-    "otherTitle": "Other documents",
-    "addAfterPayment": "You can add these after payment too.",
-    "skipForNow": "Skip for now",
-    "detailsTitle": "Check your details",
-    "pleaseFill": "Please fill these in.",
-    "replacePassport": "Passport photo wrong? Replace it",
-    "continueToPayment": "Looks right, continue to payment",
-    "travellerProgress": "Traveller {current} of {total}"
+    "readyTitle": "Ce dont vous aurez besoin",
+    "neededNow": "Nécessaire maintenant",
+    "addLater": "Peut être ajouté plus tard",
+    "passportNow": "Page d'identité du passeport (photo ou PDF d'une page).",
+    "takesTwoMinutes": "Cela prend environ 2 minutes. L'appareil photo du téléphone suffit.",
+    "encrypted": "Chiffré et utilisé uniquement pour votre demande de visa.",
+    "orderTotal": "Total de la commande {total}",
+    "otherTitle": "Autres documents",
+    "addAfterPayment": "Vous pourrez aussi les ajouter après le paiement.",
+    "skipForNow": "Passer pour l'instant",
+    "detailsTitle": "Vérifiez vos informations",
+    "pleaseFill": "Merci de remplir ces champs.",
+    "replacePassport": "Mauvaise photo de passeport ? Remplacez-la",
+    "continueToPayment": "C'est correct, continuer vers le paiement",
+    "travellerProgress": "Voyageur {current} sur {total}",
+    "readyInstruction": "Passez en revue les documents pour cette demande. Touchez un nom pour voir les formats et conseils, puis continuez quand vous les avez.",
+    "continueWithDocuments": "J'ai ces documents - Continuer",
+    "jumpAheadHint": "Terminez d'abord cette étape, puis touchez Continuer",
+    "docShowDetails": "{name}, afficher les détails",
+    "docHideDetails": "{name}, masquer les détails"
   }
 }

@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { Check } from "lucide-react";
-import { type FC } from "react";
+import { useState, type FC } from "react";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { cn } from "@/lib/utils";
+import { useApplyJumpAhead } from "./apply-jump-ahead";
 
 const STEPS = [
   { id: "trip", labelKey: "steps.trip", shortKey: "steps.tripShort" },
@@ -21,6 +22,8 @@ interface IApplyStepsRailProps {
   /** Documents page only: details is its own bar segment. */
   phase?: "documents" | "details";
   applicationId?: string;
+  /** Last trip-selection step inside the draft. Never marketing home. */
+  tripHref?: string | null;
   className?: string;
 }
 
@@ -31,8 +34,12 @@ const activeIndexFor = (currentStep: number, phase: "documents" | "details" | un
   return 4;
 };
 
-const hrefForPhase = (phase: TRailPhase, applicationId?: string): string | null => {
-  if (phase === "trip") return "/";
+const hrefForPhase = (
+  phase: TRailPhase,
+  applicationId: string | undefined,
+  tripHref: string | null | undefined,
+): string | null => {
+  if (phase === "trip") return tripHref ?? null;
   if (!applicationId) return null;
   const id = encodeURIComponent(applicationId);
   if (phase === "documents") return `/apply/applications/${id}?screen=ready`;
@@ -45,10 +52,20 @@ export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
   currentStep,
   phase,
   applicationId,
+  tripHref = null,
   className,
 }) => {
   const t = useCustomerT();
+  const jump = useApplyJumpAhead();
+  const [hintVisible, setHintVisible] = useState(false);
   const activeIndex = activeIndexFor(currentStep, phase);
+  const currentLabel = t(STEPS[activeIndex]!.labelKey);
+
+  const onUpcomingTap = () => {
+    setHintVisible(true);
+    jump.pulse();
+  };
+
   return (
     <nav
       className={cn(
@@ -57,66 +74,89 @@ export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
       )}
       aria-label={t("steps.railAriaLabel")}
     >
-      <ol className="flex items-center justify-between gap-1 sm:gap-3">
+      <p className="text-foreground mb-2 text-xs font-semibold">
+        {t("steps.meta", { n: activeIndex + 1, label: currentLabel })}
+      </p>
+      <ol className="flex items-start justify-between gap-1">
         {STEPS.map((s, index) => {
           const state = index < activeIndex ? "completed" : index === activeIndex ? "active" : "future";
-          const href = hrefForPhase(s.id, applicationId);
-          const isLink = Boolean(href) && state !== "future";
-          const labelText = t(s.shortKey);
+          const href = hrefForPhase(s.id, applicationId, tripHref);
           const fullLabel = t(s.labelKey);
+          const shortLabel = t(s.shortKey);
           const marker = (
             <span
               className={cn(
-                "flex size-11 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold transition-colors",
+                "flex size-11 shrink-0 items-center justify-center rounded-full border text-xs font-bold transition-colors",
                 state === "completed" && "border-secondary bg-secondary text-white",
-                state === "active" && "border-secondary bg-accent text-secondary ring-2 ring-secondary/10",
-                state === "future" && "border-border bg-muted text-muted-foreground",
+                state === "active" && "border-secondary bg-accent text-secondary ring-2 ring-secondary/15",
+                state === "future" && "border-border bg-muted text-muted-foreground opacity-60",
               )}
               aria-hidden
             >
               {state === "completed" ? <Check className="size-3.5" strokeWidth={3} /> : index + 1}
             </span>
           );
-          const label = (
+          const caption = (
             <span
               className={cn(
-                "text-[11px] font-bold leading-tight sm:text-xs",
-                state === "active" ? "whitespace-normal" : "truncate",
+                "max-w-full truncate text-center text-[10px] font-bold leading-tight sm:text-[11px]",
                 state === "future" ? "text-muted-foreground" : "text-secondary",
               )}
             >
-              <span className="sm:hidden">{state === "active" ? fullLabel : labelText}</span>
+              <span className="sm:hidden">{shortLabel}</span>
               <span className="hidden sm:inline">{fullLabel}</span>
             </span>
           );
           return (
-            <li key={s.labelKey} className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
-              {isLink ? (
-                <Link
-                  href={href!}
-                  className="flex min-h-11 min-w-0 items-center gap-1.5 sm:gap-2"
-                  aria-current={state === "active" ? "step" : undefined}
-                  aria-label={fullLabel}
-                >
+            <li key={s.labelKey} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+              {state === "completed" ? (
+                href ? (
+                  <Link
+                    href={href}
+                    className="flex min-h-11 min-w-11 flex-col items-center gap-1"
+                    aria-label={t("steps.completedGoBack", { label: fullLabel })}
+                  >
+                    {marker}
+                    {caption}
+                  </Link>
+                ) : (
+                  <div className="flex min-h-11 flex-col items-center gap-1">
+                    {marker}
+                    {caption}
+                  </div>
+                )
+              ) : null}
+              {state === "active" ? (
+                <div className="flex min-h-11 flex-col items-center gap-1" aria-current="step">
                   {marker}
-                  {label}
-                </Link>
-              ) : (
-                <div
-                  className="flex min-h-11 min-w-0 items-center gap-1.5 sm:gap-2"
-                  aria-current={state === "active" ? "step" : undefined}
-                >
-                  {marker}
-                  {label}
+                  {caption}
                 </div>
-              )}
-              {index < STEPS.length - 1 ? (
-                <span className="bg-border mx-0.5 h-px min-w-2 flex-1 sm:min-w-5" aria-hidden />
+              ) : null}
+              {state === "future" ? (
+                <button
+                  type="button"
+                  className="flex min-h-11 min-w-11 flex-col items-center gap-1"
+                  aria-disabled="true"
+                  aria-label={fullLabel}
+                  onClick={onUpcomingTap}
+                >
+                  {marker}
+                  {caption}
+                </button>
               ) : null}
             </li>
           );
         })}
       </ol>
+      {hintVisible ? (
+        <p
+          className="border-secondary/20 bg-accent text-secondary mt-2 rounded-lg border px-2.5 py-2 text-xs leading-snug"
+          role="status"
+          aria-live="polite"
+        >
+          {t("wizard.jumpAheadHint")}
+        </p>
+      ) : null}
     </nav>
   );
 };
