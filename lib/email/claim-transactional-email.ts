@@ -1,3 +1,4 @@
+import { and, eq } from "drizzle-orm";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { transactionalEmailSent } from "@/lib/db/schema";
 import type { TransactionalEmailKind } from "./transactional-email-kinds";
@@ -18,5 +19,22 @@ export async function tryClaimTransactionalEmail(
       })
       .returning({ id: transactionalEmailSent.id });
     return Boolean(row);
+  });
+}
+
+/** Drop a claim so a later cron can retry (e.g. Mailgun rejected the message). */
+export async function releaseTransactionalEmailClaim(
+  applicationId: string,
+  kind: TransactionalEmailKind,
+): Promise<void> {
+  await withSystemDbActor(async (tx) => {
+    await tx
+      .delete(transactionalEmailSent)
+      .where(
+        and(
+          eq(transactionalEmailSent.applicationId, applicationId),
+          eq(transactionalEmailSent.kind, kind),
+        ),
+      );
   });
 }

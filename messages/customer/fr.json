@@ -617,6 +617,17 @@
       "eyebrow": "Tout est en ordre",
       "greeting": "Bonjour,",
       "body": "Nous voyons que vous avez dépassé le problème et que votre document a bien été envoyé. Nous restons disponibles : répondez à cet e-mail ou contactez-nous sur WhatsApp."
+    },
+    "recovery": {
+      "greetingWithName": "Bonjour {firstName},",
+      "greetingNoName": "Bonjour,",
+      "checkout": {
+        "subject": "Votre demande de {visaName} n'est plus qu'à une étape",
+        "eyebrow": "Finaliser le paiement",
+        "body": "votre demande {reference} est complète, et il ne reste que le paiement de {amount}. Dès qu'il est réglé, nous commençons immédiatement. Le traitement prend généralement 2 à 3 jours ouvrables, sous réserve des décisions des autorités.",
+        "cta": "Finaliser le paiement",
+        "footer": "Les paiements sont traités de manière sécurisée par {provider}. Un souci pour payer ? Écrivez-nous sur WhatsApp, une vraie personne vous aidera."
+      }
     }
   },
   "upload": {
