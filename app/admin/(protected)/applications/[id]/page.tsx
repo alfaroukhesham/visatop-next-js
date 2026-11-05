@@ -6,7 +6,10 @@ import { withAdminDbActor } from "@/lib/db/actor-context";
 import { loadApplicationTravellers } from "@/lib/admin/load-application-travellers";
 import { AdminApplicationDetailView } from "@/components/admin/admin-application-detail-view";
 import type { AdminApplicationAuditRow } from "@/lib/admin/application-audit-format";
-import { loadApplicationLastStepView } from "@/lib/applications/load-application-last-step";
+import {
+  lastStepDocumentsFromTravellers,
+  loadApplicationLastStepView,
+} from "@/lib/applications/load-application-last-step";
 import * as schema from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +64,7 @@ export default async function AdminApplicationDetailPage({
           })
         : null;
 
-      const [payments, auditLogs, adminDocuments, travellers, lastStep] = await Promise.all([
+      const [payments, auditLogs, adminDocuments, travellers] = await Promise.all([
         tx
           .select()
           .from(schema.payment)
@@ -87,8 +90,20 @@ export default async function AdminApplicationDetailPage({
           .orderBy(desc(schema.applicationDocument.createdAt))
           .limit(40),
         loadApplicationTravellers(tx, app),
-        loadApplicationLastStepView(tx, applicationId),
       ]);
+      const lastStep = await loadApplicationLastStepView(tx, applicationId, {
+        app,
+        travellers,
+        documents:
+          travellers.length > 0
+            ? lastStepDocumentsFromTravellers(travellers)
+            : adminDocuments.map((doc) => ({
+                applicationId: app.id,
+                documentType: doc.documentType,
+                status: doc.status,
+                createdAt: doc.createdAt,
+              })),
+      });
 
       return {
         app,

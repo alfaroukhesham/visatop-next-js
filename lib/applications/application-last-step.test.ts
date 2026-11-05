@@ -223,6 +223,34 @@ describe("resolveApplicationLastStep", () => {
     expect(result.reachedAt).toEqual(passportAt);
   });
 
+  it("stays on photo upload when that traveller already has passport and photo", () => {
+    const photoAt = at(2);
+    const result = resolveApplicationLastStep({
+      ...baseInput,
+      wizardCursor: { screen: "ready", travellerId: null },
+      lastTravellerId: "a",
+      partyUpdatedAt: at(4),
+      travellers: [{ applicationId: "a", travelerIndex: 0, profileStarted: false }],
+      documents: [
+        {
+          applicationId: "a",
+          documentType: "passport_copy",
+          status: "uploaded_temp",
+          createdAt: at(3),
+        },
+        {
+          applicationId: "a",
+          documentType: "personal_photo",
+          status: "uploaded_temp",
+          createdAt: photoAt,
+        },
+      ],
+    });
+    expect(result.id).toBe("photo_upload");
+    expect(result.label).toBe("Photo upload");
+    expect(result.reachedAt).toEqual(photoAt);
+  });
+
   it("stays on passport upload when that traveller has no passport yet", () => {
     const result = resolveApplicationLastStep({
       ...baseInput,
@@ -322,6 +350,19 @@ describe("resolveApplicationLastStep", () => {
     });
     expect(result.id).toBe("service_selection");
     expect(result.label).toBe("Visa selected / created");
+  });
+
+  it("uses lastEventAt for last activity when event rows are omitted", () => {
+    const lastEventAt = at(0.25);
+    const result = resolveApplicationLastStep({
+      ...baseInput,
+      wizardCursor: null,
+      lastTravellerId: "a",
+      lastEventAt,
+    });
+    expect(result.id).toBe("docs_ready");
+    expect(result.lastActivityAt).toEqual(lastEventAt);
+    expect(result.whenDisplay).toContain("Last activity");
   });
 
   it("reports last activity as the newest known timestamp", () => {

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ADMIN_LAST_STEP_LIVE_HINT,
   ADMIN_LAST_STEP_POLL_MS,
+  formatAdminLastStepStaleCue,
   useAdminApplicationLastStep,
 } from "./use-admin-application-last-step";
 
@@ -49,6 +50,9 @@ describe("useAdminApplicationLastStep", () => {
   it("uses a single 15 second poll constant", () => {
     expect(ADMIN_LAST_STEP_POLL_MS).toBe(15_000);
     expect(ADMIN_LAST_STEP_LIVE_HINT).toBe("Live applicants updates every 15 seconds");
+    expect(formatAdminLastStepStaleCue(new Date("2026-11-05T18:00:00.000Z"), new Date("2026-11-05T18:02:00.000Z"))).toBe(
+      "Last updated 2 min ago",
+    );
   });
 
   it("keeps the server-rendered value until the poll", () => {
@@ -57,6 +61,7 @@ describe("useAdminApplicationLastStep", () => {
     );
     expect(result.current.lastStep).toEqual(initial);
     expect(result.current.fetching).toBe(false);
+    expect(result.current.stale).toBe(false);
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -129,6 +134,18 @@ describe("useAdminApplicationLastStep", () => {
       await vi.advanceTimersByTimeAsync(ADMIN_LAST_STEP_POLL_MS);
     });
     expect(result.current.lastStep.value).toBe("Paid");
+  });
+
+  it("marks the snapshot stale when a refresh fails", async () => {
+    vi.mocked(fetch).mockRejectedValueOnce(new Error("network"));
+    const { result } = renderHook(() =>
+      useAdminApplicationLastStep({ applicationId: "app_demo_1", initial }),
+    );
+    await act(async () => {
+      await result.current.refresh();
+    });
+    expect(result.current.stale).toBe(true);
+    expect(result.current.lastStep).toEqual(initial);
   });
 
   it("manual refresh fetches now and restarts the 15s timer", async () => {

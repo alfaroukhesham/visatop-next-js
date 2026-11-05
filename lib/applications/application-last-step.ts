@@ -87,6 +87,11 @@ const FUNNEL_EVENT_TO_STEP_ID: Record<string, TApplicationLastStepId> = {
   [FUNNEL_CHECKOUT_CREATED]: "checkout_started",
 };
 
+/** Linear (+ alias) names needed when no wizard cursor decides the step. */
+export const LAST_STEP_FUNNEL_EVENT_NAMES: readonly string[] = [
+  ...new Set([...Object.keys(FUNNEL_EVENT_TO_STEP_ID), ...Object.keys(FUNNEL_STEP_ALIASES)]),
+];
+
 const ADMIN_DOC_TYPES = new Set<string>([
   DOCUMENT_TYPE.ADMIN_STEP_ATTACHMENT,
   DOCUMENT_TYPE.OUTCOME_APPROVAL,
@@ -170,6 +175,8 @@ export type TApplicationLastStepInput = {
   documents?: TLastStepDocument[];
   travellers?: TLastStepTraveller[];
   events?: TLastStepEvent[];
+  /** Max funnel `occurred_at` when event rows are omitted (wizard cursor already decided the step). */
+  lastEventAt?: Date | null;
   profileStarted?: boolean;
   now?: Date;
 };
@@ -308,13 +315,17 @@ const refineStop = (input: {
 
   const hasPassport = hasDocType(input.documents, DOCUMENT_TYPE.PASSPORT_COPY);
   const hasPhoto = hasDocType(input.documents, DOCUMENT_TYPE.PERSONAL_PHOTO);
-  if (hasPassport && !hasPhoto) {
+  if (!hasPassport) return { id: "passport_upload", reachedFromDocs: null };
+  if (!hasPhoto) {
     return {
       id: "photo_upload",
       reachedFromDocs: latestDocAt(input.documents, DOCUMENT_TYPE.PASSPORT_COPY),
     };
   }
-  return { id: "passport_upload", reachedFromDocs: null };
+  return {
+    id: "photo_upload",
+    reachedFromDocs: latestDocAt(input.documents, DOCUMENT_TYPE.PERSONAL_PHOTO),
+  };
 };
 
 const stepFromFunnelEvent = (
@@ -428,6 +439,7 @@ export const resolveApplicationLastStep = (
       input.partyUpdatedAt,
       input.latestPayment?.createdAt,
       input.latestPayment?.updatedAt,
+      input.lastEventAt,
       ...(input.documents ?? []).map((doc) => doc.createdAt),
       ...(input.events ?? []).map((event) => event.occurredAt),
       reachedAt,
