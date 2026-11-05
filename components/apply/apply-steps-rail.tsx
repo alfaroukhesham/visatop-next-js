@@ -66,6 +66,14 @@ export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
     jump.pulse();
   };
 
+  const onCurrentTap = () => {
+    setHintVisible(true);
+  };
+
+  const onHintTap = () => {
+    jump.pulse();
+  };
+
   return (
     <nav
       className={cn(
@@ -127,10 +135,15 @@ export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
                 )
               ) : null}
               {state === "active" ? (
-                <div className="flex min-h-11 flex-col items-center gap-1" aria-current="step">
+                <button
+                  type="button"
+                  className="flex min-h-11 flex-col items-center gap-1"
+                  aria-current="step"
+                  onClick={onCurrentTap}
+                >
                   {marker}
                   {caption}
-                </div>
+                </button>
               ) : null}
               {state === "future" ? (
                 <button
@@ -149,13 +162,15 @@ export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
         })}
       </ol>
       {hintVisible ? (
-        <p
-          className="border-secondary/20 bg-accent text-secondary mt-2 rounded-lg border px-2.5 py-2 text-xs leading-snug"
+        <button
+          type="button"
+          className="border-secondary/20 bg-accent text-secondary mt-2 w-full rounded-lg border px-2.5 py-2 text-start text-xs leading-snug"
           role="status"
           aria-live="polite"
+          onClick={onHintTap}
         >
           {t("wizard.jumpAheadHint")}
-        </p>
+        </button>
       ) : null}
     </nav>
   );

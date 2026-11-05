@@ -86,7 +86,7 @@ export const ReadyDocumentAccordion: FC<IReadyDocumentAccordionProps> = ({ neede
     setOpenKey((current) => (current === key ? null : key));
   };
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-apply-ready-docs="">
       {neededNow.length > 0 ? (
         <div className="space-y-2">
           <p className="text-foreground text-xs font-bold uppercase tracking-wide">{t("wizard.neededNow")}</p>
