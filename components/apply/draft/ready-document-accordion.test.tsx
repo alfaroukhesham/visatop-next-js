@@ -67,5 +67,6 @@ describe("ReadyDocumentAccordion", () => {
     expect(photo).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("button", { name: /passport bio page/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /personal photo/i })).toBeInTheDocument();
+    expect(document.querySelector("[data-apply-ready-docs]")).toBeTruthy();
   });
 });

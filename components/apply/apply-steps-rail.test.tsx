@@ -62,6 +62,7 @@ describe("ApplyStepsRail on documents (ready)", () => {
     const current = screen.getByText("2").closest("[aria-current='step']");
     expect(current).toBeTruthy();
     expect(current?.tagName).not.toBe("A");
+    expect(current?.tagName).toBe("BUTTON");
   });
 
   it("announces a persistent jump-ahead hint when an upcoming step is tapped", async () => {
@@ -82,6 +83,25 @@ describe("ApplyStepsRail on documents (ready)", () => {
     expect(hint).toHaveTextContent(/finish this step first/i);
     expect(screen.getByRole("button", { name: /details/i })).toHaveAttribute("aria-disabled", "true");
     expect(screen.queryByRole("link", { name: /pay/i })).not.toBeInTheDocument();
+  });
+
+  it("shows the same jump-ahead hint when the current step is tapped", async () => {
+    const user = userEvent.setup();
+    wrap(
+      <ApplyStepsRail
+        currentStep={3}
+        phase="documents"
+        applicationId="app-1"
+        tripHref="/apply/start?nationality=IN"
+      />,
+    );
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    await user.click(screen.getByText("2").closest("[aria-current='step']") as HTMLElement);
+    const hint = screen.getByRole("status");
+    expect(hint).toHaveTextContent(/finish this step first/i);
+    await user.click(hint);
+    expect(screen.getByRole("status")).toBeInTheDocument();
   });
 
   it("does not invent a home link when tripHref is missing", () => {

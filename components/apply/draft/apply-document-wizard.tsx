@@ -31,7 +31,11 @@ import { DocumentUploadSlot } from "./document-upload-slot";
 import type { DocType, ExtractResponse, PublicDocument, TUploadSlotError } from "./types";
 import type { TPhoneNationalityOption } from "./phone-country-field";
 import { ApplyOrderTotal } from "@/components/apply/apply-order-total";
-import { ApplyReadyContinue } from "@/components/apply/apply-ready-continue";
+import {
+  APPLY_STICKY_CTA_MEDIA_QUERY,
+  ApplyReadyContinue,
+} from "@/components/apply/apply-ready-continue";
+import { useNarrowViewport } from "@/lib/client/use-narrow-viewport";
 import { ReadyDocumentAccordion, type TReadyDocumentIcon } from "./ready-document-accordion";
 
 type TMemberView = {
@@ -86,6 +90,7 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
   const t = useCustomerT();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const compactCta = useNarrowViewport(APPLY_STICKY_CTA_MEDIA_QUERY);
   const ordered = useMemo(
     () => members.slice().sort((a, b) => a.travelerIndex - b.travelerIndex),
     [members],
@@ -170,7 +175,7 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
     const later = [...laterByKey.values()];
     const tripHref = applyPreviousHref(applicationId, wizardMembers, resolved, primaryApp.nationalityCode);
     return (
-      <section className="max-md:pb-24 space-y-5">
+      <section className="space-y-5" data-apply-ready-section="">
         <h1 className="font-heading text-foreground text-xl font-semibold tracking-tight md:text-[1.75rem]">
           {t("wizard.readyTitle")}
         </h1>
@@ -209,12 +214,18 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
           variant="outline"
           brand="white"
           className="h-12 w-full"
+          data-apply-ready-inline-previous=""
+          hidden={compactCta}
           type="button"
           onClick={() => router.push(tripHref)}
         >
           {t("common.previous")}
         </ClientButton>
-        <ApplyReadyContinue onClick={() => void confirmAndGo({ screen: "ready", travellerId: null })}>
+        <ApplyReadyContinue
+          previousLabel={t("common.previous")}
+          onPrevious={() => router.push(tripHref)}
+          onClick={() => void confirmAndGo({ screen: "ready", travellerId: null })}
+        >
           {t("wizard.continueWithDocuments")}
         </ApplyReadyContinue>
       </section>

@@ -443,6 +443,46 @@ html:has([data-apply-sticky-cta]) a[data-whatsapp-fab] {
   bottom: calc(7rem + env(safe-area-inset-bottom, 0px)) !important;
 }
 
+/* Compact ready-step bar (portal, width <=1024px inclusive). Do not change theme-client-rise.
+   Tailwind max-[1024px] compiles to (width < 1024px) and would miss 1024x768. */
+@media (max-width: 1024px) {
+  html:has([data-apply-sticky-cta]) {
+    --apply-sticky-cta-height: calc(7.5rem + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: var(--apply-sticky-cta-height);
+  }
+
+  html:has([data-apply-sticky-cta]) a[data-whatsapp-fab] {
+    bottom: calc(9.25rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  [data-apply-ready-section] {
+    padding-bottom: var(--apply-sticky-cta-height, 7.5rem);
+  }
+
+  [data-apply-ready-inline-previous] {
+    display: none;
+  }
+
+  [data-apply-sticky-cta-portal] {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 30;
+    border-top: 1px solid var(--border);
+    background-color: color-mix(in srgb, var(--background) 95%, transparent);
+    padding-inline: 0.75rem;
+    padding-top: 0.625rem;
+    padding-bottom: calc(0.625rem + env(safe-area-inset-bottom, 0px));
+    backdrop-filter: blur(12px);
+  }
+}
+
+@media (min-width: 1025px) {
+  [data-apply-sticky-cta-portal] {
+    display: none;
+  }
+}
+
 @keyframes apply-continue-pulse {
   0%,
   100% {
