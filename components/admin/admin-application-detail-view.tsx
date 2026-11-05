@@ -14,8 +14,10 @@ import {
   formatAuditInlineDetails,
   type AdminApplicationAuditRow,
 } from "@/lib/admin/application-audit-format";
+import { AdminApplicationLastStepRow } from "@/components/admin/admin-application-last-step-row";
 import { ProfileRow, StatusBadge } from "@/components/admin/admin-application-detail-parts";
 import type { TAdminTraveller } from "@/lib/admin/load-application-travellers";
+import type { TAdminLastStepView } from "@/lib/applications/application-last-step";
 
 type ApplicationDetail = {
   id: string;
@@ -61,12 +63,6 @@ type AdminDocumentRow = {
   byteLength: number | null;
 };
 
-export type TAdminApplicationLastStepView = {
-  fieldLabel: string;
-  value: string;
-  secondary: string;
-};
-
 export function AdminApplicationDetailView({
   app,
   serviceLabel,
@@ -84,7 +80,7 @@ export function AdminApplicationDetailView({
   adminDocuments: AdminDocumentRow[];
   travellers: TAdminTraveller[];
   selectedTravellerId: string;
-  lastStep: TAdminApplicationLastStepView;
+  lastStep: TAdminLastStepView;
 }) {
   return (
     <AdminShell
@@ -135,12 +131,7 @@ export function AdminApplicationDetailView({
             <ProfileRow label="Guest Email" value={app.guestEmail} />
             <ProfileRow label="Admin ops step" value={app.adminOpsStep} />
             <ProfileRow label="Created" value={app.createdAt.toLocaleString()} />
-            <ProfileRow
-              label={lastStep.fieldLabel}
-              value={lastStep.value}
-              secondary={lastStep.secondary}
-              mono={false}
-            />
+            <AdminApplicationLastStepRow applicationId={app.id} initial={lastStep} />
           </dl>
         </div>
 

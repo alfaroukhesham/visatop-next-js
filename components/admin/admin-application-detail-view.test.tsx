@@ -71,6 +71,8 @@ describe("AdminApplicationDetailView last step", () => {
     expect(screen.getByText("Stopped at")).toBeInTheDocument();
     expect(screen.getByText("Passport upload")).toBeInTheDocument();
     expect(screen.getByText("2 hours ago · 11/5/2026, 4:00:00 PM")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Refresh" })).toBeInTheDocument();
+    expect(screen.getByText("Live applicants updates every 15 seconds")).toBeInTheDocument();
     expect(screen.getByText("Created")).toBeInTheDocument();
     expect(screen.getAllByText("Nationality").length).toBeGreaterThan(0);
   });

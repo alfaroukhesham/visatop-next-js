@@ -187,6 +187,18 @@ export type TApplicationLastStep = {
   whenDisplay: string;
 };
 
+export type TAdminLastStepView = {
+  fieldLabel: TApplicationLastStep["fieldLabel"] | string;
+  value: string;
+  secondary: string;
+};
+
+export const toAdminLastStepView = (step: TApplicationLastStep): TAdminLastStepView => ({
+  fieldLabel: step.fieldLabel,
+  value: step.displayValue,
+  secondary: step.whenDisplay,
+});
+
 const isSettled = (status: string): boolean =>
   (ADMIN_LIST_SETTLED_PAYMENT_STATUSES as readonly string[]).includes(status);
 
