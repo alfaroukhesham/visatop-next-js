@@ -21,7 +21,11 @@ export async function POST(
     async ({ tx, adminUserId }) => {
       const updated = await tx
         .update(schema.application)
-        .set({ adminAttentionRequired: false })
+        .set({
+          adminAttentionRequired: false,
+          adminAttentionReason: null,
+          adminAttentionDetails: null,
+        })
         .where(eq(schema.application.id, applicationId))
         .returning();
 

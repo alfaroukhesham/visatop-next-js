@@ -40,8 +40,11 @@ const makeTx = (opts?: { paymentUpdated?: boolean }) => {
       },
     }),
     insert: () => ({
-      values: async (values: Record<string, unknown>) => {
+      values: (values: Record<string, unknown>) => {
         inserts.push(values);
+        return {
+          onConflictDoNothing: async () => undefined,
+        };
       },
     }),
     select: () => ({
@@ -76,12 +79,15 @@ describe("rotateOpenFincraInlineAttempt", () => {
     expect(result?.reference).toBe("pay_1-a2");
     expect(result?.currency).toBe("NGN");
     expect(paymentSets).toEqual([{ providerOperationId: "pay_1-a2" }]);
-    expect(inserts[0]).toMatchObject({
+    expect(inserts.some((row) => row.merchantReference === "pay_1-a1")).toBe(true);
+    expect(inserts.some((row) => row.merchantReference === "pay_1-a2")).toBe(true);
+    const audit = inserts.find((row) => row.action === "payment_fincra_attempt_rotated");
+    expect(audit).toMatchObject({
       action: "payment_fincra_attempt_rotated",
       entityId: "pay_1",
     });
-    expect(String(inserts[0]?.afterJson)).toContain("pay_1-a1");
-    expect(String(inserts[0]?.afterJson)).toContain("1000000");
+    expect(String(audit?.afterJson)).toContain("pay_1-a1");
+    expect(String(audit?.afterJson)).toContain("1000000");
   });
 
   it("does not rotate a row that is no longer checkout_created", async () => {

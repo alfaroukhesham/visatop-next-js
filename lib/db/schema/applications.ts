@@ -97,6 +97,10 @@ export const application = pgTable(
     checkoutState: text("checkout_state"),
 
     adminAttentionRequired: boolean("admin_attention_required").default(false).notNull(),
+    /** Machine reason for the attention flag, e.g. fincra_extra_collection. */
+    adminAttentionReason: text("admin_attention_reason"),
+    /** JSON details for the attention flag (provider refs, amounts, timestamps). */
+    adminAttentionDetails: jsonb("admin_attention_details"),
 
     /** Free-form ops label (e.g. embassy step); set from admin UI only. */
     adminOpsStep: text("admin_ops_step"),
