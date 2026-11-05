@@ -617,6 +617,17 @@
       "eyebrow": "Всё готово",
       "greeting": "Здравствуйте,",
       "body": "Мы видим, что вы справились с проблемой и документ успешно загружен. Мы всегда рядом, если нужна помощь: ответьте на это письмо или напишите нам в WhatsApp."
+    },
+    "recovery": {
+      "greetingWithName": "Hello {firstName},",
+      "greetingNoName": "Hello,",
+      "checkout": {
+        "subject": "Your {visaName} application is one step from done",
+        "eyebrow": "Complete your payment",
+        "body": "your application {reference} is complete, and only the payment of {amount} is left. Once it's paid, we start right away. Processing usually takes 2 to 3 working days, subject to authority approvals.",
+        "cta": "Complete payment",
+        "footer": "Payments are processed securely by {provider}. Trouble paying? Message us on WhatsApp and a real person will help."
+      }
     }
   },
   "upload": {

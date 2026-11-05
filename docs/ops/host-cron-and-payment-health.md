@@ -49,6 +49,10 @@ curl -fsS -X "$METHOD" -H "x-internal-secret: ${SECRET}" "$BASE/api/internal/${N
 # Hourly
 0 * * * * /root/visatop/bin/internal-cron.sh cleanup-drafts
 0 * * * * /root/visatop/bin/internal-cron.sh retry-meta-capi-purchases
+
+# Every 15 minutes: checkout-opened-not-paid recovery email
+# (no-ops until RECOVERY_EMAILS_ENABLED=true in /root/visatop/.env)
+*/15 * * * * /root/visatop/bin/internal-cron.sh recovery-emails
 ```
 
 The wrapper calls `/api/internal/<name>` with header `x-internal-secret`. Default method is POST; payment health is GET.
