@@ -2,8 +2,8 @@ import { logger } from "@/lib/logger";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import {
   CHECKOUT_RECOVERY_BATCH_SIZE,
-  CHECKOUT_RECOVERY_LOOKBACK_DAYS,
   getCheckoutRecoveryDelayMs,
+  getCheckoutRecoveryMaxAgeMs,
   isRecoveryEmailsEnabled,
 } from "./config";
 import { decideCheckoutRecoveryEmail } from "./decide";
@@ -33,9 +33,17 @@ export const runCheckoutRecoveryEmailJob = async (opts?: {
   };
   if (!enabled) return empty;
 
-  const delayMs = getCheckoutRecoveryDelayMs();
+  const windows = {
+    delayMs: getCheckoutRecoveryDelayMs(),
+    maxAgeMs: getCheckoutRecoveryMaxAgeMs(),
+  };
   const loaded = await withSystemDbActor((tx) =>
-    loadCheckoutRecoveryCandidates(tx, now, CHECKOUT_RECOVERY_LOOKBACK_DAYS, CHECKOUT_RECOVERY_BATCH_SIZE),
+    loadCheckoutRecoveryCandidates(tx, {
+      now,
+      delayMs: windows.delayMs,
+      maxAgeMs: windows.maxAgeMs,
+      limit: CHECKOUT_RECOVERY_BATCH_SIZE,
+    }),
   );
 
   const result: TCheckoutRecoveryJobResult = {
@@ -44,7 +52,7 @@ export const runCheckoutRecoveryEmailJob = async (opts?: {
   };
 
   for (const row of loaded) {
-    const decision = decideCheckoutRecoveryEmail(row.candidate, delayMs, now);
+    const decision = decideCheckoutRecoveryEmail(row.candidate, windows, now);
     if (decision.action === "skip") {
       result.skipped += 1;
       continue;

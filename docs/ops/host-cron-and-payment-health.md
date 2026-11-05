@@ -52,6 +52,8 @@ curl -fsS -X "$METHOD" -H "x-internal-secret: ${SECRET}" "$BASE/api/internal/${N
 
 # Every 15 minutes: checkout-opened-not-paid recovery email
 # (no-ops until RECOVERY_EMAILS_ENABLED=true in /root/visatop/.env)
+# Eligible window: checkout created between DELAY minutes and MAX_AGE hours ago
+# (defaults 60 minutes … 24 hours). First enable does not mail a 14-day backlog.
 */15 * * * * /root/visatop/bin/internal-cron.sh recovery-emails
 ```
 

@@ -1,5 +1,12 @@
-import { and, asc, desc, eq, gt, inArray, isNotNull, notInArray, or } from "drizzle-orm";
+import { and, desc, eq, exists, gte, inArray, isNotNull, lte, not, notInArray, or, sql } from "drizzle-orm";
+import {
+  checkoutCreatedAttemptExists,
+  latestPaymentCreatedAtSql,
+} from "@/lib/applications/admin-queries";
 import { isAdminListCheckoutCreatedAttempt } from "@/lib/applications/admin-list-status";
+import {
+  isResumeEmailLinkSecretConfigured,
+} from "@/lib/applications/resume-email-link";
 import type { DbTransaction } from "@/lib/db";
 import {
   application,
@@ -37,14 +44,61 @@ export type TCheckoutRecoveryLoaded = {
   candidate: TCheckoutRecoveryCandidate;
 };
 
-export const loadCheckoutRecoveryCandidates = async (
+export type TCheckoutRecoveryLoadParams = {
+  now: Date;
+  delayMs: number;
+  maxAgeMs: number;
+  limit: number;
+};
+
+const latestPaymentIsLatestSql = sql`${payment.id} = (
+  select p2.id from payment p2
+  where p2.application_id = ${application.id}
+  order by p2.created_at desc
+  limit 1
+)`;
+
+/** Still-open checkout (not reconciled failed/expired) whose createdAt is inside the delay/max-age window. */
+const stillOpenCheckoutInWindowExists = (
   tx: DbTransaction,
-  now: Date,
-  lookbackDays: number,
-  limit: number,
-): Promise<TCheckoutRecoveryLoaded[]> => {
-  const since = new Date(now.getTime() - lookbackDays * 24 * 60 * 60 * 1000);
-  const rows = await tx
+  delayCutoff: Date,
+  maxAgeCutoff: Date,
+) =>
+  exists(
+    tx
+      .select({ id: payment.id })
+      .from(payment)
+      .where(
+        and(
+          eq(payment.applicationId, application.id),
+          latestPaymentIsLatestSql,
+          eq(payment.status, "checkout_created"),
+          lte(payment.createdAt, delayCutoff),
+          gte(payment.createdAt, maxAgeCutoff),
+        ),
+      ),
+  );
+
+const recoveryCheckoutAlreadySentExists = (tx: DbTransaction) =>
+  exists(
+    tx
+      .select({ id: transactionalEmailSent.id })
+      .from(transactionalEmailSent)
+      .where(
+        and(
+          eq(transactionalEmailSent.applicationId, application.id),
+          eq(transactionalEmailSent.kind, CHECKOUT_RECOVERY_KIND),
+        ),
+      ),
+  );
+
+export const checkoutRecoveryCandidatesQuery = (
+  tx: DbTransaction,
+  params: TCheckoutRecoveryLoadParams,
+) => {
+  const delayCutoff = new Date(params.now.getTime() - params.delayMs);
+  const maxAgeCutoff = new Date(params.now.getTime() - params.maxAgeMs);
+  return tx
     .select({
       app: application,
       partyDraftExpiresAt: applicationParty.draftExpiresAt,
@@ -58,19 +112,61 @@ export const loadCheckoutRecoveryCandidates = async (
     .where(
       and(
         eq(application.travelerRole, "primary"),
+        eq(application.paymentStatus, "checkout_created"),
         notInArray(application.applicationStatus, [...SKIP_APPLICATION_STATUSES]),
-        notInArray(application.paymentStatus, ["paid", "refunded", "refund_pending"]),
-        gt(application.updatedAt, since),
         or(isNotNull(application.guestEmail), isNotNull(application.userId)),
+        checkoutCreatedAttemptExists(tx),
+        stillOpenCheckoutInWindowExists(tx, delayCutoff, maxAgeCutoff),
+        not(recoveryCheckoutAlreadySentExists(tx)),
       ),
     )
-    .orderBy(asc(application.updatedAt))
-    .limit(limit);
+    .orderBy(sql`${latestPaymentCreatedAtSql} asc`)
+    .limit(params.limit);
+};
 
+export const guestCheckoutResumeReady = (input: {
+  isGuest: boolean;
+  partyId: string | null;
+  draftExpiresAt: Date | null;
+  now: Date;
+  secretConfigured?: boolean;
+}): boolean => {
+  if (!input.isGuest) return true;
+  const secretOk = input.secretConfigured ?? isResumeEmailLinkSecretConfigured();
+  if (!secretOk || !input.partyId || !input.draftExpiresAt) return false;
+  return input.draftExpiresAt.getTime() > input.now.getTime();
+};
+
+/**
+ * In-memory mirror of the SQL WHERE (drafts never occupy the batch).
+ * Used by tests; the cron path filters in SQL via {@link checkoutRecoveryCandidatesQuery}.
+ */
+export const matchesCheckoutRecoverySqlCandidate = (row: {
+  paymentStatus: string;
+  latestPaymentStatus: string | null;
+  checkoutCreatedAt: Date | null;
+  alreadySent: boolean;
+  now: Date;
+  delayMs: number;
+  maxAgeMs: number;
+}): boolean => {
+  if (row.alreadySent) return false;
+  if (row.paymentStatus !== "checkout_created") return false;
+  if (row.latestPaymentStatus !== "checkout_created") return false;
+  if (!row.checkoutCreatedAt) return false;
+  const ageMs = row.now.getTime() - row.checkoutCreatedAt.getTime();
+  return ageMs >= row.delayMs && ageMs <= row.maxAgeMs;
+};
+
+export const loadCheckoutRecoveryCandidates = async (
+  tx: DbTransaction,
+  params: TCheckoutRecoveryLoadParams,
+): Promise<TCheckoutRecoveryLoaded[]> => {
+  const rows = await checkoutRecoveryCandidatesQuery(tx, params);
   if (rows.length === 0) return [];
 
   const ids = rows.map((r) => r.app.id);
-  const [paymentRows, sentRows, quoteRows] = await Promise.all([
+  const [paymentRows, quoteRows] = await Promise.all([
     tx
       .select({
         applicationId: payment.applicationId,
@@ -86,17 +182,6 @@ export const loadCheckoutRecoveryCandidates = async (
       .orderBy(desc(payment.createdAt)),
     tx
       .select({
-        applicationId: transactionalEmailSent.applicationId,
-      })
-      .from(transactionalEmailSent)
-      .where(
-        and(
-          inArray(transactionalEmailSent.applicationId, ids),
-          eq(transactionalEmailSent.kind, CHECKOUT_RECOVERY_KIND),
-        ),
-      ),
-    tx
-      .select({
         applicationId: priceQuote.applicationId,
         totalAmount: priceQuote.totalAmount,
         currency: priceQuote.currency,
@@ -110,12 +195,12 @@ export const loadCheckoutRecoveryCandidates = async (
   for (const row of paymentRows) {
     if (!latestPayment.has(row.applicationId)) latestPayment.set(row.applicationId, row);
   }
-  const sentSet = new Set(sentRows.map((r) => r.applicationId));
   const latestQuote = new Map<string, (typeof quoteRows)[number]>();
   for (const row of quoteRows) {
     if (!latestQuote.has(row.applicationId)) latestQuote.set(row.applicationId, row);
   }
 
+  const secretConfigured = isResumeEmailLinkSecretConfigured();
   const loaded: TCheckoutRecoveryLoaded[] = [];
   for (const row of rows) {
     const to = row.app.userId
@@ -124,6 +209,7 @@ export const loadCheckoutRecoveryCandidates = async (
     if (!to) continue;
     const pay = latestPayment.get(row.app.id) ?? null;
     const quote = latestQuote.get(row.app.id) ?? null;
+    const draftExpiresAt = row.partyDraftExpiresAt ?? row.app.draftExpiresAt;
     const checkoutAttempt = isAdminListCheckoutCreatedAttempt({
       applicationPaymentStatus: row.app.paymentStatus,
       latestPaymentStatus: pay?.status ?? null,
@@ -131,11 +217,20 @@ export const loadCheckoutRecoveryCandidates = async (
     });
     const candidate: TCheckoutRecoveryCandidate = {
       hasEmail: true,
+      isGuest: row.app.isGuest,
+      guestResumeReady: guestCheckoutResumeReady({
+        isGuest: row.app.isGuest,
+        partyId: row.app.partyId,
+        draftExpiresAt,
+        now: params.now,
+        secretConfigured,
+      }),
       applicationStatus: row.app.applicationStatus,
       paymentStatus: row.app.paymentStatus,
+      latestPaymentStatus: pay?.status ?? null,
       checkoutAttempt,
-      checkoutCreatedAt: checkoutAttempt ? (pay?.createdAt ?? null) : null,
-      alreadySent: sentSet.has(row.app.id),
+      checkoutCreatedAt: pay?.createdAt ?? null,
+      alreadySent: false,
     };
     loaded.push({
       applicationId: row.app.id,
@@ -146,7 +241,7 @@ export const loadCheckoutRecoveryCandidates = async (
       fullName: row.app.fullName,
       visaName: row.serviceName,
       reference: row.app.referenceNumber ?? row.app.id.slice(0, 8),
-      draftExpiresAt: row.partyDraftExpiresAt ?? row.app.draftExpiresAt,
+      draftExpiresAt,
       paymentProvider: pay?.provider ?? null,
       amountMinor: pay?.amount ?? quote?.totalAmount ?? null,
       currency: pay?.currency ?? quote?.currency ?? row.app.catalogCurrency,

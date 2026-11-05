@@ -23,5 +23,11 @@ export const isRecoveryEmailsEnabled = (): boolean =>
 export const getCheckoutRecoveryDelayMs = (): number =>
   parsePositiveInt(process.env.RECOVERY_EMAIL_CHECKOUT_DELAY_MINUTES, 60) * 60_000;
 
-export const CHECKOUT_RECOVERY_LOOKBACK_DAYS = 14;
+/**
+ * Ignore checkouts older than this (hours). Default 24 so the first enable
+ * does not mail a multi-day backlog.
+ */
+export const getCheckoutRecoveryMaxAgeMs = (): number =>
+  parsePositiveInt(process.env.RECOVERY_EMAIL_CHECKOUT_MAX_AGE_HOURS, 24) * 60 * 60_000;
+
 export const CHECKOUT_RECOVERY_BATCH_SIZE = 100;

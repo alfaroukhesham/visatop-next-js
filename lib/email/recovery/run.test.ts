@@ -34,8 +34,11 @@ const loaded = (overrides: Partial<TCheckoutRecoveryLoaded> = {}): TCheckoutReco
   currency: "USD",
   candidate: {
     hasEmail: true,
+    isGuest: true,
+    guestResumeReady: true,
     applicationStatus: "ready_for_payment",
     paymentStatus: "checkout_created",
+    latestPaymentStatus: "checkout_created",
     checkoutAttempt: true,
     checkoutCreatedAt: new Date(now.getTime() - 60 * 60_000),
     alreadySent: false,
@@ -71,8 +74,11 @@ describe("runCheckoutRecoveryEmailJob", () => {
       loaded({
         candidate: {
           hasEmail: true,
+          isGuest: true,
+          guestResumeReady: true,
           applicationStatus: "draft",
           paymentStatus: "unpaid",
+          latestPaymentStatus: null,
           checkoutAttempt: false,
           checkoutCreatedAt: null,
           alreadySent: false,

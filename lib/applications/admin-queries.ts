@@ -17,24 +17,11 @@ export type AdminListParams = {
   offset?: number;
 };
 
-export async function listAdminApplications(
-  tx: DbTransaction,
-  params: AdminListParams
-) {
-  const conditions = [];
-
-  if (params.attention) {
-    conditions.push(eq(schema.application.adminAttentionRequired, true));
-  }
-
-  if (params.status) {
-    conditions.push(eq(schema.application.applicationStatus, params.status));
-  }
-
-  // Keep this EXISTS in sync with `isAdminListCheckoutCreatedAttempt`.
+/** Latest payment is a checkout attempt. Keep in sync with `isAdminListCheckoutCreatedAttempt`. */
+export const checkoutCreatedAttemptExists = (tx: DbTransaction) => {
   const settledStatuses = [...ADMIN_LIST_SETTLED_PAYMENT_STATUSES];
   const cardFailureCodes = [...ADMIN_LIST_CARD_FAILURE_CODES];
-  const checkoutCreatedAttempt = exists(
+  return exists(
     tx
       .select({ id: schema.payment.id })
       .from(schema.payment)
@@ -58,6 +45,31 @@ export async function listAdminApplications(
         ),
       ),
   );
+};
+
+export const latestPaymentCreatedAtSql = sql`(
+  select p2.created_at from payment p2
+  where p2.application_id = ${schema.application.id}
+  order by p2.created_at desc
+  limit 1
+)`;
+
+export async function listAdminApplications(
+  tx: DbTransaction,
+  params: AdminListParams
+) {
+  const conditions = [];
+
+  if (params.attention) {
+    conditions.push(eq(schema.application.adminAttentionRequired, true));
+  }
+
+  if (params.status) {
+    conditions.push(eq(schema.application.applicationStatus, params.status));
+  }
+
+  const settledStatuses = [...ADMIN_LIST_SETTLED_PAYMENT_STATUSES];
+  const checkoutCreatedAttempt = checkoutCreatedAttemptExists(tx);
   const listCheckoutCreated = sql`(
     ${notInArray(schema.application.paymentStatus, settledStatuses)}
     and ${checkoutCreatedAttempt}

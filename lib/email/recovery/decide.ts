@@ -14,11 +14,19 @@ const SKIP_APPLICATION_STATUSES = new Set([
 
 export type TCheckoutRecoveryCandidate = {
   hasEmail: boolean;
+  isGuest: boolean;
+  guestResumeReady: boolean;
   applicationStatus: string;
   paymentStatus: string;
+  latestPaymentStatus: string | null;
   checkoutAttempt: boolean;
   checkoutCreatedAt: Date | null;
   alreadySent: boolean;
+};
+
+export type TCheckoutRecoveryWindows = {
+  delayMs: number;
+  maxAgeMs: number;
 };
 
 export type TCheckoutRecoveryDecision =
@@ -27,7 +35,7 @@ export type TCheckoutRecoveryDecision =
 
 export const decideCheckoutRecoveryEmail = (
   candidate: TCheckoutRecoveryCandidate,
-  delayMs: number,
+  windows: TCheckoutRecoveryWindows,
   now: Date,
 ): TCheckoutRecoveryDecision => {
   if (!candidate.hasEmail) return { action: "skip", reason: "no_email" };
@@ -41,13 +49,23 @@ export const decideCheckoutRecoveryEmail = (
     };
   }
   if (candidate.alreadySent) return { action: "skip", reason: "already_sent" };
+  if (candidate.isGuest && !candidate.guestResumeReady) {
+    return { action: "skip", reason: "guest_resume_unavailable" };
+  }
+  // Still-open checkout only — reconciled failed/expired (app back to unpaid) must not get Complete payment.
+  if (
+    candidate.paymentStatus !== "checkout_created" ||
+    candidate.latestPaymentStatus !== "checkout_created"
+  ) {
+    return { action: "skip", reason: "checkout_not_open" };
+  }
   // TODO: generic same-day continue / next-day tips / travel reminder — checkout-only for now.
   if (!candidate.checkoutAttempt) return { action: "skip", reason: "not_checkout_created" };
   if (!candidate.checkoutCreatedAt) {
     return { action: "skip", reason: "checkout_missing_timestamp" };
   }
-  if (now.getTime() < candidate.checkoutCreatedAt.getTime() + delayMs) {
-    return { action: "skip", reason: "checkout_delay" };
-  }
+  const ageMs = now.getTime() - candidate.checkoutCreatedAt.getTime();
+  if (ageMs < windows.delayMs) return { action: "skip", reason: "checkout_delay" };
+  if (ageMs > windows.maxAgeMs) return { action: "skip", reason: "checkout_too_old" };
   return { action: "send" };
 };
