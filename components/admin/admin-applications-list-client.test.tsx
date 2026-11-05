@@ -37,8 +37,24 @@ const listState = {
       travelerKind: "adult",
       partyMemberCount: 1,
     },
+    {
+      id: "app_fincra_expired",
+      serviceId: "svc_1",
+      serviceName: "30 Days Tourist Visa",
+      applicationStatus: "ready_for_payment",
+      paymentStatus: "checkout_created",
+      fulfillmentStatus: "not_started",
+      referenceNumber: "VT-1002",
+      fullName: "ADELABU",
+      guestEmail: "adelabu@example.com",
+      adminAttentionRequired: false,
+      createdAt: "2026-11-05T06:00:00.000Z",
+      partyId: null,
+      travelerKind: "adult",
+      partyMemberCount: 1,
+    },
   ],
-  total: 1,
+  total: 2,
   attentionCount: 0,
   loading: false,
   error: null,
@@ -59,6 +75,7 @@ describe("AdminApplicationsListClient", () => {
   it("shows unpaid Fincra checkouts as Checkout Created, drops Fulfilment, and title-cases statuses", () => {
     render(<AdminApplicationsListClient initialAttentionCount={0} />);
 
+    expect(screen.getByText("ADELABU")).toBeInTheDocument();
     expect(screen.getAllByText("Checkout Created").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Ready For Payment").length).toBeGreaterThan(0);
     expect(screen.queryByText("checkout_created")).not.toBeInTheDocument();
