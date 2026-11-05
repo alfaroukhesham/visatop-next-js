@@ -123,7 +123,7 @@ export function AdminApplicationDetailView({
               <ApplicationActions applicationId={app.id} hasAttention={false} />
             )}
           </div>
-          <AdminApplicationLastStepLive applicationId={app.id} initial={lastStep}>
+          <AdminApplicationLastStepLive key={app.id} applicationId={app.id} initial={lastStep}>
             <ProfileRow label="Nationality" value={app.nationalityCode} />
             <ProfileRow label="Service" value={serviceLabel ?? "Unknown service"} mono={false} />
             <ProfileRow label="Reference No." value={app.referenceNumber} />

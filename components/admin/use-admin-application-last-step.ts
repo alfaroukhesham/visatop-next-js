@@ -46,12 +46,6 @@ export const useAdminApplicationLastStep = (input: {
   const intervalIdRef = useRef<number | null>(null);
   const cancelledRef = useRef(false);
 
-  useEffect(() => {
-    setLastStep(input.initial);
-    setStale(false);
-    setLastSuccessAt(new Date());
-  }, [input.applicationId, input.initial]);
-
   const stop = useCallback(() => {
     if (intervalIdRef.current === null) return;
     window.clearInterval(intervalIdRef.current);
