@@ -44,6 +44,9 @@ describe("getCustomerMessages", () => {
     expect(en("wizard.continueWithDocuments")).toBe("I have these - Continue");
     expect(ar("wizard.continueWithDocuments")).toBe("لديّ هذه المستندات - متابعة");
     expect(fr("wizard.continueWithDocuments")).toBe("J'ai ces documents - Continuer");
+    expect(en("common.continue")).toBe("Continue");
+    expect(ar("common.continue")).toBe("متابعة");
+    expect(fr("common.continue")).toBe("Continuer");
     expect(en("wizard.jumpAheadHint")).toMatch(/Finish this step first/);
     expect(ar("wizard.jumpAheadHint")).toMatch(/أكمل هذه الخطوة أولاً/);
     expect(fr("wizard.jumpAheadHint")).toMatch(/Terminez d'abord/);

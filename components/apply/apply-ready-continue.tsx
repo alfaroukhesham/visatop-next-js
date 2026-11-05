@@ -18,11 +18,25 @@ export const APPLY_READY_CONTINUE_INLINE_CLASS =
 /** Same classes as the inline ready-step Previous button on main. */
 export const APPLY_READY_PREVIOUS_CLASS = "h-12 w-full";
 
+/** EN/AR compact bar uses the short Continue label below this width. */
+export const APPLY_READY_CONTINUE_FULL_MIN_WIDTH_PX = 360;
+export const APPLY_READY_CONTINUE_SHORT_MEDIA_QUERY = `(max-width: ${APPLY_READY_CONTINUE_FULL_MIN_WIDTH_PX - 1}px)`;
+
+export const compactContinueAlwaysShort = (locale: string): boolean =>
+  locale === "fr" || locale.toLowerCase().startsWith("fr-");
+
+export const compactContinueShowsShortLabel = (
+  alwaysShort: boolean,
+  belowFullMinWidth: boolean,
+): boolean => alwaysShort || belowFullMinWidth;
+
 interface IApplyReadyContinueProps {
-  children: ReactNode;
+  children: string;
   onClick: () => void;
   previousLabel?: string;
   onPrevious?: () => void;
+  compactShortLabel?: string;
+  compactAlwaysShort?: boolean;
 }
 
 interface IApplyReadyPreviousButtonProps {
@@ -37,6 +51,7 @@ interface IContinueButtonProps {
   onClick: () => void;
   pulseContinue: boolean;
   clearPulse: () => void;
+  accessibleLabel?: string;
 }
 
 /** Same outline Previous as the inline ready-step button on main. */
@@ -59,15 +74,22 @@ export const ApplyReadyPreviousButton: FC<IApplyReadyPreviousButtonProps> = ({
   </ClientButton>
 );
 
-const ContinueButton: FC<IContinueButtonProps> = ({ children, onClick, pulseContinue, clearPulse }) => (
+const ContinueButton: FC<IContinueButtonProps> = ({
+  children,
+  onClick,
+  pulseContinue,
+  clearPulse,
+  accessibleLabel,
+}) => (
   <ClientButton
     brand="cta"
     className={cn("h-12 min-h-12 w-full normal-case tracking-normal", pulseContinue && "apply-continue-pulse")}
     type="button"
+    aria-label={accessibleLabel}
     onClick={onClick}
     onAnimationEnd={clearPulse}
   >
-    {children}
+    <span data-apply-ready-continue-label="">{children}</span>
   </ClientButton>
 );
 
@@ -80,9 +102,16 @@ export const ApplyReadyContinue: FC<IApplyReadyContinueProps> = ({
   onClick,
   previousLabel,
   onPrevious,
+  compactShortLabel,
+  compactAlwaysShort = false,
 }) => {
   const { pulseContinue, clearPulse } = useApplyJumpAhead();
   const compact = useNarrowViewport(APPLY_STICKY_CTA_MEDIA_QUERY);
+  const belowFullMinWidth = useNarrowViewport(APPLY_READY_CONTINUE_SHORT_MEDIA_QUERY);
+  const compactVisibleLabel =
+    compactShortLabel && compactContinueShowsShortLabel(compactAlwaysShort, belowFullMinWidth)
+      ? compactShortLabel
+      : children;
 
   useEffect(() => {
     if (!pulseContinue) return;
@@ -116,9 +145,14 @@ export const ApplyReadyContinue: FC<IApplyReadyContinueProps> = ({
                   <ApplyReadyPreviousButton onClick={onPrevious}>{previousLabel}</ApplyReadyPreviousButton>
                 </div>
               ) : null}
-              <div className="min-w-0 flex-[1.75] [&>*]:min-w-0">
-                <ContinueButton onClick={onClick} pulseContinue={pulseContinue} clearPulse={clearPulse}>
-                  {children}
+              <div className="min-w-0 flex-[2] [&>*]:min-w-0">
+                <ContinueButton
+                  accessibleLabel={children}
+                  onClick={onClick}
+                  pulseContinue={pulseContinue}
+                  clearPulse={clearPulse}
+                >
+                  {compactVisibleLabel}
                 </ContinueButton>
               </div>
             </div>

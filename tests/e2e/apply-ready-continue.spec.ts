@@ -25,6 +25,21 @@ const DESKTOP_VIEWPORTS = [
 
 const REQUESTED_BAR_SHOTS = new Set(["320x568", "390x664", "390x844", "440x956", "1024x768"]);
 const REQUESTED_DESKTOP_SHOTS = new Set(["1280x800", "1440x900"]);
+const TRUNCATION_VIEWPORTS = new Set(["320x568", "360x740", "390x664", "390x844", "414x896", "440x956", "1024x768"]);
+
+const CONTINUE_FULL: Record<"en" | "ar" | "fr", string> = {
+  en: "I have these - Continue",
+  ar: "لديّ هذه المستندات - متابعة",
+  fr: "J'ai ces documents - Continuer",
+};
+const CONTINUE_SHORT: Record<"en" | "ar" | "fr", string> = {
+  en: "Continue",
+  ar: "متابعة",
+  fr: "Continuer",
+};
+
+const compactVisibleContinue = (locale: "en" | "ar" | "fr", width: number) =>
+  locale === "fr" || width < 360 ? CONTINUE_SHORT[locale] : CONTINUE_FULL[locale];
 
 const saveShot = async (page: Page, name: string) => {
   mkdirSync(ARTIFACT_DIR, { recursive: true });
@@ -37,11 +52,17 @@ const saveShot = async (page: Page, name: string) => {
   });
 };
 
-const openReady = async (page: Page, locale: "en" | "ar", viewport: { width: number; height: number }) => {
+const openReady = async (
+  page: Page,
+  locale: "en" | "ar" | "fr",
+  viewport: { width: number; height: number },
+) => {
   await page.setViewportSize(viewport);
   await page.goto(`${FIXTURE_PATH}?locale=${locale}&screen=ready`, { waitUntil: "domcontentloaded" });
   await expect(page.locator("[data-ui='client']")).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole("heading", { name: /what you'll need|ما ستحتاج إليه/i })).toBeVisible({
+  await expect(
+    page.getByRole("heading", { name: /what you'll need|ما ستحتاج إليه|ce dont vous aurez besoin/i }),
+  ).toBeVisible({
     timeout: 20_000,
   });
 };
@@ -97,10 +118,26 @@ const measureBarButtons = async (page: Page) =>
     });
   });
 
+const measureContinueLabel = async (page: Page) =>
+  page.evaluate(() => {
+    const bar = document.querySelector<HTMLElement>("[data-apply-sticky-cta-portal]");
+    const btn = bar?.querySelectorAll("button")[1];
+    const label = btn?.querySelector<HTMLElement>("[data-apply-ready-continue-label]");
+    if (!btn || !label) return null;
+    const style = getComputedStyle(btn);
+    const pad = Number.parseFloat(style.paddingLeft) + Number.parseFloat(style.paddingRight);
+    return {
+      text: (label.textContent ?? "").trim(),
+      aria: btn.getAttribute("aria-label"),
+      scrollWidth: label.scrollWidth,
+      clientWidth: btn.clientWidth - pad,
+    };
+  });
+
 test.describe("apply ready Continue bar", () => {
   test.skip(({ browserName }) => browserName !== "chromium", "viewport matrix is chromium-only");
 
-  for (const locale of ["en", "ar"] as const) {
+  for (const locale of ["en", "ar", "fr"] as const) {
     for (const viewport of COMPACT_VIEWPORTS) {
       test(`${locale} ${viewport.name} keeps Continue in the first viewport outside rise`, async ({
         page,
@@ -134,8 +171,15 @@ test.describe("apply ready Continue bar", () => {
         } else {
           expect(previous.x).toBeLessThan(continueBtn.x);
         }
+        const label = await measureContinueLabel(page);
+        expect(label).toBeTruthy();
+        expect(label?.aria).toBe(CONTINUE_FULL[locale]);
+        expect(label?.text).toBe(compactVisibleContinue(locale, viewport.width));
+        if (TRUNCATION_VIEWPORTS.has(viewport.name)) {
+          expect(label?.scrollWidth ?? 0).toBeLessThanOrEqual((label?.clientWidth ?? 0) + 1);
+        }
         await saveShot(page, `after-${locale}-${viewport.name}`);
-        if (REQUESTED_BAR_SHOTS.has(viewport.name)) {
+        if (REQUESTED_BAR_SHOTS.has(viewport.name) || (locale === "fr" && viewport.name.startsWith("390"))) {
           await saveShot(page, `bar-${locale}-${viewport.name}`);
         }
       });
@@ -144,15 +188,17 @@ test.describe("apply ready Continue bar", () => {
     for (const viewport of DESKTOP_VIEWPORTS) {
       test(`${locale} ${viewport.name} keeps Continue inline (not portaled)`, async ({ page }) => {
         await openReady(page, locale, viewport);
-        await expect(page.getByRole("button", { name: /i have these - continue|لديّ هذه المستندات/i })).toBeVisible({
+        await expect(page.getByRole("button", { name: CONTINUE_FULL[locale] })).toBeVisible({
           timeout: 10_000,
         });
         const metrics = await measureContinue(page);
         expect(metrics.hasBar).toBe(true);
         expect(metrics.portal).toBe(false);
         expect(metrics.inRise).toBe(true);
+        const inlineLabel = page.locator("[data-apply-sticky-cta] [data-apply-ready-continue-label]");
+        await expect(inlineLabel).toHaveText(CONTINUE_FULL[locale]);
         await saveShot(page, `after-${locale}-${viewport.name}`);
-        if (REQUESTED_DESKTOP_SHOTS.has(viewport.name)) {
+        if (REQUESTED_DESKTOP_SHOTS.has(viewport.name) && locale !== "fr") {
           await saveShot(page, `desktop-${locale}-${viewport.name}`);
         }
       });

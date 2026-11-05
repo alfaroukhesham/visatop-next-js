@@ -4,7 +4,7 @@ import { useEffect, useMemo, type FC } from "react";
 import { ShieldCheck } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ClientButton } from "@/components/client/client-button";
-import { useCustomerT } from "@/components/client/customer-i18n-provider";
+import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { tagClarityApplyScreen } from "@/lib/analytics/clarity-apply-screen";
 import { trackEventOnce } from "@/lib/analytics/gtag-client";
@@ -35,6 +35,7 @@ import {
   APPLY_STICKY_CTA_MEDIA_QUERY,
   ApplyReadyContinue,
   ApplyReadyPreviousButton,
+  compactContinueAlwaysShort,
 } from "@/components/apply/apply-ready-continue";
 import { useNarrowViewport } from "@/lib/client/use-narrow-viewport";
 import { ReadyDocumentAccordion, type TReadyDocumentIcon } from "./ready-document-accordion";
@@ -89,6 +90,7 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
   onSaved,
 }) => {
   const t = useCustomerT();
+  const locale = useCustomerLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const compactCta = useNarrowViewport(APPLY_STICKY_CTA_MEDIA_QUERY);
@@ -216,6 +218,8 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
         </ApplyReadyPreviousButton>
         <ApplyReadyContinue
           previousLabel={t("common.previous")}
+          compactShortLabel={t("common.continue")}
+          compactAlwaysShort={compactContinueAlwaysShort(locale)}
           onPrevious={() => router.push(tripHref)}
           onClick={() => void confirmAndGo({ screen: "ready", travellerId: null })}
         >

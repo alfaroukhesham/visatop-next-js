@@ -9,9 +9,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApplyJumpAheadProvider, useApplyJumpAhead } from "./apply-jump-ahead";
 import {
   APPLY_READY_CONTINUE_INLINE_CLASS,
+  APPLY_READY_CONTINUE_SHORT_MEDIA_QUERY,
   APPLY_READY_PREVIOUS_CLASS,
   APPLY_STICKY_CTA_MEDIA_QUERY,
   ApplyReadyContinue,
+  compactContinueAlwaysShort,
+  compactContinueShowsShortLabel,
 } from "./apply-ready-continue";
 
 const wrap = (ui: ReactElement) =>
@@ -21,12 +24,22 @@ const wrap = (ui: ReactElement) =>
     </div>,
   );
 
-const installMatchMedia = (matches: boolean) => {
+const installMatchMedia = (matchesOrWidth: boolean | number) => {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     writable: true,
-    value: (query: string) =>
-      ({
+    value: (query: string) => {
+      const max = query.match(/max-width:\s*(\d+)/);
+      const min = query.match(/min-width:\s*(\d+)/);
+      const matches =
+        typeof matchesOrWidth === "boolean"
+          ? matchesOrWidth
+          : max
+            ? matchesOrWidth <= Number(max[1])
+            : min
+              ? matchesOrWidth >= Number(min[1])
+              : false;
+      return {
         matches,
         media: query,
         onchange: null,
@@ -35,7 +48,8 @@ const installMatchMedia = (matches: boolean) => {
         addListener: () => undefined,
         removeListener: () => undefined,
         dispatchEvent: () => true,
-      }) as MediaQueryList,
+      } as MediaQueryList;
+    },
   });
 };
 
@@ -130,11 +144,71 @@ describe("ApplyReadyContinue compact (<=1024px)", () => {
     expect(continueBtn).toHaveClass("normal-case");
     expect(continueBtn).toHaveClass("!bg-primary");
     expect(previous.parentElement?.className).toMatch(/flex-1/);
-    expect(continueBtn.parentElement?.className).toMatch(/flex-\[1\.75\]/);
+    expect(continueBtn.parentElement?.className).toMatch(/flex-\[2\]/);
   });
 
   it("uses the compact media query inclusive of 1024px", () => {
     expect(APPLY_STICKY_CTA_MEDIA_QUERY).toBe("(max-width: 1024px)");
+    expect(APPLY_READY_CONTINUE_SHORT_MEDIA_QUERY).toBe("(max-width: 359px)");
+    expect(compactContinueAlwaysShort("fr")).toBe(true);
+    expect(compactContinueAlwaysShort("en")).toBe(false);
+    expect(compactContinueAlwaysShort("ar")).toBe(false);
+    expect(compactContinueShowsShortLabel(false, false)).toBe(false);
+    expect(compactContinueShowsShortLabel(false, true)).toBe(true);
+    expect(compactContinueShowsShortLabel(true, false)).toBe(true);
+  });
+
+  it("shows the short Continue label below 360px and keeps the full accessible name", () => {
+    installMatchMedia(320);
+    wrap(
+      <ApplyReadyContinue
+        previousLabel="Previous"
+        compactShortLabel="Continue"
+        onPrevious={() => undefined}
+        onClick={() => undefined}
+      >
+        I have these - Continue
+      </ApplyReadyContinue>,
+    );
+    const continueBtn = screen.getByRole("button", { name: "I have these - Continue" });
+    expect(continueBtn).toHaveAttribute("aria-label", "I have these - Continue");
+    expect(continueBtn.querySelector("[data-apply-ready-continue-label]")?.textContent).toBe("Continue");
+  });
+
+  it("keeps the full Continue label in the compact bar at 360px+", () => {
+    installMatchMedia(360);
+    wrap(
+      <ApplyReadyContinue
+        previousLabel="Previous"
+        compactShortLabel="Continue"
+        onPrevious={() => undefined}
+        onClick={() => undefined}
+      >
+        I have these - Continue
+      </ApplyReadyContinue>,
+    );
+    const continueBtn = screen.getByRole("button", { name: "I have these - Continue" });
+    expect(continueBtn.querySelector("[data-apply-ready-continue-label]")?.textContent).toBe(
+      "I have these - Continue",
+    );
+  });
+
+  it("always uses the short French Continue label in the compact bar", () => {
+    installMatchMedia(440);
+    wrap(
+      <ApplyReadyContinue
+        previousLabel="Précédent"
+        compactShortLabel="Continuer"
+        compactAlwaysShort
+        onPrevious={() => undefined}
+        onClick={() => undefined}
+      >
+        {"J'ai ces documents - Continuer"}
+      </ApplyReadyContinue>,
+    );
+    const continueBtn = screen.getByRole("button", { name: "J'ai ces documents - Continuer" });
+    expect(continueBtn).toHaveAttribute("aria-label", "J'ai ces documents - Continuer");
+    expect(continueBtn.querySelector("[data-apply-ready-continue-label]")?.textContent).toBe("Continuer");
   });
 });
 
@@ -159,6 +233,8 @@ describe("sticky Continue CSS contracts", () => {
     );
     expect(wizard).toMatch(/docsReadyViewed/);
     expect(wizard).toMatch(/wizard\.continueWithDocuments/);
+    expect(wizard).toMatch(/compactShortLabel/);
+    expect(wizard).toMatch(/common\.continue/);
     expect(wizard).toMatch(/ApplyReadyPreviousButton/);
     expect(wizard).toMatch(/previousLabel/);
     expect(wizard).toMatch(/data-apply-ready-section/);
