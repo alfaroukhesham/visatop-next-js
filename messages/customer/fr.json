@@ -304,6 +304,8 @@
     "referenceLabel": "Référence",
     "continue": "Continuer",
     "viewStatus": "Voir le statut",
+    "speakWithLiveSupport": "Parler au support en direct",
+    "liveSupportPrefill": "Bonjour, j’ai besoin d’aide pour ma demande VisaTop (réf. {reference}).",
     "loadingMore": "Chargement de demandes supplémentaires…",
     "loadMore": "Charger plus",
     "guestLookupFooter": "Pour téléverser des documents ou payer, ouvrez la demande depuis le même navigateur que celui utilisé au départ, ou connectez-vous si vous l'avez associée à votre compte.",

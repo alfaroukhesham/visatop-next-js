@@ -304,6 +304,8 @@
     "referenceLabel": "Reference",
     "continue": "Continue",
     "viewStatus": "View status",
+    "speakWithLiveSupport": "Speak with live support",
+    "liveSupportPrefill": "Hi, I need help with my VisaTop application (ref {reference}).",
     "loadingMore": "Loading more applications…",
     "loadMore": "Load more",
     "guestLookupFooter": "To upload documents or pay, open the application from the same browser you started with, or sign in if you linked it to your account.",

@@ -304,6 +304,8 @@
     "referenceLabel": "संदर्भ",
     "continue": "जारी रखें",
     "viewStatus": "स्थिति देखें",
+    "speakWithLiveSupport": "लाइव सपोर्ट से बात करें",
+    "liveSupportPrefill": "नमस्ते, मुझे अपने VisaTop आवेदन (संदर्भ {reference}) में मदद चाहिए।",
     "loadingMore": "और आवेदन लोड हो रहे हैं…",
     "loadMore": "और लोड करें",
     "guestLookupFooter": "दस्तावेज़ अपलोड या भुगतान के लिए, उसी ब्राउज़र से आवेदन खोलें जिससे शुरू किया था, या यदि खाते से जोड़ा है तो साइन इन करें।",

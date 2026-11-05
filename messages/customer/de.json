@@ -304,6 +304,8 @@
     "referenceLabel": "Referenz",
     "continue": "Weiter",
     "viewStatus": "Status anzeigen",
+    "speakWithLiveSupport": "Mit dem Live-Support sprechen",
+    "liveSupportPrefill": "Hallo, ich brauche Hilfe zu meinem VisaTop-Antrag (Ref. {reference}).",
     "loadingMore": "Weitere Anträge werden geladen…",
     "loadMore": "Mehr laden",
     "guestLookupFooter": "Um Dokumente hochzuladen oder zu bezahlen, öffnen Sie den Antrag im selben Browser, mit dem Sie gestartet haben, oder melden Sie sich an, falls Sie ihn mit Ihrem Konto verknüpft haben.",

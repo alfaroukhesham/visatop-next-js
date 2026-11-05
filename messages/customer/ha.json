@@ -304,6 +304,8 @@
     "referenceLabel": "Lambar nema",
     "continue": "Ci gaba",
     "viewStatus": "Duba matsayi",
+    "speakWithLiveSupport": "Yi magana da tallafi kai tsaye",
+    "liveSupportPrefill": "Sannu, ina bukatar taimako game da neman VisaTop na (ref {reference}).",
     "loadingMore": "Ana lodawa ƙarin nema…",
     "loadMore": "Loda ƙarin",
     "guestLookupFooter": "Don loda takardu ko biya, buɗe nema daga wannan burauzar da kuka fara da ita, ko shiga idan kun haɗa shi da asusun ku.",

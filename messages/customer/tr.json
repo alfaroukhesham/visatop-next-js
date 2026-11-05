@@ -304,6 +304,8 @@
     "referenceLabel": "Referans",
     "continue": "Devam et",
     "viewStatus": "Durumu görüntüle",
+    "speakWithLiveSupport": "Canlı destekle konuş",
+    "liveSupportPrefill": "Merhaba, VisaTop başvurum hakkında yardıma ihtiyacım var (ref {reference}).",
     "loadingMore": "Daha fazla başvuru yükleniyor…",
     "loadMore": "Daha fazla yükle",
     "guestLookupFooter": "Belge yüklemek veya ödeme yapmak için başvuruyu başladığınız tarayıcıdan açın veya hesabınıza bağladıysanız giriş yapın.",
