@@ -1,8 +1,20 @@
 import type { FincraFeeBearer } from "@/lib/payments/resolve-payment-provider";
 import { fincraMinorToMajorNumber } from "@/lib/payments/fincra-amounts";
+import { publicAsset } from "@/lib/app-href";
 
-export const FINCRA_INLINE_SCRIPT_SRC =
+/**
+ * Self-hosted Fincra Checkout Standard widget.
+ * Version: @fincra-engineering/checkout@2.2.0
+ * Source: https://unpkg.com/@fincra-engineering/checkout@2.2.0/dist/inline.min.js
+ * sha256: af34945fc7e2a0318a268aca741947d2826fb47e8ec45a40b04f2a8e398a080f
+ */
+export const FINCRA_INLINE_WIDGET_VERSION = "2.2.0";
+export const FINCRA_INLINE_WIDGET_SOURCE_URL =
   "https://unpkg.com/@fincra-engineering/checkout@2.2.0/dist/inline.min.js";
+export const FINCRA_INLINE_WIDGET_SHA256 =
+  "af34945fc7e2a0318a268aca741947d2826fb47e8ec45a40b04f2a8e398a080f";
+export const FINCRA_INLINE_SCRIPT_PATH = "/vendor/fincra-checkout-2.2.0/inline.min.js";
+export const FINCRA_INLINE_SCRIPT_SRC = publicAsset(FINCRA_INLINE_SCRIPT_PATH);
 
 export type TFincraInlineCustomer = {
   name: string;

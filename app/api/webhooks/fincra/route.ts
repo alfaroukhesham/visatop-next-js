@@ -176,6 +176,8 @@ const postFincraWebhook = async (req: Request) => {
         verified,
         payment: payForAmount,
         merchantReference,
+        alreadyPaid: payForAmount.status === "paid",
+        settledMerchantReference: payForAmount.settledMerchantReference,
       });
 
       const normalized = {

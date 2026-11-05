@@ -18,6 +18,7 @@ import { AdminApplicationLastStepLive } from "@/components/admin/admin-applicati
 import { ProfileRow, StatusBadge } from "@/components/admin/admin-application-detail-parts";
 import type { TAdminTraveller } from "@/lib/admin/load-application-travellers";
 import type { TAdminLastStepView } from "@/lib/applications/application-last-step";
+import { formatFincraAdminAttentionBanner } from "@/lib/payments/fincra-admin-attention";
 
 type ApplicationDetail = {
   id: string;
@@ -26,6 +27,8 @@ type ApplicationDetail = {
   paymentStatus: string;
   fulfillmentStatus: string;
   adminAttentionRequired: boolean | null;
+  adminAttentionReason?: string | null;
+  adminAttentionDetails?: unknown;
   nationalityCode: string | null;
   isGuest: boolean;
   guestEmail: string | null;
@@ -101,10 +104,18 @@ export function AdminApplicationDetailView({
           <div className="border-2 border-destructive bg-destructive/5 p-4 flex items-center gap-3 animate-pulse">
             <AlertTriangle className="text-destructive size-6 shrink-0" />
             <div>
-              <p className="font-bold text-destructive">Manual Intervention Required</p>
-              <p className="text-sm text-destructive/80">
-                This application was flagged by the system ,  check the audit log for details.
-              </p>
+              {(() => {
+                const banner = formatFincraAdminAttentionBanner({
+                  reason: app.adminAttentionReason,
+                  details: app.adminAttentionDetails,
+                });
+                return (
+                  <>
+                    <p className="font-bold text-destructive">{banner.title}</p>
+                    <p className="text-sm text-destructive/80">{banner.body}</p>
+                  </>
+                );
+              })()}
             </div>
             <div className="ml-auto">
               <ApplicationActions applicationId={app.id} hasAttention={!!app.adminAttentionRequired} />

@@ -89,7 +89,7 @@ export const FincraInlineCheckout: FC<IFincraInlineCheckoutProps> = ({
     if (!res.ok || !envelope.ok || !envelope.data) {
       throw new Error(checkoutErrorToUserMessage(envelope.error, tRef.current));
     }
-    return envelope.data;
+    return envelope.data as TFincraInlineCheckoutData | { provider?: string; mode?: string; redirectUrl?: string };
   }, []);
 
   const fallbackToHosted = useCallback(async () => {
@@ -98,6 +98,10 @@ export const FincraInlineCheckout: FC<IFincraInlineCheckoutProps> = ({
     setPreparing(true);
     try {
       const data = await postCheckout("hosted");
+      if ("mode" in data && data.mode === "paid") {
+        onCompletedRef.current();
+        return;
+      }
       const redirectUrl = "redirectUrl" in data ? data.redirectUrl : undefined;
       if (!redirectUrl) {
         throw new Error(tRef.current("checkout.errors.failedDot"));
@@ -155,6 +159,10 @@ export const FincraInlineCheckout: FC<IFincraInlineCheckoutProps> = ({
     setClosed(false);
     try {
       const data = await postCheckout();
+      if ("mode" in data && data.mode === "paid") {
+        onCompletedRef.current();
+        return;
+      }
       if ("mode" in data && data.mode === "hosted" && "redirectUrl" in data && data.redirectUrl) {
         onHostedRedirectRef.current(data.redirectUrl);
         return;

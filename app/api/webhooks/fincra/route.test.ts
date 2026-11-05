@@ -102,6 +102,7 @@ describe("POST /api/webhooks/fincra", () => {
       amountMinor: BigInt(18_500_000),
       amountReceivedMinor: BigInt(18_500_000),
       amountExpectedMinor: BigInt(18_500_000),
+      amountToSettleMinor: BigInt(18_499_699),
       varianceType: null,
       message: null,
       merchantReference: "pay_1",
@@ -169,6 +170,7 @@ describe("POST /api/webhooks/fincra", () => {
       amountMinor: BigInt(18_500_000),
       amountReceivedMinor: BigInt(18_500_000),
       amountExpectedMinor: BigInt(18_500_000),
+      amountToSettleMinor: BigInt(18_499_699),
       varianceType: null,
       message: null,
       merchantReference: "pay_1-a2",
@@ -232,6 +234,7 @@ describe("POST /api/webhooks/fincra", () => {
       amountMinor: BigInt(7300),
       amountReceivedMinor: BigInt(7300),
       amountExpectedMinor: BigInt(18_500_000),
+      amountToSettleMinor: null,
       varianceType: "underpayment",
       message: "INCORRECT_AMOUNT",
       merchantReference: "pay_1",
@@ -249,7 +252,7 @@ describe("POST /api/webhooks/fincra", () => {
     expect(res.status).toBe(200);
     const decision = processMock.mock.calls[0]![1].decision;
     expect(decision.kind).toBe("mismatch");
-    expect(decision.reason).toBe("amount_mismatch");
+    expect(decision.reason).toBe("variance_underpayment");
     expect(sideEffectsMock).not.toHaveBeenCalled();
   });
 
@@ -266,6 +269,7 @@ describe("POST /api/webhooks/fincra", () => {
       amountMinor: BigInt(18_500_000),
       amountReceivedMinor: BigInt(18_500_000),
       amountExpectedMinor: BigInt(18_500_000),
+      amountToSettleMinor: BigInt(18_499_699),
       varianceType: null,
       message: null,
       merchantReference: "pay_1",

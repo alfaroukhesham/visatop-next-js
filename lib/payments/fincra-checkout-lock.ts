@@ -27,10 +27,9 @@ export const isFincraOpenPaymentUnprovisioned = (providerCheckoutId: string | nu
   !(providerCheckoutId ?? "").trim();
 
 /**
- * 409 self-heal: a hosted Fincra row that never received a pay code (provider
- * create failed) or that has gone stale should not block a clean retry.
- * Inline checkouts never get a pay code, so missing `providerCheckoutId` is
- * not treated as failed unless `treatMissingPayCodeAsFailed` is true.
+ * Candidate for hosted self-heal (missing pay code or older than the local
+ * stale window). Callers MUST verify every stored merchant reference before
+ * abandoning; a pending bank transfer stays open.
  */
 export const shouldSelfHealFincraOpenPayment = (
   payRow: TFincraOpenPaymentLock,

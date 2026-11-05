@@ -29,7 +29,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return jsonError("UNAUTHORIZED", "Cannot access application", { status, requestId });
   }
 
-  const result = await withSystemDbActor(async (tx) => {
+  const loaded = await withSystemDbActor(async (tx) => {
     const [appRow] = await tx
       .select()
       .from(applicationTable)
@@ -43,19 +43,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
     const fincraPay = await findOpenFincraPaymentForApplication(tx, applicationId);
     if (fincraPay) {
-      const attempt = await reconcileFincraPaymentFromReturn(tx, fincraPay, requestId);
-      const [updatedApp] = await tx
-        .select()
-        .from(applicationTable)
-        .where(eq(applicationTable.id, applicationId))
-        .limit(1);
-      return {
-        kind: "done" as const,
-        provider: "fincra" as const,
-        application: updatedApp ?? appRow,
-        attempt: { outcome: attempt.outcome, status: attempt.fincraStatus },
-        firstPaidApplicationId: attempt.process?.firstPaidApplicationId ?? null,
-      };
+      return { kind: "fincra_open" as const, application: appRow, fincraPay };
     }
 
     if (getActivePaymentProvider() !== "ziina") {
@@ -74,56 +62,77 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       .where(eq(applicationTable.id, applicationId))
       .limit(1);
     return {
-      kind: "done" as const,
-      provider: "ziina" as const,
+      kind: "ziina_done" as const,
       application: updatedApp ?? appRow,
       attempt: { outcome: attempt.outcome, status: attempt.ziinaStatus },
       firstPaidApplicationId: attempt.process?.firstPaidApplicationId ?? null,
     };
   });
 
-  if (result.kind === "not_found") {
+  if (loaded.kind === "not_found") {
     return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
   }
 
-  if (result.kind === "already_paid") {
+  if (loaded.kind === "already_paid") {
     return jsonOk(
       {
         reconciled: true,
         alreadyPaid: true,
-        application: toPublicApplication(result.application, undefined, t),
+        application: toPublicApplication(loaded.application, undefined, t),
       },
       { requestId },
     );
   }
 
-  if (result.kind === "no_checkout") {
+  if (loaded.kind === "no_checkout") {
     return jsonOk(
       {
         reconciled: false,
         reason: "no_open_checkout",
-        application: toPublicApplication(result.application, undefined, t),
+        application: toPublicApplication(loaded.application, undefined, t),
       },
       { requestId },
     );
   }
 
-  if (result.firstPaidApplicationId) {
-    if (result.provider === "fincra") {
-      scheduleFincraPaidSideEffects(result.firstPaidApplicationId, requestId);
-    } else {
-      scheduleZiinaPaidSideEffects(result.firstPaidApplicationId, requestId);
+  if (loaded.kind === "fincra_open") {
+    const attempt = await reconcileFincraPaymentFromReturn(loaded.fincraPay, requestId);
+    const updatedApp = await withSystemDbActor(async (tx) => {
+      const [app] = await tx
+        .select()
+        .from(applicationTable)
+        .where(eq(applicationTable.id, applicationId))
+        .limit(1);
+      return app ?? loaded.application;
+    });
+    if (attempt.process?.firstPaidApplicationId) {
+      scheduleFincraPaidSideEffects(attempt.process.firstPaidApplicationId, requestId);
     }
+    return jsonOk(
+      {
+        reconciled: attempt.outcome === "applied" && Boolean(attempt.process?.firstPaidApplicationId),
+        attempt: {
+          outcome: attempt.outcome,
+          providerStatus: attempt.fincraStatus,
+        },
+        application: toPublicApplication(updatedApp, undefined, t),
+      },
+      { requestId },
+    );
+  }
+
+  if (loaded.firstPaidApplicationId) {
+    scheduleZiinaPaidSideEffects(loaded.firstPaidApplicationId, requestId);
   }
 
   return jsonOk(
     {
-      reconciled: result.attempt.outcome === "applied" && Boolean(result.firstPaidApplicationId),
+      reconciled: loaded.attempt.outcome === "applied" && Boolean(loaded.firstPaidApplicationId),
       attempt: {
-        outcome: result.attempt.outcome,
-        providerStatus: result.attempt.status,
+        outcome: loaded.attempt.outcome,
+        providerStatus: loaded.attempt.status,
       },
-      application: toPublicApplication(result.application, undefined, t),
+      application: toPublicApplication(loaded.application, undefined, t),
     },
     { requestId },
   );

@@ -20,12 +20,14 @@ export const GET = async (req: Request, ctx: { params: Promise<{ id: string }> }
     return jsonError("UNAUTHORIZED", "Cannot access application", { status, requestId });
   }
 
-  const resolved = await withSystemDbActor(async (tx) => {
-    const fincra = await resolveFincraCheckoutSession(tx, applicationId, requestId);
-    if (fincra.session.kind !== "none") return { source: "fincra" as const, ...fincra };
-    const ziina = await resolveZiinaCheckoutSession(tx, applicationId, requestId);
-    return { source: "ziina" as const, ...ziina };
-  });
+  const fincra = await resolveFincraCheckoutSession(applicationId, requestId);
+  const resolved =
+    fincra.session.kind !== "none"
+      ? { source: "fincra" as const, ...fincra }
+      : {
+          source: "ziina" as const,
+          ...(await withSystemDbActor(async (tx) => resolveZiinaCheckoutSession(tx, applicationId, requestId))),
+        };
   if (resolved.firstPaidApplicationId) {
     if (resolved.source === "fincra") {
       scheduleFincraPaidSideEffects(resolved.firstPaidApplicationId, requestId);
