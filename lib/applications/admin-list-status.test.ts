@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatAdminListStatus,
+  isAdminListCheckoutCreatedAttempt,
   resolveAdminListPaymentStatus,
 } from "./admin-list-status";
 
@@ -21,16 +22,16 @@ describe("formatAdminListStatus", () => {
 });
 
 describe("resolveAdminListPaymentStatus", () => {
-  it("keeps paid even if an older checkout_created payment exists", () => {
+  it("Ziina open: still checkout_created", () => {
     expect(
       resolveAdminListPaymentStatus({
-        applicationPaymentStatus: "paid",
+        applicationPaymentStatus: "checkout_created",
         latestPaymentStatus: "checkout_created",
       }),
-    ).toBe("paid");
+    ).toBe("checkout_created");
   });
 
-  it("surfaces unpaid Fincra checkouts as checkout_created from the payment row", () => {
+  it("Fincra open: latest payment checkout_created overlays unpaid app", () => {
     expect(
       resolveAdminListPaymentStatus({
         applicationPaymentStatus: "unpaid",
@@ -39,13 +40,17 @@ describe("resolveAdminListPaymentStatus", () => {
     ).toBe("checkout_created");
   });
 
-  it("uses the application payment status when no open checkout exists", () => {
+  it("Fincra expired-abandoned: app unpaid, payment failed/expired → checkout_created", () => {
     expect(
       resolveAdminListPaymentStatus({
         applicationPaymentStatus: "unpaid",
         latestPaymentStatus: "failed",
+        latestPaymentFailureCode: "expired",
       }),
-    ).toBe("unpaid");
+    ).toBe("checkout_created");
+  });
+
+  it("no payment: Unpaid", () => {
     expect(
       resolveAdminListPaymentStatus({
         applicationPaymentStatus: "unpaid",
@@ -54,12 +59,81 @@ describe("resolveAdminListPaymentStatus", () => {
     ).toBe("unpaid");
   });
 
-  it("keeps checkout_created when both rows already agree", () => {
+  it("paid stays paid even if an open checkout payment exists", () => {
     expect(
       resolveAdminListPaymentStatus({
+        applicationPaymentStatus: "paid",
+        latestPaymentStatus: "checkout_created",
+      }),
+    ).toBe("paid");
+  });
+
+  it("paid stays paid even if an older expired payment exists", () => {
+    expect(
+      resolveAdminListPaymentStatus({
+        applicationPaymentStatus: "paid",
+        latestPaymentStatus: "failed",
+        latestPaymentFailureCode: "expired",
+      }),
+    ).toBe("paid");
+  });
+
+  it("keeps a distinguishable card decline as failed", () => {
+    expect(
+      resolveAdminListPaymentStatus({
+        applicationPaymentStatus: "unpaid",
+        latestPaymentStatus: "failed",
+        latestPaymentFailureCode: "card_declined",
+      }),
+    ).toBe("failed");
+  });
+
+  it("treats a generic failed checkout attempt as checkout_created", () => {
+    expect(
+      resolveAdminListPaymentStatus({
+        applicationPaymentStatus: "unpaid",
+        latestPaymentStatus: "failed",
+        latestPaymentFailureCode: "failed",
+      }),
+    ).toBe("checkout_created");
+  });
+});
+
+describe("isAdminListCheckoutCreatedAttempt (Payment status filter)", () => {
+  it("includes Ziina open, Fincra open, and Fincra expired-abandoned", () => {
+    expect(
+      isAdminListCheckoutCreatedAttempt({
         applicationPaymentStatus: "checkout_created",
         latestPaymentStatus: "checkout_created",
       }),
-    ).toBe("checkout_created");
+    ).toBe(true);
+    expect(
+      isAdminListCheckoutCreatedAttempt({
+        applicationPaymentStatus: "unpaid",
+        latestPaymentStatus: "checkout_created",
+      }),
+    ).toBe(true);
+    expect(
+      isAdminListCheckoutCreatedAttempt({
+        applicationPaymentStatus: "unpaid",
+        latestPaymentStatus: "failed",
+        latestPaymentFailureCode: "expired",
+      }),
+    ).toBe(true);
+  });
+
+  it("excludes unpaid with no payment and paid applications", () => {
+    expect(
+      isAdminListCheckoutCreatedAttempt({
+        applicationPaymentStatus: "unpaid",
+        latestPaymentStatus: null,
+      }),
+    ).toBe(false);
+    expect(
+      isAdminListCheckoutCreatedAttempt({
+        applicationPaymentStatus: "paid",
+        latestPaymentStatus: "paid",
+      }),
+    ).toBe(false);
   });
 });

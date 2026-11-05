@@ -1,7 +1,11 @@
-import { and, desc, eq, exists, ilike, inArray, not, or, count } from "drizzle-orm";
+import { and, desc, eq, exists, ilike, inArray, not, notInArray, or, sql, count } from "drizzle-orm";
 import { type DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { resolveAdminListPaymentStatus } from "@/lib/applications/admin-list-status";
+import {
+  ADMIN_LIST_CARD_FAILURE_CODES,
+  ADMIN_LIST_SETTLED_PAYMENT_STATUSES,
+  resolveAdminListPaymentStatus,
+} from "@/lib/applications/admin-list-status";
 
 export type AdminListParams = {
   attention?: boolean;
@@ -27,25 +31,45 @@ export async function listAdminApplications(
     conditions.push(eq(schema.application.applicationStatus, params.status));
   }
 
-  const openCheckoutPayment = exists(
+  // Keep this EXISTS in sync with `isAdminListCheckoutCreatedAttempt`.
+  const settledStatuses = [...ADMIN_LIST_SETTLED_PAYMENT_STATUSES];
+  const cardFailureCodes = [...ADMIN_LIST_CARD_FAILURE_CODES];
+  const checkoutCreatedAttempt = exists(
     tx
       .select({ id: schema.payment.id })
       .from(schema.payment)
       .where(
         and(
           eq(schema.payment.applicationId, schema.application.id),
-          eq(schema.payment.status, "checkout_created"),
+          sql`${schema.payment.id} = (
+            select p2.id from payment p2
+            where p2.application_id = ${schema.application.id}
+            order by p2.created_at desc
+            limit 1
+          )`,
+          notInArray(schema.payment.status, settledStatuses),
+          sql`not (
+            ${schema.payment.status} = 'failed'
+            and lower(coalesce(${schema.payment.failureCode}, '')) in (${sql.join(
+              cardFailureCodes.map((code) => sql`${code}`),
+              sql`, `,
+            )})
+          )`,
         ),
       ),
   );
+  const listCheckoutCreated = sql`(
+    ${notInArray(schema.application.paymentStatus, settledStatuses)}
+    and ${checkoutCreatedAttempt}
+  )`;
 
   if (params.paymentStatus === "checkout_created") {
     conditions.push(
-      or(eq(schema.application.paymentStatus, "checkout_created"), openCheckoutPayment),
+      or(eq(schema.application.paymentStatus, "checkout_created"), listCheckoutCreated),
     );
   } else if (params.paymentStatus === "unpaid") {
     conditions.push(
-      and(eq(schema.application.paymentStatus, "unpaid"), not(openCheckoutPayment)),
+      and(eq(schema.application.paymentStatus, "unpaid"), not(listCheckoutCreated)),
     );
   } else if (params.paymentStatus) {
     conditions.push(eq(schema.application.paymentStatus, params.paymentStatus));
@@ -104,35 +128,46 @@ export async function listAdminApplications(
   }
 
   const applicationIds = rows.map((r) => r.application.id);
-  const latestPaymentStatusByApplicationId = new Map<string, string>();
+  const latestPaymentByApplicationId = new Map<
+    string,
+    { status: string; failureCode: string | null }
+  >();
   if (applicationIds.length > 0) {
     const paymentRows = await tx
       .select({
         applicationId: schema.payment.applicationId,
         status: schema.payment.status,
+        failureCode: schema.payment.failureCode,
       })
       .from(schema.payment)
       .where(inArray(schema.payment.applicationId, applicationIds))
       .orderBy(desc(schema.payment.createdAt));
     for (const paymentRow of paymentRows) {
-      if (!latestPaymentStatusByApplicationId.has(paymentRow.applicationId)) {
-        latestPaymentStatusByApplicationId.set(paymentRow.applicationId, paymentRow.status);
+      if (!latestPaymentByApplicationId.has(paymentRow.applicationId)) {
+        latestPaymentByApplicationId.set(paymentRow.applicationId, {
+          status: paymentRow.status,
+          failureCode: paymentRow.failureCode,
+        });
       }
     }
   }
 
   return {
-    items: rows.map((row) => ({
-      ...row.application,
-      paymentStatus: resolveAdminListPaymentStatus({
-        applicationPaymentStatus: row.application.paymentStatus,
-        latestPaymentStatus: latestPaymentStatusByApplicationId.get(row.application.id) ?? null,
-      }),
-      serviceName: row.serviceName,
-      partyMemberCount: row.application.partyId
-        ? (partyCounts.get(row.application.partyId) ?? 1)
-        : 1,
-    })),
+    items: rows.map((row) => {
+      const latestPayment = latestPaymentByApplicationId.get(row.application.id);
+      return {
+        ...row.application,
+        paymentStatus: resolveAdminListPaymentStatus({
+          applicationPaymentStatus: row.application.paymentStatus,
+          latestPaymentStatus: latestPayment?.status ?? null,
+          latestPaymentFailureCode: latestPayment?.failureCode ?? null,
+        }),
+        serviceName: row.serviceName,
+        partyMemberCount: row.application.partyId
+          ? (partyCounts.get(row.application.partyId) ?? 1)
+          : 1,
+      };
+    }),
     total: totalResult.value,
   };
 }
