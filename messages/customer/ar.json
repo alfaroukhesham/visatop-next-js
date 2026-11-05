@@ -304,6 +304,8 @@
     "referenceLabel": "المرجع",
     "continue": "متابعة",
     "viewStatus": "عرض الحالة",
+    "speakWithLiveSupport": "تحدث مع الدعم المباشر",
+    "liveSupportPrefill": "مرحباً، أحتاج مساعدة بخصوص طلب VisaTop (المرجع {reference}).",
     "loadingMore": "جارٍ تحميل المزيد من الطلبات…",
     "loadMore": "تحميل المزيد",
     "guestLookupFooter": "لرفع المستندات أو الدفع، افتح الطلب من نفس المتصفح الذي بدأت منه، أو سجّل الدخول إذا ربطته بحسابك.",

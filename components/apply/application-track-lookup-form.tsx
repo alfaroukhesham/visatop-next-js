@@ -1,17 +1,21 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type FC } from "react";
 import { Loader2 } from "lucide-react";
 import { ClientButton, ClientButtonLink } from "@/components/client/client-button";
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
+import { buttonVariants } from "@/components/ui/button-variants";
 import { nationalityLabelWithFlag } from "@/lib/apply/display-names";
 import { apiHref } from "@/lib/app-href";
+import { gtagCommand } from "@/lib/analytics/gtag-client";
 import type { ClientApplicationTracking } from "@/lib/applications/user-facing-tracking";
 import { ApplicationClientTracking } from "@/components/apply/application-client-tracking";
 import { ClientInlineLoading, ClientTrackListSkeleton } from "@/components/client/client-loading";
 import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
+import { buildWhatsAppUrl } from "@/lib/support-contact";
+import { cn } from "@/lib/utils";
 
 type TrackApplicationRow = {
   applicationId: string;
@@ -34,6 +38,35 @@ type TrackOk = {
 type TrackErr = {
   ok: false;
   error?: { message?: string; code?: string };
+};
+
+interface ITrackLiveSupportLinkProps {
+  referenceDisplay: string;
+}
+
+const handleTrackLiveSupportClick = () => {
+  gtagCommand("event", "whatsapp_lp_click", {
+    event_category: "ads_lp",
+    event_label: "chat_with_expert",
+  });
+};
+
+const TrackLiveSupportLink: FC<ITrackLiveSupportLinkProps> = ({ referenceDisplay }) => {
+  const t = useCustomerT();
+  return (
+    <a
+      href={buildWhatsAppUrl(t("track.liveSupportPrefill", { reference: referenceDisplay }))}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={handleTrackLiveSupportClick}
+      className={cn(
+        buttonVariants({ variant: "outline", size: "sm" }),
+        "inline-flex h-9 items-center justify-center px-4 text-xs font-semibold",
+      )}
+    >
+      {t("track.speakWithLiveSupport")}
+    </a>
+  );
 };
 
 export function ApplicationTrackLookupForm() {
@@ -166,14 +199,7 @@ export function ApplicationTrackLookupForm() {
                           {t("track.continue")}
                         </ClientButtonLink>
                       ) : row.paymentStatus === "paid" ? (
-                        <ClientButtonLink
-                          href={`/apply/applications/${encodeURIComponent(row.applicationId)}/submitted`}
-                          variant="outline"
-                          size="sm"
-                          className="h-9 px-4 text-xs font-semibold"
-                        >
-                          {t("track.viewStatus")}
-                        </ClientButtonLink>
+                        <TrackLiveSupportLink referenceDisplay={row.referenceDisplay} />
                       ) : null}
                     </div>
                   </div>
