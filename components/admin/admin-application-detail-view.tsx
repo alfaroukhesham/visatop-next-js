@@ -61,6 +61,12 @@ type AdminDocumentRow = {
   byteLength: number | null;
 };
 
+export type TAdminApplicationLastStepView = {
+  fieldLabel: string;
+  value: string;
+  secondary: string;
+};
+
 export function AdminApplicationDetailView({
   app,
   serviceLabel,
@@ -69,6 +75,7 @@ export function AdminApplicationDetailView({
   adminDocuments,
   travellers,
   selectedTravellerId,
+  lastStep,
 }: {
   app: ApplicationDetail;
   serviceLabel: string | null;
@@ -77,6 +84,7 @@ export function AdminApplicationDetailView({
   adminDocuments: AdminDocumentRow[];
   travellers: TAdminTraveller[];
   selectedTravellerId: string;
+  lastStep: TAdminApplicationLastStepView;
 }) {
   return (
     <AdminShell
@@ -127,6 +135,12 @@ export function AdminApplicationDetailView({
             <ProfileRow label="Guest Email" value={app.guestEmail} />
             <ProfileRow label="Admin ops step" value={app.adminOpsStep} />
             <ProfileRow label="Created" value={app.createdAt.toLocaleString()} />
+            <ProfileRow
+              label={lastStep.fieldLabel}
+              value={lastStep.value}
+              secondary={lastStep.secondary}
+              mono={false}
+            />
           </dl>
         </div>
 

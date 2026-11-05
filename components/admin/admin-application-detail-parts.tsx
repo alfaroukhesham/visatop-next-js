@@ -36,10 +36,12 @@ export function StatusBadge({ label, value }: { label: string; value: string }) 
 export function ProfileRow({
   label,
   value,
+  secondary,
   mono = true,
 }: {
   label: string;
   value: string | null | undefined;
+  secondary?: string | null;
   mono?: boolean;
 }) {
   return (
@@ -50,6 +52,9 @@ export function ProfileRow({
       <dd className={cn("mt-0.5 text-sm text-foreground", mono && "font-mono")}>
         {value ?? <span className="text-muted-foreground/50 italic">, </span>}
       </dd>
+      {secondary ? (
+        <dd className="mt-0.5 whitespace-pre-line text-xs text-muted-foreground">{secondary}</dd>
+      ) : null}
     </div>
   );
 }

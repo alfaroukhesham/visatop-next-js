@@ -16,7 +16,11 @@ import {
 } from "@/lib/analytics/admin-analytics-conversion";
 import { toDurationPercentiles } from "@/lib/analytics/admin-analytics-durations";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
-import { abandonStopFromCursor, type TApplyWizardScreen } from "@/lib/apply/apply-wizard";
+import {
+  APPLY_STOP_LABELS,
+  APPLY_STOP_SCREENS,
+  resolveAnalyticsStopScreen,
+} from "@/lib/applications/application-last-step";
 import {
   deltaPct,
   previousPeriod,
@@ -103,16 +107,6 @@ const paidKpiIdsInRange = (range: TInstantRange) => sql`
 
 const paidKpiCountInRange = (range: TInstantRange) =>
   sql<number>`cast((select count(*) from (${paidKpiIdsInRange(range)}) paid_ids) as int)`;
-
-const APPLY_STOP_SCREENS = ["ready", "passport", "other", "details", "pay"] as const;
-
-const APPLY_STOP_LABELS: Record<(typeof APPLY_STOP_SCREENS)[number], string> = {
-  ready: "What you'll need",
-  passport: "Passport",
-  other: "Other documents",
-  details: "Check your details",
-  pay: "Payment",
-};
 
 const mergeWeekly = (
   createdRows: { weekStart: string; n: number }[],
@@ -291,14 +285,11 @@ export const loadAdminAnalytics = async (
         ? new Date(lastPaidAtRaw).toISOString()
         : null;
 
-  const isWizardScreen = (value: string | null): value is TApplyWizardScreen =>
-    value === "ready" || value === "passport" || value === "other" || value === "details";
   const stopCounts = new Map<string, number>();
   for (const row of stopRows) {
-    const stop = abandonStopFromCursor({
-      cursor: isWizardScreen(row.screen)
-        ? { screen: row.screen, travellerId: row.travellerId }
-        : null,
+    const stop = resolveAnalyticsStopScreen({
+      cursorScreen: row.screen,
+      cursorTravellerId: row.travellerId,
       lastTravellerId: row.lastId,
     });
     stopCounts.set(stop, (stopCounts.get(stop) ?? 0) + 1);
