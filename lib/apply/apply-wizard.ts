@@ -167,13 +167,21 @@ export const applyWizardHref = (applicationId: string, screen: TResolvedApplyScr
   return `/apply/applications/${id}?${params.toString()}`;
 };
 
+/** Last trip-selection step (visa / duration / entry), never marketing home. */
+export const applyTripStepHref = (nationalityCode?: string | null): string | null => {
+  const code = nationalityCode?.trim().toUpperCase() ?? "";
+  if (!/^[A-Z]{2}$/.test(code)) return null;
+  return `/apply/start?nationality=${encodeURIComponent(code)}`;
+};
+
 export const applyPreviousHref = (
   applicationId: string,
   members: TApplyWizardMember[],
   current: TResolvedApplyScreen,
+  nationalityCode?: string | null,
 ): string => {
   const prev = previousApplyScreen(members, current);
-  if (prev.screen === "home") return "/";
+  if (prev.screen === "home") return applyTripStepHref(nationalityCode) ?? "/apply/start";
   return applyWizardHref(applicationId, prev);
 };
 

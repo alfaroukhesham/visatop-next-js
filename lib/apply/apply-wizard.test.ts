@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   abandonStopFromCursor,
   applyPreviousHref,
+  applyTripStepHref,
   applyWizardHref,
   cursorIsAhead,
   nextApplyScreen,
@@ -88,7 +89,33 @@ describe("resolveApplyScreen", () => {
   });
 });
 
+describe("applyTripStepHref", () => {
+  it("points at visa selection, never marketing home", () => {
+    expect(applyTripStepHref("IN")).toBe("/apply/start?nationality=IN");
+    expect(applyTripStepHref(" in ")).toBe("/apply/start?nationality=IN");
+    expect(applyTripStepHref("")).toBeNull();
+    expect(applyTripStepHref(null)).toBeNull();
+  });
+});
+
 describe("previousApplyScreen", () => {
+  it("sends ready back to the last trip step when nationality is known", () => {
+    const one: TApplyWizardMember[] = [{ applicationId: "a", hasPassport: false }];
+    expect(previousApplyScreen(one, { screen: "ready", travellerId: null })).toEqual({
+      screen: "home",
+      travellerId: null,
+    });
+    expect(applyPreviousHref("a", one, { screen: "ready", travellerId: null }, "IN")).toBe(
+      "/apply/start?nationality=IN",
+    );
+    expect(applyPreviousHref("a", one, { screen: "ready", travellerId: null }, "IN")).not.toBe("/");
+    expect(applyPreviousHref("a", one, { screen: "ready", travellerId: null }, "IN")).not.toContain(
+      "/visa-processing",
+    );
+    expect(applyPreviousHref("a", one, { screen: "ready", travellerId: null })).toBe("/apply/start");
+    expect(applyPreviousHref("a", one, { screen: "ready", travellerId: null })).not.toBe("/");
+  });
+
   it("sends payment back to details, not the bare application url", () => {
     const one: TApplyWizardMember[] = [{ applicationId: "a", hasPassport: true }];
     expect(previousApplyScreen(one, { screen: "payment", travellerId: null })).toEqual({

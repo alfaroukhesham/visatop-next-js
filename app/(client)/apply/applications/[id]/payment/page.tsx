@@ -11,6 +11,7 @@ import { paymentPanelMayShow } from "@/lib/applications/payment-panel-may-show";
 import { toPublicApplication } from "@/lib/applications/public-application";
 import { CUSTOMER_LOCALE_COOKIE, parseCustomerLocale } from "@/lib/i18n/customer-locale";
 import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
+import { applyTripStepHref } from "@/lib/apply/apply-wizard";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 
 interface IApplyApplicationPaymentPageProps {
@@ -46,6 +47,7 @@ const ApplyApplicationPaymentPage = async ({ params }: IApplyApplicationPaymentP
       <ApplyTwoColumn
         currentStep={4}
         applicationId={id}
+        tripHref={applyTripStepHref(row.nationalityCode)}
         hasSelectedVisa
         visaSummary={
           <CheckoutOrderRecap application={publicApp} members={members} trackCheckoutViewed />

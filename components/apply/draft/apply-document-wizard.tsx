@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, type FC } from "react";
-import { Camera, FileText, Landmark, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ClientButton } from "@/components/client/client-button";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
@@ -31,6 +31,8 @@ import { DocumentUploadSlot } from "./document-upload-slot";
 import type { DocType, ExtractResponse, PublicDocument, TUploadSlotError } from "./types";
 import type { TPhoneNationalityOption } from "./phone-country-field";
 import { ApplyOrderTotal } from "@/components/apply/apply-order-total";
+import { ApplyReadyContinue } from "@/components/apply/apply-ready-continue";
+import { ReadyDocumentAccordion, type TReadyDocumentIcon } from "./ready-document-accordion";
 
 type TMemberView = {
   app: PublicApplication | null;
@@ -60,10 +62,11 @@ export interface IApplyDocumentWizardProps {
   onSaved: () => void;
 }
 
-const iconForSlot = (key: string) => {
-  if (key === "personal_photo") return Camera;
-  if (key === "bank_statement_6m") return Landmark;
-  return FileText;
+const iconForSlot = (key: string): TReadyDocumentIcon => {
+  if (key === "personal_photo") return "photo";
+  if (key === "bank_statement_6m") return "bank";
+  if (key === "passport_copy") return "passport";
+  return "file";
 };
 
 export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
@@ -165,39 +168,33 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
       }
     }
     const later = [...laterByKey.values()];
+    const tripHref = applyPreviousHref(applicationId, wizardMembers, resolved, primaryApp.nationalityCode);
     return (
-      <section className="space-y-5">
+      <section className="max-md:pb-24 space-y-5">
         <h1 className="font-heading text-foreground text-xl font-semibold tracking-tight md:text-[1.75rem]">
           {t("wizard.readyTitle")}
         </h1>
-        <div className="space-y-3">
-          <p className="text-foreground text-xs font-bold uppercase tracking-wide">{t("wizard.neededNow")}</p>
-          <div className="border-border flex items-start gap-3 rounded-2xl border bg-card p-4">
-            <FileText className="text-primary mt-0.5 size-5 shrink-0" aria-hidden />
-            <div>
-              <p className="text-sm font-semibold">{t("wizard.passportNow")}</p>
-              <p className="text-muted-foreground text-xs">{t("documents.slots.passportCopy.description")}</p>
-            </div>
-          </div>
-        </div>
-        {later.length > 0 ? (
-          <div className="space-y-3">
-            <p className="text-foreground text-xs font-bold uppercase tracking-wide">{t("wizard.addLater")}</p>
-            {later.map((slot) => {
-              const Icon = iconForSlot(slot.key);
-              const copy = translateDocumentSlot(slot, t);
-              return (
-                <div key={slot.key} className="border-border flex items-start gap-3 rounded-2xl border bg-card p-4">
-                  <Icon className="text-secondary mt-0.5 size-5 shrink-0" aria-hidden />
-                  <div>
-                    <p className="text-sm font-semibold">{copy.label}</p>
-                    <p className="text-muted-foreground text-xs">{copy.description}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : null}
+        <p className="text-foreground text-sm leading-relaxed">{t("wizard.readyInstruction")}</p>
+        <ReadyDocumentAccordion
+          neededNow={[
+            {
+              key: "passport_copy",
+              label: t("wizard.passportNow"),
+              description: t("documents.slots.passportCopy.description"),
+              icon: "passport",
+            },
+          ]}
+          addLater={later.map((slot) => {
+            const copy = translateDocumentSlot(slot, t);
+            return {
+              key: slot.key,
+              label: copy.label,
+              description: copy.description,
+              icon: iconForSlot(slot.key),
+              tip: slot.key === "personal_photo" ? t("wizard.takesTwoMinutes") : null,
+            };
+          })}
+        />
         <p className="text-muted-foreground text-sm">{t("wizard.takesTwoMinutes")}</p>
         <p className="text-muted-foreground flex items-center gap-2 text-xs">
           <ShieldCheck className="size-4 shrink-0" aria-hidden />
@@ -209,22 +206,17 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
           serviceIds={ordered.map((member) => member.serviceId)}
         />
         <ClientButton
-          brand="cta"
-          className="h-12 w-full"
-          type="button"
-          onClick={() => void confirmAndGo({ screen: "ready", travellerId: null })}
-        >
-          {t("common.continue")}
-        </ClientButton>
-        <ClientButton
           variant="outline"
           brand="white"
           className="h-12 w-full"
           type="button"
-          onClick={() => router.push(applyPreviousHref(applicationId, wizardMembers, resolved))}
+          onClick={() => router.push(tripHref)}
         >
           {t("common.previous")}
         </ClientButton>
+        <ApplyReadyContinue onClick={() => void confirmAndGo({ screen: "ready", travellerId: null })}>
+          {t("wizard.continueWithDocuments")}
+        </ApplyReadyContinue>
       </section>
     );
   }

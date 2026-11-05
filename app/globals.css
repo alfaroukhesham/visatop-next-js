@@ -434,6 +434,37 @@
   outline-offset: 3px;
 }
 
+html:has([data-apply-sticky-cta]) {
+  scroll-padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Keep the WhatsApp FAB above the sticky Continue bar if the A/B hide is reversed. */
+html:has([data-apply-sticky-cta]) a[data-whatsapp-fab] {
+  bottom: calc(7rem + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+@keyframes apply-continue-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(252 205 100 / 0%);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgb(252 205 100 / 55%);
+  }
+}
+
+.apply-continue-pulse {
+  animation: apply-continue-pulse 0.6s ease 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apply-continue-pulse {
+    animation: none;
+    outline: 3px solid #fccd64;
+    outline-offset: 2px;
+  }
+}
+
 .theme-client-main {
   padding-top: var(--wp-shell-header-height, 0px);
 }
