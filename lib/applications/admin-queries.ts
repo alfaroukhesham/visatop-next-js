@@ -1,6 +1,7 @@
-import { and, desc, eq, ilike, inArray, or, count } from "drizzle-orm";
+import { and, desc, eq, exists, ilike, inArray, not, or, count } from "drizzle-orm";
 import { type DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { resolveAdminListPaymentStatus } from "@/lib/applications/admin-list-status";
 
 export type AdminListParams = {
   attention?: boolean;
@@ -26,7 +27,27 @@ export async function listAdminApplications(
     conditions.push(eq(schema.application.applicationStatus, params.status));
   }
 
-  if (params.paymentStatus) {
+  const openCheckoutPayment = exists(
+    tx
+      .select({ id: schema.payment.id })
+      .from(schema.payment)
+      .where(
+        and(
+          eq(schema.payment.applicationId, schema.application.id),
+          eq(schema.payment.status, "checkout_created"),
+        ),
+      ),
+  );
+
+  if (params.paymentStatus === "checkout_created") {
+    conditions.push(
+      or(eq(schema.application.paymentStatus, "checkout_created"), openCheckoutPayment),
+    );
+  } else if (params.paymentStatus === "unpaid") {
+    conditions.push(
+      and(eq(schema.application.paymentStatus, "unpaid"), not(openCheckoutPayment)),
+    );
+  } else if (params.paymentStatus) {
     conditions.push(eq(schema.application.paymentStatus, params.paymentStatus));
   }
 
@@ -82,9 +103,31 @@ export async function listAdminApplications(
     }
   }
 
+  const applicationIds = rows.map((r) => r.application.id);
+  const latestPaymentStatusByApplicationId = new Map<string, string>();
+  if (applicationIds.length > 0) {
+    const paymentRows = await tx
+      .select({
+        applicationId: schema.payment.applicationId,
+        status: schema.payment.status,
+      })
+      .from(schema.payment)
+      .where(inArray(schema.payment.applicationId, applicationIds))
+      .orderBy(desc(schema.payment.createdAt));
+    for (const paymentRow of paymentRows) {
+      if (!latestPaymentStatusByApplicationId.has(paymentRow.applicationId)) {
+        latestPaymentStatusByApplicationId.set(paymentRow.applicationId, paymentRow.status);
+      }
+    }
+  }
+
   return {
     items: rows.map((row) => ({
       ...row.application,
+      paymentStatus: resolveAdminListPaymentStatus({
+        applicationPaymentStatus: row.application.paymentStatus,
+        latestPaymentStatus: latestPaymentStatusByApplicationId.get(row.application.id) ?? null,
+      }),
       serviceName: row.serviceName,
       partyMemberCount: row.application.partyId
         ? (partyCounts.get(row.application.partyId) ?? 1)
