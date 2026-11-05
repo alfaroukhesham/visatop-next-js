@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FC } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import {
@@ -8,6 +8,7 @@ import {
   FULFILLMENT_STATUSES,
   PAYMENT_STATUSES,
 } from "@/lib/applications/status";
+import { formatAdminListStatus } from "@/lib/applications/admin-list-status";
 import {
   AdminListFilters,
   type AdminListFilterField,
@@ -24,16 +25,38 @@ import { useAdminApplicationsList } from "@/components/admin/use-admin-applicati
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button-variants";
 
-const TABLE_COLUMNS = 7;
+const TABLE_COLUMNS = 6;
 const SKELETON_COLUMN_WIDTHS = [
   "w-32",
   "w-40",
   "w-24",
   "w-20",
-  "w-28",
   "w-12",
   "w-20",
 ];
+
+interface IAdminListStatusPillProps {
+  value: string;
+  variant?: "app" | "payment";
+}
+
+const AdminListStatusPill: FC<IAdminListStatusPillProps> = ({ value, variant = "app" }) => {
+  const paid = variant === "payment" && value === "paid";
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center px-2 py-0.5 text-xs font-medium",
+        variant === "app"
+          ? "bg-primary/10 text-primary border border-primary/20"
+          : paid
+            ? "bg-success/10 text-success border border-success/20"
+            : "bg-muted text-muted-foreground border border-border",
+      )}
+    >
+      {formatAdminListStatus(value)}
+    </span>
+  );
+};
 
 const FILTER_FIELDS: AdminListFilterField[] = [
   {
@@ -240,9 +263,6 @@ export function AdminApplicationsListClient({ initialAttentionCount }: Props) {
               <th className="px-4 py-3 text-xs font-bold uppercase text-muted-foreground">
                 Payment
               </th>
-              <th className="px-4 py-3 text-xs font-bold uppercase text-muted-foreground">
-                Fulfillment
-              </th>
               <th className="px-4 py-3 text-xs font-bold uppercase text-muted-foreground">Flag</th>
               <th className="px-4 py-3 text-xs font-bold uppercase text-muted-foreground">
                 Created
@@ -301,26 +321,10 @@ export function AdminApplicationsListClient({ initialAttentionCount }: Props) {
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-primary/10 text-primary border border-primary/20 font-mono">
-                    {app.applicationStatus}
-                  </span>
+                  <AdminListStatusPill value={app.applicationStatus} />
                 </td>
                 <td className="px-4 py-3">
-                  <span
-                    className={cn(
-                      "inline-flex items-center px-2 py-0.5 text-xs font-mono",
-                      app.paymentStatus === "paid"
-                        ? "bg-success/10 text-success border border-success/20"
-                        : "bg-muted text-muted-foreground border border-border",
-                    )}
-                  >
-                    {app.paymentStatus}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="inline-flex items-center px-2 py-0.5 text-xs font-mono bg-muted text-muted-foreground border border-border">
-                    {app.fulfillmentStatus}
-                  </span>
+                  <AdminListStatusPill value={app.paymentStatus} variant="payment" />
                 </td>
                 <td className="px-4 py-3">
                   {app.adminAttentionRequired ? (

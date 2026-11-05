@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatAdminListStatus } from "@/lib/applications/admin-list-status";
 
 const selectClassName =
   "border-input bg-background h-9 w-full min-w-0 rounded-md border px-2 text-sm";
@@ -36,9 +37,7 @@ export type AdminListFiltersProps = {
   className?: string;
 };
 
-function formatOptionLabel(value: string) {
-  return value.replaceAll("_", " ");
-}
+const formatOptionLabel = (value: string) => formatAdminListStatus(value);
 
 function normalizeOptions(
   options: readonly string[] | readonly { value: string; label: string }[],
