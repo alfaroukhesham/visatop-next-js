@@ -1,12 +1,19 @@
 import { notFound } from "next/navigation";
-import { eq, desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { formatServiceTypeForExport } from "@/lib/applications/customer-export";
 import { getAdminUserId } from "@/lib/admin/get-admin-session";
 import { withAdminDbActor } from "@/lib/db/actor-context";
 import { loadApplicationTravellers } from "@/lib/admin/load-application-travellers";
 import { AdminApplicationDetailView } from "@/components/admin/admin-application-detail-view";
 import type { AdminApplicationAuditRow } from "@/lib/admin/application-audit-format";
+import {
+  lastStepDocumentsFromTravellers,
+  loadApplicationLastStepView,
+} from "@/lib/applications/load-application-last-step";
 import * as schema from "@/lib/db/schema";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function AdminApplicationDetailPage({
   params,
@@ -22,7 +29,7 @@ export default async function AdminApplicationDetailPage({
   ]);
   const travellerParam = Array.isArray(sp.traveller) ? sp.traveller[0] : sp.traveller;
 
-  const { app, serviceLabel, payments, auditLogs, adminDocuments, travellers } =
+  const { app, serviceLabel, payments, auditLogs, adminDocuments, travellers, lastStep } =
     await withAdminDbActor(adminUserId, async ({ tx }) => {
       const [joined] = await tx
         .select({
@@ -45,6 +52,7 @@ export default async function AdminApplicationDetailPage({
           auditLogs: [],
           adminDocuments: [],
           travellers: [],
+          lastStep: null,
         };
       }
 
@@ -83,8 +91,29 @@ export default async function AdminApplicationDetailPage({
           .limit(40),
         loadApplicationTravellers(tx, app),
       ]);
+      const lastStep = await loadApplicationLastStepView(tx, applicationId, {
+        app,
+        travellers,
+        documents:
+          travellers.length > 0
+            ? lastStepDocumentsFromTravellers(travellers)
+            : adminDocuments.map((doc) => ({
+                applicationId: app.id,
+                documentType: doc.documentType,
+                status: doc.status,
+                createdAt: doc.createdAt,
+              })),
+      });
 
-      return { app, serviceLabel, payments, auditLogs, adminDocuments, travellers };
+      return {
+        app,
+        serviceLabel,
+        payments,
+        auditLogs,
+        adminDocuments,
+        travellers,
+        lastStep,
+      };
     });
 
   if (!app) notFound();
@@ -136,6 +165,13 @@ export default async function AdminApplicationDetailPage({
       adminDocuments={adminDocuments}
       travellers={travellers}
       selectedTravellerId={travellerParam ?? app.id}
+      lastStep={
+        lastStep ?? {
+          fieldLabel: "Stopped at",
+          value: "—",
+          secondary: "",
+        }
+      }
     />
   );
 }

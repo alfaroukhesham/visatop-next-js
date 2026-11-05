@@ -14,8 +14,10 @@ import {
   formatAuditInlineDetails,
   type AdminApplicationAuditRow,
 } from "@/lib/admin/application-audit-format";
+import { AdminApplicationLastStepLive } from "@/components/admin/admin-application-last-step-row";
 import { ProfileRow, StatusBadge } from "@/components/admin/admin-application-detail-parts";
 import type { TAdminTraveller } from "@/lib/admin/load-application-travellers";
+import type { TAdminLastStepView } from "@/lib/applications/application-last-step";
 
 type ApplicationDetail = {
   id: string;
@@ -69,6 +71,7 @@ export function AdminApplicationDetailView({
   adminDocuments,
   travellers,
   selectedTravellerId,
+  lastStep,
 }: {
   app: ApplicationDetail;
   serviceLabel: string | null;
@@ -77,6 +80,7 @@ export function AdminApplicationDetailView({
   adminDocuments: AdminDocumentRow[];
   travellers: TAdminTraveller[];
   selectedTravellerId: string;
+  lastStep: TAdminLastStepView;
 }) {
   return (
     <AdminShell
@@ -119,7 +123,7 @@ export function AdminApplicationDetailView({
               <ApplicationActions applicationId={app.id} hasAttention={false} />
             )}
           </div>
-          <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 border-t border-border pt-4">
+          <AdminApplicationLastStepLive key={app.id} applicationId={app.id} initial={lastStep}>
             <ProfileRow label="Nationality" value={app.nationalityCode} />
             <ProfileRow label="Service" value={serviceLabel ?? "Unknown service"} mono={false} />
             <ProfileRow label="Reference No." value={app.referenceNumber} />
@@ -127,7 +131,7 @@ export function AdminApplicationDetailView({
             <ProfileRow label="Guest Email" value={app.guestEmail} />
             <ProfileRow label="Admin ops step" value={app.adminOpsStep} />
             <ProfileRow label="Created" value={app.createdAt.toLocaleString()} />
-          </dl>
+          </AdminApplicationLastStepLive>
         </div>
 
         {travellers.length > 0 ? (
