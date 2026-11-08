@@ -15,7 +15,7 @@ Droplet Grafana / Alloy / Loki / Tempo / GlitchTip compose and Uptime Kuma setup
 | React | `app/error.tsx`, `app/global-error.tsx` | `Sentry.captureException` when enabled |
 | Build | `next.config.ts` → `withSentryConfig` | Source-map upload **off** unless GlitchTip URL + token are both set |
 | Liveness | `GET /api/health` | Unchanged — blue-green `wait_healthy` |
-| Readiness | `GET /api/health/ready` | DB ping + payment/OCR config booleans |
+| Readiness | `GET /api/health/ready` | Payment/OCR config booleans always. Production (and staging with `STAGING_ALLOW_IDLE_DB_WAKE=true`) also runs DB `select 1`. Staging skips that ping by default. |
 
 `basePath` is `/visa-processing`. Public URLs are `/visa-processing/...`.
 
@@ -72,7 +72,7 @@ Not enabled. GlitchTip cannot store Sentry Session Replay. Do not add `replayInt
 | URL | Role |
 | --- | --- |
 | `/visa-processing/api/health` | Process is up. No DB. Used by `scripts/blue-green-deploy.sh`. |
-| `/visa-processing/api/health/ready` | Can serve traffic: DB `select 1`, payment secrets present for the active provider, `GEMINI_API_KEY` present. Response is `{ ready, checks: { database, payment, ocr } }` — booleans only. HTTP **200** if ready, **503** otherwise. |
+| `/visa-processing/api/health/ready` | Can serve traffic: payment secrets present for the active provider, `GEMINI_API_KEY` present, and a DB `select 1` on production (always) or on staging when `STAGING_ALLOW_IDLE_DB_WAKE=true`. On `APP_ENV=staging` the ping is skipped by default and `checks.database` is reported `true` so a leftover monitor stays HTTP 200 without waking Neon. Response is `{ ready, checks: { database, payment, ocr } }` — booleans only. HTTP **200** if ready, **503** otherwise. |
 
 Never point blue-green drain/health at `/api/health/ready` (a new color must pass liveness before it is fully configured).
 
