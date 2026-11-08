@@ -9,7 +9,7 @@ Staging and production share **one Ziina access token**. A `POST` to Ziina `/web
 On the droplet, cron must read `INTERNAL_CRON_SECRET` from a root-only file (not world-readable):
 
 - Production: `/root/visatop/.env`
-- Staging: `/root/visatop/.env.staging` (reconcile/cleanup only; do **not** register the Ziina webhook here)
+- Staging: `/root/visatop/.env.staging` (do **not** register the Ziina webhook here; do **not** install a staging `*/5` crontab if `weathered-resonance` should scale to zero)
 
 Optional on production:
 
@@ -78,3 +78,44 @@ Add an HTTP(s) monitor (interval 60–120s) that **fails on non-200**:
 Ziina’s public API documents POST/DELETE `/webhook` only. The health check **attempts GET `/webhook`**. If that is unreadable, the alert still names the last host that ran Register webhook on this environment and tells ops to check staging.
 
 Do not point this monitor at staging: staging stealing the URL is the failure mode we are detecting on **prod**.
+
+## Staging idle (weathered-resonance) — recommendations only
+
+Do not run these from a laptop agent. On the droplet, as root, inspect then pause **staging** wake sources. Leave production crontab, Kuma prod monitors, and `/root/visatop/.env` unchanged.
+
+App code on `APP_ENV=staging` already no-ops `/api/health/ready` DB pings and `/api/internal/*` cron DB work unless `STAGING_ALLOW_IDLE_DB_WAKE=true`. That does **not** stop:
+
+- Kuma (or any HTTP monitor) hitting `https://app-staging.visatop.com/visa-processing/apply/start?nationality=IN` (SSR catalog)
+- Catalog APIs / checkout tabs / Playwright synthetics against staging
+- A staging crontab that still fires (harmless after deploy, but remove it so logs stay quiet)
+
+Alloy blackbox and Docker `HEALTHCHECK` hit `/api/health` (DB-free) — leave them.
+
+```bash
+# 1) What crontab exists? Look for app-staging / .env.staging wrappers.
+crontab -l
+ls -l /root/visatop/bin/
+grep -R --line-number -E 'app-staging|env.staging|reconcile-|health/payments' /root/visatop/bin/ /var/spool/cron/crontabs/ 2>/dev/null || true
+
+# 2) If a staging wrapper exists, comment its crontab lines (do not delete the script).
+# crontab -e
+# # */5 * * * * /root/visatop/bin/internal-cron-staging.sh reconcile-ziina-payments
+# Then: crontab -l | grep -v '^#' | grep -i staging || echo 'no active staging cron'
+
+# 3) Kuma: pause staging monitors that are not liveness.
+# Tunnel: ssh -L 3050:127.0.0.1:3050 root@<droplet>
+# Keep:  https://app-staging.visatop.com/visa-processing/api/health
+# Pause: /api/health/ready, /apply/start?nationality=*, keyword checks that run a browser, Playwright synthetic.
+# Optional sqlite list (container name visatop-kuma):
+docker exec visatop-kuma sqlite3 /app/data/kuma.db \
+  "select id, name, url, active, interval from monitor;"
+
+# 4) Confirm liveness still 200 and ready does not need Neon:
+curl -sS -o /dev/null -w '%{http_code}\n' https://app-staging.visatop.com/visa-processing/api/health
+# Expect 200. Do not loop /apply/start or catalog APIs.
+
+# 5) During a payment/reconcile test on staging only:
+# In /root/visatop/.env.staging set STAGING_ALLOW_IDLE_DB_WAKE=true, recreate the
+# staging app container (blue-green-deploy.sh deploy staging <image>), run the test,
+# then unset the flag and recreate again. Never put this in /root/visatop/.env.
+```

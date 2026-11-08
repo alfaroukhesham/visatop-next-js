@@ -80,16 +80,18 @@ Never point blue-green drain/health at `/api/health/ready` (a new color must pas
 
 Uptime Kuma is deployed on the same droplet (`deploy/observability/`, see [`infra.md`](infra.md)). Create HTTP(s) monitors — not Grafana Synthetics or Better Stack.
 
-Suggested monitors (staging and production hosts separately):
+Suggested monitors:
 
-1. **Home / apply start** — `https://<host>/visa-processing/`  
-   Expect HTTP 200 and a keyword such as `Start your application` or `Traveling to Dubai`.
-2. **Apply start with nationality** (optional deeper check) — `https://<host>/visa-processing/apply/start?nationality=IN`  
-   Expect HTTP 200. `/apply/start` without `nationality` redirects home.
-3. **Readiness** — `https://<host>/visa-processing/api/health/ready`  
+1. **Liveness (staging + production)** — `https://<host>/visa-processing/api/health`  
+   DB-free. Keep this on staging.
+2. **Home / apply start (production)** — `https://visatop.com/visa-processing/`  
+   Expect HTTP 200 and a keyword such as `Start your application` or `Traveling to Dubai`. Home HTML is DB-free.
+3. **Apply start with nationality (production only)** — `https://visatop.com/visa-processing/apply/start?nationality=IN`  
+   Expect HTTP 200. `/apply/start` without `nationality` redirects home. SSR queries the catalog — do not poll this on staging if `weathered-resonance` should scale to zero.
+4. **Readiness (production only)** — `https://visatop.com/visa-processing/api/health/ready`  
    Expect HTTP 200. Treat 503 as down.
 
-Keep the existing liveness URL for deploy automation only.
+Keep the existing liveness URL for deploy automation on both hosts. See `deploy/observability/kuma/monitors.md`.
 
 ## Playwright synthetic (cron / container)
 

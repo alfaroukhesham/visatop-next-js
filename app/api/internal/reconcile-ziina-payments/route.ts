@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { and, desc, eq } from "drizzle-orm";
+import { skipIfStagingIdleCron } from "@/lib/api/internal-cron-auth";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { payment } from "@/lib/db/schema";
@@ -39,6 +40,8 @@ const postReconcileZiina = async (request: Request) => {
       requestId,
     });
   }
+  const idleSkip = skipIfStagingIdleCron(requestId);
+  if (idleSkip) return idleSkip;
 
   if (getActivePaymentProvider() !== "ziina") {
     return jsonOk({ skipped: true, reason: "not_ziina_provider" }, { requestId });

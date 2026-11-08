@@ -69,7 +69,7 @@ Raise retention to 30 days only after `df -h` shows comfortable headroom (Promet
 | JS exceptions | App `SENTRY_DSN` → GlitchTip (`@sentry/nextjs`, see [`sentry.md`](sentry.md)) | GlitchTip |
 | Synthetics | Uptime Kuma + Alloy blackbox probes | Kuma / Prometheus |
 
-Alloy blackbox probes hit local `visatop-edge-prod:3000/visa-processing/api/health` and `visatop-edge-staging:3001/...`, plus the public liveness URLs. Uptime Kuma should also cover `/api/health/ready`, home, and apply/start (see [`sentry.md`](sentry.md) and `deploy/observability/kuma/monitors.md`). Never point blue-green `wait_healthy` at `/api/health/ready`.
+Alloy blackbox probes hit local `visatop-edge-prod:3000/visa-processing/api/health` and `visatop-edge-staging:3001/...`, plus the public liveness URLs (all DB-free). Uptime Kuma should cover production `/api/health/ready`, home, and apply/start; staging should keep **liveness only** if `weathered-resonance` should scale to zero (see [`sentry.md`](sentry.md) and `deploy/observability/kuma/monitors.md`). Never point blue-green `wait_healthy` at `/api/health/ready`.
 
 ## UIs — localhost or Caddy+auth, never public unauthenticated
 

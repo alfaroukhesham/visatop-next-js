@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { shouldSkipStagingIdleDbWake } from "@/lib/env/staging-idle-db-wake";
 import { getActivePaymentProvider } from "@/lib/payments/resolve-payment-provider";
 
 export type TReadinessChecks = {
@@ -10,6 +11,7 @@ export type TReadinessChecks = {
 
 export type TReadinessDeps = {
   pingDatabase?: () => Promise<boolean>;
+  skipDatabasePing?: boolean;
   paymentConfigured?: () => boolean;
   ocrConfigured?: () => boolean;
 };
@@ -39,7 +41,10 @@ export const pingDatabase = async (
 export const getReadinessChecks = async (
   deps: TReadinessDeps = {},
 ): Promise<TReadinessChecks> => {
-  const database = await (deps.pingDatabase ?? pingDatabase)();
+  const skipDatabasePing = deps.skipDatabasePing ?? shouldSkipStagingIdleDbWake();
+  const database = skipDatabasePing
+    ? true
+    : await (deps.pingDatabase ?? pingDatabase)();
   const payment = (deps.paymentConfigured ?? isPaymentConfigPresent)();
   const ocr = (deps.ocrConfigured ?? isOcrConfigPresent)();
   return { database, payment, ocr };

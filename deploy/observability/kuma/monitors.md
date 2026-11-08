@@ -7,12 +7,17 @@ Kuma has no first-class “monitors as code” in this repo. After `./scripts/up
    - **Liveness** (same path as blue-green `wait_healthy`; do not treat this as “ready for traffic”):
      `https://visatop.com/visa-processing/api/health`
      `https://app-staging.visatop.com/visa-processing/api/health`
-   - **Home / apply start** — `https://<host>/visa-processing/`
+     Liveness is **DB-free**. Keep this on staging; it does not keep Neon awake.
+   - **Home / apply start** — production: `https://visatop.com/visa-processing/`
      Expect HTTP 200 and a keyword such as `Start your application` or `Traveling to Dubai`.
-   - **Apply start with nationality** (optional) — `https://<host>/visa-processing/apply/start?nationality=IN`
+     Home HTML is DB-free. **Do not** add a staging home monitor that executes JS or hits catalog APIs.
+   - **Apply start with nationality** — **production only**:
+     `https://visatop.com/visa-processing/apply/start?nationality=IN`
      Expect HTTP 200. `/apply/start` without `nationality` redirects home.
-   - **Readiness** — `https://<host>/visa-processing/api/health/ready`
+     This SSR path queries `catalog_customer_price`. A 60s staging copy keeps `weathered-resonance` awake.
+   - **Readiness** — **production only**: `https://visatop.com/visa-processing/api/health/ready`
      Expect HTTP 200. Treat 503 as down. Never point blue-green drain/health here.
+     Staging `GET /api/health/ready` skips the DB ping unless `STAGING_ALLOW_IDLE_DB_WAKE=true`. Still prefer not to poll it on staging.
    - **Payment health (production only)** — `https://visatop.com/visa-processing/api/internal/health/payments`
      Method GET. Header `x-internal-secret: <INTERNAL_CRON_SECRET from /root/visatop/.env>`.
      Expect HTTP 200. Treat 503 as down (webhook URL not prod, webhooks silent after widget open, or Ziina completed but local row still `checkout_created`).

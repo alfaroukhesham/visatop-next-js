@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/headers", () => ({
   headers: async () => new Headers({ "x-request-id": "recovery-cron" }),
@@ -15,6 +15,23 @@ describe("POST /api/internal/recovery-emails", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("INTERNAL_CRON_SECRET", "cron-secret");
+    vi.stubEnv("APP_ENV", "production");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("skips the job on APP_ENV=staging", async () => {
+    vi.stubEnv("APP_ENV", "staging");
+    const res = await POST(
+      new Request("http://localhost/api/internal/recovery-emails", {
+        method: "POST",
+        headers: { "x-internal-secret": "cron-secret" },
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(runCheckoutRecoveryEmailJob).not.toHaveBeenCalled();
   });
 
   it("rejects a missing internal secret", async () => {

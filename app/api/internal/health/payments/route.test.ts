@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/headers", () => ({
   headers: async () => new Headers({ "x-request-id": "health-pay" }),
@@ -20,12 +20,47 @@ describe("GET /api/internal/health/payments", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("INTERNAL_CRON_SECRET", "cron-secret");
+    vi.stubEnv("APP_ENV", "production");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   const req = () =>
     new Request("http://localhost/api/internal/health/payments", {
       headers: { "x-internal-secret": "cron-secret" },
     });
+
+  it("skips DB work on APP_ENV=staging", async () => {
+    vi.stubEnv("APP_ENV", "staging");
+    const res = await GET(req());
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.data).toEqual({ skipped: true, reason: "staging_idle_db_wake" });
+    expect(actor.withSystemDbActor).not.toHaveBeenCalled();
+  });
+
+  it("does not skip production", async () => {
+    vi.stubEnv("APP_ENV", "production");
+    vi.mocked(actor.withSystemDbActor).mockImplementation(async (fn: (tx: unknown) => unknown) =>
+      fn({}),
+    );
+    vi.mocked(collectPaymentsHealth).mockResolvedValue({
+      ok: true,
+      alerts: [],
+      webhook: {
+        expectedUrl: "https://visatop.com/visa-processing/api/webhooks/ziina",
+        registeredUrl: "https://visatop.com/visa-processing/api/webhooks/ziina",
+        registeredHost: "visatop.com",
+        lastLocalRegistrationHost: "visatop.com",
+        unreadable: false,
+      },
+    });
+    const res = await GET(req());
+    expect(res.status).toBe(200);
+    expect(actor.withSystemDbActor).toHaveBeenCalled();
+  });
 
   it("returns 401 without the internal secret", async () => {
     const res = await GET(new Request("http://localhost/api/internal/health/payments"));
