@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { skipIfStagingIdleCron } from "@/lib/api/internal-cron-auth";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import {
@@ -27,6 +28,8 @@ export const POST = async (request: Request) => {
       requestId,
     });
   }
+  const idleSkip = skipIfStagingIdleCron(requestId);
+  if (idleSkip) return idleSkip;
 
   const applicationIds = await withSystemDbActor((tx) => listUnsentPaidCapiPurchaseIds(tx));
   const log = createRequestLogger(requestId);

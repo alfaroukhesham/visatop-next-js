@@ -43,6 +43,43 @@ describe("readiness checks", () => {
     ).resolves.toBe(false);
   });
 
+  it("skips the database ping on APP_ENV=staging and still reports database true", async () => {
+    vi.stubEnv("APP_ENV", "staging");
+    const ping = vi.fn(async () => false);
+    const checks = await getReadinessChecks({
+      pingDatabase: ping,
+      paymentConfigured: () => true,
+      ocrConfigured: () => true,
+    });
+    expect(ping).not.toHaveBeenCalled();
+    expect(checks).toEqual({ database: true, payment: true, ocr: true });
+  });
+
+  it("pings the database on production", async () => {
+    vi.stubEnv("APP_ENV", "production");
+    const ping = vi.fn(async () => true);
+    const checks = await getReadinessChecks({
+      pingDatabase: ping,
+      paymentConfigured: () => true,
+      ocrConfigured: () => true,
+    });
+    expect(ping).toHaveBeenCalledTimes(1);
+    expect(checks.database).toBe(true);
+  });
+
+  it("pings staging when STAGING_ALLOW_IDLE_DB_WAKE is true", async () => {
+    vi.stubEnv("APP_ENV", "staging");
+    vi.stubEnv("STAGING_ALLOW_IDLE_DB_WAKE", "true");
+    const ping = vi.fn(async () => false);
+    const checks = await getReadinessChecks({
+      pingDatabase: ping,
+      paymentConfigured: () => true,
+      ocrConfigured: () => true,
+    });
+    expect(ping).toHaveBeenCalledTimes(1);
+    expect(checks.database).toBe(false);
+  });
+
   it("aggregates booleans only and never echoes secret values", async () => {
     vi.stubEnv("GEMINI_API_KEY", "super-secret-ocr");
     vi.stubEnv("PADDLE_API_KEY", "super-secret-pay");

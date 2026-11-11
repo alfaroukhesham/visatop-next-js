@@ -66,6 +66,9 @@ describe("observability stack (self-hosted, opt-in)", () => {
     expect(alloy).toContain("[passport]");
     expect(alloy).toContain('name              = "checkout_created_total"');
     expect(alloy).toContain('name              = "webhook_401_total"');
+    expect(alloy).toContain("app-staging.visatop.com/visa-processing/api/health");
+    expect(alloy).not.toContain("/api/health/ready");
+    expect(alloy).not.toContain("apply/start");
   });
 
   it("provisions Grafana alerts covering the required failure modes", () => {

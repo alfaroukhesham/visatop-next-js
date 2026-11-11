@@ -15,7 +15,7 @@ Droplet Grafana / Alloy / Loki / Tempo / GlitchTip compose and Uptime Kuma setup
 | React | `app/error.tsx`, `app/global-error.tsx` | `Sentry.captureException` when enabled |
 | Build | `next.config.ts` → `withSentryConfig` | Source-map upload **off** unless GlitchTip URL + token are both set |
 | Liveness | `GET /api/health` | Unchanged — blue-green `wait_healthy` |
-| Readiness | `GET /api/health/ready` | DB ping + payment/OCR config booleans |
+| Readiness | `GET /api/health/ready` | Payment/OCR config booleans always. Production (and staging with `STAGING_ALLOW_IDLE_DB_WAKE=true`) also runs DB `select 1`. Staging skips that ping by default. |
 
 `basePath` is `/visa-processing`. Public URLs are `/visa-processing/...`.
 
@@ -72,7 +72,7 @@ Not enabled. GlitchTip cannot store Sentry Session Replay. Do not add `replayInt
 | URL | Role |
 | --- | --- |
 | `/visa-processing/api/health` | Process is up. No DB. Used by `scripts/blue-green-deploy.sh`. |
-| `/visa-processing/api/health/ready` | Can serve traffic: DB `select 1`, payment secrets present for the active provider, `GEMINI_API_KEY` present. Response is `{ ready, checks: { database, payment, ocr } }` — booleans only. HTTP **200** if ready, **503** otherwise. |
+| `/visa-processing/api/health/ready` | Can serve traffic: payment secrets present for the active provider, `GEMINI_API_KEY` present, and a DB `select 1` on production (always) or on staging when `STAGING_ALLOW_IDLE_DB_WAKE=true`. On `APP_ENV=staging` the ping is skipped by default and `checks.database` is reported `true` so a leftover monitor stays HTTP 200 without waking Neon. Response is `{ ready, checks: { database, payment, ocr } }` — booleans only. HTTP **200** if ready, **503** otherwise. |
 
 Never point blue-green drain/health at `/api/health/ready` (a new color must pass liveness before it is fully configured).
 
@@ -80,16 +80,18 @@ Never point blue-green drain/health at `/api/health/ready` (a new color must pas
 
 Uptime Kuma is deployed on the same droplet (`deploy/observability/`, see [`infra.md`](infra.md)). Create HTTP(s) monitors — not Grafana Synthetics or Better Stack.
 
-Suggested monitors (staging and production hosts separately):
+Suggested monitors:
 
-1. **Home / apply start** — `https://<host>/visa-processing/`  
-   Expect HTTP 200 and a keyword such as `Start your application` or `Traveling to Dubai`.
-2. **Apply start with nationality** (optional deeper check) — `https://<host>/visa-processing/apply/start?nationality=IN`  
-   Expect HTTP 200. `/apply/start` without `nationality` redirects home.
-3. **Readiness** — `https://<host>/visa-processing/api/health/ready`  
+1. **Liveness (staging + production)** — `https://<host>/visa-processing/api/health`  
+   DB-free. Keep this on staging.
+2. **Home / apply start (production)** — `https://visatop.com/visa-processing/`  
+   Expect HTTP 200 and a keyword such as `Start your application` or `Traveling to Dubai`. Home HTML is DB-free.
+3. **Apply start with nationality (production only)** — `https://visatop.com/visa-processing/apply/start?nationality=IN`  
+   Expect HTTP 200. `/apply/start` without `nationality` redirects home. SSR queries the catalog — do not poll this on staging if `weathered-resonance` should scale to zero.
+4. **Readiness (production only)** — `https://visatop.com/visa-processing/api/health/ready`  
    Expect HTTP 200. Treat 503 as down.
 
-Keep the existing liveness URL for deploy automation only.
+Keep the existing liveness URL for deploy automation on both hosts. See `deploy/observability/kuma/monitors.md`.
 
 ## Playwright synthetic (cron / container)
 

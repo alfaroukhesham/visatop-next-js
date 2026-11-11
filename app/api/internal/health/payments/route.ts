@@ -1,6 +1,9 @@
 import { headers } from "next/headers";
 import { jsonError, jsonOk } from "@/lib/api/response";
-import { requireInternalCronSecret } from "@/lib/api/internal-cron-auth";
+import {
+  requireInternalCronSecret,
+  skipIfStagingIdleCron,
+} from "@/lib/api/internal-cron-auth";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { collectPaymentsHealth } from "@/lib/payments/payments-health";
 
@@ -12,6 +15,8 @@ export const GET = async (request: Request) => {
   const requestId = hdrs.get("x-request-id");
   const unauthorized = requireInternalCronSecret(request, requestId);
   if (unauthorized) return unauthorized;
+  const idleSkip = skipIfStagingIdleCron(requestId);
+  if (idleSkip) return idleSkip;
 
   const health = await withSystemDbActor((tx) => collectPaymentsHealth(tx));
   if (!health.ok) {

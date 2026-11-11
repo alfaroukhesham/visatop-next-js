@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { and, desc, eq, or } from "drizzle-orm";
+import { skipIfStagingIdleCron } from "@/lib/api/internal-cron-auth";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { payment } from "@/lib/db/schema";
@@ -35,6 +36,8 @@ const postReconcileFincra = async (request: Request) => {
   if (secret !== expected) {
     return jsonError("UNAUTHORIZED", "Invalid internal secret.", { status: 401, requestId });
   }
+  const idleSkip = skipIfStagingIdleCron(requestId);
+  if (idleSkip) return idleSkip;
 
   if (!isFincraEnabled()) {
     return jsonOk({ skipped: true, reason: "fincra_disabled" }, { requestId });

@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { and, eq, inArray, isNotNull, isNull, lt, sql } from "drizzle-orm";
+import { skipIfStagingIdleCron } from "@/lib/api/internal-cron-auth";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import type { DbTransaction } from "@/lib/db";
 import { withSystemDbActor } from "@/lib/db/actor-context";
@@ -70,6 +71,8 @@ export async function POST(request: Request) {
       requestId,
     });
   }
+  const idleSkip = skipIfStagingIdleCron(requestId);
+  if (idleSkip) return idleSkip;
 
   const result = await withSystemDbActor(async (tx) => {
     // 1) Hard-delete expired unpaid drafts. FK `ON DELETE CASCADE` on
