@@ -8,7 +8,12 @@
  * Header row is detected, not assumed fixed.
  */
 
-import type { TAdminImportCurrency } from "@/lib/payments/local-checkout-config";
+import {
+  buildLocalImportCurrencyStripPattern,
+  buildLocalImportCurrencySymbolStripPattern,
+  detectLocalImportCurrencySignal,
+  type TAdminImportCurrency,
+} from "@/lib/payments/local-checkout-config";
 
 /** Maximum number of rows scanned looking for the header row. */
 const HEADER_SCAN_LIMIT = 25;
@@ -142,20 +147,19 @@ const AED_SIGNALS = [
   "dirham",
   "dirhams",
 ];
-const NGN_SIGNALS = ["ngn", "₦", "naira"];
-const ZAR_SIGNALS = ["zar", " rand", "rand ", "south african rand"];
+const LOCAL_IMPORT_STRIP = buildLocalImportCurrencyStripPattern();
+const LOCAL_IMPORT_SYMBOL_STRIP = buildLocalImportCurrencySymbolStripPattern();
 
 /**
  * Attempt to parse a currency code from raw cell text.
  * Returns an admin-import currency or null.
  */
 export function parseCurrencySignal(raw: string): TAdminImportCurrency | null {
+  const local = detectLocalImportCurrencySignal(raw);
+  if (local) return local;
   const lower = raw.toLowerCase();
-  if (NGN_SIGNALS.some((s) => lower.includes(s))) return "NGN";
   if (USD_SIGNALS.some((s) => lower.includes(s))) return "USD";
   if (AED_SIGNALS.some((s) => lower.includes(s))) return "AED";
-  if (lower.startsWith("r ") || /^r\d/.test(lower)) return "ZAR";
-  if (ZAR_SIGNALS.some((s) => lower.includes(s))) return "ZAR";
   return null;
 }
 
@@ -167,8 +171,9 @@ export function parseCurrencySignal(raw: string): TAdminImportCurrency | null {
 export function extractNumericValue(raw: string): number | null {
   // Strip known currency signal words/symbols
   let cleaned = raw
-    .replace(/usd|aed|ngn|naira|zar|rand|dh|dhs|د\.إ/gi, "")
-    .replace(/[$₦R]/g, "")
+    .replace(/usd|aed|dh|dhs|د\.إ/gi, "")
+    .replace(LOCAL_IMPORT_STRIP, "")
+    .replace(LOCAL_IMPORT_SYMBOL_STRIP, "")
     .trim();
 
   // If after stripping we have something like "1 234" (space-separated thousands)

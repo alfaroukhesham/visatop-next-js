@@ -11,6 +11,8 @@ import { buildFincraInlineCheckoutData, type TFincraInlineCheckoutData } from "@
 import { nextFincraAttemptReference } from "@/lib/payments/fincra-attempt-reference";
 import { reconcileFincraPaymentFromReturn } from "@/lib/payments/reconcile-fincra-payments";
 import { getFincraServerConfig } from "@/lib/payments/resolve-payment-provider";
+import { getLocalCheckoutByCurrency } from "@/lib/payments/local-checkout-config";
+import { FINCRA_INLINE_PAYMENT_METHODS } from "@/lib/payments/local-checkout-config";
 import type { TResumeCheckoutSession } from "@/lib/payments/checkout-types";
 
 export const loadOpenFincraPayment = async (tx: DbTransaction, memberIds: string[]) => {
@@ -61,10 +63,15 @@ export const buildFincraInlineCheckoutDataForPayment = async (
   };
   if (app.partyId) metadata.partyId = app.partyId;
   if (app.userId) metadata.userId = app.userId;
+  const localCheckout = getLocalCheckoutByCurrency(payRow.currency);
+  const paymentMethods = localCheckout
+    ? [...localCheckout.paymentMethods]
+    : [...FINCRA_INLINE_PAYMENT_METHODS];
   return buildFincraInlineCheckoutData({
     publicKey: cfg.publicKey,
     amountMinor: payRow.amount,
     currency: payRow.currency,
+    paymentMethods,
     customer: {
       name: app.fullName?.trim() || "VisaTop customer",
       email: customerEmail,

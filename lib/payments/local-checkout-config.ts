@@ -13,6 +13,8 @@ export type TLocalCheckoutConfigEntry = {
   paymentMethods: readonly TFincraCheckoutPaymentMethod[];
   /** Code-level gate; `FINCRA_ENABLED` must still be on for Fincra checkout. */
   enabled: boolean;
+  /** Extra strings for admin price-sheet import detection/stripping (ISO code is always matched). */
+  importAliases?: readonly string[];
 };
 
 /**
@@ -26,6 +28,7 @@ export const LOCAL_CHECKOUT_CONFIG: readonly TLocalCheckoutConfigEntry[] = [
     provider: "fincra",
     paymentMethods: FINCRA_INLINE_PAYMENT_METHODS,
     enabled: true,
+    importAliases: ["₦", "naira"],
   },
   {
     nationality: "ZA",
@@ -33,6 +36,7 @@ export const LOCAL_CHECKOUT_CONFIG: readonly TLocalCheckoutConfigEntry[] = [
     provider: "fincra",
     paymentMethods: FINCRA_INLINE_PAYMENT_METHODS,
     enabled: true,
+    importAliases: ["rand", "r"],
   },
 ] as const;
 
@@ -47,6 +51,60 @@ export type TConfiguredLocalCheckoutCurrency = (typeof CONFIGURED_LOCAL_CHECKOUT
 export const ADMIN_IMPORT_CURRENCIES = ["USD", "AED", ...CONFIGURED_LOCAL_CHECKOUT_CURRENCIES] as const;
 
 export type TAdminImportCurrency = (typeof ADMIN_IMPORT_CURRENCIES)[number];
+
+const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+type TLocalImportDetectEntry = Pick<TLocalCheckoutConfigEntry, "currency" | "importAliases">;
+
+/** Detect a configured local import currency from raw cell text (ISO code + importAliases). */
+export const detectLocalImportCurrencySignal = (
+  raw: string,
+  entries: readonly TLocalImportDetectEntry[] = LOCAL_CHECKOUT_CONFIG,
+): TConfiguredLocalCheckoutCurrency | null => {
+  const lower = raw.toLowerCase();
+  const trimmed = raw.trim();
+  for (const entry of entries) {
+    const code = entry.currency.trim().toUpperCase() as TConfiguredLocalCheckoutCurrency;
+    const codeLower = code.toLowerCase();
+    if (lower.includes(codeLower)) return code;
+    for (const alias of entry.importAliases ?? []) {
+      if (alias.length === 1) {
+        const re = new RegExp(`^${escapeRegExp(alias)}\\s|^${escapeRegExp(alias)}\\d`, "i");
+        if (re.test(trimmed)) return code;
+      } else if (lower.includes(alias.toLowerCase())) {
+        return code;
+      }
+    }
+  }
+  return null;
+};
+
+/** Alternation pattern for stripping configured local currency tokens from amount cells. */
+export const buildLocalImportCurrencyStripPattern = (
+  entries: readonly TLocalImportDetectEntry[] = LOCAL_CHECKOUT_CONFIG,
+): RegExp => {
+  const parts: string[] = [];
+  for (const entry of entries) {
+    parts.push(escapeRegExp(entry.currency));
+    for (const alias of entry.importAliases ?? []) {
+      if (alias.length > 1) parts.push(escapeRegExp(alias));
+    }
+  }
+  return new RegExp(parts.join("|"), "gi");
+};
+
+/** Character class for single-char import aliases and `$` when stripping amount cells. */
+export const buildLocalImportCurrencySymbolStripPattern = (
+  entries: readonly TLocalImportDetectEntry[] = LOCAL_CHECKOUT_CONFIG,
+): RegExp => {
+  const chars = new Set<string>(["$"]);
+  for (const entry of entries) {
+    for (const alias of entry.importAliases ?? []) {
+      if ([...alias].length === 1) chars.add(alias);
+    }
+  }
+  return new RegExp(`[${[...chars].map(escapeRegExp).join("")}]`, "g");
+};
 
 const normNat = (code: string): string => code.trim().toUpperCase();
 

@@ -484,7 +484,7 @@ export async function previewPriceSheetImport(
   }
 
   // Build auto-fix preview: USD/AED pairs with exactly one of those currencies need FX.
-  // NGN is stored as-is and never FX-derived.
+  // Configured local checkout currencies are stored as-is and never FX-derived.
   for (const [key, entry] of seenPairCurrencies) {
     const usdAed = [...entry.currencies].filter((c): c is "USD" | "AED" => c === "USD" || c === "AED");
     if (usdAed.length !== 1) continue;

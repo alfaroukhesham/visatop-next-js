@@ -20,6 +20,7 @@ export type TFincraInlineCheckoutData = {
   key: string;
   amount: number;
   currency: string;
+  paymentMethods: string[];
   customer: TFincraInlineCustomer;
   reference: string;
   feeBearer: FincraFeeBearer;
@@ -55,6 +56,7 @@ export const buildFincraInlineCheckoutData = (params: {
   publicKey: string;
   amountMinor: bigint;
   currency: string;
+  paymentMethods: readonly string[];
   customer: { name: string; email: string; phoneNumber?: string | null };
   reference: string;
   feeBearer: FincraFeeBearer;
@@ -72,6 +74,7 @@ export const buildFincraInlineCheckoutData = (params: {
     key: params.publicKey,
     amount: fincraMinorToMajorNumber(params.amountMinor),
     currency: params.currency.trim().toUpperCase(),
+    paymentMethods: [...params.paymentMethods],
     customer,
     reference: params.reference,
     feeBearer: params.feeBearer,
@@ -90,7 +93,7 @@ export const toFincraInitializeOptions = (
   reference: data.reference,
   feeBearer: data.feeBearer,
   metadata: data.metadata,
-  paymentMethods: [...FINCRA_INLINE_PAYMENT_METHODS],
+  paymentMethods: [...data.paymentMethods],
   onSuccess: hooks.onSuccess,
   onClose: hooks.onClose,
 });

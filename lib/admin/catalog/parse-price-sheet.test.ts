@@ -10,6 +10,7 @@ import {
   toMinorUnits,
   collectMissingNationalityEntries,
 } from "./parse-price-sheet";
+import { detectLocalImportCurrencySignal } from "@/lib/payments/local-checkout-config";
 
 describe("detectHeaderRowIndex", () => {
   it("detects header at row 0 (simple sheet)", () => {
@@ -152,6 +153,19 @@ describe("parseCurrencySignal", () => {
   it("returns null for no signal", () => {
     expect(parseCurrencySignal("100")).toBeNull();
     expect(parseCurrencySignal("")).toBeNull();
+  });
+});
+
+describe("config-driven local import detection", () => {
+  it("detects a hypothetical currency from injected config entries", () => {
+    expect(
+      detectLocalImportCurrencySignal("1500 widgets", [
+        { currency: "WGT", importAliases: ["widgets", "w"] },
+      ]),
+    ).toBe("WGT");
+    expect(detectLocalImportCurrencySignal("W 99", [{ currency: "WGT", importAliases: ["w"] }])).toBe(
+      "WGT",
+    );
   });
 });
 

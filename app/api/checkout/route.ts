@@ -398,6 +398,7 @@ export async function POST(req: Request) {
           publicKey: fincraCfg.publicKey,
           amountMinor: totalMinor,
           currency: catalogCurrency,
+          paymentMethods: fincraPaymentMethods,
           customer: {
             name: customerName,
             email: customerEmail,

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fincraMajorToMinor, fincraMinorToMajorNumber, tryFincraMajorToMinor } from "./fincra-amounts";
 
 describe("fincra amounts", () => {
-  it("converts major naira to kobo", () => {
+  it("converts major units to minor (×100)", () => {
     expect(fincraMajorToMinor(185000)).toBe(BigInt(18_500_000));
     expect(fincraMajorToMinor("185000.50")).toBe(BigInt(18_500_050));
   });
