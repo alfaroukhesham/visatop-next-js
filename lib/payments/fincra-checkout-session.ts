@@ -64,6 +64,7 @@ export const buildFincraInlineCheckoutDataForPayment = async (
   return buildFincraInlineCheckoutData({
     publicKey: cfg.publicKey,
     amountMinor: payRow.amount,
+    currency: payRow.currency,
     customer: {
       name: app.fullName?.trim() || "VisaTop customer",
       email: customerEmail,

@@ -142,6 +142,13 @@ describe("parseCurrencySignal", () => {
     expect(parseCurrencySignal("185000 naira")).toBe("NGN");
   });
 
+  it("detects ZAR variants", () => {
+    expect(parseCurrencySignal("ZAR 1500")).toBe("ZAR");
+    expect(parseCurrencySignal("R 1500")).toBe("ZAR");
+    expect(parseCurrencySignal("R1500")).toBe("ZAR");
+    expect(parseCurrencySignal("1500 rand")).toBe("ZAR");
+  });
+
   it("returns null for no signal", () => {
     expect(parseCurrencySignal("100")).toBeNull();
     expect(parseCurrencySignal("")).toBeNull();

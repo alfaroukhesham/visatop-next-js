@@ -1,3 +1,5 @@
+import type { TAdminImportCurrency } from "@/lib/payments/local-checkout-config";
+
 export type MissingNationalityEntry = {
   normKey: string;
   exampleRaw: string;
@@ -94,7 +96,7 @@ export type CustomerPriceImportState = {
   file: File | null;
   preview: PreviewResult | null;
   applyResult: ApplyResult | null;
-  pendingCurrency: "USD" | "AED" | "NGN";
+  pendingCurrency: TAdminImportCurrency;
   phase: ImportPhase;
   error: string | null;
   showAutoFix: boolean;

@@ -4,12 +4,13 @@ import {
   resolveCheckoutProviderDecision,
 } from "./resolve-checkout-provider";
 import { isFincraEnabled, parseFincraFeeBearer } from "./resolve-payment-provider";
+import { parseQuoteCurrency } from "@/lib/pricing/catalog-currency";
 
 describe("resolveCheckoutProviderDecision", () => {
   it("routes Nigerian applications with stored NGN prices to Fincra when NGN is selected", () => {
     const d = resolveCheckoutProviderDecision({
       nationalityCode: "NG",
-      hasStoredNgnPriceForEveryMember: true,
+      hasStoredLocalPriceForEveryMember: true,
       displayCurrency: "USD",
       selectedCurrency: "NGN",
       defaultProvider: "ziina",
@@ -18,14 +19,30 @@ describe("resolveCheckoutProviderDecision", () => {
     expect(d).toEqual({
       provider: "fincra",
       quoteCurrency: "NGN",
-      fincraSkippedMissingNgn: false,
+      fincraSkippedMissingLocalPrice: false,
     });
   });
 
-  it("falls back to the default provider when NGN prices are missing", () => {
+  it("routes South African applications with stored ZAR prices to Fincra when ZAR is selected", () => {
+    const d = resolveCheckoutProviderDecision({
+      nationalityCode: "ZA",
+      hasStoredLocalPriceForEveryMember: true,
+      displayCurrency: "USD",
+      selectedCurrency: "ZAR",
+      defaultProvider: "ziina",
+      fincraEnabled: true,
+    });
+    expect(d).toEqual({
+      provider: "fincra",
+      quoteCurrency: "ZAR",
+      fincraSkippedMissingLocalPrice: false,
+    });
+  });
+
+  it("falls back to the default provider when local prices are missing", () => {
     const d = resolveCheckoutProviderDecision({
       nationalityCode: "ng",
-      hasStoredNgnPriceForEveryMember: false,
+      hasStoredLocalPriceForEveryMember: false,
       displayCurrency: "AED",
       selectedCurrency: "NGN",
       defaultProvider: "paddle",
@@ -34,14 +51,14 @@ describe("resolveCheckoutProviderDecision", () => {
     expect(d).toEqual({
       provider: "paddle",
       quoteCurrency: "AED",
-      fincraSkippedMissingNgn: true,
+      fincraSkippedMissingLocalPrice: true,
     });
   });
 
-  it("keeps the default provider for non-NG nationality even when Fincra is on", () => {
+  it("keeps the default provider for non-configured nationality even when Fincra is on", () => {
     const d = resolveCheckoutProviderDecision({
       nationalityCode: "IN",
-      hasStoredNgnPriceForEveryMember: true,
+      hasStoredLocalPriceForEveryMember: true,
       displayCurrency: "USD",
       selectedCurrency: "NGN",
       defaultProvider: "ziina",
@@ -49,13 +66,13 @@ describe("resolveCheckoutProviderDecision", () => {
     });
     expect(d.provider).toBe("ziina");
     expect(d.quoteCurrency).toBe("USD");
-    expect(d.fincraSkippedMissingNgn).toBe(false);
+    expect(d.fincraSkippedMissingLocalPrice).toBe(false);
   });
 
   it("does not offer Fincra when the flag is off", () => {
     const d = resolveCheckoutProviderDecision({
       nationalityCode: "NG",
-      hasStoredNgnPriceForEveryMember: true,
+      hasStoredLocalPriceForEveryMember: true,
       displayCurrency: "USD",
       selectedCurrency: "NGN",
       defaultProvider: "ziina",
@@ -65,10 +82,10 @@ describe("resolveCheckoutProviderDecision", () => {
     expect(d.quoteCurrency).toBe("USD");
   });
 
-  it("keeps Paddle/Ziina when a Nigerian applicant selected a global currency", () => {
+  it("keeps Paddle/Ziina when a configured applicant selected a global currency", () => {
     const d = resolveCheckoutProviderDecision({
       nationalityCode: "NG",
-      hasStoredNgnPriceForEveryMember: true,
+      hasStoredLocalPriceForEveryMember: true,
       displayCurrency: "USD",
       selectedCurrency: "USD",
       defaultProvider: "paddle",
@@ -77,8 +94,21 @@ describe("resolveCheckoutProviderDecision", () => {
     expect(d).toEqual({
       provider: "paddle",
       quoteCurrency: "USD",
-      fincraSkippedMissingNgn: false,
+      fincraSkippedMissingLocalPrice: false,
     });
+  });
+
+  it("keeps the default provider when ZA selects USD", () => {
+    const d = resolveCheckoutProviderDecision({
+      nationalityCode: "ZA",
+      hasStoredLocalPriceForEveryMember: true,
+      displayCurrency: "USD",
+      selectedCurrency: "USD",
+      defaultProvider: "ziina",
+      fincraEnabled: true,
+    });
+    expect(d.provider).toBe("ziina");
+    expect(d.quoteCurrency).toBe("USD");
   });
 });
 
@@ -87,6 +117,12 @@ describe("decideCheckoutProviderFromContext", () => {
     { code: "USD", kind: "global" as const },
     { code: "AED", kind: "global" as const },
     { code: "NGN", kind: "local" as const },
+  ];
+
+  const zaVisible = [
+    { code: "USD", kind: "global" as const },
+    { code: "AED", kind: "global" as const },
+    { code: "ZAR", kind: "local" as const },
   ];
 
   it("selects Fincra when NGN is allowed and stored", () => {
@@ -100,7 +136,22 @@ describe("decideCheckoutProviderFromContext", () => {
     });
     expect(r).toEqual({
       ok: true,
-      decision: { provider: "fincra", quoteCurrency: "NGN", fincraSkippedMissingNgn: false },
+      decision: { provider: "fincra", quoteCurrency: "NGN", fincraSkippedMissingLocalPrice: false },
+    });
+  });
+
+  it("selects Fincra when ZAR is allowed and stored", () => {
+    const r = decideCheckoutProviderFromContext({
+      nationalityCode: "ZA",
+      selectedCurrency: "ZAR",
+      visible: zaVisible,
+      hasStoredPriceForSelected: true,
+      defaultProvider: "paddle",
+      fincraEnabled: true,
+    });
+    expect(r).toEqual({
+      ok: true,
+      decision: { provider: "fincra", quoteCurrency: "ZAR", fincraSkippedMissingLocalPrice: false },
     });
   });
 
@@ -129,6 +180,13 @@ describe("decideCheckoutProviderFromContext", () => {
       fincraEnabled: true,
     });
     expect(r).toEqual({ ok: false, reason: "missing_stored_price" });
+  });
+});
+
+describe("parseQuoteCurrency", () => {
+  it("passes configured local currencies through", () => {
+    expect(parseQuoteCurrency("ZAR")).toBe("ZAR");
+    expect(parseQuoteCurrency("ngn")).toBe("NGN");
   });
 });
 

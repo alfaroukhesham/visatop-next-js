@@ -252,8 +252,6 @@
     "paymentConfirmed": "Ödeme onaylandı",
     "paymentConfirmedDetail": "Ödemenizi onaylıyor ve işleme başlıyoruz.",
     "payAndSubmit": "Öde ve başvuruyu gönder",
-    "payInNaira": "Naira ile öde",
-    "payInNairaHint": "Naira fiyatı olan Nijerya başvuruları Fincra üzerinden ödenir (kart veya havale).",
     "whatsappHelpPrefix": "Having trouble with payment?",
     "whatsappHelpLink": "Message us on WhatsApp",
     "whatsappHelpSuffix": ", we're available 24/7.",
@@ -282,7 +280,9 @@
       "noHiddenCharges": "Gizli ücret yok"
     },
     "termsAgree": "VisaTop'un {link} kabul ediyorum",
-    "termsLink": "Kullanım Koşulları'nı"
+    "termsLink": "Kullanım Koşulları'nı",
+    "payInLocalCurrency": "{currencyName} ile öde",
+    "payInLocalCurrencyHint": "{currencyName} fiyatı olan başvurular Fincra üzerinden ödenir (kart veya havale)."
   },
   "pay": {
     "payNowIncomplete": "İşleme başlamak için şimdi ödeyin. Ödemeden sonra kalan bilgileri ekleyebilirsiniz.",

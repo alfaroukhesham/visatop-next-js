@@ -8,6 +8,8 @@
  * Header row is detected, not assumed fixed.
  */
 
+import type { TAdminImportCurrency } from "@/lib/payments/local-checkout-config";
+
 /** Maximum number of rows scanned looking for the header row. */
 const HEADER_SCAN_LIMIT = 25;
 
@@ -141,18 +143,19 @@ const AED_SIGNALS = [
   "dirhams",
 ];
 const NGN_SIGNALS = ["ngn", "₦", "naira"];
+const ZAR_SIGNALS = ["zar", " rand", "rand ", "south african rand"];
 
 /**
  * Attempt to parse a currency code from raw cell text.
- * Returns "USD", "AED", "NGN", or null.
+ * Returns an admin-import currency or null.
  */
-export function parseCurrencySignal(
-  raw: string,
-): "USD" | "AED" | "NGN" | null {
+export function parseCurrencySignal(raw: string): TAdminImportCurrency | null {
   const lower = raw.toLowerCase();
   if (NGN_SIGNALS.some((s) => lower.includes(s))) return "NGN";
   if (USD_SIGNALS.some((s) => lower.includes(s))) return "USD";
   if (AED_SIGNALS.some((s) => lower.includes(s))) return "AED";
+  if (lower.startsWith("r ") || /^r\d/.test(lower)) return "ZAR";
+  if (ZAR_SIGNALS.some((s) => lower.includes(s))) return "ZAR";
   return null;
 }
 
@@ -164,8 +167,8 @@ export function parseCurrencySignal(
 export function extractNumericValue(raw: string): number | null {
   // Strip known currency signal words/symbols
   let cleaned = raw
-    .replace(/usd|aed|ngn|naira|dh|dhs|د\.إ/gi, "")
-    .replace(/[$₦]/g, "")
+    .replace(/usd|aed|ngn|naira|zar|rand|dh|dhs|د\.إ/gi, "")
+    .replace(/[$₦R]/g, "")
     .trim();
 
   // If after stripping we have something like "1 234" (space-separated thousands)
@@ -197,7 +200,7 @@ export function toMinorUnits(value: number): bigint {
 }
 
 export type MoneyCellResult =
-  | { kind: "priced"; currency: "USD" | "AED" | "NGN"; amountMinor: bigint }
+  | { kind: "priced"; currency: TAdminImportCurrency; amountMinor: bigint }
   | { kind: "ambiguous"; amountMinor: bigint } // amount parsed, currency unknown
   | { kind: "empty" }; // no parseable amount
 

@@ -252,8 +252,6 @@
     "paymentConfirmed": "تم تأكيد الدفع",
     "paymentConfirmedDetail": "نؤكّد دفعتك ونبدأ المعالجة.",
     "payAndSubmit": "الدفع وإرسال الطلب",
-    "payInNaira": "الدفع بالنايرا",
-    "payInNairaHint": "طلبات الجنسية النيجيرية ذات سعر النايرا تُدفع عبر Fincra (بطاقة أو تحويل بنكي).",
     "whatsappHelpPrefix": "هل تواجه مشكلة في الدفع؟",
     "whatsappHelpLink": "راسلنا على واتساب",
     "whatsappHelpSuffix": "، نحن متاحون على مدار الساعة.",
@@ -282,7 +280,9 @@
       "noHiddenCharges": "لا رسوم مخفية"
     },
     "termsAgree": "أوافق على {link} الخاصة بـ VisaTop",
-    "termsLink": "شروط الاستخدام"
+    "termsLink": "شروط الاستخدام",
+    "payInLocalCurrency": "الدفع بـ{currencyName}",
+    "payInLocalCurrencyHint": "الطلبات ذات سعر {currencyName} تُدفع عبر Fincra (بطاقة أو تحويل بنكي)."
   },
   "pay": {
     "payNowIncomplete": "ادفع الآن لبدء المعالجة. يمكنك إضافة التفاصيل المتبقية بعد الدفع.",

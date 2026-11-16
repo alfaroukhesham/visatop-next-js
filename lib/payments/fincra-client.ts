@@ -88,7 +88,7 @@ export const parseFincraVerifiedPayment = (json: unknown): FincraVerifiedPayment
   const id =
     typeof idRaw === "number" || typeof idRaw === "string" ? String(idRaw) : "";
   const status = readString(data, "status").trim().toLowerCase();
-  const currency = readString(data, "currency").trim().toUpperCase() || "NGN";
+  const currency = readString(data, "currency").trim().toUpperCase();
   const amountMinor = tryFincraMajorToMinor(data.amount) ?? BigInt(0);
   const amountReceivedMinor = tryFincraMajorToMinor(data.amountReceived);
   const amountExpectedMinor = tryFincraMajorToMinor(data.amountExpected);

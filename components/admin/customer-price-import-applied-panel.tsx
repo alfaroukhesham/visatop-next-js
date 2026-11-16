@@ -7,13 +7,14 @@ import type {
   ImportPhase,
   PendingImportListRow,
 } from "@/components/admin/customer-price-import-types";
+import type { TAdminImportCurrency } from "@/lib/payments/local-checkout-config";
 
 export type CustomerPriceImportAppliedPanelProps = {
   applyResult: ApplyResult;
   phase: ImportPhase;
   assignElapsedSec: number;
-  pendingCurrency: "USD" | "AED" | "NGN";
-  onPendingCurrencyChange: (currency: "USD" | "AED" | "NGN") => void;
+  pendingCurrency: TAdminImportCurrency;
+  onPendingCurrencyChange: (currency: TAdminImportCurrency) => void;
   pendingPageSize: number;
   onPendingPageSizeChange: (size: number) => void;
   pendingPage: number;

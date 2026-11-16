@@ -76,7 +76,7 @@ export const parseFincraWebhookToNormalized = (rawBody: string): FincraWebhookPa
         ? String((d.metadata as Record<string, unknown>).reference)
         : null;
   const status = typeof d.status === "string" ? d.status.trim().toLowerCase() : "";
-  const currency = typeof d.currency === "string" ? d.currency.trim().toUpperCase() : "NGN";
+  const currency = typeof d.currency === "string" ? d.currency.trim().toUpperCase() : "";
   const amountMinor =
     tryFincraMajorToMinor(d.amountReceived) ?? tryFincraMajorToMinor(d.amount) ?? BigInt(0);
   const providerPaymentId = reference || chargeReference || id;

@@ -10,7 +10,7 @@ import {
   type TApplicationCharge,
   type TCheckoutOffer,
 } from "@/lib/applications/public-application";
-import { parseUsdAedCurrency } from "@/lib/pricing/catalog-currency";
+import { parseQuoteCurrency } from "@/lib/pricing/catalog-currency";
 import { resolveCheckoutOfferDecision } from "@/lib/payments/resolve-checkout-provider";
 import { getActivePaymentProvider } from "@/lib/payments/resolve-payment-provider";
 
@@ -69,7 +69,7 @@ export const loadCheckoutOffer = async (
   if (!offer.ok) {
     return {
       provider: getActivePaymentProvider(),
-      currency: parseUsdAedCurrency(row.catalogCurrency),
+      currency: parseQuoteCurrency(row.catalogCurrency),
     };
   }
   return { provider: offer.decision.provider, currency: offer.decision.quoteCurrency };

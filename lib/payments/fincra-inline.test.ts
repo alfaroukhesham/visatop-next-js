@@ -19,6 +19,7 @@ describe("Fincra inline checkout payload", () => {
     const data = buildFincraInlineCheckoutData({
       publicKey: "pk_test_public",
       amountMinor: BigInt(18_500_000),
+      currency: "NGN",
       customer: { name: "Ada Lovelace", email: "ada@example.com", phoneNumber: "+2348012345678" },
       reference: "pay_1",
       feeBearer: "business",
@@ -43,6 +44,7 @@ describe("Fincra inline checkout payload", () => {
     const data = buildFincraInlineCheckoutData({
       publicKey: "pk_live",
       amountMinor: BigInt(10000),
+      currency: "ZAR",
       customer: { name: "A", email: "a@b.c" },
       reference: "pay_9",
       feeBearer: "customer",
@@ -54,7 +56,7 @@ describe("Fincra inline checkout payload", () => {
     });
     expect(options.key).toBe(data.key);
     expect(options.amount).toBe(data.amount);
-    expect(options.currency).toBe("NGN");
+    expect(options.currency).toBe("ZAR");
     expect(options.reference).toBe("pay_9");
     expect(options.feeBearer).toBe("customer");
     expect(options.metadata).toEqual({ paymentId: "pay_9" });
@@ -66,6 +68,7 @@ describe("Fincra inline checkout payload", () => {
     const data = buildFincraInlineCheckoutData({
       publicKey: "pk_live",
       amountMinor: BigInt(10000),
+      currency: "NGN",
       customer: { name: "A", email: "ada@mail.com" },
       reference: "pay_9-a1",
       feeBearer: "customer",

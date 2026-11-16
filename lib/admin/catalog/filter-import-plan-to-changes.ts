@@ -2,11 +2,12 @@ import { sql, inArray } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import type { ImportCatalogScope } from "./purge-catalog-outside-sheet-scope";
+import type { TAdminImportCurrency } from "@/lib/payments/local-checkout-config";
 
 export type ImportPriceUpsert = {
   nationalityCode: string;
   serviceId: string;
-  currency: "USD" | "AED" | "NGN";
+  currency: TAdminImportCurrency;
   amountMinor: bigint;
   source: string;
 };
