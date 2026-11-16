@@ -181,6 +181,43 @@ describe("extractNumericValue", () => {
   it("returns null for no number", () => {
     expect(extractNumericValue("N/A")).toBeNull();
   });
+
+  it("strips leading single-char local aliases case-insensitively", () => {
+    expect(extractNumericValue("R1500")).toBe(1500);
+    expect(extractNumericValue("R 1500")).toBe(1500);
+    expect(extractNumericValue("r1500")).toBe(1500);
+    expect(extractNumericValue("₦10,000")).toBe(10000);
+  });
+
+  it("does not strip letters when a single-char alias is not at the start", () => {
+    expect(extractNumericValue("recommend 100")).toBeNull();
+    expect(parseMoneyCell("recommend 100")).toEqual({ kind: "empty" });
+  });
+});
+
+describe("parseMoneyCell local currency amounts", () => {
+  it("parses ZAR and NGN prefixed amounts", () => {
+    expect(parseMoneyCell("R1500")).toEqual({
+      kind: "priced",
+      currency: "ZAR",
+      amountMinor: BigInt(150_000),
+    });
+    expect(parseMoneyCell("R 1500")).toEqual({
+      kind: "priced",
+      currency: "ZAR",
+      amountMinor: BigInt(150_000),
+    });
+    expect(parseMoneyCell("r1500")).toEqual({
+      kind: "priced",
+      currency: "ZAR",
+      amountMinor: BigInt(150_000),
+    });
+    expect(parseMoneyCell("₦10,000")).toEqual({
+      kind: "priced",
+      currency: "NGN",
+      amountMinor: BigInt(1_000_000),
+    });
+  });
 });
 
 describe("toMinorUnits", () => {

@@ -1,7 +1,5 @@
 import type { FincraFeeBearer } from "@/lib/payments/resolve-payment-provider";
 import { fincraMinorToMajorNumber } from "@/lib/payments/fincra-amounts";
-import { FINCRA_INLINE_PAYMENT_METHODS } from "@/lib/payments/local-checkout-config";
-
 export const FINCRA_INLINE_SCRIPT_SRC =
   "https://unpkg.com/@fincra-engineering/checkout@2.2.0/dist/inline.min.js";
 

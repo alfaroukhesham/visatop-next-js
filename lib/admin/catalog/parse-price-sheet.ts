@@ -10,8 +10,8 @@
 
 import {
   buildLocalImportCurrencyStripPattern,
-  buildLocalImportCurrencySymbolStripPattern,
   detectLocalImportCurrencySignal,
+  stripLeadingSingleCharImportAliases,
   type TAdminImportCurrency,
 } from "@/lib/payments/local-checkout-config";
 
@@ -148,7 +148,6 @@ const AED_SIGNALS = [
   "dirhams",
 ];
 const LOCAL_IMPORT_STRIP = buildLocalImportCurrencyStripPattern();
-const LOCAL_IMPORT_SYMBOL_STRIP = buildLocalImportCurrencySymbolStripPattern();
 
 /**
  * Attempt to parse a currency code from raw cell text.
@@ -170,10 +169,10 @@ export function parseCurrencySignal(raw: string): TAdminImportCurrency | null {
  */
 export function extractNumericValue(raw: string): number | null {
   // Strip known currency signal words/symbols
-  let cleaned = raw
-    .replace(/usd|aed|dh|dhs|د\.إ/gi, "")
-    .replace(LOCAL_IMPORT_STRIP, "")
-    .replace(LOCAL_IMPORT_SYMBOL_STRIP, "")
+  let cleaned = stripLeadingSingleCharImportAliases(
+    raw.replace(/usd|aed|dh|dhs|د\.إ/gi, "").replace(LOCAL_IMPORT_STRIP, ""),
+  )
+    .replace(/^\$+(?=\s*\d)/, "")
     .trim();
 
   // If after stripping we have something like "1 234" (space-separated thousands)

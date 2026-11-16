@@ -93,17 +93,20 @@ export const buildLocalImportCurrencyStripPattern = (
   return new RegExp(parts.join("|"), "gi");
 };
 
-/** Character class for single-char import aliases and `$` when stripping amount cells. */
-export const buildLocalImportCurrencySymbolStripPattern = (
+/** Strip a leading single-char import alias (case-insensitive), matching detect's ^alias\\s|^alias\\d rule. */
+export const stripLeadingSingleCharImportAliases = (
+  raw: string,
   entries: readonly TLocalImportDetectEntry[] = LOCAL_CHECKOUT_CONFIG,
-): RegExp => {
-  const chars = new Set<string>(["$"]);
+): string => {
+  const trimmed = raw.trim();
   for (const entry of entries) {
     for (const alias of entry.importAliases ?? []) {
-      if ([...alias].length === 1) chars.add(alias);
+      if (alias.length !== 1) continue;
+      const re = new RegExp(`^${escapeRegExp(alias)}(\\s+|(?=\\d))`, "i");
+      if (re.test(trimmed)) return trimmed.replace(re, "").trimStart();
     }
   }
-  return new RegExp(`[${[...chars].map(escapeRegExp).join("")}]`, "g");
+  return trimmed;
 };
 
 const normNat = (code: string): string => code.trim().toUpperCase();
