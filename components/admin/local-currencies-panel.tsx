@@ -28,6 +28,7 @@ import {
 } from "@/components/admin/admin-loading";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
+import { formatMajorFromMinor } from "@/lib/admin/catalog/service-price-fx-fill";
 import { formatMinorUnitsAmount } from "@/lib/pricing/format-minor-units";
 import type { CatalogLocalCurrency, CatalogNationality } from "@/lib/admin/catalog/catalog-types";
 
@@ -49,14 +50,35 @@ type TPriceRow = {
 const formatMinor = (minor: string | null, currency: string): string =>
   minor ? formatMinorUnitsAmount(minor, currency) : "—";
 
+const majorDraftsFromRows = (rows: TPriceRow[]): Record<string, string> => {
+  const drafts: Record<string, string> = {};
+  for (const row of rows) {
+    if (!row.localMinor) continue;
+    try {
+      drafts[row.serviceId] = formatMajorFromMinor(BigInt(row.localMinor));
+    } catch {
+      /* ignore malformed stored minor units */
+    }
+  }
+  return drafts;
+};
+
 export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
   localCurrencies,
   nationalities,
   canWrite,
 }) => {
   const router = useRouter();
+  const [currencyOverrides, setCurrencyOverrides] = useState<Record<string, CatalogLocalCurrency>>({});
+  const mergedCurrencies = useMemo(() => {
+    const byCode = new Map(localCurrencies.map((c) => [c.code, c]));
+    for (const [code, currency] of Object.entries(currencyOverrides)) {
+      byCode.set(code, currency);
+    }
+    return [...byCode.values()].sort((a, b) => a.code.localeCompare(b.code));
+  }, [localCurrencies, currencyOverrides]);
   const [selectedCode, setSelectedCode] = useState(localCurrencies[0]?.code ?? "");
-  const selected = localCurrencies.find((c) => c.code === selectedCode) ?? null;
+  const selected = mergedCurrencies.find((c) => c.code === selectedCode) ?? null;
   const [createCode, setCreateCode] = useState("");
   const [createNationalities, setCreateNationalities] = useState<string[]>([]);
   const [editNationalities, setEditNationalities] = useState<string[]>([]);
@@ -66,6 +88,7 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
   const [loadingPrices, setLoadingPrices] = useState(false);
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const linkedNationalityKey = selected?.nationalityCodes.join(",") ?? "";
 
   const flash = (text: string, err = false) => {
     setBanner({ type: err ? "err" : "ok", text });
@@ -73,13 +96,12 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
   };
 
   useEffect(() => {
-    if (selected) {
-      setEditNationalities(selected.nationalityCodes);
-      setPriceNationality((current) =>
-        selected.nationalityCodes.includes(current) ? current : (selected.nationalityCodes[0] ?? ""),
-      );
-    }
-  }, [selected]);
+    if (!selected) return;
+    setEditNationalities(selected.nationalityCodes);
+    setPriceNationality((current) =>
+      selected.nationalityCodes.includes(current) ? current : (selected.nationalityCodes[0] ?? ""),
+    );
+  }, [selected, selectedCode, linkedNationalityKey]);
 
   const loadPrices = useCallback(async (code: string, nationality: string) => {
     if (!code || !nationality) {
@@ -87,6 +109,7 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
       return;
     }
     setLoadingPrices(true);
+    setBanner(null);
     try {
       const res = await fetchApiEnvelope<{ rows: TPriceRow[] }>(
         apiHref(
@@ -94,12 +117,13 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
         ),
       );
       if (!res.ok) {
-        setBanner({ type: "err", text: res.error.message });
+        flash(res.error.message, true);
         setRows([]);
+        setDrafts({});
         return;
       }
       setRows(res.data.rows);
-      setDrafts({});
+      setDrafts(majorDraftsFromRows(res.data.rows));
     } finally {
       setLoadingPrices(false);
     }
@@ -131,10 +155,14 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
       flash(res.error.message, true);
       return;
     }
+    const created = res.data.localCurrency;
     setCreateCode("");
     setCreateNationalities([]);
-    setSelectedCode(res.data.localCurrency.code);
-    flash(`Created ${res.data.localCurrency.code}.`);
+    setCurrencyOverrides((current) => ({ ...current, [created.code]: created }));
+    setSelectedCode(created.code);
+    setEditNationalities(created.nationalityCodes);
+    setPriceNationality(created.nationalityCodes[0] ?? "");
+    flash(`Created ${created.code}.`);
     router.refresh();
   };
 
@@ -154,6 +182,16 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
       flash(res.error.message, true);
       return;
     }
+    setCurrencyOverrides((current) => ({
+      ...current,
+      [selected.code]: res.data.localCurrency,
+    }));
+    setEditNationalities(res.data.localCurrency.nationalityCodes);
+    setPriceNationality((currentNat) =>
+      res.data.localCurrency.nationalityCodes.includes(currentNat)
+        ? currentNat
+        : (res.data.localCurrency.nationalityCodes[0] ?? ""),
+    );
     flash(`Updated ${selected.code} nationality links.`);
     router.refresh();
   };
@@ -182,7 +220,7 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
       return;
     }
     setRows(res.data.rows);
-    setDrafts({});
+    setDrafts(majorDraftsFromRows(res.data.rows));
     flash(`Saved ${selected.code} prices.`);
   };
 
@@ -196,9 +234,9 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
       {banner ? (
         <p
           className={
-            banner.type === "ok"
-              ? "text-sm text-foreground"
-              : "text-error border-error/30 bg-error/5 rounded-xl border px-4 py-3 text-sm"
+            banner.type === "err"
+              ? "border-destructive/40 bg-destructive/10 text-destructive border-b-2 px-4 py-3 text-sm"
+              : "border-success/40 bg-success/10 text-success border-b-2 px-4 py-3 text-sm"
           }
           role="status"
         >
@@ -361,7 +399,7 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
                               <Input
                                 type="text"
                                 inputMode="decimal"
-                                placeholder={formatMinor(row.localMinor, selected.code)}
+                                placeholder="e.g. 185000.00"
                                 className="font-mono text-sm"
                                 disabled={!canWrite || saving}
                                 value={drafts[row.serviceId] ?? ""}

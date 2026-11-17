@@ -20,6 +20,10 @@ import { cn } from "@/lib/utils";
 import { DATE_API_KEYS, type ApplicantProfile, type ApplicantProfileFieldKey, type ExtractResponse } from "./types";
 import { PhoneCountryField, type TPhoneNationalityOption } from "./phone-country-field";
 
+import {
+  applicantNationalityPrefill,
+  isAcceptedApplicantNationality,
+} from "@/lib/apply/applicant-nationality-label";
 import { nonEmptyPrefillKeys } from "@/lib/apply/prefill-keys";
 import { applicantFieldValue, applyDateMask } from "./utils";
 
@@ -170,7 +174,9 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
 
   const initial: Record<string, string> = {};
   for (const r of APPLICANT_ROWS) initial[r.apiKey] = applicantFieldValue(applicant, r.key, guestEmail);
-  if (!applicant.nationality) initial.applicantNationality = nationalityName;
+  if (!applicant.nationality) {
+    initial.applicantNationality = applicantNationalityPrefill(nationalityCode, nationalityName);
+  }
 
   const [values, setValues] = useState<Record<string, string>>(initial);
   const [editedKeys, setEditedKeys] = useState<Set<string>>(() => new Set());
@@ -448,6 +454,12 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
           const isMissing = !APPLY_STEP3_VALIDATION_DISABLED && missing.includes(r.key);
           const isOcrHighlight = (ocrHighlightFields as readonly string[]).includes(r.key);
           const wasOcr = prefilled.has(r.key);
+          const nationalityHighlight =
+            r.key === "nationality" &&
+            isOcrHighlight &&
+            !isAcceptedApplicantNationality(values.applicantNationality, nationalityCode, nationalityName);
+          const fieldInvalid =
+            (isMissing && !values[r.apiKey]) || (r.key === "nationality" ? nationalityHighlight : isOcrHighlight);
           return (
             <div key={r.key}>
               <dt className="text-foreground flex flex-col gap-0.5 text-[11px] font-bold uppercase tracking-wide">
@@ -478,8 +490,8 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
                   onBlur={() => {
                     if (!locked && dirty) void persistPatch(values, { navigate: false });
                   }}
-                  invalid={(isMissing && !values[r.apiKey]) || isOcrHighlight}
-                  aria-describedby={isOcrHighlight ? "ocr-review-hint" : undefined}
+                  invalid={fieldInvalid}
+                  aria-describedby={fieldInvalid && isOcrHighlight ? "ocr-review-hint" : undefined}
                   className={["min-h-11 h-11 rounded-xl", locked ? "cursor-not-allowed opacity-70" : ""].join(" ")}
                 />
               </dd>
