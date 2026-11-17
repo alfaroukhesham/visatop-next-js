@@ -22,7 +22,7 @@ import { PhoneCountryField, type TPhoneNationalityOption } from "./phone-country
 
 import {
   applicantNationalityPrefill,
-  isAcceptedApplicantNationality,
+  isApplicantNationalityValidForReview,
 } from "@/lib/apply/applicant-nationality-label";
 import { nonEmptyPrefillKeys } from "@/lib/apply/prefill-keys";
 import { applicantFieldValue, applyDateMask } from "./utils";
@@ -457,7 +457,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
           const nationalityHighlight =
             r.key === "nationality" &&
             isOcrHighlight &&
-            !isAcceptedApplicantNationality(values.applicantNationality, nationalityCode, nationalityName);
+            !isApplicantNationalityValidForReview(values.applicantNationality, nationalityCode, nationalityName);
           const fieldInvalid =
             (isMissing && !values[r.apiKey]) || (r.key === "nationality" ? nationalityHighlight : isOcrHighlight);
           return (

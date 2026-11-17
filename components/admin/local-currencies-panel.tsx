@@ -95,6 +95,10 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
     setTimeout(() => setBanner(null), 4000);
   };
 
+  const showLoadError = (text: string) => {
+    setBanner({ type: "err", text });
+  };
+
   useEffect(() => {
     if (!selected) return;
     setEditNationalities(selected.nationalityCodes);
@@ -117,7 +121,7 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
         ),
       );
       if (!res.ok) {
-        flash(res.error.message, true);
+        showLoadError(res.error.message);
         setRows([]);
         setDrafts({});
         return;
@@ -255,10 +259,10 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
           </CardHeader>
           <CardContent className="space-y-4 p-4">
             <ul className="space-y-1">
-              {localCurrencies.length === 0 ? (
+              {mergedCurrencies.length === 0 ? (
                 <li className="text-muted-foreground text-sm">No local currencies yet.</li>
               ) : (
-                localCurrencies.map((c) => (
+                mergedCurrencies.map((c) => (
                   <li key={c.code}>
                     <button
                       type="button"

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   applicantNationalityPrefill,
+  applicantNationalityUsesCountryNamePrefill,
   isAcceptedApplicantNationality,
+  isApplicantNationalityValidForReview,
 } from "./applicant-nationality-label";
 
 describe("applicantNationalityPrefill", () => {
@@ -26,5 +28,13 @@ describe("isAcceptedApplicantNationality", () => {
 
   it("rejects unrelated labels", () => {
     expect(isAcceptedApplicantNationality("British", "ZA", "South Africa")).toBe(false);
+  });
+});
+
+describe("unmapped ISO codes", () => {
+  it("uses country-name prefill and keeps that value valid for review highlighting", () => {
+    expect(applicantNationalityUsesCountryNamePrefill("AD")).toBe(true);
+    expect(applicantNationalityPrefill("AD", "Andorra")).toBe("Andorra");
+    expect(isApplicantNationalityValidForReview("Andorra", "AD", "Andorra")).toBe(true);
   });
 });

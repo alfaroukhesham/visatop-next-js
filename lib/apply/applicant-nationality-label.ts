@@ -80,6 +80,9 @@ export const applicantNationalityPrefill = (nationalityCode: string, catalogName
   return code ? (DEMONYM_BY_ISO2[code] ?? regionNameForCode(code) ?? "") : "";
 };
 
+export const applicantNationalityUsesCountryNamePrefill = (nationalityCode: string): boolean =>
+  !DEMONYM_BY_ISO2[nationalityCode.trim().toUpperCase()];
+
 /** Accept demonym, catalog country name, or ISO region label for this passport code. */
 export const isAcceptedApplicantNationality = (
   value: string | null | undefined,
@@ -104,4 +107,18 @@ export const isAcceptedApplicantNationality = (
   accepted.add(normalizeCountryName(applicantNationalityPrefill(nationalityCode, catalogName)));
 
   return accepted.has(norm);
+};
+
+/** OCR review highlight: unmapped codes use country-name prefill and should stay valid when unchanged. */
+export const isApplicantNationalityValidForReview = (
+  value: string | null | undefined,
+  nationalityCode: string,
+  catalogName: string,
+): boolean => {
+  if (isAcceptedApplicantNationality(value, nationalityCode, catalogName)) return true;
+  if (!applicantNationalityUsesCountryNamePrefill(nationalityCode)) return false;
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) return false;
+  const prefill = applicantNationalityPrefill(nationalityCode, catalogName);
+  return normalizeCountryName(trimmed) === normalizeCountryName(prefill);
 };
