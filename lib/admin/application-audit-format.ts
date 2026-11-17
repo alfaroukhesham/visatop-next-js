@@ -58,6 +58,10 @@ export function formatAuditActionTitle(action: string): string {
       return "Post-payment document retention failed (flagged)";
     case "payment_paid_but_application_cancelled":
       return "Paid event received for a cancelled application (flagged)";
+    case "payment_fincra_extra_collection":
+      return "Fincra extra collection (refund required)";
+    case "payment_fincra_paid_after_cancel":
+      return "Fincra paid after cancel (refund required)";
     case "payment_failed":
       return "Payment failed";
     case "guest_application_linked":
@@ -92,6 +96,10 @@ export function formatAuditActionHint(log: AdminApplicationAuditRow): string | n
       return "Paid, but required docs could not be retained. Check document storage + required docs.";
     case "payment_paid_but_application_cancelled":
       return "Paid webhook arrived after cancellation. Validate intent and decide next steps.";
+    case "payment_fincra_extra_collection":
+      return "A second Fincra collection landed after this payment was already paid. Refund from the refund control after checking the provider reference.";
+    case "payment_fincra_paid_after_cancel":
+      return "Fincra reported a successful charge after cancellation. The application was not marked paid. Refund from the refund control after checking the provider reference.";
     case "payment_failed":
       return "Paddle reported payment failure. Customer may need to retry checkout.";
     case "guest_application_linked":
@@ -106,13 +114,26 @@ export function formatAuditInlineDetails(log: AdminApplicationAuditRow): string 
   if (!after) return null;
 
   if (log.action === "payment_amount_mismatch_flagged" || log.action === "payment_fincra_mismatch_flagged") {
-    const expected = after.expectedAmountMinor ?? after.paymentAmountMinor;
-    const received = after.receivedAmountMinor ?? after.eventAmountMinor;
+    const expected = after.expectedAmountMinor ?? after.paymentAmountMinor ?? after.amountExpected;
+    const received = after.receivedAmountMinor ?? after.eventAmountMinor ?? after.amountReceived;
     const reason = typeof after.reason === "string" ? after.reason : null;
     if (expected != null && received != null) {
       const detail = `Expected ${String(expected)} (minor units), received ${String(received)}.`;
       return reason ? `${reason}: ${detail}` : detail;
     }
+  }
+
+  if (log.action === "payment_fincra_extra_collection" || log.action === "payment_fincra_paid_after_cancel") {
+    const merchantReference = typeof after.merchantReference === "string" ? after.merchantReference : "";
+    const amountMinor = after.amountMinor ?? after.amountReceived;
+    const currency = typeof after.currency === "string" ? after.currency : "";
+    const providerReference = typeof after.providerReference === "string" ? after.providerReference : "";
+    const parts = [
+      merchantReference ? `Merchant ref ${merchantReference}` : null,
+      amountMinor != null ? `${String(amountMinor)} ${currency}`.trim() : null,
+      providerReference ? `Provider ref ${providerReference}` : null,
+    ].filter(Boolean);
+    if (parts.length > 0) return parts.join(" · ");
   }
 
   if (log.action === "payment_paid_docs_retain_failed_flagged") {

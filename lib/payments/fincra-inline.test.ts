@@ -9,10 +9,8 @@ import {
 } from "./fincra-inline";
 
 describe("Fincra inline checkout payload", () => {
-  it("pins the documented checkout@2.2.0 script", () => {
-    expect(FINCRA_INLINE_SCRIPT_SRC).toBe(
-      "https://unpkg.com/@fincra-engineering/checkout@2.2.0/dist/inline.min.js",
-    );
+  it("loads the self-hosted checkout@2.2.0 script from this origin", () => {
+    expect(FINCRA_INLINE_SCRIPT_SRC).toBe("/visa-processing/vendor/fincra-checkout-2.2.0/inline.min.js");
   });
 
   it("builds public inline fields from the stored kobo amount and never includes a secret key", () => {

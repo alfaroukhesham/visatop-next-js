@@ -30,12 +30,20 @@ import { createFincraCheckout, FincraProviderError } from "@/lib/payments/fincra
 import { isTrustedFincraCheckoutUrl } from "@/lib/payments/fincra-embedded";
 import { fincraMinorToMajorNumber } from "@/lib/payments/fincra-amounts";
 import { buildFincraInlineCheckoutData } from "@/lib/payments/fincra-inline";
-import { getLocalCheckoutByCurrency } from "@/lib/payments/local-checkout-config";
+import {
+  FINCRA_INLINE_PAYMENT_METHODS,
+  getLocalCheckoutByCurrency,
+} from "@/lib/payments/local-checkout-config";
 import {
   abandonFincraCheckoutLock,
   classifyFincraLockedCheckoutRetry,
 } from "@/lib/payments/fincra-checkout-lock";
-import { loadOpenFincraPayment, rotateOpenFincraInlineAttempt } from "@/lib/payments/fincra-checkout-session";
+import {
+  completeFincraLockedCheckoutRetry,
+  loadOpenFincraPayment,
+  type TFincraLockedRetry,
+} from "@/lib/payments/fincra-checkout-session";
+import { recordFincraAttemptReference } from "@/lib/payments/fincra-attempt-store";
 import { nextFincraAttemptReference } from "@/lib/payments/fincra-attempt-reference";
 import type { CheckoutSessionData } from "@/lib/payments/checkout-types";
 import { diagnoseCheckoutBlock } from "@/lib/payments/diagnose-checkout-block";
@@ -55,6 +63,14 @@ import { createRequestLogger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const isFincraLockedRetry = (value: unknown): value is TFincraLockedRetry =>
+  Boolean(
+    value &&
+      typeof value === "object" &&
+      "kind" in value &&
+      (value as { kind: unknown }).kind === "fincra_locked_retry",
+  );
 
 export async function POST(req: Request) {
   const hdrs = await headers();
@@ -147,7 +163,7 @@ export async function POST(req: Request) {
           .where(inArray(schema.application.id, ids));
       };
 
-      let lockedRows = await lockCheckoutRows();
+      const lockedRows = await lockCheckoutRows();
 
       if (lockedRows.length !== memberIds.length) {
         await unlockCheckoutRows(lockedRows.map((r) => r.id));
@@ -164,26 +180,14 @@ export async function POST(req: Request) {
           payRow: openFincra,
           members: memberLocks,
         });
-        if (retry === "rotate" && openFincra) {
-          const rotated = await rotateOpenFincraInlineAttempt(tx, {
+        if ((retry === "rotate" || retry === "self_heal") && openFincra) {
+          const lockedRetry: TFincraLockedRetry = {
+            kind: "fincra_locked_retry",
+            action: retry,
             payRow: openFincra,
             memberIds,
-            requestId: requestId ?? null,
-          });
-          if (rotated) {
-            await persistMetaCapiAttribution(tx, openFincra.applicationId, capiAttribution);
-            const data: CheckoutSessionData = rotated;
-            return jsonOk(data, { requestId });
-          }
-        }
-        if (retry === "self_heal" && openFincra) {
-          await abandonFincraCheckoutLock(tx, {
-            memberIds,
-            paymentId: openFincra.id,
-            reason: openFincra.providerCheckoutId?.trim() ? "stale_checkout" : "unprovisioned_checkout",
-            requestId,
-          });
-          lockedRows = await lockCheckoutRows();
+          };
+          return lockedRetry;
         }
       }
 
@@ -372,6 +376,7 @@ export async function POST(req: Request) {
           .update(schema.payment)
           .set({ providerOperationId: attemptRef })
           .where(eq(schema.payment.id, paymentId));
+        await recordFincraAttemptReference(tx, { paymentId, merchantReference: attemptRef });
 
         const encId = encodeURIComponent(primary.id);
         const redirectUrl = appHref(`/apply/applications/${encId}/checkout/return`);
@@ -393,7 +398,7 @@ export async function POST(req: Request) {
         const localCheckout = getLocalCheckoutByCurrency(catalogCurrency);
         const fincraPaymentMethods = localCheckout
           ? [...localCheckout.paymentMethods]
-          : (["card", "bank_transfer"] as const);
+          : [...FINCRA_INLINE_PAYMENT_METHODS];
         const inlineData = buildFincraInlineCheckoutData({
           publicKey: fincraCfg.publicKey,
           amountMinor: totalMinor,
@@ -628,7 +633,24 @@ export async function POST(req: Request) {
       }
     };
 
-    return await withSystemDbActor(runTx);
+    const first = await withSystemDbActor(runTx);
+    if (isFincraLockedRetry(first)) {
+      const completed = await completeFincraLockedCheckoutRetry({
+        retry: first,
+        requestId: requestId ?? null,
+        capiAttribution,
+      });
+      if (completed.kind === "response") return completed.response;
+      const second = await withSystemDbActor(runTx);
+      if (isFincraLockedRetry(second)) {
+        return jsonError("CONFLICT", "Checkout cannot be started for this application", {
+          status: 409,
+          requestId,
+        });
+      }
+      return second;
+    }
+    return first;
   } catch (err) {
     log.error({ err }, "[api/checkout] Checkout failed");
     if (err instanceof PaddleProviderError) {

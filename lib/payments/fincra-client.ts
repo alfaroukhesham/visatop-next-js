@@ -74,6 +74,8 @@ export type FincraVerifiedPayment = {
   amountMinor: bigint;
   amountReceivedMinor: bigint | null;
   amountExpectedMinor: bigint | null;
+  /** Merchant net after fees — never used for paid matching. */
+  amountToSettleMinor: bigint | null;
   varianceType: string | null;
   message: string | null;
   merchantReference: string | null;
@@ -92,6 +94,7 @@ export const parseFincraVerifiedPayment = (json: unknown): FincraVerifiedPayment
   const amountMinor = tryFincraMajorToMinor(data.amount) ?? BigInt(0);
   const amountReceivedMinor = tryFincraMajorToMinor(data.amountReceived);
   const amountExpectedMinor = tryFincraMajorToMinor(data.amountExpected);
+  const amountToSettleMinor = tryFincraMajorToMinor(data.amountToSettle);
   const varianceType =
     typeof data.varianceType === "string" && data.varianceType.trim()
       ? data.varianceType.trim().toLowerCase()
@@ -111,6 +114,7 @@ export const parseFincraVerifiedPayment = (json: unknown): FincraVerifiedPayment
     amountMinor,
     amountReceivedMinor,
     amountExpectedMinor,
+    amountToSettleMinor,
     varianceType,
     message,
     merchantReference,
@@ -254,7 +258,7 @@ export const verifyFincraCheckoutByMerchantReference = async (params: {
     });
     throw new FincraProviderError(
       `Fincra verify failed (HTTP ${res.status})`,
-      res.status >= 500 ? 502 : res.status >= 400 ? 400 : 502,
+      res.status === 404 ? 404 : res.status >= 500 ? 502 : res.status >= 400 ? 400 : 502,
       res.text.slice(0, 500),
     );
   }
@@ -262,6 +266,28 @@ export const verifyFincraCheckoutByMerchantReference = async (params: {
   setSafeSpanAttributes(span, { status: verified.status, "http.status_code": res.status });
   return verified;
   });
+
+export type TFincraMerchantReferenceLookup =
+  | { kind: "verified"; payment: FincraVerifiedPayment }
+  | { kind: "not_found" };
+
+export const lookupFincraCheckoutByMerchantReference = async (params: {
+  apiBaseUrl: string;
+  secretKey: string;
+  businessId: string;
+  merchantReference: string;
+  timeoutMs?: number;
+}): Promise<TFincraMerchantReferenceLookup> => {
+  try {
+    const payment = await verifyFincraCheckoutByMerchantReference(params);
+    return { kind: "verified", payment };
+  } catch (e) {
+    if (e instanceof FincraProviderError && e.httpStatus === 404) {
+      return { kind: "not_found" };
+    }
+    throw e;
+  }
+};
 
 export const initiateFincraRefund = async (params: {
   apiBaseUrl: string;
