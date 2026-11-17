@@ -4,6 +4,7 @@ import {
   fincraWebhookLookupIds,
   nextFincraAttemptReference,
   parseFincraAttemptReference,
+  resolveFincraWebhookMerchantReference,
 } from "./fincra-attempt-reference";
 
 describe("fincra attempt references", () => {
@@ -31,5 +32,21 @@ describe("fincra attempt references", () => {
       "pay_1",
     ]);
     expect(fincraWebhookLookupIds({ merchantReference: "pay_1" })).toEqual(["pay_1"]);
+  });
+
+  it("resolves portal refs from data.reference and ignores Fincra pay codes", () => {
+    expect(
+      resolveFincraWebhookMerchantReference({
+        reference: "etayplfayznwkmo4fgz2dmeh-a1",
+        metadataReference: "x".repeat(21),
+      }),
+    ).toBe("etayplfayznwkmo4fgz2dmeh-a1");
+    expect(resolveFincraWebhookMerchantReference({ reference: "fcr-p-a7211ae64e" })).toBeNull();
+    expect(
+      fincraWebhookLookupIds({
+        reference: "pay_1-a1",
+        paymentIdFromMetadata: "pay_1",
+      }),
+    ).toEqual(["pay_1-a1", "pay_1"]);
   });
 });

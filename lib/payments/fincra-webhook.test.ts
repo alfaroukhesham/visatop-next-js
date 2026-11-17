@@ -1,6 +1,10 @@
 import crypto from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { parseFincraWebhookToNormalized, verifyFincraWebhookSignature } from "./fincra-webhook";
+import {
+  parseFincraWebhookEnvelope,
+  parseFincraWebhookToNormalized,
+  verifyFincraWebhookSignature,
+} from "./fincra-webhook";
 
 const secret = "webhook-secret";
 
@@ -107,5 +111,72 @@ describe("parseFincraWebhookToNormalized", () => {
     const r = parseFincraWebhookToNormalized("not-json");
     expect(r.kind).toBe("ignored");
     if (r.kind === "ignored") expect(r.reason).toBe("invalid_json");
+  });
+
+  it("reads our attempt ref from data.reference for portal charge.successful", () => {
+    const body = JSON.stringify({
+      event: "charge.successful",
+      data: {
+        id: 601227,
+        amount: 185000,
+        amountReceived: 185000,
+        currency: "NGN",
+        status: "success",
+        reference: "etayplfayznwkmo4fgz2dmeh-a1",
+        chargeReference: "fcr-p-portal",
+        metadata: { paymentId: "etayplfayznwkmo4fgz2dmeh", applicationId: "app_1" },
+      },
+    });
+    const r = parseFincraWebhookToNormalized(body);
+    expect(r.kind).toBe("event");
+    if (r.kind === "event") {
+      expect(r.merchantReference).toBe("etayplfayznwkmo4fgz2dmeh-a1");
+      expect(r.event.providerPaymentId).toBe("fcr-p-portal");
+      expect(r.event.metadata.operationId).toBe("etayplfayznwkmo4fgz2dmeh-a1");
+      expect(r.event.metadata.paymentId).toBe("etayplfayznwkmo4fgz2dmeh");
+    }
+    const env = parseFincraWebhookEnvelope(body);
+    expect(env?.merchantReference).toBe("etayplfayznwkmo4fgz2dmeh-a1");
+    expect(env?.providerReference).toBe("fcr-p-portal");
+  });
+
+  it("does not treat payment-link metadata.reference as our merchant ref", () => {
+    const body = JSON.stringify({
+      event: "charge.successful",
+      data: {
+        id: 1,
+        amount: 100,
+        status: "success",
+        currency: "NGN",
+        reference: "fcr-p-a7211ae64e",
+        metadata: { reference: "abcdefghij1234567890a", title: "link" },
+      },
+    });
+    const r = parseFincraWebhookToNormalized(body);
+    expect(r.kind).toBe("event");
+    if (r.kind === "event") {
+      expect(r.merchantReference).toBeNull();
+      expect(r.event.providerPaymentId).toBe("fcr-p-a7211ae64e");
+      expect(r.event.metadata.operationId).toBeUndefined();
+    }
+  });
+});
+
+describe("parseFincraWebhookEnvelope portal refs", () => {
+  it("reads charge.expired with attempt ref on data.reference", () => {
+    const e = parseFincraWebhookEnvelope(
+      JSON.stringify({
+        event: "charge.expired",
+        data: {
+          id: 5,
+          reference: "pay_1-a1",
+          status: "expired",
+          metadata: { paymentId: "pay_1" },
+        },
+      }),
+    );
+    expect(e?.merchantReference).toBe("pay_1-a1");
+    expect(e?.providerReference).toBe("pay_1-a1");
+    expect(e?.paymentIdFromMetadata).toBe("pay_1");
   });
 });

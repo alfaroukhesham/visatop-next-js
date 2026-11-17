@@ -345,6 +345,27 @@ describe("POST /api/webhooks/fincra", () => {
       data: { id: 77, reference: "fcr-p-9", merchantReference, status: event.split(".")[1], amount: 332450, currency: "NGN" },
     });
 
+  it("persists charge.expired when our -a1 ref is on data.reference (portal shape)", async () => {
+    const portalExpired = JSON.stringify({
+      event: "charge.expired",
+      data: {
+        id: 77,
+        reference: "pay_1-a1",
+        status: "expired",
+        amount: 332450,
+        currency: "NGN",
+        metadata: { paymentId: "pay_1" },
+      },
+    });
+    const res = await post(portalExpired);
+    expect(res.status).toBe(200);
+    expect(recordMock).toHaveBeenCalledTimes(1);
+    const arg = recordMock.mock.calls[0]![1];
+    expect(arg.envelope.merchantReference).toBe("pay_1-a1");
+    expect(verifyMock).not.toHaveBeenCalled();
+    expect(processMock).not.toHaveBeenCalled();
+  });
+
   it.each(["charge.expired", "charge.failed"])("persists %s for an -aN ref and audits without verifying/marking", async (event) => {
     const res = await post(unpaidBody(event, "pay_1-a1"));
     expect(res.status).toBe(200);
@@ -411,5 +432,91 @@ describe("POST /api/webhooks/fincra", () => {
     expect(res.status).toBe(200);
     expect(recordMock.mock.calls[0]![1].payRow).toBeNull();
     expect(verifyMock).not.toHaveBeenCalled();
+  });
+
+  it("verifies the older portal attempt from data.reference, not the latest providerOperationId", async () => {
+    withSystemMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
+      fn({
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              limit: async () => [
+                {
+                  id: "pay_1",
+                  provider: "fincra",
+                  applicationId: "app_1",
+                  amount: BigInt(18_500_000),
+                  currency: "NGN",
+                  status: "checkout_created",
+                  providerOperationId: "pay_1-a3",
+                },
+              ],
+            }),
+          }),
+        }),
+        update: () => ({
+          set: () => ({
+            where: () => ({
+              returning: async () => [{ key: "last_webhook_received_at_fincra" }],
+            }),
+          }),
+        }),
+      }),
+    );
+    const portalSuccess = JSON.stringify({
+      event: "charge.successful",
+      data: {
+        id: 1,
+        amount: 185000,
+        amountReceived: 185000,
+        currency: "NGN",
+        status: "success",
+        reference: "pay_1-a1",
+        chargeReference: "fcr-p-portal",
+        metadata: { paymentId: "pay_1", applicationId: "app_1" },
+      },
+    });
+    verifyMock.mockResolvedValue({
+      id: "1",
+      status: "success",
+      currency: "NGN",
+      amountMinor: BigInt(18_500_000),
+      amountReceivedMinor: BigInt(18_500_000),
+      amountExpectedMinor: BigInt(18_500_000),
+      amountToSettleMinor: BigInt(18_499_699),
+      varianceType: null,
+      message: null,
+      merchantReference: "pay_1-a1",
+      reference: "fcr-p-portal",
+      feeMinor: BigInt(301),
+      raw: {},
+    });
+    const res = await post(portalSuccess);
+    expect(res.status).toBe(200);
+    expect(verifyMock).toHaveBeenCalledWith(expect.objectContaining({ merchantReference: "pay_1-a1" }));
+    expect(processMock).toHaveBeenCalledTimes(1);
+    expect(processMock.mock.calls[0]![1].normalized.metadata.operationId).toBe("pay_1-a1");
+  });
+
+  it("stores payment-link charge.successful as unmatched without marking paid", async () => {
+    withSystemMock.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => fn(emptyTx()));
+    const linkBody = JSON.stringify({
+      event: "charge.successful",
+      data: {
+        id: 99,
+        amount: 50000,
+        amountReceived: 50000,
+        currency: "NGN",
+        status: "success",
+        reference: "fcr-p-a7211ae64e",
+        metadata: { reference: "abcdefghij1234567890a", title: "Visa fee" },
+      },
+    });
+    const res = await post(linkBody);
+    expect(res.status).toBe(200);
+    expect(recordMock.mock.calls[0]![1].payRow).toBeNull();
+    expect(verifyMock).not.toHaveBeenCalled();
+    expect(processMock).not.toHaveBeenCalled();
+    expect(sideEffectsMock).not.toHaveBeenCalled();
   });
 });

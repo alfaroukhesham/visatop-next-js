@@ -1,6 +1,10 @@
 import crypto from "node:crypto";
 import type { NormalizedPaymentWebhookEvent } from "@/lib/payments/normalized-webhook";
 import { tryFincraMajorToMinor } from "@/lib/payments/fincra-amounts";
+import {
+  parseFincraAttemptReference,
+  resolveFincraWebhookMerchantReference,
+} from "@/lib/payments/fincra-attempt-reference";
 
 export type FincraWebhookParseResult =
   | { kind: "event"; event: NormalizedPaymentWebhookEvent; merchantReference: string | null }
@@ -67,19 +71,25 @@ export const parseFincraWebhookToNormalized = (rawBody: string): FincraWebhookPa
   const id = typeof idRaw === "number" || typeof idRaw === "string" ? String(idRaw) : "";
   const reference = typeof d.reference === "string" ? d.reference : "";
   const chargeReference = typeof d.chargeReference === "string" ? d.chargeReference : "";
-  const merchantReference =
-    typeof d.merchantReference === "string"
-      ? d.merchantReference
-      : typeof d.metadata === "object" &&
-          d.metadata !== null &&
-          typeof (d.metadata as Record<string, unknown>).reference === "string"
-        ? String((d.metadata as Record<string, unknown>).reference)
-        : null;
+  const meta =
+    typeof d.metadata === "object" && d.metadata !== null ? (d.metadata as Record<string, unknown>) : {};
+  const metadataReference = typeof meta.reference === "string" ? meta.reference : null;
+  const merchantReference = resolveFincraWebhookMerchantReference({
+    merchantReference: typeof d.merchantReference === "string" ? d.merchantReference : null,
+    reference: reference || null,
+    chargeReference: chargeReference || null,
+    metadataReference,
+  });
   const status = typeof d.status === "string" ? d.status.trim().toLowerCase() : "";
   const currency = typeof d.currency === "string" ? d.currency.trim().toUpperCase() : "";
   const amountMinor =
     tryFincraMajorToMinor(d.amountReceived) ?? tryFincraMajorToMinor(d.amount) ?? BigInt(0);
-  const providerPaymentId = reference || chargeReference || id;
+  const providerPaymentId =
+    (reference && !parseFincraAttemptReference(reference) ? reference : null) ||
+    (chargeReference && !parseFincraAttemptReference(chargeReference) ? chargeReference : null) ||
+    reference ||
+    chargeReference ||
+    id;
   if (!providerPaymentId) {
     return { kind: "ignored", reason: "missing_reference" };
   }
@@ -146,11 +156,25 @@ export const parseFincraWebhookEnvelope = (rawBody: string): FincraWebhookEnvelo
   const innerMeta =
     meta.metadata && typeof meta.metadata === "object" ? (meta.metadata as Record<string, unknown>) : {};
   const errorObj = d.error && typeof d.error === "object" ? (d.error as Record<string, unknown>) : null;
+  const dataReference = str(d.reference);
+  const dataChargeReference = str(d.chargeReference);
+  const metadataReference = str(meta.reference);
+  const merchantReference = resolveFincraWebhookMerchantReference({
+    merchantReference: str(d.merchantReference),
+    reference: dataReference,
+    chargeReference: dataChargeReference,
+    metadataReference,
+  });
+  const providerReference =
+    (dataReference && !parseFincraAttemptReference(dataReference) ? dataReference : null) ??
+    (dataChargeReference && !parseFincraAttemptReference(dataChargeReference) ? dataChargeReference : null) ??
+    dataChargeReference ??
+    dataReference;
   return {
     eventName,
-    providerEventId: str(d.id) ?? str(d.chargeReference) ?? str(d.reference),
-    merchantReference: str(d.merchantReference) ?? str(meta.reference),
-    providerReference: str(d.reference) ?? str(d.chargeReference),
+    providerEventId: str(d.id) ?? dataChargeReference ?? dataReference,
+    merchantReference,
+    providerReference,
     status: str(d.status)?.toLowerCase() ?? null,
     paymentIdFromMetadata: str(meta.paymentId) ?? str(innerMeta.paymentId),
     failureMessage:
