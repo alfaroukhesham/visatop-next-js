@@ -4,7 +4,7 @@ import type { FC } from "react";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { SUPPORT_WHATSAPP_URL } from "@/lib/support-contact";
 
-/** Small support line shown directly below the Naira (Fincra) pay / continue button. */
+/** Small support line shown directly below the Fincra local-currency pay / continue button. */
 export const PaymentWhatsAppHelp: FC = () => {
   const t = useCustomerT();
   return (

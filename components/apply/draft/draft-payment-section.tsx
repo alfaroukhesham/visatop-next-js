@@ -3,7 +3,7 @@
 import { useState, type FC } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
-import { useCustomerT } from "@/components/client/customer-i18n-provider";
+import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
 import type { PublicApplication } from "@/lib/applications/public-application";
 import { customerLooksCompleteForPayCopy } from "@/lib/apply/payment-copy";
 import type { Readiness } from "@/lib/documents/validation-readiness";
@@ -14,6 +14,7 @@ import { FincraInlineCheckout } from "../fincra-inline-checkout";
 import { ZiinaEmbeddedCheckout } from "../ziina-embedded-checkout";
 import { PaymentWhatsAppHelp } from "../payment-whatsapp-help";
 import type { TFincraInlineCheckoutData } from "@/lib/payments/fincra-inline";
+import { formatLocalCheckoutCurrencyName } from "@/lib/payments/local-checkout-config";
 
 type CheckoutHandlers = {
   onZiinaEmbedded: (embeddedUrl: string) => void;
@@ -66,6 +67,7 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
   showPaddleRetry,
 }) => {
   const t = useCustomerT();
+  const locale = useCustomerLocale();
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [termsError, setTermsError] = useState<string | null>(null);
   const payCopyComplete = customerLooksCompleteForPayCopy({
@@ -82,7 +84,10 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
     app.paymentStatus !== "paid" &&
     (app.paymentStatus === "checkout_created" || Boolean(embeddedUrl) || Boolean(fincraInline));
 
-  const payInNaira = app.checkoutOffer?.provider === "fincra";
+  const fincraLocalCheckout = app.checkoutOffer?.provider === "fincra";
+  const localCurrencyName = fincraLocalCheckout
+    ? formatLocalCheckoutCurrencyName(app.checkoutOffer?.currency ?? "", locale)
+    : "";
   const payButton = (
     <div className="space-y-4">
       <CheckoutTermsCheckbox
@@ -93,12 +98,18 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
         }}
         error={termsError}
       />
-      {payInNaira ? (
-        <p className="text-muted-foreground text-sm">{t("payment.payInNairaHint")}</p>
+      {fincraLocalCheckout ? (
+        <p className="text-muted-foreground text-sm">
+          {t("payment.payInLocalCurrencyHint", { currencyName: localCurrencyName })}
+        </p>
       ) : null}
       <PaddleCheckoutButton
         applicationId={applicationId}
-        payLabel={payInNaira ? t("payment.payInNaira") : undefined}
+        payLabel={
+          fincraLocalCheckout
+            ? t("payment.payInLocalCurrency", { currencyName: localCurrencyName })
+            : undefined
+        }
         termsAccepted={termsAccepted}
         onTermsRejected={() => setTermsError(t("checkout.errors.termsRequired"))}
         onZiinaEmbedded={(url) => {
@@ -118,7 +129,7 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
         onCancel={checkout.onStartCheckoutTimer}
         onError={checkout.onError}
       />
-      {payInNaira ? <PaymentWhatsAppHelp /> : null}
+      {fincraLocalCheckout ? <PaymentWhatsAppHelp /> : null}
     </div>
   );
 

@@ -29,13 +29,18 @@ import type {
   ImportPhase,
   PendingImportListRow,
 } from "@/components/admin/customer-price-import-types";
+import {
+  ADMIN_IMPORT_CURRENCIES,
+  CONFIGURED_LOCAL_CHECKOUT_CURRENCIES,
+  type TAdminImportCurrency,
+} from "@/lib/payments/local-checkout-config";
 
 export type CustomerPriceImportPendingWizardProps = {
   applyResult: ApplyResult;
   phase: ImportPhase;
   assignElapsedSec: number;
-  pendingCurrency: "USD" | "AED" | "NGN";
-  onPendingCurrencyChange: (currency: "USD" | "AED" | "NGN") => void;
+  pendingCurrency: TAdminImportCurrency;
+  onPendingCurrencyChange: (currency: TAdminImportCurrency) => void;
   pendingPageSize: number;
   onPendingPageSizeChange: (size: number) => void;
   pendingPage: number;
@@ -91,8 +96,8 @@ export function CustomerPriceImportPendingWizard({
           </CardTitle>
           <CardDescription className="text-xs">
             Review the rows below, choose which currency the stored amounts represent, then assign once for the
-            whole batch. USD and AED fill the sibling currency from your FX rate. NGN is stored as-is with no
-            conversion.
+            whole batch. USD and AED fill the sibling currency from your FX rate. Local currencies (
+            {CONFIGURED_LOCAL_CHECKOUT_CURRENCIES.join(", ")}) are stored as-is with no conversion.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -118,7 +123,7 @@ export function CustomerPriceImportPendingWizard({
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Amounts are in:</span>
               <div className="flex gap-2">
-                {(["USD", "AED", "NGN"] as const).map((c) => (
+                {ADMIN_IMPORT_CURRENCIES.map((c) => (
                   <button
                     key={c}
                     type="button"

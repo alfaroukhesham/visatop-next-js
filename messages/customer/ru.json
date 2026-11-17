@@ -252,8 +252,6 @@
     "paymentConfirmed": "Оплата подтверждена",
     "paymentConfirmedDetail": "Мы подтверждаем ваш платёж и начинаем обработку.",
     "payAndSubmit": "Оплатить и подать заявку",
-    "payInNaira": "Оплатить в найре",
-    "payInNairaHint": "Нигерийские заявки с ценой в найре оплачиваются через Fincra (карта или перевод).",
     "whatsappHelpPrefix": "Having trouble with payment?",
     "whatsappHelpLink": "Message us on WhatsApp",
     "whatsappHelpSuffix": ", we're available 24/7.",
@@ -282,7 +280,9 @@
       "noHiddenCharges": "Без скрытых платежей"
     },
     "termsAgree": "Я принимаю {link} VisaTop",
-    "termsLink": "Условия использования"
+    "termsLink": "Условия использования",
+    "payInLocalCurrency": "Оплатить в {currencyName}",
+    "payInLocalCurrencyHint": "Заявки с ценой в {currencyName} оплачиваются через Fincra (карта или перевод)."
   },
   "pay": {
     "payNowIncomplete": "Оплатите сейчас, чтобы начать обработку. Оставшиеся данные можно добавить после оплаты.",

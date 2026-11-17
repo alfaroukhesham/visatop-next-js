@@ -20,6 +20,10 @@ import {
 } from "@/lib/payments/fincra-attempt-verify";
 import { reconcileFincraPaymentFromReturn } from "@/lib/payments/reconcile-fincra-payments";
 import { getFincraServerConfig } from "@/lib/payments/resolve-payment-provider";
+import {
+  FINCRA_INLINE_PAYMENT_METHODS,
+  getLocalCheckoutByCurrency,
+} from "@/lib/payments/local-checkout-config";
 import type { CheckoutSessionData, TResumeCheckoutSession } from "@/lib/payments/checkout-types";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor } from "@/lib/db/actor-context";
@@ -78,9 +82,15 @@ export const buildFincraInlineCheckoutDataForPayment = async (
   };
   if (app.partyId) metadata.partyId = app.partyId;
   if (app.userId) metadata.userId = app.userId;
+  const localCheckout = getLocalCheckoutByCurrency(payRow.currency);
+  const paymentMethods = localCheckout
+    ? [...localCheckout.paymentMethods]
+    : [...FINCRA_INLINE_PAYMENT_METHODS];
   return buildFincraInlineCheckoutData({
     publicKey: cfg.publicKey,
     amountMinor: payRow.amount,
+    currency: payRow.currency,
+    paymentMethods,
     customer: {
       name: app.fullName?.trim() || "VisaTop customer",
       email: customerEmail,

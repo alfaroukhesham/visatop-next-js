@@ -10,6 +10,7 @@ import {
   toMinorUnits,
   collectMissingNationalityEntries,
 } from "./parse-price-sheet";
+import { detectLocalImportCurrencySignal } from "@/lib/payments/local-checkout-config";
 
 describe("detectHeaderRowIndex", () => {
   it("detects header at row 0 (simple sheet)", () => {
@@ -142,9 +143,29 @@ describe("parseCurrencySignal", () => {
     expect(parseCurrencySignal("185000 naira")).toBe("NGN");
   });
 
+  it("detects ZAR variants", () => {
+    expect(parseCurrencySignal("ZAR 1500")).toBe("ZAR");
+    expect(parseCurrencySignal("R 1500")).toBe("ZAR");
+    expect(parseCurrencySignal("R1500")).toBe("ZAR");
+    expect(parseCurrencySignal("1500 rand")).toBe("ZAR");
+  });
+
   it("returns null for no signal", () => {
     expect(parseCurrencySignal("100")).toBeNull();
     expect(parseCurrencySignal("")).toBeNull();
+  });
+});
+
+describe("config-driven local import detection", () => {
+  it("detects a hypothetical currency from injected config entries", () => {
+    expect(
+      detectLocalImportCurrencySignal("1500 widgets", [
+        { currency: "WGT", importAliases: ["widgets", "w"] },
+      ]),
+    ).toBe("WGT");
+    expect(detectLocalImportCurrencySignal("W 99", [{ currency: "WGT", importAliases: ["w"] }])).toBe(
+      "WGT",
+    );
   });
 });
 
@@ -159,6 +180,43 @@ describe("extractNumericValue", () => {
 
   it("returns null for no number", () => {
     expect(extractNumericValue("N/A")).toBeNull();
+  });
+
+  it("strips leading single-char local aliases case-insensitively", () => {
+    expect(extractNumericValue("R1500")).toBe(1500);
+    expect(extractNumericValue("R 1500")).toBe(1500);
+    expect(extractNumericValue("r1500")).toBe(1500);
+    expect(extractNumericValue("₦10,000")).toBe(10000);
+  });
+
+  it("does not strip letters when a single-char alias is not at the start", () => {
+    expect(extractNumericValue("recommend 100")).toBeNull();
+    expect(parseMoneyCell("recommend 100")).toEqual({ kind: "empty" });
+  });
+});
+
+describe("parseMoneyCell local currency amounts", () => {
+  it("parses ZAR and NGN prefixed amounts", () => {
+    expect(parseMoneyCell("R1500")).toEqual({
+      kind: "priced",
+      currency: "ZAR",
+      amountMinor: BigInt(150_000),
+    });
+    expect(parseMoneyCell("R 1500")).toEqual({
+      kind: "priced",
+      currency: "ZAR",
+      amountMinor: BigInt(150_000),
+    });
+    expect(parseMoneyCell("r1500")).toEqual({
+      kind: "priced",
+      currency: "ZAR",
+      amountMinor: BigInt(150_000),
+    });
+    expect(parseMoneyCell("₦10,000")).toEqual({
+      kind: "priced",
+      currency: "NGN",
+      amountMinor: BigInt(1_000_000),
+    });
   });
 });
 

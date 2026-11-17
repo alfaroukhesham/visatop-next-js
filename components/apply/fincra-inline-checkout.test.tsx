@@ -29,7 +29,11 @@ vi.mock("@/lib/payments/fincra-inline", async () => {
 });
 
 import { FincraInlineCheckout } from "./fincra-inline-checkout";
-import { resetFincraInlineWidgetLockForTests, type TFincraInlineCheckoutData } from "@/lib/payments/fincra-inline";
+import {
+  FINCRA_INLINE_PAYMENT_METHODS,
+  resetFincraInlineWidgetLockForTests,
+  type TFincraInlineCheckoutData,
+} from "@/lib/payments/fincra-inline";
 
 const checkoutFor = (reference: string): TFincraInlineCheckoutData => ({
   provider: "fincra",
@@ -37,6 +41,7 @@ const checkoutFor = (reference: string): TFincraInlineCheckoutData => ({
   key: "pk_test",
   amount: 185000,
   currency: "NGN",
+  paymentMethods: [...FINCRA_INLINE_PAYMENT_METHODS],
   customer: { name: "Ada", email: "ada@mail.com" },
   reference,
   feeBearer: "business",

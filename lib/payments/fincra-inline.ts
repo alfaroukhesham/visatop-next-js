@@ -22,14 +22,16 @@ export type TFincraInlineCustomer = {
   phoneNumber?: string;
 };
 
-export const FINCRA_INLINE_PAYMENT_METHODS = ["card", "bank_transfer"] as const;
+export type { TFincraCheckoutPaymentMethod } from "@/lib/payments/local-checkout-config";
+export { FINCRA_INLINE_PAYMENT_METHODS } from "@/lib/payments/local-checkout-config";
 
 export type TFincraInlineCheckoutData = {
   provider: "fincra";
   mode: "inline";
   key: string;
   amount: number;
-  currency: "NGN";
+  currency: string;
+  paymentMethods: string[];
   customer: TFincraInlineCustomer;
   reference: string;
   feeBearer: FincraFeeBearer;
@@ -45,7 +47,7 @@ export type TFincraHostedCheckoutData = {
 export type TFincraInitializeOptions = {
   key: string;
   amount: number;
-  currency: "NGN";
+  currency: string;
   customer: TFincraInlineCustomer;
   reference: string;
   feeBearer: FincraFeeBearer;
@@ -64,6 +66,8 @@ type TWindowWithFincra = Window & { Fincra?: TFincraInlineApi };
 export const buildFincraInlineCheckoutData = (params: {
   publicKey: string;
   amountMinor: bigint;
+  currency: string;
+  paymentMethods: readonly string[];
   customer: { name: string; email: string; phoneNumber?: string | null };
   reference: string;
   feeBearer: FincraFeeBearer;
@@ -80,7 +84,8 @@ export const buildFincraInlineCheckoutData = (params: {
     mode: "inline",
     key: params.publicKey,
     amount: fincraMinorToMajorNumber(params.amountMinor),
-    currency: "NGN",
+    currency: params.currency.trim().toUpperCase(),
+    paymentMethods: [...params.paymentMethods],
     customer,
     reference: params.reference,
     feeBearer: params.feeBearer,
@@ -99,7 +104,7 @@ export const toFincraInitializeOptions = (
   reference: data.reference,
   feeBearer: data.feeBearer,
   metadata: data.metadata,
-  paymentMethods: [...FINCRA_INLINE_PAYMENT_METHODS],
+  paymentMethods: [...data.paymentMethods],
   onSuccess: hooks.onSuccess,
   onClose: hooks.onClose,
 });

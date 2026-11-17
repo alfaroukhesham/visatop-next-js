@@ -6,6 +6,7 @@ import { ExternalLink, Loader2, RefreshCw, Webhook, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
+import { configuredLocalCheckoutCountrySummary } from "@/lib/payments/local-checkout-config";
 
 type PaymentsSettingsState = {
   activeProvider: "paddle" | "ziina";
@@ -210,9 +211,10 @@ export function PaymentsSettings() {
       </div>
 
       <div className="border-border space-y-3 border p-5">
-        <h3 className="font-heading text-base font-semibold tracking-tight">Fincra (Pay in Naira)</h3>
+        <h3 className="font-heading text-base font-semibold tracking-tight">Fincra (local-currency checkout)</h3>
         <p className="text-muted-foreground text-sm">
-          Per-checkout for Nigerian nationality when an NGN catalog price exists. Flag{" "}
+          Per-checkout for configured nationalities ({configuredLocalCheckoutCountrySummary()}) when a stored
+          local catalog price exists. Flag{" "}
           <span className="font-mono text-xs">FINCRA_ENABLED</span> is{" "}
           <span className="font-medium">{state.settings.fincra.enabled ? "on" : "off"}</span>
           {state.settings.fincra.configured ? "; keys present." : "; keys missing."}

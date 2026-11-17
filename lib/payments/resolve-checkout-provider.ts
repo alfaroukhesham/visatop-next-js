@@ -1,11 +1,7 @@
 import type { DbTransaction } from "@/lib/db";
 import { loadVisibleCatalogCurrencies } from "@/lib/catalog/load-visible-catalog-currencies";
 import { resolveCheckoutTotal } from "@/lib/pricing/resolve-customer-catalog-price";
-import {
-  FINCRA_CURRENCY,
-  parseUsdAedCurrency,
-  type TUsdAedCurrency,
-} from "@/lib/pricing/catalog-currency";
+import { parseQuoteCurrency } from "@/lib/pricing/catalog-currency";
 import {
   assertSelectedCatalogCurrency,
   type TSelectedCurrencyFailureReason,
@@ -17,47 +13,49 @@ import {
   type ActivePaymentProvider,
   type CheckoutPaymentProvider,
 } from "@/lib/payments/resolve-payment-provider";
-
-export const FINCRA_NATIONALITY_CODE = "NG";
-
-export const isFincraNationality = (nationalityCode: string): boolean =>
-  nationalityCode.trim().toUpperCase() === FINCRA_NATIONALITY_CODE;
+import { getLocalCheckoutForSelection } from "@/lib/payments/local-checkout-config";
 
 export type TCheckoutProviderDecision = {
   provider: CheckoutPaymentProvider;
-  quoteCurrency: TUsdAedCurrency | typeof FINCRA_CURRENCY;
-  /** True when NG + flag on, but no stored NGN row so we use the default provider. */
-  fincraSkippedMissingNgn: boolean;
+  quoteCurrency: string;
+  /** True when a configured local currency is selected but stored prices are missing. */
+  fincraSkippedMissingLocalPrice: boolean;
 };
 
 export const resolveCheckoutProviderDecision = (params: {
   nationalityCode: string;
-  hasStoredNgnPriceForEveryMember: boolean;
-  displayCurrency: TUsdAedCurrency;
-  /** Draft/selected catalog currency. NGN selects Fincra when the other gates pass. */
+  hasStoredLocalPriceForEveryMember: boolean;
+  displayCurrency: string;
+  /** Draft/selected catalog currency. */
   selectedCurrency?: string;
   defaultProvider?: ActivePaymentProvider;
   fincraEnabled?: boolean;
 }): TCheckoutProviderDecision => {
   const defaultProvider = params.defaultProvider ?? getActivePaymentProvider();
   const fincraEnabled = params.fincraEnabled ?? isFincraEnabled();
-  const selectedNgn = (params.selectedCurrency ?? "").trim().toUpperCase() === FINCRA_CURRENCY;
+  const selected = (params.selectedCurrency ?? "").trim().toUpperCase();
+  const localEntry = getLocalCheckoutForSelection(params.nationalityCode, selected);
   if (
-    selectedNgn &&
+    localEntry &&
+    localEntry.provider === "fincra" &&
     fincraEnabled &&
-    isFincraNationality(params.nationalityCode) &&
-    params.hasStoredNgnPriceForEveryMember
+    params.hasStoredLocalPriceForEveryMember
   ) {
-    return { provider: "fincra", quoteCurrency: FINCRA_CURRENCY, fincraSkippedMissingNgn: false };
+    return {
+      provider: "fincra",
+      quoteCurrency: localEntry.currency,
+      fincraSkippedMissingLocalPrice: false,
+    };
   }
   return {
     provider: defaultProvider,
     quoteCurrency: params.displayCurrency,
-    fincraSkippedMissingNgn:
-      selectedNgn &&
-      fincraEnabled &&
-      isFincraNationality(params.nationalityCode) &&
-      !params.hasStoredNgnPriceForEveryMember,
+    fincraSkippedMissingLocalPrice: Boolean(
+      localEntry &&
+        localEntry.provider === "fincra" &&
+        fincraEnabled &&
+        !params.hasStoredLocalPriceForEveryMember,
+    ),
   };
 };
 
@@ -78,11 +76,6 @@ export const membersHaveStoredPricesInCurrency = async (
   return true;
 };
 
-export const membersHaveStoredNgnPrices = (
-  tx: DbTransaction,
-  members: Array<{ nationalityCode: string; serviceId: string }>,
-): Promise<boolean> => membersHaveStoredPricesInCurrency(tx, members, FINCRA_CURRENCY);
-
 export const decideCheckoutProviderFromContext = (params: {
   nationalityCode: string;
   selectedCurrency: string;
@@ -98,13 +91,14 @@ export const decideCheckoutProviderFromContext = (params: {
     hasStoredPrice: params.hasStoredPriceForSelected,
   });
   if (!access.ok) return { ok: false, reason: access.reason };
+  const localEntry = getLocalCheckoutForSelection(params.nationalityCode, access.currency);
   const decision = resolveCheckoutProviderDecision({
     nationalityCode: params.nationalityCode,
-    hasStoredNgnPriceForEveryMember:
-      access.kind === "local" && access.currency === FINCRA_CURRENCY
+    hasStoredLocalPriceForEveryMember:
+      access.kind === "local" && localEntry
         ? params.hasStoredPriceForSelected
         : false,
-    displayCurrency: parseUsdAedCurrency(access.currency),
+    displayCurrency: parseQuoteCurrency(access.currency),
     selectedCurrency: access.currency,
     defaultProvider: params.defaultProvider,
     fincraEnabled: params.fincraEnabled,

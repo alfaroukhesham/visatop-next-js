@@ -1,4 +1,4 @@
-/** Fincra checkout amounts are major units (naira); we store NGN as kobo. */
+/** Fincra checkout amounts are major units; catalog stores the same currency in minor units (×100). */
 
 export const FINCRA_MINOR_PER_MAJOR = 100;
 

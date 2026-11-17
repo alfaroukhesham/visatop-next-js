@@ -31,6 +31,10 @@ import { isTrustedFincraCheckoutUrl } from "@/lib/payments/fincra-embedded";
 import { fincraMinorToMajorNumber } from "@/lib/payments/fincra-amounts";
 import { buildFincraInlineCheckoutData } from "@/lib/payments/fincra-inline";
 import {
+  FINCRA_INLINE_PAYMENT_METHODS,
+  getLocalCheckoutByCurrency,
+} from "@/lib/payments/local-checkout-config";
+import {
   abandonFincraCheckoutLock,
   classifyFincraLockedCheckoutRetry,
 } from "@/lib/payments/fincra-checkout-lock";
@@ -382,7 +386,7 @@ export async function POST(req: Request) {
           await tx.update(schema.application).set({ checkoutState: "none" }).where(inArray(schema.application.id, memberIds));
           return jsonError(
             "VALIDATION_ERROR",
-            "Email is required on the application before Naira checkout.",
+            "Email is required on the application before local-currency checkout.",
             { status: 400, requestId, details: { reason: "missing_guest_email" } },
           );
         }
@@ -391,9 +395,15 @@ export async function POST(req: Request) {
           ...metadata,
           paymentId,
         };
+        const localCheckout = getLocalCheckoutByCurrency(catalogCurrency);
+        const fincraPaymentMethods = localCheckout
+          ? [...localCheckout.paymentMethods]
+          : [...FINCRA_INLINE_PAYMENT_METHODS];
         const inlineData = buildFincraInlineCheckoutData({
           publicKey: fincraCfg.publicKey,
           amountMinor: totalMinor,
+          currency: catalogCurrency,
+          paymentMethods: fincraPaymentMethods,
           customer: {
             name: customerName,
             email: customerEmail,
@@ -415,7 +425,7 @@ export async function POST(req: Request) {
             secretKey: fincraCfg.secretKey,
             publicKey: fincraCfg.publicKey,
             amountMajor: fincraMinorToMajorNumber(totalMinor),
-            currency: "NGN",
+            currency: catalogCurrency,
             reference: attemptRef,
             redirectUrl,
             customer: {
@@ -425,7 +435,7 @@ export async function POST(req: Request) {
             },
             feeBearer: fincraCfg.feeBearer,
             metadata: fincraMetadata,
-            paymentMethods: ["card", "bank_transfer"],
+            paymentMethods: fincraPaymentMethods,
             timeoutMs: 8000,
           });
 

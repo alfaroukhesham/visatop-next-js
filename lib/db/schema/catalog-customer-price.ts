@@ -32,7 +32,7 @@ export const catalogCustomerPrice = pgTable(
     serviceId: text("service_id")
       .notNull()
       .references(() => visaService.id, { onDelete: "cascade" }),
-    /** ISO 4217: 'USD' | 'AED' | 'NGN' (NGN is kobo; never FX-derived). */
+    /** ISO 4217: globals plus configured local codes (minor units; locals are never FX-derived). */
     currency: text("currency").notNull(),
     /** Final customer total in minor units (cents / fils / kobo). */
     amountMinor: bigint("amount_minor", { mode: "number" }).notNull(),

@@ -5,6 +5,7 @@ import {
   assignPendingCurrency,
   listPendingPriceImportPage,
 } from "@/lib/admin/catalog/apply-customer-price-import";
+import { isAdminImportCurrency } from "@/lib/payments/local-checkout-config";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,10 +58,10 @@ export async function POST(req: Request) {
 
     const { currency, batchId, pendingIds } = body as Record<string, unknown>;
 
-    if (currency !== "USD" && currency !== "AED" && currency !== "NGN") {
+    if (typeof currency !== "string" || !isAdminImportCurrency(currency)) {
       return jsonError(
         "VALIDATION_ERROR",
-        "Field 'currency' must be 'USD', 'AED', or 'NGN'.",
+        "Field 'currency' must be a supported import currency (USD, AED, or a configured local currency).",
         { status: 400, requestId },
       );
     }
@@ -76,7 +77,7 @@ export async function POST(req: Request) {
     const result = await assignPendingCurrency(
       tx,
       {
-        currency: currency as "USD" | "AED" | "NGN",
+        currency,
         batchId: typeof batchId === "string" ? batchId : undefined,
         pendingIds: Array.isArray(pendingIds)
           ? (pendingIds as string[])

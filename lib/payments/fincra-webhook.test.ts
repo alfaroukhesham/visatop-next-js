@@ -28,6 +28,21 @@ describe("verifyFincraWebhookSignature", () => {
 });
 
 describe("parseFincraWebhookToNormalized", () => {
+  it("does not assume NGN when currency is missing", () => {
+    const body = JSON.stringify({
+      event: "charge.successful",
+      data: {
+        id: 1,
+        amount: 100,
+        status: "success",
+        reference: "fcr-p-x",
+      },
+    });
+    const r = parseFincraWebhookToNormalized(body);
+    expect(r.kind).toBe("event");
+    if (r.kind === "event") expect(r.event.currency).toBe("");
+  });
+
   it("maps charge.successful to payment_completed", () => {
     const body = JSON.stringify({
       event: "charge.successful",

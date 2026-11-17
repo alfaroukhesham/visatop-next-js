@@ -252,8 +252,6 @@
     "paymentConfirmed": "Zahlung bestätigt",
     "paymentConfirmedDetail": "Wir bestätigen Ihre Zahlung und starten die Bearbeitung.",
     "payAndSubmit": "Bezahlen & Antrag einreichen",
-    "payInNaira": "In Naira bezahlen",
-    "payInNairaHint": "Nigerianische Anträge mit Naira-Preis zahlen über Fincra (Karte oder Überweisung).",
     "whatsappHelpPrefix": "Having trouble with payment?",
     "whatsappHelpLink": "Message us on WhatsApp",
     "whatsappHelpSuffix": ", we're available 24/7.",
@@ -282,7 +280,9 @@
       "noHiddenCharges": "Keine versteckten Kosten"
     },
     "termsAgree": "Ich stimme den {link} von VisaTop zu",
-    "termsLink": "Nutzungsbedingungen"
+    "termsLink": "Nutzungsbedingungen",
+    "payInLocalCurrency": "In {currencyName} bezahlen",
+    "payInLocalCurrencyHint": "Anträge mit einem Preis in {currencyName} zahlen über Fincra (Karte oder Überweisung)."
   },
   "pay": {
     "payNowIncomplete": "Bezahlen Sie jetzt, um die Bearbeitung zu starten. Sie können verbleibende Angaben nach der Zahlung ergänzen.",

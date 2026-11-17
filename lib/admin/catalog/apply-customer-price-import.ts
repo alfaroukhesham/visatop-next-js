@@ -24,6 +24,10 @@ import {
 } from "./parse-price-sheet";
 import { fxUsdToAed, fxAedToUsd, readFxRateString } from "@/lib/pricing/fx-usd-aed";
 import { minorUnitsToJsonSafeNumber } from "@/lib/pricing/minor-units-json";
+import {
+  isStoredLocalCheckoutCurrency,
+  type TAdminImportCurrency,
+} from "@/lib/payments/local-checkout-config";
 import { withSuggestedAlpha2 } from "./suggest-country-alpha2";
 import {
   buildServiceNameToIdMap,
@@ -430,7 +434,7 @@ export async function previewPriceSheetImport(
   // Track per (nationality, service) which currencies are present in the sheet.
   const seenPairCurrencies = new Map<
     string,
-    { serviceName: string; currencies: Set<"USD" | "AED" | "NGN"> }
+    { serviceName: string; currencies: Set<TAdminImportCurrency> }
   >();
   function pairKey(nat: string, svcName: string) {
     return natServiceNormKey(nat, svcName.toLowerCase());
@@ -458,7 +462,7 @@ export async function previewPriceSheetImport(
           const k = pairKey(natCode, svcName);
           const existing = seenPairCurrencies.get(k) ?? {
             serviceName: svcName,
-            currencies: new Set<"USD" | "AED" | "NGN">(),
+            currencies: new Set<TAdminImportCurrency>(),
           };
           existing.currencies.add(parsed.currency);
           existing.serviceName = svcName;
@@ -480,7 +484,7 @@ export async function previewPriceSheetImport(
   }
 
   // Build auto-fix preview: USD/AED pairs with exactly one of those currencies need FX.
-  // NGN is stored as-is and never FX-derived.
+  // Configured local checkout currencies are stored as-is and never FX-derived.
   for (const [key, entry] of seenPairCurrencies) {
     const usdAed = [...entry.currencies].filter((c): c is "USD" | "AED" => c === "USD" || c === "AED");
     if (usdAed.length !== 1) continue;
@@ -630,7 +634,7 @@ export async function applyPriceSheetImport(
     nationalityCode: string;
     serviceNorm: string;
     serviceName: string;
-    currency: "USD" | "AED" | "NGN";
+    currency: TAdminImportCurrency;
     amountMinor: bigint;
     source: string;
   };
@@ -848,7 +852,7 @@ export async function applyPriceSheetImport(
       nationalityCode: string;
       serviceId: string;
       serviceName: string;
-      currency: "USD" | "AED" | "NGN";
+      currency: TAdminImportCurrency;
       amountMinor: bigint;
       source: string;
     }
@@ -1093,7 +1097,7 @@ export async function listPendingPriceImportPage(
 type CatalogPriceUpsertRow = {
   nationalityCode: string;
   serviceId: string;
-  currency: "USD" | "AED" | "NGN";
+  currency: TAdminImportCurrency;
   amountMinor: bigint;
   source: string;
 };
@@ -1108,7 +1112,7 @@ function dedupeCatalogPriceUpserts(rows: CatalogPriceUpsertRow[]): CatalogPriceU
 }
 
 export type AssignPendingCurrencyInput = {
-  currency: "USD" | "AED" | "NGN";
+  currency: TAdminImportCurrency;
   pendingIds?: string[]; // if empty, assigns to all rows of batchId
   batchId?: string;
 };
@@ -1168,7 +1172,7 @@ export async function assignPendingCurrency(
   }
 
   const promoted = pendingRows.length;
-  const fxRate = currency === "NGN" ? null : readFxRateString();
+  const fxRate = isStoredLocalCheckoutCurrency(currency) ? null : readFxRateString();
 
   const primarySource = "admin_import";
   const primaryRows: CatalogPriceUpsertRow[] = pendingRows.map((p) => ({
@@ -1180,7 +1184,7 @@ export async function assignPendingCurrency(
   }));
 
   const siblingRows: CatalogPriceUpsertRow[] =
-    currency === "NGN"
+    isStoredLocalCheckoutCurrency(currency)
       ? []
       : pendingRows.map((p) => {
           const siblingCurrency: "USD" | "AED" = currency === "USD" ? "AED" : "USD";
@@ -1291,7 +1295,7 @@ export async function assignPendingCurrency(
   const serviceIdToName = new Map(svcRows.map((s) => [s.id, s.name]));
 
   const autoFix: AutoFix[] =
-    currency === "NGN"
+    isStoredLocalCheckoutCurrency(currency)
       ? []
       : samplePending.map((p) => ({
           nationalityCode: p.nationalityCode,
