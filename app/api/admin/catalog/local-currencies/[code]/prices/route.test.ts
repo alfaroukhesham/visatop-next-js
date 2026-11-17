@@ -76,6 +76,25 @@ describe("GET /api/admin/catalog/local-currencies/[code]/prices", () => {
 });
 
 describe("PUT /api/admin/catalog/local-currencies/[code]/prices", () => {
+  it("rejects price saves when the nationality is not linked to the currency", async () => {
+    vi.mocked(listAdminLocalCurrencies).mockResolvedValue([{ ...ngn, nationalityCodes: ["NG"] }]);
+    const res = await PUT(
+      new Request("http://localhost/api/admin/catalog/local-currencies/NGN/prices", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nationalityCode: "ZA",
+          updates: [{ serviceId: "svc-1", amountMajor: "185000.00" }],
+        }),
+      }),
+      { params: Promise.resolve({ code: "NGN" }) },
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.message).toBe("Choose a nationality linked to this local currency.");
+    expect(applyLocalCurrencyPriceUiUpdates).not.toHaveBeenCalled();
+  });
+
   it("saves stored local prices without FX and audits", async () => {
     vi.mocked(applyLocalCurrencyPriceUiUpdates).mockResolvedValue({
       updated: 1,

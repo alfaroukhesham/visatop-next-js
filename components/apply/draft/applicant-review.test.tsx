@@ -80,6 +80,32 @@ describe("ApplicantReview OCR highlight", () => {
     expect(screen.queryByText(/Please fill these in/i)).not.toBeInTheDocument();
   });
 
+  it("prefills nationality with a demonym when the catalog name is a country", () => {
+    render(
+      <CustomerI18nProvider locale="en" messages={en} fallback={en}>
+        <ApplicantReview
+          applicationId="app-1"
+          nationalityCode="ZA"
+          nationalityName="South Africa"
+          nationalities={[{ code: "ZA", name: "South Africa", dialCode: "27" }]}
+          applicant={{ ...applicant, nationality: null }}
+          guestEmail={null}
+          extraction={extraction([])}
+          readiness="blocked_validation"
+          paymentReadiness="ready"
+          missing={[]}
+          documentsReady
+          passportUploaded
+          extractPending={false}
+          waitForPassportExtract={async () => undefined}
+          locked={false}
+          onSaved={() => undefined}
+        />
+      </CustomerI18nProvider>,
+    );
+    expect(screen.getByDisplayValue("South African")).toBeInTheDocument();
+  });
+
   it("highlights reader-filled fields from persisted provenance after reload", () => {
     render(
       <CustomerI18nProvider locale="en" messages={en} fallback={en}>
