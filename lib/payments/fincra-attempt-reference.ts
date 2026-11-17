@@ -36,18 +36,50 @@ export const fincraAttemptNumberForReference = (
   return 1;
 };
 
+/** Our checkout ref from Fincra webhook `data` fields (portal puts it on `reference`, not `merchantReference`). */
+export const resolveFincraWebhookMerchantReference = (params: {
+  merchantReference?: string | null;
+  reference?: string | null;
+  chargeReference?: string | null;
+  metadataReference?: string | null;
+}): string | null => {
+  const direct = params.merchantReference?.trim();
+  if (direct) return direct;
+  const fromAttemptPattern = (value?: string | null): string | null => {
+    const trimmed = value?.trim();
+    if (!trimmed) return null;
+    return parseFincraAttemptReference(trimmed) ? trimmed : null;
+  };
+  return (
+    fromAttemptPattern(params.reference) ??
+    fromAttemptPattern(params.chargeReference) ??
+    fromAttemptPattern(params.metadataReference) ??
+    null
+  );
+};
+
 export const fincraWebhookLookupIds = (params: {
   merchantReference?: string | null;
   paymentIdFromMetadata?: string | null;
+  reference?: string | null;
+  chargeReference?: string | null;
+  metadataReference?: string | null;
 }): string[] => {
   const ids = new Set<string>();
   const add = (value?: string | null) => {
     const trimmed = value?.trim();
     if (trimmed) ids.add(trimmed);
   };
-  add(params.merchantReference);
+  const merchantReference =
+    params.merchantReference?.trim() ||
+    resolveFincraWebhookMerchantReference({
+      reference: params.reference,
+      chargeReference: params.chargeReference,
+      metadataReference: params.metadataReference,
+    });
+  add(merchantReference);
   add(params.paymentIdFromMetadata);
-  const parsed = parseFincraAttemptReference(params.merchantReference);
+  const parsed = parseFincraAttemptReference(merchantReference);
   if (parsed) add(parsed.paymentId);
   return [...ids];
 };
