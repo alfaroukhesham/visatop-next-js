@@ -71,6 +71,10 @@ export const parseApplyWizardQuery = (
   return { screen, travellerId };
 };
 
+/** Lets draft wizard screens load while `paymentStatus` is `checkout_created` (pay step back nav). */
+export const explicitWizardScreenRequested = (screen: string | null | undefined): boolean =>
+  parseApplyWizardQuery(screen, null) !== null;
+
 export const resolveApplyScreen = (input: {
   members: TApplyWizardMember[];
   cursor: TApplyWizardCursor | null;

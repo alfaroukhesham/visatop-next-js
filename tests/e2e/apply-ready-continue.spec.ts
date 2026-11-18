@@ -28,7 +28,7 @@ const REQUESTED_DESKTOP_SHOTS = new Set(["1280x800", "1440x900"]);
 const TRUNCATION_VIEWPORTS = new Set(["320x568", "360x740", "390x664", "390x844", "414x896", "440x956", "1024x768"]);
 
 const CONTINUE_FULL: Record<"en" | "ar" | "fr", string> = {
-  en: "I have these - Continue",
+  en: "Continue",
   ar: "لديّ هذه المستندات - متابعة",
   fr: "J'ai ces documents - Continuer",
 };

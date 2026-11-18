@@ -668,7 +668,7 @@
     "continueToPayment": "C'est correct, continuer vers le paiement",
     "travellerProgress": "Voyageur {current} sur {total}",
     "readyInstruction": "Passez en revue les documents pour cette demande. Touchez un nom pour voir les formats et conseils, puis continuez quand vous les avez.",
-    "continueWithDocuments": "J'ai ces documents - Continuer",
+    "continueWithDocuments": "Continuer",
     "jumpAheadHint": "Terminez d'abord cette étape, puis touchez Continuer",
     "docShowDetails": "{name}, afficher les détails",
     "docHideDetails": "{name}, masquer les détails"

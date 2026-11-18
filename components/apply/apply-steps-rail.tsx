@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { Check } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, type FC } from "react";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { cn } from "@/lib/utils";
@@ -56,6 +56,7 @@ export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
   className,
 }) => {
   const t = useCustomerT();
+  const router = useRouter();
   const jump = useApplyJumpAhead();
   const [hintVisible, setHintVisible] = useState(false);
   const activeIndex = activeIndexFor(currentStep, phase);
@@ -119,14 +120,15 @@ export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
             <li key={s.labelKey} className="flex min-w-0 flex-1 flex-col items-center gap-1">
               {state === "completed" ? (
                 href ? (
-                  <Link
-                    href={href}
-                    className="flex min-h-11 min-w-11 flex-col items-center gap-1"
+                  <button
+                    type="button"
+                    className="focus-visible:ring-secondary/40 flex min-h-11 min-w-11 flex-col items-center gap-1 rounded-lg focus-visible:outline-none focus-visible:ring-2"
                     aria-label={t("steps.completedGoBack", { label: fullLabel })}
+                    onClick={() => router.push(href)}
                   >
                     {marker}
                     {caption}
-                  </Link>
+                  </button>
                 ) : (
                   <div className="flex min-h-11 flex-col items-center gap-1">
                     {marker}

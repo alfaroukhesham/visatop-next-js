@@ -668,7 +668,7 @@
     "continueToPayment": "البيانات صحيحة، المتابعة إلى الدفع",
     "travellerProgress": "المسافر {current} من {total}",
     "readyInstruction": "راجع المستندات المطلوبة لهذا الطلب. اضغط على الاسم لمعرفة الصيغ والنصائح، ثم تابع عندما تكون جاهزاً.",
-    "continueWithDocuments": "لديّ هذه المستندات - متابعة",
+    "continueWithDocuments": "متابعة",
     "jumpAheadHint": "أكمل هذه الخطوة أولاً، ثم اضغط متابعة",
     "docShowDetails": "{name}، عرض التفاصيل",
     "docHideDetails": "{name}، إخفاء التفاصيل"

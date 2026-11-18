@@ -41,9 +41,9 @@ describe("getCustomerMessages", () => {
     expect(en("wizard.readyTitle")).toBe("What you'll need");
     expect(ar("wizard.readyTitle")).toBe("ما ستحتاج إليه");
     expect(fr("wizard.readyTitle")).toBe("Ce dont vous aurez besoin");
-    expect(en("wizard.continueWithDocuments")).toBe("I have these - Continue");
-    expect(ar("wizard.continueWithDocuments")).toBe("لديّ هذه المستندات - متابعة");
-    expect(fr("wizard.continueWithDocuments")).toBe("J'ai ces documents - Continuer");
+    expect(en("wizard.continueWithDocuments")).toBe("Continue");
+    expect(ar("wizard.continueWithDocuments")).toBe("متابعة");
+    expect(fr("wizard.continueWithDocuments")).toBe("Continuer");
     expect(en("common.continue")).toBe("Continue");
     expect(ar("common.continue")).toBe("متابعة");
     expect(fr("common.continue")).toBe("Continuer");

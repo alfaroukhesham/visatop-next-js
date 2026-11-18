@@ -73,7 +73,7 @@ describe("ApplyReadyContinue desktop (>=1025px)", () => {
 
   it("is a full-width gold bar that stays inline and is not portaled", () => {
     installMatchMedia(false);
-    wrap(<ApplyReadyContinue onClick={() => undefined}>I have these - Continue</ApplyReadyContinue>);
+    wrap(<ApplyReadyContinue onClick={() => undefined}>Continue</ApplyReadyContinue>);
     const bar = document.querySelector("[data-apply-sticky-cta]") as HTMLElement | null;
     expect(bar).toBeTruthy();
     expect(bar?.hasAttribute("data-apply-sticky-cta-portal")).toBe(false);
@@ -84,8 +84,8 @@ describe("ApplyReadyContinue desktop (>=1025px)", () => {
     expect(bar?.className).not.toMatch(/(?:^|\s)hidden(?:\s|$)/);
     expect(bar?.className).not.toContain("max-[1024px]:hidden");
     expect(APPLY_READY_CONTINUE_INLINE_CLASS).toContain("md:static");
-    expect(screen.getByRole("button", { name: /i have these - continue/i })).toHaveClass("w-full");
-    expect(screen.getByRole("button", { name: /i have these - continue/i })).toHaveClass("normal-case");
+    expect(screen.getByRole("button", { name: /^continue$/i })).toHaveClass("w-full");
+    expect(screen.getByRole("button", { name: /^continue$/i })).toHaveClass("normal-case");
     expect(document.querySelector("[data-apply-sticky-cta-portal]")).toBeNull();
   });
 
@@ -96,11 +96,11 @@ describe("ApplyReadyContinue desktop (>=1025px)", () => {
     wrap(
       <>
         <PulseTrigger />
-        <ApplyReadyContinue onClick={onClick}>I have these - Continue</ApplyReadyContinue>
+        <ApplyReadyContinue onClick={onClick}>Continue</ApplyReadyContinue>
       </>,
     );
     await user.click(screen.getByRole("button", { name: "jump" }));
-    expect(screen.getByRole("button", { name: /i have these - continue/i }).className).toMatch(
+    expect(screen.getByRole("button", { name: /^continue$/i }).className).toMatch(
       /apply-continue-pulse/,
     );
     expect(onClick).not.toHaveBeenCalled();
@@ -117,7 +117,7 @@ describe("ApplyReadyContinue compact (<=1024px)", () => {
           onPrevious={() => undefined}
           onClick={() => undefined}
         >
-          I have these - Continue
+          Continue
         </ApplyReadyContinue>
       </div>,
     );
@@ -130,7 +130,7 @@ describe("ApplyReadyContinue compact (<=1024px)", () => {
     expect(bar?.style.position).toBe("fixed");
     expect(bar?.style.bottom).toBe("0px");
     const previous = screen.getByRole("button", { name: "Previous" });
-    const continueBtn = screen.getByRole("button", { name: /i have these - continue/i });
+    const continueBtn = screen.getByRole("button", { name: /^continue$/i });
     expect(APPLY_READY_PREVIOUS_CLASS).toBe("h-12 w-full");
     expect(previous).toHaveClass("h-12");
     expect(previous).toHaveClass("w-full");
@@ -167,11 +167,11 @@ describe("ApplyReadyContinue compact (<=1024px)", () => {
         onPrevious={() => undefined}
         onClick={() => undefined}
       >
-        I have these - Continue
+        Continue
       </ApplyReadyContinue>,
     );
-    const continueBtn = screen.getByRole("button", { name: "I have these - Continue" });
-    expect(continueBtn).toHaveAttribute("aria-label", "I have these - Continue");
+    const continueBtn = screen.getByRole("button", { name: "Continue" });
+    expect(continueBtn).toHaveAttribute("aria-label", "Continue");
     expect(continueBtn.querySelector("[data-apply-ready-continue-label]")?.textContent).toBe("Continue");
   });
 
@@ -184,12 +184,12 @@ describe("ApplyReadyContinue compact (<=1024px)", () => {
         onPrevious={() => undefined}
         onClick={() => undefined}
       >
-        I have these - Continue
+        Continue
       </ApplyReadyContinue>,
     );
-    const continueBtn = screen.getByRole("button", { name: "I have these - Continue" });
+    const continueBtn = screen.getByRole("button", { name: "Continue" });
     expect(continueBtn.querySelector("[data-apply-ready-continue-label]")?.textContent).toBe(
-      "I have these - Continue",
+      "Continue",
     );
   });
 
