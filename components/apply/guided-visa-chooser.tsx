@@ -110,11 +110,13 @@ interface IStayChoiceTileProps {
   hint: string;
   icon: ReactNode;
   onClick: () => void;
+  testId: string;
 }
 
-const StayChoiceTile: FC<IStayChoiceTileProps> = ({ selected, label, hint, icon, onClick }) => (
+const StayChoiceTile: FC<IStayChoiceTileProps> = ({ selected, label, hint, icon, onClick, testId }) => (
   <button
     type="button"
+    data-testid={testId}
     onClick={onClick}
     aria-pressed={selected}
     className={cn(
@@ -168,11 +170,13 @@ interface IChoiceButtonProps {
   hint?: string;
   icon: ReactNode;
   onClick: () => void;
+  testId: string;
 }
 
-const ChoiceButton: FC<IChoiceButtonProps> = ({ selected, label, hint, icon, onClick }) => (
+const ChoiceButton: FC<IChoiceButtonProps> = ({ selected, label, hint, icon, onClick, testId }) => (
   <button
     type="button"
+    data-testid={testId}
     onClick={onClick}
     aria-pressed={selected}
     className={cn(
@@ -330,6 +334,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                 return (
                   <StayChoiceTile
                     key={b}
+                    testId={`chooser-stay-${b}`}
                     selected={view.stay === b}
                     label={t(`chooser.stayLabels.${b}`)}
                     hint={t(meta.hintKey)}
@@ -353,6 +358,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                 choice === "single" ? (
                   <ChoiceButton
                     key="single"
+                    testId="chooser-entry-single"
                     selected={view.entry === "single"}
                     label={t("chooser.singleEntry")}
                     hint={t("chooser.singleEntryHint")}
@@ -362,6 +368,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                 ) : (
                   <ChoiceButton
                     key="multiple"
+                    testId="chooser-entry-multiple"
                     selected={view.entry === "multiple"}
                     label={t("chooser.multipleEntry")}
                     hint={t("chooser.multipleEntryHint")}
@@ -385,6 +392,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                 choice === "adult" ? (
                   <ChoiceButton
                     key="adult"
+                    testId="chooser-kind-adult"
                     selected={view.kind === "adult"}
                     label={t("chooser.adult")}
                     icon={<UserRound className="size-6" />}
@@ -393,6 +401,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                 ) : (
                   <ChoiceButton
                     key="child"
+                    testId="chooser-kind-child"
                     selected={view.kind === "child"}
                     label={t("chooser.child")}
                     icon={<Baby className="size-6" />}
@@ -427,6 +436,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                     <li key={s.id}>
                       <button
                         type="button"
+                        data-testid={`chooser-visa-${s.id}`}
                         onClick={() => onSelectService(s.id)}
                         aria-pressed={selected}
                         className={cn(
@@ -488,6 +498,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
             </p>
             <button
               type="button"
+              data-testid="chooser-add-traveller"
               onClick={() => onAddTraveler?.()}
               disabled={!canAddTraveler}
               className="border-secondary text-secondary hover:bg-secondary hover:text-white rounded-xl border-2 px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors disabled:cursor-not-allowed disabled:opacity-50"

@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { Check } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, type FC } from "react";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,8 @@ interface IApplyStepsRailProps {
   applicationId?: string;
   /** Last trip-selection step inside the draft. Never marketing home. */
   tripHref?: string | null;
+  /** Party member for completed Details back-nav (last traveller on Pay). */
+  detailsTravellerId?: string | null;
   className?: string;
 }
 
@@ -38,12 +40,18 @@ const hrefForPhase = (
   phase: TRailPhase,
   applicationId: string | undefined,
   tripHref: string | null | undefined,
+  detailsTravellerId?: string | null,
 ): string | null => {
   if (phase === "trip") return tripHref ?? null;
   if (!applicationId) return null;
   const id = encodeURIComponent(applicationId);
   if (phase === "documents") return `/apply/applications/${id}?screen=ready`;
-  if (phase === "details") return `/apply/applications/${id}?screen=details`;
+  if (phase === "details") {
+    const params = new URLSearchParams({ screen: "details" });
+    const traveller = detailsTravellerId?.trim();
+    if (traveller) params.set("traveller", traveller);
+    return `/apply/applications/${id}?${params.toString()}`;
+  }
   if (phase === "pay") return `/apply/applications/${id}/payment`;
   return `/apply/applications/${id}/submitted`;
 };
@@ -53,9 +61,11 @@ export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
   phase,
   applicationId,
   tripHref = null,
+  detailsTravellerId = null,
   className,
 }) => {
   const t = useCustomerT();
+  const router = useRouter();
   const jump = useApplyJumpAhead();
   const [hintVisible, setHintVisible] = useState(false);
   const activeIndex = activeIndexFor(currentStep, phase);
@@ -88,7 +98,7 @@ export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
       <ol className="flex items-start justify-between gap-1">
         {STEPS.map((s, index) => {
           const state = index < activeIndex ? "completed" : index === activeIndex ? "active" : "future";
-          const href = hrefForPhase(s.id, applicationId, tripHref);
+          const href = hrefForPhase(s.id, applicationId, tripHref, detailsTravellerId);
           const fullLabel = t(s.labelKey);
           const shortLabel = t(s.shortKey);
           const marker = (
@@ -119,14 +129,15 @@ export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
             <li key={s.labelKey} className="flex min-w-0 flex-1 flex-col items-center gap-1">
               {state === "completed" ? (
                 href ? (
-                  <Link
-                    href={href}
-                    className="flex min-h-11 min-w-11 flex-col items-center gap-1"
+                  <button
+                    type="button"
+                    className="focus-visible:ring-secondary/40 flex min-h-11 min-w-11 flex-col items-center gap-1 rounded-lg focus-visible:outline-none focus-visible:ring-2"
                     aria-label={t("steps.completedGoBack", { label: fullLabel })}
+                    onClick={() => router.push(href)}
                   >
                     {marker}
                     {caption}
-                  </Link>
+                  </button>
                 ) : (
                   <div className="flex min-h-11 flex-col items-center gap-1">
                     {marker}

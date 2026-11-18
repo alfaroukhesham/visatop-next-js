@@ -11,19 +11,10 @@ import { ApplyStepsRail } from "./apply-steps-rail";
 
 const en = getEnglishCustomerMessages();
 
-vi.mock("next/link", () => ({
-  default: ({
-    href,
-    children,
-    ...props
-  }: {
-    href: string;
-    children: React.ReactNode;
-  } & React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
-    <a href={href} {...props}>
-      {children}
-    </a>
-  ),
+const pushMock = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: pushMock }),
 }));
 
 const wrap = (ui: ReactElement) =>
@@ -35,6 +26,7 @@ const wrap = (ui: ReactElement) =>
 
 afterEach(() => {
   cleanup();
+  pushMock.mockClear();
 });
 
 describe("ApplyStepsRail on documents (ready)", () => {
@@ -53,12 +45,8 @@ describe("ApplyStepsRail on documents (ready)", () => {
     expect(screen.getAllByText("Documents").some((el) => el.className.includes("hidden sm:inline"))).toBe(
       true,
     );
-    const trip = screen.getByRole("link", { name: /trip, completed/i });
-    expect(trip).toHaveAttribute("href", "/apply/start?nationality=IN");
-    expect(trip.getAttribute("href")).not.toBe("/");
-    expect(trip.getAttribute("href")).not.toContain("/visa-processing");
-
-    expect(screen.queryByRole("link", { name: /^documents$/i })).not.toBeInTheDocument();
+    const trip = screen.getByRole("button", { name: /trip, completed/i });
+    expect(trip.tagName).toBe("BUTTON");
     const current = screen.getByText("2").closest("[aria-current='step']");
     expect(current).toBeTruthy();
     expect(current?.tagName).not.toBe("A");
@@ -82,7 +70,40 @@ describe("ApplyStepsRail on documents (ready)", () => {
     expect(hint).toHaveAttribute("aria-live", "polite");
     expect(hint).toHaveTextContent(/finish this step first/i);
     expect(screen.getByRole("button", { name: /details/i })).toHaveAttribute("aria-disabled", "true");
-    expect(screen.queryByRole("link", { name: /pay/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /pay, completed/i })).not.toBeInTheDocument();
+  });
+
+  it("includes the last traveller on completed Details during Pay", async () => {
+    const user = userEvent.setup();
+    wrap(
+      <ApplyStepsRail
+        currentStep={4}
+        applicationId="party-primary"
+        tripHref="/apply/start?nationality=IN"
+        detailsTravellerId="traveller-b"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /details, completed/i }));
+    expect(pushMock).toHaveBeenCalledWith(
+      "/apply/applications/party-primary?screen=details&traveller=traveller-b",
+    );
+  });
+
+  it("navigates to an earlier completed step on the payment rail", async () => {
+    const user = userEvent.setup();
+    wrap(
+      <ApplyStepsRail
+        currentStep={4}
+        applicationId="app-1"
+        tripHref="/apply/start?nationality=IN"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /details, completed/i }));
+    expect(pushMock).toHaveBeenCalledWith("/apply/applications/app-1?screen=details");
+    await user.click(screen.getByRole("button", { name: /documents, completed/i }));
+    expect(pushMock).toHaveBeenCalledWith("/apply/applications/app-1?screen=ready");
   });
 
   it("shows the same jump-ahead hint when the current step is tapped", async () => {
@@ -106,7 +127,6 @@ describe("ApplyStepsRail on documents (ready)", () => {
 
   it("does not invent a home link when tripHref is missing", () => {
     wrap(<ApplyStepsRail currentStep={3} phase="documents" applicationId="app-1" />);
-    expect(screen.queryByRole("link", { name: /trip/i })).not.toBeInTheDocument();
-    expect(screen.queryAllByRole("link").some((link) => link.getAttribute("href") === "/")).toBe(false);
+    expect(screen.queryByRole("button", { name: /trip, completed/i })).not.toBeInTheDocument();
   });
 });

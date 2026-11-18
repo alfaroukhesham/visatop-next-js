@@ -3,9 +3,11 @@ import {
   abandonStopFromCursor,
   applyPreviousHref,
   applyTripStepHref,
+  lastTravellerApplicationId,
   applyWizardHref,
   cursorIsAhead,
   nextApplyScreen,
+  explicitWizardScreenRequested,
   parseApplyWizardQuery,
   previousApplyScreen,
   resolveApplyScreen,
@@ -86,6 +88,33 @@ describe("resolveApplyScreen", () => {
         requested: { screen: "passport", travellerId: "b" },
       }),
     ).toEqual({ screen: "passport", travellerId: "a" });
+  });
+});
+
+describe("explicitWizardScreenRequested", () => {
+  it("allows known wizard screens during checkout", () => {
+    expect(explicitWizardScreenRequested("ready")).toBe(true);
+    expect(explicitWizardScreenRequested("details")).toBe(true);
+    expect(explicitWizardScreenRequested("passport")).toBe(true);
+  });
+
+  it("rejects bare or unknown screen params", () => {
+    expect(explicitWizardScreenRequested(undefined)).toBe(false);
+    expect(explicitWizardScreenRequested(null)).toBe(false);
+    expect(explicitWizardScreenRequested("")).toBe(false);
+    expect(explicitWizardScreenRequested("payment")).toBe(false);
+  });
+});
+
+describe("lastTravellerApplicationId", () => {
+  it("returns the highest travelerIndex application id", () => {
+    expect(
+      lastTravellerApplicationId([
+        { applicationId: "a", travelerIndex: 0 },
+        { applicationId: "b", travelerIndex: 2 },
+        { applicationId: "c", travelerIndex: 1 },
+      ]),
+    ).toBe("b");
   });
 });
 
