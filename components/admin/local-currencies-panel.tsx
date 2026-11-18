@@ -48,6 +48,10 @@ type TPriceRow = {
   localMinor: string | null;
 };
 
+type TBanner = { type: "ok" | "err"; text: string };
+
+const UNLINKED_NATIONALITY_MESSAGE = "Choose a nationality linked to this local currency.";
+
 const formatMinor = (minor: string | null, currency: string): string =>
   minor ? formatMinorUnitsAmount(minor, currency) : "—";
 
@@ -63,6 +67,9 @@ const majorDraftsFromRows = (rows: TPriceRow[]): Record<string, string> => {
   }
   return drafts;
 };
+
+const toggleCode = (list: string[], code: string): string[] =>
+  list.includes(code) ? list.filter((c) => c !== code) : [...list, code];
 
 export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
   localCurrencies,
@@ -82,81 +89,29 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
   const selected = mergedCurrencies.find((c) => c.code === selectedCode) ?? null;
   const [createCode, setCreateCode] = useState("");
   const [createNationalities, setCreateNationalities] = useState<string[]>([]);
-  const [editNationalities, setEditNationalities] = useState<string[]>([]);
-  const [priceNationality, setPriceNationality] = useState(
-    () => localCurrencies[0]?.nationalityCodes[0] ?? "",
-  );
-  const [rows, setRows] = useState<TPriceRow[]>([]);
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [loadingPrices, setLoadingPrices] = useState(false);
+  const [priceNationalityPick, setPriceNationalityPick] = useState("");
   const [saving, setSaving] = useState(false);
-  const [banner, setBanner] = useState<{ type: "ok" | "err"; text: string } | null>(null);
-  const linkedNationalityKey = selected?.nationalityCodes.join(",") ?? "";
+  const [banner, setBanner] = useState<TBanner | null>(null);
+
   const activePriceNationality = useMemo(
     () =>
       selected
-        ? resolveLocalCurrencyPriceNationality(selected.nationalityCodes, priceNationality)
+        ? resolveLocalCurrencyPriceNationality(selected.nationalityCodes, priceNationalityPick)
         : "",
-    [selected, priceNationality],
+    [selected, priceNationalityPick],
   );
 
-  const flash = (text: string, err = false) => {
+  const derivedUnlinkedBanner = useMemo((): TBanner | null => {
+    if (!selected || selected.nationalityCodes.length > 0) return null;
+    return { type: "err", text: UNLINKED_NATIONALITY_MESSAGE };
+  }, [selected]);
+
+  const bannerToShow = banner ?? derivedUnlinkedBanner;
+
+  const flash = useCallback((text: string, err = false) => {
     setBanner({ type: err ? "err" : "ok", text });
     setTimeout(() => setBanner(null), 4000);
-  };
-
-  const showLoadError = (text: string) => {
-    setBanner({ type: "err", text });
-  };
-
-  useEffect(() => {
-    if (!selected) return;
-    setEditNationalities(selected.nationalityCodes);
-    setPriceNationality((current) =>
-      resolveLocalCurrencyPriceNationality(selected.nationalityCodes, current),
-    );
-  }, [selected, selectedCode, linkedNationalityKey]);
-
-  const loadPrices = useCallback(async (code: string, nationality: string) => {
-    if (!code || !nationality) {
-      setRows([]);
-      return;
-    }
-    setLoadingPrices(true);
-    setBanner(null);
-    try {
-      const res = await fetchApiEnvelope<{ rows: TPriceRow[] }>(
-        apiHref(
-          `/admin/catalog/local-currencies/${encodeURIComponent(code)}/prices?nationality=${encodeURIComponent(nationality)}`,
-        ),
-      );
-      if (!res.ok) {
-        showLoadError(res.error.message);
-        setRows([]);
-        setDrafts({});
-        return;
-      }
-      setRows(res.data.rows);
-      setDrafts(majorDraftsFromRows(res.data.rows));
-    } finally {
-      setLoadingPrices(false);
-    }
   }, []);
-
-  useEffect(() => {
-    if (!selectedCode || !selected) return;
-    if (selected.nationalityCodes.length === 0) {
-      setRows([]);
-      setDrafts({});
-      showLoadError("Choose a nationality linked to this local currency.");
-      return;
-    }
-    if (!activePriceNationality) return;
-    void loadPrices(selectedCode, activePriceNationality);
-  }, [selectedCode, selected, activePriceNationality, loadPrices]);
-
-  const toggleCode = (list: string[], code: string): string[] =>
-    list.includes(code) ? list.filter((c) => c !== code) : [...list, code];
 
   const onCreate = async () => {
     setSaving(true);
@@ -181,66 +136,9 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
     setCreateNationalities([]);
     setCurrencyOverrides((current) => ({ ...current, [created.code]: created }));
     setSelectedCode(created.code);
-    setEditNationalities(created.nationalityCodes);
-    setPriceNationality(created.nationalityCodes[0] ?? "");
+    setPriceNationalityPick(created.nationalityCodes[0] ?? "");
     flash(`Created ${created.code}.`);
     router.refresh();
-  };
-
-  const onSaveLinks = async () => {
-    if (!selected) return;
-    setSaving(true);
-    const res = await fetchApiEnvelope<{ localCurrency: CatalogLocalCurrency }>(
-      apiHref(`/admin/catalog/local-currencies/${encodeURIComponent(selected.code)}`),
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nationalityCodes: editNationalities }),
-      },
-    );
-    setSaving(false);
-    if (!res.ok) {
-      flash(res.error.message, true);
-      return;
-    }
-    setCurrencyOverrides((current) => ({
-      ...current,
-      [selected.code]: res.data.localCurrency,
-    }));
-    setEditNationalities(res.data.localCurrency.nationalityCodes);
-    setPriceNationality((currentNat) =>
-      resolveLocalCurrencyPriceNationality(res.data.localCurrency.nationalityCodes, currentNat),
-    );
-    flash(`Updated ${selected.code} nationality links.`);
-    router.refresh();
-  };
-
-  const onSavePrices = async () => {
-    if (!selected || !activePriceNationality) return;
-    const updates = Object.entries(drafts)
-      .filter(([, amountMajor]) => amountMajor.trim().length > 0)
-      .map(([serviceId, amountMajor]) => ({ serviceId, amountMajor }));
-    if (updates.length === 0) {
-      flash("Enter at least one local price.", true);
-      return;
-    }
-    setSaving(true);
-    const res = await fetchApiEnvelope<{ rows: TPriceRow[] }>(
-      apiHref(`/admin/catalog/local-currencies/${encodeURIComponent(selected.code)}/prices`),
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nationalityCode: activePriceNationality, updates }),
-      },
-    );
-    setSaving(false);
-    if (!res.ok) {
-      flash(res.error.message, true);
-      return;
-    }
-    setRows(res.data.rows);
-    setDrafts(majorDraftsFromRows(res.data.rows));
-    flash(`Saved ${selected.code} prices.`);
   };
 
   const nationalityOptions = useMemo(
@@ -248,18 +146,22 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
     [nationalities],
   );
 
+  const linksEditorKey = selected
+    ? `links:${selected.code}:${selected.nationalityCodes.join(",")}`
+    : "links:none";
+
   return (
     <div className="space-y-6">
-      {banner ? (
+      {bannerToShow ? (
         <p
           className={
-            banner.type === "err"
+            bannerToShow.type === "err"
               ? "border-destructive/40 bg-destructive/10 text-destructive border-b-2 px-4 py-3 text-sm"
               : "border-success/40 bg-success/10 text-success border-b-2 px-4 py-3 text-sm"
           }
           role="status"
         >
-          {banner.text}
+          {bannerToShow.text}
         </p>
       ) : null}
 
@@ -283,7 +185,7 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
                       type="button"
                       onClick={() => {
                         setSelectedCode(c.code);
-                        setPriceNationality((current) =>
+                        setPriceNationalityPick((current) =>
                           resolveLocalCurrencyPriceNationality(c.nationalityCodes, current),
                         );
                       }}
@@ -339,112 +241,43 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
         <div className="space-y-6">
           {selected ? (
             <>
-              <Card className="border-border border">
-                <CardHeader>
-                  <CardTitle className="font-heading text-lg">{selected.code} nationality links</CardTitle>
-                  <CardDescription>
-                    Applicants with these passports see the {selected.code} tab. Everyone else only sees global USD and
-                    AED.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <NationalityChecklist
-                    nationalities={nationalityOptions}
-                    selected={editNationalities}
-                    onToggle={(code) => setEditNationalities((current) => toggleCode(current, code))}
-                    disabled={!canWrite || saving}
-                  />
-                  {canWrite ? (
-                    <Button type="button" disabled={saving} onClick={() => void onSaveLinks()}>
-                      Save links
-                    </Button>
-                  ) : null}
-                </CardContent>
-              </Card>
+              <LocalCurrencyLinksEditor
+                key={linksEditorKey}
+                currency={selected}
+                nationalityOptions={nationalityOptions}
+                canWrite={canWrite}
+                saving={saving}
+                onSavingChange={setSaving}
+                onFlash={flash}
+                onSaved={(updated) => {
+                  setCurrencyOverrides((current) => ({ ...current, [updated.code]: updated }));
+                  setPriceNationalityPick((currentNat) =>
+                    resolveLocalCurrencyPriceNationality(updated.nationalityCodes, currentNat),
+                  );
+                  router.refresh();
+                }}
+              />
 
-              <Card className="border-border border">
-                <CardHeader>
-                  <CardTitle className="font-heading text-lg">{selected.code} prices</CardTitle>
-                  <CardDescription>
-                    Enter the customer total in {selected.code} (minor units stored as kobo/cents). Global USD/AED
-                    columns are for reference only.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {selected.nationalityCodes.length > 1 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {selected.nationalityCodes.map((code) => (
-                        <Button
-                          key={code}
-                          type="button"
-                          variant={priceNationality === code ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setPriceNationality(code)}
-                        >
-                          {code}
-                        </Button>
-                      ))}
-                    </div>
-                  ) : null}
-
-                  <AdminTableLoadingFrame
-                    loading={loadingPrices}
-                    hasRows={rows.length > 0}
-                    className="overflow-x-auto border border-border"
-                  >
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Service</TableHead>
-                          <TableHead>USD</TableHead>
-                          <TableHead>AED</TableHead>
-                          <TableHead className="min-w-[9rem]">{selected.code}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {loadingPrices && rows.length === 0 ? (
-                          <AdminTableLoadingSkeleton columns={4} rows={8} />
-                        ) : null}
-                        {rows.map((row) => (
-                          <TableRow key={row.serviceId}>
-                            <TableCell>
-                              <span className="font-medium">{row.serviceName}</span>
-                              {!row.enabled ? (
-                                <span className="text-muted-foreground ml-2 text-xs">(disabled)</span>
-                              ) : null}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm tabular-nums">
-                              {formatMinor(row.usdMinor, "USD")}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm tabular-nums">
-                              {formatMinor(row.aedMinor, "AED")}
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="text"
-                                inputMode="decimal"
-                                placeholder="e.g. 185000.00"
-                                className="font-mono text-sm"
-                                disabled={!canWrite || saving}
-                                value={drafts[row.serviceId] ?? ""}
-                                onChange={(e) =>
-                                  setDrafts((current) => ({ ...current, [row.serviceId]: e.target.value }))
-                                }
-                                aria-label={`${selected.code} price for ${row.serviceName}`}
-                              />
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </AdminTableLoadingFrame>
-                  {canWrite ? (
-                    <Button type="button" disabled={saving || loadingPrices} onClick={() => void onSavePrices()}>
-                      Save {selected.code} prices
-                    </Button>
-                  ) : null}
-                </CardContent>
-              </Card>
+              {selected.nationalityCodes.length > 0 && activePriceNationality ? (
+                <LocalCurrencyPricesEditor
+                  key={`${selected.code}:${activePriceNationality}`}
+                  currencyCode={selected.code}
+                  nationalityCode={activePriceNationality}
+                  nationalityCodes={selected.nationalityCodes}
+                  onPickNationality={setPriceNationalityPick}
+                  canWrite={canWrite}
+                  saving={saving}
+                  onSavingChange={setSaving}
+                  onFlash={flash}
+                />
+              ) : (
+                <Card className="border-border border">
+                  <CardHeader>
+                    <CardTitle className="font-heading text-lg">{selected.code} prices</CardTitle>
+                    <CardDescription>Link at least one nationality before setting local prices.</CardDescription>
+                  </CardHeader>
+                </Card>
+              )}
             </>
           ) : (
             <p className="text-muted-foreground text-sm">Select or create a local currency to edit links and prices.</p>
@@ -452,6 +285,233 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
         </div>
       </div>
     </div>
+  );
+};
+
+interface ILocalCurrencyLinksEditorProps {
+  currency: CatalogLocalCurrency;
+  nationalityOptions: CatalogNationality[];
+  canWrite: boolean;
+  saving: boolean;
+  onSavingChange: (saving: boolean) => void;
+  onFlash: (text: string, err?: boolean) => void;
+  onSaved: (updated: CatalogLocalCurrency) => void;
+}
+
+const LocalCurrencyLinksEditor: FC<ILocalCurrencyLinksEditorProps> = ({
+  currency,
+  nationalityOptions,
+  canWrite,
+  saving,
+  onSavingChange,
+  onFlash,
+  onSaved,
+}) => {
+  const [editNationalities, setEditNationalities] = useState(currency.nationalityCodes);
+
+  const onSaveLinks = async () => {
+    onSavingChange(true);
+    const res = await fetchApiEnvelope<{ localCurrency: CatalogLocalCurrency }>(
+      apiHref(`/admin/catalog/local-currencies/${encodeURIComponent(currency.code)}`),
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nationalityCodes: editNationalities }),
+      },
+    );
+    onSavingChange(false);
+    if (!res.ok) {
+      onFlash(res.error.message, true);
+      return;
+    }
+    onSaved(res.data.localCurrency);
+    onFlash(`Updated ${currency.code} nationality links.`);
+  };
+
+  return (
+    <Card className="border-border border">
+      <CardHeader>
+        <CardTitle className="font-heading text-lg">{currency.code} nationality links</CardTitle>
+        <CardDescription>
+          Applicants with these passports see the {currency.code} tab. Everyone else only sees global USD and AED.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <NationalityChecklist
+          nationalities={nationalityOptions}
+          selected={editNationalities}
+          onToggle={(code) => setEditNationalities((current) => toggleCode(current, code))}
+          disabled={!canWrite || saving}
+        />
+        {canWrite ? (
+          <Button type="button" disabled={saving} onClick={() => void onSaveLinks()}>
+            Save links
+          </Button>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+};
+
+interface ILocalCurrencyPricesEditorProps {
+  currencyCode: string;
+  nationalityCode: string;
+  nationalityCodes: string[];
+  onPickNationality: (code: string) => void;
+  canWrite: boolean;
+  saving: boolean;
+  onSavingChange: (saving: boolean) => void;
+  onFlash: (text: string, err?: boolean) => void;
+}
+
+const LocalCurrencyPricesEditor: FC<ILocalCurrencyPricesEditorProps> = ({
+  currencyCode,
+  nationalityCode,
+  nationalityCodes,
+  onPickNationality,
+  canWrite,
+  saving,
+  onSavingChange,
+  onFlash,
+}) => {
+  const [rows, setRows] = useState<TPriceRow[]>([]);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [loadingPrices, setLoadingPrices] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      setLoadingPrices(true);
+      try {
+        const res = await fetchApiEnvelope<{ rows: TPriceRow[] }>(
+          apiHref(
+            `/admin/catalog/local-currencies/${encodeURIComponent(currencyCode)}/prices?nationality=${encodeURIComponent(nationalityCode)}`,
+          ),
+        );
+        if (cancelled) return;
+        if (!res.ok) {
+          onFlash(res.error.message, true);
+          setRows([]);
+          setDrafts({});
+          return;
+        }
+        setRows(res.data.rows);
+        setDrafts(majorDraftsFromRows(res.data.rows));
+      } finally {
+        if (!cancelled) setLoadingPrices(false);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [currencyCode, nationalityCode, onFlash]);
+
+  const onSavePrices = async () => {
+    const updates = Object.entries(drafts)
+      .filter(([, amountMajor]) => amountMajor.trim().length > 0)
+      .map(([serviceId, amountMajor]) => ({ serviceId, amountMajor }));
+    if (updates.length === 0) {
+      onFlash("Enter at least one local price.", true);
+      return;
+    }
+    onSavingChange(true);
+    const res = await fetchApiEnvelope<{ rows: TPriceRow[] }>(
+      apiHref(`/admin/catalog/local-currencies/${encodeURIComponent(currencyCode)}/prices`),
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nationalityCode, updates }),
+      },
+    );
+    onSavingChange(false);
+    if (!res.ok) {
+      onFlash(res.error.message, true);
+      return;
+    }
+    setRows(res.data.rows);
+    setDrafts(majorDraftsFromRows(res.data.rows));
+    onFlash(`Saved ${currencyCode} prices.`);
+  };
+
+  return (
+    <Card className="border-border border">
+      <CardHeader>
+        <CardTitle className="font-heading text-lg">{currencyCode} prices</CardTitle>
+        <CardDescription>
+          Enter the customer total in {currencyCode} (minor units stored as kobo/cents). Global USD/AED columns are for
+          reference only.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {nationalityCodes.length > 1 ? (
+          <div className="flex flex-wrap gap-2">
+            {nationalityCodes.map((code) => (
+              <Button
+                key={code}
+                type="button"
+                variant={nationalityCode === code ? "default" : "outline"}
+                size="sm"
+                onClick={() => onPickNationality(code)}
+              >
+                {code}
+              </Button>
+            ))}
+          </div>
+        ) : null}
+
+        <AdminTableLoadingFrame
+          loading={loadingPrices}
+          hasRows={rows.length > 0}
+          className="overflow-x-auto border border-border"
+        >
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Service</TableHead>
+                <TableHead>USD</TableHead>
+                <TableHead>AED</TableHead>
+                <TableHead className="min-w-[9rem]">{currencyCode}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loadingPrices && rows.length === 0 ? <AdminTableLoadingSkeleton columns={4} rows={8} /> : null}
+              {rows.map((row) => (
+                <TableRow key={row.serviceId}>
+                  <TableCell>
+                    <span className="font-medium">{row.serviceName}</span>
+                    {!row.enabled ? <span className="text-muted-foreground ml-2 text-xs">(disabled)</span> : null}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm tabular-nums">
+                    {formatMinor(row.usdMinor, "USD")}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-sm tabular-nums">
+                    {formatMinor(row.aedMinor, "AED")}
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="e.g. 185000.00"
+                      className="font-mono text-sm"
+                      disabled={!canWrite || saving}
+                      value={drafts[row.serviceId] ?? ""}
+                      onChange={(e) => setDrafts((current) => ({ ...current, [row.serviceId]: e.target.value }))}
+                      aria-label={`${currencyCode} price for ${row.serviceName}`}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </AdminTableLoadingFrame>
+        {canWrite ? (
+          <Button type="button" disabled={saving || loadingPrices} onClick={() => void onSavePrices()}>
+            Save {currencyCode} prices
+          </Button>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 };
 
