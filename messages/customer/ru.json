@@ -251,7 +251,7 @@
     "cancelAndReset": "Отменить и сбросить",
     "paymentConfirmed": "Оплата подтверждена",
     "paymentConfirmedDetail": "Мы подтверждаем ваш платёж и начинаем обработку.",
-    "payAndSubmit": "Оплатить и подать заявку",
+    "payAndSubmit": "Перейти к оплате",
     "whatsappHelpPrefix": "Having trouble with payment?",
     "whatsappHelpLink": "Message us on WhatsApp",
     "whatsappHelpSuffix": ", we're available 24/7.",
@@ -281,7 +281,7 @@
     },
     "termsAgree": "Я принимаю {link} VisaTop",
     "termsLink": "Условия использования",
-    "payInLocalCurrency": "Оплатить в {currencyName}",
+    "payInLocalCurrency": "Перейти к оплате",
     "payInLocalCurrencyHint": "Заявки с ценой в {currencyName} оплачиваются через Fincra (карта или перевод)."
   },
   "pay": {

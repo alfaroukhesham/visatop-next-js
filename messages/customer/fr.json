@@ -251,7 +251,7 @@
     "cancelAndReset": "Annuler et réinitialiser",
     "paymentConfirmed": "Paiement confirmé",
     "paymentConfirmedDetail": "Nous confirmons votre paiement et démarrons le traitement.",
-    "payAndSubmit": "Payer et soumettre la demande",
+    "payAndSubmit": "Procéder au paiement",
     "whatsappHelpPrefix": "Un problème de paiement ?",
     "whatsappHelpLink": "Écrivez-nous sur WhatsApp",
     "whatsappHelpSuffix": ", nous sommes disponibles 24h/24 et 7j/7.",
@@ -281,7 +281,7 @@
     },
     "termsAgree": "J'accepte les {link} de VisaTop",
     "termsLink": "Conditions d'utilisation",
-    "payInLocalCurrency": "Payer en {currencyName}",
+    "payInLocalCurrency": "Procéder au paiement",
     "payInLocalCurrencyHint": "Les demandes avec un tarif en {currencyName} se règlent via Fincra (carte ou virement)."
   },
   "pay": {

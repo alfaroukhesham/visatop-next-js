@@ -105,11 +105,6 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
       ) : null}
       <PaddleCheckoutButton
         applicationId={applicationId}
-        payLabel={
-          fincraLocalCheckout
-            ? t("payment.payInLocalCurrency", { currencyName: localCurrencyName })
-            : undefined
-        }
         termsAccepted={termsAccepted}
         onTermsRejected={() => setTermsError(t("checkout.errors.termsRequired"))}
         onZiinaEmbedded={(url) => {
