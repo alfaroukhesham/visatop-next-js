@@ -3,6 +3,7 @@ import {
   abandonStopFromCursor,
   applyPreviousHref,
   applyTripStepHref,
+  lastTravellerApplicationId,
   applyWizardHref,
   cursorIsAhead,
   nextApplyScreen,
@@ -102,6 +103,18 @@ describe("explicitWizardScreenRequested", () => {
     expect(explicitWizardScreenRequested(null)).toBe(false);
     expect(explicitWizardScreenRequested("")).toBe(false);
     expect(explicitWizardScreenRequested("payment")).toBe(false);
+  });
+});
+
+describe("lastTravellerApplicationId", () => {
+  it("returns the highest travelerIndex application id", () => {
+    expect(
+      lastTravellerApplicationId([
+        { applicationId: "a", travelerIndex: 0 },
+        { applicationId: "b", travelerIndex: 2 },
+        { applicationId: "c", travelerIndex: 1 },
+      ]),
+    ).toBe("b");
   });
 });
 

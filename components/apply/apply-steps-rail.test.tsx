@@ -73,6 +73,23 @@ describe("ApplyStepsRail on documents (ready)", () => {
     expect(screen.queryByRole("button", { name: /pay, completed/i })).not.toBeInTheDocument();
   });
 
+  it("includes the last traveller on completed Details during Pay", async () => {
+    const user = userEvent.setup();
+    wrap(
+      <ApplyStepsRail
+        currentStep={4}
+        applicationId="party-primary"
+        tripHref="/apply/start?nationality=IN"
+        detailsTravellerId="traveller-b"
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /details, completed/i }));
+    expect(pushMock).toHaveBeenCalledWith(
+      "/apply/applications/party-primary?screen=details&traveller=traveller-b",
+    );
+  });
+
   it("navigates to an earlier completed step on the payment rail", async () => {
     const user = userEvent.setup();
     wrap(

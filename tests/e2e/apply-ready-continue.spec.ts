@@ -29,8 +29,8 @@ const TRUNCATION_VIEWPORTS = new Set(["320x568", "360x740", "390x664", "390x844"
 
 const CONTINUE_FULL: Record<"en" | "ar" | "fr", string> = {
   en: "Continue",
-  ar: "لديّ هذه المستندات - متابعة",
-  fr: "J'ai ces documents - Continuer",
+  ar: "متابعة",
+  fr: "Continuer",
 };
 const CONTINUE_SHORT: Record<"en" | "ar" | "fr", string> = {
   en: "Continue",
@@ -211,7 +211,7 @@ test.describe("apply ready Continue bar", () => {
     await page.getByRole("button", { name: "Details", exact: true }).click({ force: true });
     await expect(page.getByRole("status")).toContainText(/finish this step first/i);
     const continueBtn = page.locator("[data-apply-sticky-cta-portal]").getByRole("button", {
-      name: /i have these - continue/i,
+      name: /^continue$/i,
     });
     await expect(continueBtn).toBeVisible();
     const continueBox = await continueBtn.boundingBox();

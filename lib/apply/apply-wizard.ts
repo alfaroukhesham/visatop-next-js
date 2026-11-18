@@ -172,6 +172,13 @@ export const applyWizardHref = (applicationId: string, screen: TResolvedApplyScr
 };
 
 /** Last trip-selection step (visa / duration / entry), never marketing home. */
+export const lastTravellerApplicationId = (
+  members: ReadonlyArray<{ applicationId: string; travelerIndex: number }>,
+): string | null => {
+  if (members.length === 0) return null;
+  return [...members].sort((a, b) => a.travelerIndex - b.travelerIndex).at(-1)!.applicationId;
+};
+
 export const applyTripStepHref = (nationalityCode?: string | null): string | null => {
   const code = nationalityCode?.trim().toUpperCase() ?? "";
   if (!/^[A-Z]{2}$/.test(code)) return null;

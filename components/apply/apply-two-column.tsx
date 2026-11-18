@@ -9,6 +9,7 @@ interface IApplyTwoColumnProps {
   applicationId?: string;
   /** In-flow visa/duration step. Trip-done must not link to marketing home. */
   tripHref?: string | null;
+  detailsTravellerId?: string | null;
   children: ReactNode;
   className?: string;
   contentClassName?: string;
@@ -23,6 +24,7 @@ export const ApplyTwoColumn: FC<IApplyTwoColumnProps> = ({
   phase,
   applicationId,
   tripHref = null,
+  detailsTravellerId = null,
   children,
   className,
   contentClassName,
@@ -42,6 +44,7 @@ export const ApplyTwoColumn: FC<IApplyTwoColumnProps> = ({
           phase={phase}
           applicationId={applicationId}
           tripHref={tripHref}
+          detailsTravellerId={detailsTravellerId}
         />
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
           <div
