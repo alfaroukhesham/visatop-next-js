@@ -20,7 +20,6 @@ import type { TFincraInlineCheckoutData } from "@/lib/payments/fincra-inline";
 interface IPaddleCheckoutButtonProps {
   applicationId: string;
   disabled?: boolean;
-  payLabel?: string;
   /** Must be true to POST /api/checkout. Unticked clicks must not start payment. */
   termsAccepted?: boolean;
   /** Called when the user tries to pay without accepting Terms (inline error). */
@@ -42,7 +41,6 @@ export function PaddleCheckoutButton({
   termsAccepted = false,
   onTermsRejected,
   onSuccess,
-  payLabel,
   onZiinaEmbedded,
   onFincraInline,
   onFincraRedirect,
@@ -277,7 +275,7 @@ export function PaddleCheckoutButton({
           {t("payment.preparingCheckout")}
         </>
       ) : (
-        payLabel ?? t("payment.payAndSubmit")
+        t("payment.payAndSubmit")
       )}
     </ClientButton>
   );

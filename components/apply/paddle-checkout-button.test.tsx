@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/components/client/customer-i18n-provider", () => ({
   useCustomerT: () => (key: string) => {
     const map: Record<string, string> = {
-      "payment.payAndSubmit": "Pay & Submit Application",
+      "payment.payAndSubmit": "Proceed to payment",
       "payment.preparingCheckout": "Preparing Secure Checkout...",
       "checkout.errors.termsRequired": "Please agree to VisaTop's Terms of Use before paying.",
       "checkout.errors.failedDot": "Checkout failed.",
@@ -68,7 +68,7 @@ describe("PaddleCheckoutButton terms gate", () => {
         onTermsRejected={onTermsRejected}
       />,
     );
-    expect(screen.getByRole("button", { name: /pay & submit/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /proceed to payment/i })).toBeDisabled();
     expect(fetch).not.toHaveBeenCalled();
     expect(onTermsRejected).not.toHaveBeenCalled();
   });
@@ -82,7 +82,7 @@ describe("PaddleCheckoutButton terms gate", () => {
       }),
     );
     render(<PaddleCheckoutButton applicationId="app-1" termsAccepted onError={() => undefined} />);
-    await user.click(screen.getByRole("button", { name: /pay & submit/i }));
+    await user.click(screen.getByRole("button", { name: /proceed to payment/i }));
     expect(fetch).toHaveBeenCalledTimes(1);
     const [, init] = vi.mocked(fetch).mock.calls[0]!;
     expect(JSON.parse(String(init?.body))).toEqual({
@@ -120,7 +120,7 @@ describe("PaddleCheckoutButton terms gate", () => {
         onFincraRedirect={onFincraRedirect}
       />,
     );
-    await user.click(screen.getByRole("button", { name: /pay & submit/i }));
+    await user.click(screen.getByRole("button", { name: /proceed to payment/i }));
     expect(onFincraInline).toHaveBeenCalledWith(inline);
     expect(onFincraRedirect).not.toHaveBeenCalled();
     expect(trackEventOnce).toHaveBeenCalledWith(
@@ -158,7 +158,7 @@ describe("PaddleCheckoutButton terms gate", () => {
         onZiinaEmbedded={() => undefined}
       />,
     );
-    await user.click(screen.getByRole("button", { name: /pay & submit/i }));
+    await user.click(screen.getByRole("button", { name: /proceed to payment/i }));
     expect(trackEventOnce).toHaveBeenCalledWith(
       "apply_payment_started",
       {

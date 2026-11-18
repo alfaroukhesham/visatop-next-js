@@ -251,7 +251,7 @@
     "cancelAndReset": "Soke & Sake saiti",
     "paymentConfirmed": "An tabbatar da biya",
     "paymentConfirmedDetail": "Muna tabbatar da biyan kuɗi ku kuma muna fara sarrafawa.",
-    "payAndSubmit": "Biya & Gabatar da nema",
+    "payAndSubmit": "Ci gaba zuwa biya",
     "whatsappHelpPrefix": "Having trouble with payment?",
     "whatsappHelpLink": "Message us on WhatsApp",
     "whatsappHelpSuffix": ", we're available 24/7.",
@@ -281,7 +281,7 @@
     },
     "termsAgree": "Na yarda da {link} na VisaTop",
     "termsLink": "Sharuɗɗan Amfani",
-    "payInLocalCurrency": "Biya da {currencyName}",
+    "payInLocalCurrency": "Ci gaba zuwa biya",
     "payInLocalCurrencyHint": "Aikace-aikacen da farashin {currencyName} ana biya ta Fincra (kati ko canja wurin banki)."
   },
   "pay": {

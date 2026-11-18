@@ -251,7 +251,7 @@
     "cancelAndReset": "Kanselahin at i-reset",
     "paymentConfirmed": "Nakumpirma ang Payment",
     "paymentConfirmedDetail": "Kinukumpirma namin ang payment mo at sinisimulan na ang processing.",
-    "payAndSubmit": "Magbayad at i-submit ang Application",
+    "payAndSubmit": "Magpatuloy sa pagbabayad",
     "whatsappHelpPrefix": "Having trouble with payment?",
     "whatsappHelpLink": "Message us on WhatsApp",
     "whatsappHelpSuffix": ", we're available 24/7.",
@@ -281,7 +281,7 @@
     },
     "termsAgree": "Sumasang-ayon ako sa {link} ng VisaTop",
     "termsLink": "Mga Tuntunin ng Paggamit",
-    "payInLocalCurrency": "Magbayad sa {currencyName}",
+    "payInLocalCurrency": "Magpatuloy sa pagbabayad",
     "payInLocalCurrencyHint": "Ang mga aplikasyon na may presyong {currencyName} ay magbabayad sa Fincra (card o bank transfer)."
   },
   "pay": {
