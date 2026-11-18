@@ -31,6 +31,7 @@ import { apiHref } from "@/lib/app-href";
 import { formatMajorFromMinor } from "@/lib/admin/catalog/service-price-fx-fill";
 import { formatMinorUnitsAmount } from "@/lib/pricing/format-minor-units";
 import type { CatalogLocalCurrency, CatalogNationality } from "@/lib/admin/catalog/catalog-types";
+import { resolveLocalCurrencyPriceNationality } from "@/lib/admin/catalog/resolve-local-currency-price-nationality";
 
 interface ILocalCurrenciesPanelProps {
   localCurrencies: CatalogLocalCurrency[];
@@ -82,13 +83,22 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
   const [createCode, setCreateCode] = useState("");
   const [createNationalities, setCreateNationalities] = useState<string[]>([]);
   const [editNationalities, setEditNationalities] = useState<string[]>([]);
-  const [priceNationality, setPriceNationality] = useState("");
+  const [priceNationality, setPriceNationality] = useState(
+    () => localCurrencies[0]?.nationalityCodes[0] ?? "",
+  );
   const [rows, setRows] = useState<TPriceRow[]>([]);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [loadingPrices, setLoadingPrices] = useState(false);
   const [saving, setSaving] = useState(false);
   const [banner, setBanner] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const linkedNationalityKey = selected?.nationalityCodes.join(",") ?? "";
+  const activePriceNationality = useMemo(
+    () =>
+      selected
+        ? resolveLocalCurrencyPriceNationality(selected.nationalityCodes, priceNationality)
+        : "",
+    [selected, priceNationality],
+  );
 
   const flash = (text: string, err = false) => {
     setBanner({ type: err ? "err" : "ok", text });
@@ -103,7 +113,7 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
     if (!selected) return;
     setEditNationalities(selected.nationalityCodes);
     setPriceNationality((current) =>
-      selected.nationalityCodes.includes(current) ? current : (selected.nationalityCodes[0] ?? ""),
+      resolveLocalCurrencyPriceNationality(selected.nationalityCodes, current),
     );
   }, [selected, selectedCode, linkedNationalityKey]);
 
@@ -134,9 +144,16 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
   }, []);
 
   useEffect(() => {
-    if (!selectedCode || !priceNationality) return;
-    void loadPrices(selectedCode, priceNationality);
-  }, [selectedCode, priceNationality, loadPrices]);
+    if (!selectedCode || !selected) return;
+    if (selected.nationalityCodes.length === 0) {
+      setRows([]);
+      setDrafts({});
+      showLoadError("Choose a nationality linked to this local currency.");
+      return;
+    }
+    if (!activePriceNationality) return;
+    void loadPrices(selectedCode, activePriceNationality);
+  }, [selectedCode, selected, activePriceNationality, loadPrices]);
 
   const toggleCode = (list: string[], code: string): string[] =>
     list.includes(code) ? list.filter((c) => c !== code) : [...list, code];
@@ -192,16 +209,14 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
     }));
     setEditNationalities(res.data.localCurrency.nationalityCodes);
     setPriceNationality((currentNat) =>
-      res.data.localCurrency.nationalityCodes.includes(currentNat)
-        ? currentNat
-        : (res.data.localCurrency.nationalityCodes[0] ?? ""),
+      resolveLocalCurrencyPriceNationality(res.data.localCurrency.nationalityCodes, currentNat),
     );
     flash(`Updated ${selected.code} nationality links.`);
     router.refresh();
   };
 
   const onSavePrices = async () => {
-    if (!selected || !priceNationality) return;
+    if (!selected || !activePriceNationality) return;
     const updates = Object.entries(drafts)
       .filter(([, amountMajor]) => amountMajor.trim().length > 0)
       .map(([serviceId, amountMajor]) => ({ serviceId, amountMajor }));
@@ -215,7 +230,7 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nationalityCode: priceNationality, updates }),
+        body: JSON.stringify({ nationalityCode: activePriceNationality, updates }),
       },
     );
     setSaving(false);
@@ -266,7 +281,12 @@ export const LocalCurrenciesPanel: FC<ILocalCurrenciesPanelProps> = ({
                   <li key={c.code}>
                     <button
                       type="button"
-                      onClick={() => setSelectedCode(c.code)}
+                      onClick={() => {
+                        setSelectedCode(c.code);
+                        setPriceNationality((current) =>
+                          resolveLocalCurrencyPriceNationality(c.nationalityCodes, current),
+                        );
+                      }}
                       className={
                         selectedCode === c.code
                           ? "bg-secondary text-white w-full rounded-xl px-3 py-2 text-left text-sm font-semibold"
