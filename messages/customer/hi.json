@@ -74,6 +74,7 @@
       "child": "बच्चा",
       "chooseVisaOption": "एक वीज़ा चुनें",
       "chooseVisaForThis": "इस यात्री के लिए एक वीज़ा चुनें।",
+      "visaForTraveller": "यात्री {number} के लिए वीज़ा",
       "addAtLeastOne": "कम से कम एक यात्री जोड़ें।",
       "maxTravelers": "प्रति चेकआउट अधिकतम {count} यात्री।",
       "chooseVisaForAll": "हर यात्री के लिए एक वीज़ा चुनें।"
@@ -731,6 +732,8 @@
     "insurance": {
       "title": "यात्रा बीमा",
       "add": "यात्रा बीमा जोड़ें · {price} प्रति यात्री",
+      "selectAll": "सभी यात्रियों को चुनें",
+      "forTraveller": "यात्री {number} · {price}",
       "terms": "पॉलिसी की शर्तें पढ़ें"
     },
     "recap": {

@@ -18,7 +18,15 @@ const bodySchema = z
       .nullable()
       .optional(),
     processingSpeed: z.enum(["standard", "fast_track"]).optional(),
-    travelInsurance: z.boolean().optional(),
+    travelInsurance: z
+      .array(
+        z.object({
+          applicationId: z.string().trim().min(1).max(80),
+          selected: z.boolean(),
+        }),
+      )
+      .max(20)
+      .optional(),
   })
   .refine(
     (body) =>

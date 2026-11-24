@@ -29,9 +29,12 @@ const isStayBucket = (value: unknown): value is TStayBucket =>
 const isPhase = (value: unknown): value is TChooserPhase =>
   value === "stay" || value === "entry" || value === "kind" || value === "results";
 
+const FRESH_START_KEY = "visatop:chooser-fresh";
+
 type TSessionLike = {
   getItem: (key: string) => string | null;
   setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
 };
 
 const getSessionStorage = (): TSessionLike | null => {
@@ -42,6 +45,34 @@ const getSessionStorage = (): TSessionLike | null => {
     return null;
   }
 };
+
+/** Home "start" sets this so the next /apply/start visit does not restore an older chooser. */
+export function markChooserFreshStart(): void {
+  getSessionStorage()?.setItem(FRESH_START_KEY, "1");
+}
+
+export function peekChooserFreshStart(): boolean {
+  return getSessionStorage()?.getItem(FRESH_START_KEY) === "1";
+}
+
+export function consumeChooserFreshStart(): void {
+  getSessionStorage()?.removeItem(FRESH_START_KEY);
+}
+
+export function clearChooserDraft(nationality: string): void {
+  const storage = getSessionStorage();
+  if (!storage) return;
+  const code = nationality.trim().toUpperCase();
+  if (code.length !== 2) return;
+  storage.removeItem(storageKey(code));
+}
+
+/** Restore only when the customer is resuming this chooser, or reloading it. A fresh start stays empty. */
+export const shouldRestoreChooserDraft = (input: {
+  fresh: boolean;
+  resume: boolean;
+  reloaded: boolean;
+}): boolean => !input.fresh && (input.resume || input.reloaded);
 
 export function readChooserDraft(nationality: string): TChooserDraft | null {
   const storage = getSessionStorage();

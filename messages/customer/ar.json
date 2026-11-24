@@ -74,6 +74,7 @@
       "child": "طفل",
       "chooseVisaOption": "اختر تأشيرة",
       "chooseVisaForThis": "اختر تأشيرة لهذا المسافر.",
+      "visaForTraveller": "تأشيرة المسافر {number}",
       "addAtLeastOne": "أضف مسافرًا واحدًا على الأقل.",
       "maxTravelers": "الحد الأقصى {count} مسافرين لكل عملية دفع.",
       "chooseVisaForAll": "اختر تأشيرة لكل مسافر."
@@ -731,6 +732,8 @@
     "insurance": {
       "title": "تأمين السفر",
       "add": "أضف تأمين السفر · {price} لكل مسافر",
+      "selectAll": "تحديد كل المسافرين",
+      "forTraveller": "المسافر {number} · {price}",
       "terms": "اقرأ شروط وثيقة التأمين"
     },
     "recap": {

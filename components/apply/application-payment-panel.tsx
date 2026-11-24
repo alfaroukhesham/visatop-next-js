@@ -27,6 +27,15 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
   const quote = useCheckoutQuoteOptional();
   const router = useRouter();
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsError, setTermsError] = useState<string | null>(null);
+  const termsResetKey = quote?.termsResetKey ?? 0;
+  const [seenTermsResetKey, setSeenTermsResetKey] = useState(termsResetKey);
+  if (seenTermsResetKey !== termsResetKey) {
+    setSeenTermsResetKey(termsResetKey);
+    setTermsAccepted(false);
+  }
+  const sessionEpoch = useRef(0);
   const [embeddedUrl, setEmbeddedUrl] = useState<string | null>(null);
   const [fincraInline, setFincraInline] = useState<TFincraInlineCheckoutData | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -73,11 +82,12 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
     if (embeddedUrl || fincraInline) return;
 
     let cancelled = false;
+    const epoch = sessionEpoch.current;
     const run = async () => {
       const res = await fetchApiEnvelope<TResumeCheckoutSession>(
         apiHref(`/applications/${encodeURIComponent(applicationId)}/checkout-session`),
       );
-      if (cancelled) return;
+      if (cancelled || epoch !== sessionEpoch.current) return;
       if (!res.ok) {
         setCheckoutError(t("checkout.errors.sessionUnavailable"));
         return;
@@ -113,6 +123,7 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
         setCheckoutError(t("checkout.errors.paymentNotCompleted"));
         return;
       }
+      if (epoch !== sessionEpoch.current) return;
       setCheckoutError(t("checkout.errors.sessionUnavailable"));
     };
     void run();
@@ -201,22 +212,27 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
 
   const onZiinaFailed = useCallback(() => {
     setConfirming(false);
+    quote?.setPaying(false);
     setCheckoutError(t("checkout.errors.paymentNotCompleted"));
-  }, [t]);
+  }, [quote, t]);
 
   const onZiinaCanceled = useCallback(() => {
     setConfirming(false);
+    quote?.setPaying(false);
     setCheckoutError(t("checkout.errors.paymentNotCompleted"));
-  }, [t]);
+  }, [quote, t]);
 
   const cancelOpenCheckout = useCallback(async (): Promise<boolean> => {
+    sessionEpoch.current += 1;
     setCheckoutError(null);
     setEmbeddedUrl(null);
     setFincraInline(null);
     setConfirming(false);
     setShowPaddleRetry(false);
     pollCleanupRef.current?.();
-    return draft.cancelCheckout();
+    const cancelled = await draft.cancelCheckout();
+    if (cancelled) setCheckoutError(null);
+    return cancelled;
   }, [draft]);
 
   useRefreshQuoteWhenCheckoutEnds(draft.app?.paymentStatus, quote?.refreshQuote);
@@ -283,7 +299,12 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
         onCancelCheckout={quote ? quote.cancelCheckout : () => void cancelOpenCheckout()}
         payBlocked={quote?.payBlocked ?? false}
         payDescribedBy={quote?.payDescribedBy ?? null}
-        termsResetKey={quote?.termsResetKey ?? 0}
+        termsAccepted={termsAccepted}
+        onTermsAcceptedChange={setTermsAccepted}
+        termsError={termsError}
+        onTermsError={setTermsError}
+        onPayingChange={quote?.setPaying}
+        onCheckoutStarted={quote?.refreshQuote}
         checkout={{
           onZiinaEmbedded,
           onFincraInline,

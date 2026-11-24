@@ -48,6 +48,22 @@ describe("resolveCheckoutExtras", () => {
     expect(quote.availability.find((item) => item.key === "fast_track")?.available).toBe(true);
   });
 
+  it("charges insurance for the opted-in travellers and Fast Track for every traveller", () => {
+    const quote = resolveCheckoutExtras({
+      currency: "AED",
+      members,
+      catalog: [insurance([{ currency: "AED", amountMinor: 7900 }]), fastTrack([{ currency: "AED", amountMinor: 36725 }])],
+      insuranceSelectedByApplicationId: { "app-a": true, "app-b": false },
+      processingSpeed: "fast_track",
+    });
+
+    expect(quote.lines.filter((line) => line.key === "travel_insurance").map((line) => line.applicationId)).toEqual([
+      "app-a",
+    ]);
+    expect(quote.lines.filter((line) => line.key === "fast_track")).toHaveLength(2);
+    expect(quote.extrasTotalMinor).toBe(BigInt(7900 + 36725 * 2));
+  });
+
   it("keeps an unselected extra available with a unit price and out of the total", () => {
     const quote = resolveCheckoutExtras({
       currency: "AED",

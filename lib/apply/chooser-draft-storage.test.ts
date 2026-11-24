@@ -1,5 +1,10 @@
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
-import { readChooserDraft, writeChooserDraft } from "./chooser-draft-storage";
+import {
+  clearChooserDraft,
+  readChooserDraft,
+  shouldRestoreChooserDraft,
+  writeChooserDraft,
+} from "./chooser-draft-storage";
 
 describe("chooser draft storage", () => {
   const memory = new Map<string, string>();
@@ -11,6 +16,7 @@ describe("chooser draft storage", () => {
       value: {
         getItem: (k: string) => memory.get(k) ?? null,
         setItem: (k: string, v: string) => memory.set(k, v),
+        removeItem: (k: string) => memory.delete(k),
       },
     });
   });
@@ -57,5 +63,26 @@ describe("chooser draft storage", () => {
       travelDate: "",
     });
     expect(readChooserDraft("NG")?.displayCurrency).toBe("NGN");
+  });
+
+  it("restores only a resume or a reload, and a fresh start clears the stored chooser", () => {
+    writeChooserDraft("IN", {
+      displayCurrency: "AED",
+      serviceId: "svc-1",
+      stay: "15_30",
+      entry: "single",
+      kind: "adult",
+      phase: "results",
+      additionalTravelers: [],
+      email: "",
+      travelDate: "2026-12-02",
+    });
+    expect(shouldRestoreChooserDraft({ fresh: true, resume: false, reloaded: false })).toBe(false);
+    expect(shouldRestoreChooserDraft({ fresh: false, resume: true, reloaded: false })).toBe(true);
+    expect(shouldRestoreChooserDraft({ fresh: false, resume: false, reloaded: true })).toBe(true);
+    expect(shouldRestoreChooserDraft({ fresh: true, resume: true, reloaded: true })).toBe(false);
+    expect(shouldRestoreChooserDraft({ fresh: false, resume: false, reloaded: false })).toBe(false);
+    clearChooserDraft("in");
+    expect(readChooserDraft("IN")).toBeNull();
   });
 });

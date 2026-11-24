@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import type { DbTransaction } from "@/lib/db";
 import {
   application,
@@ -376,17 +376,16 @@ export const buildQuotePreview = (input: {
 
 const writeExtraSelection = async (
   tx: DbTransaction,
-  memberIds: readonly string[],
+  rows: readonly { applicationId: string; selected: boolean }[],
   extraId: string,
-  selected: boolean,
 ) => {
-  if (memberIds.length === 0) return;
+  if (rows.length === 0) return;
   await tx
     .insert(applicationExtraSelection)
-    .values(memberIds.map((applicationId) => ({ applicationId, extraId, selected })))
+    .values(rows.map((row) => ({ applicationId: row.applicationId, extraId, selected: row.selected })))
     .onConflictDoUpdate({
       target: [applicationExtraSelection.applicationId, applicationExtraSelection.extraId],
-      set: { selected, updatedAt: new Date() },
+      set: { selected: sql`excluded.selected`, updatedAt: new Date() },
     });
 };
 
@@ -407,7 +406,12 @@ const persistSpeed = async (
     })
     .where(eq(applicationParty.id, partyId));
   if (fastTrackExtraId && speed) {
-    await writeExtraSelection(tx, memberIds, fastTrackExtraId, speed === "fast_track");
+    const selected = speed === "fast_track";
+    await writeExtraSelection(
+      tx,
+      memberIds.map((applicationId) => ({ applicationId, selected })),
+      fastTrackExtraId,
+    );
   }
 };
 
@@ -662,10 +666,22 @@ export const savePartyTrip = async (
 
   const memberIds = state.members.map((member) => member.applicationId);
   if (fastTrack && plan.next.processingSpeed) {
-    await writeExtraSelection(tx, memberIds, fastTrack.id, plan.next.processingSpeed === "fast_track");
+    const selected = plan.next.processingSpeed === "fast_track";
+    await writeExtraSelection(
+      tx,
+      memberIds.map((applicationId) => ({ applicationId, selected })),
+      fastTrack.id,
+    );
   }
   if (insurance && patch.travelInsurance !== undefined) {
-    await writeExtraSelection(tx, memberIds, insurance.id, patch.travelInsurance);
+    await writeExtraSelection(
+      tx,
+      memberIds.map((applicationId) => ({
+        applicationId,
+        selected: plan.next.insuranceSelectedByApplicationId[applicationId] === true,
+      })),
+      insurance.id,
+    );
   }
 
   return {

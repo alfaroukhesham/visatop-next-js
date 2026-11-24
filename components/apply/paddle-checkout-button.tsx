@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import {
   CheckoutEventNames,
   CheckoutEventsStatus,
@@ -26,6 +27,10 @@ interface IPaddleCheckoutButtonProps {
   onTermsRejected?: () => void;
   /** Points at the "Updating total" status while a quote save is in flight. */
   describedBy?: string | null;
+  /** Called synchronously before the checkout request, and again if that request fails. */
+  onPayingChange?: (paying: boolean) => void;
+  /** Checkout was created. The pay step refreshes the quote so extras stay locked. */
+  onCheckoutStarted?: () => void;
   onSuccess?: () => void;
   /** Called with Ziina `embedded_url` so checkout stays on the payment step. */
   onZiinaEmbedded?: (embeddedUrl: string) => void;
@@ -41,6 +46,8 @@ export function PaddleCheckoutButton({
   applicationId,
   disabled,
   describedBy = null,
+  onPayingChange,
+  onCheckoutStarted,
   termsAccepted = false,
   onTermsRejected,
   onSuccess,
@@ -73,6 +80,7 @@ export function PaddleCheckoutButton({
       if (paymentFinished.current) return;
       paymentFinished.current = true;
       setIsInitializing(false);
+      onPayingChange?.(false);
       onError?.(message);
     };
 
@@ -82,6 +90,7 @@ export function PaddleCheckoutButton({
       return;
     }
 
+    flushSync(() => onPayingChange?.(true));
     setIsInitializing(true);
     try {
       const res = await fetch(apiHref("/checkout"), {
@@ -114,6 +123,7 @@ export function PaddleCheckoutButton({
       if (!res.ok) {
         throw new Error(checkoutErrorToUserMessage(envelope.error, t));
       }
+      onCheckoutStarted?.();
 
       if (!envelope.ok || !envelope.data) {
         throw new Error(checkoutErrorToUserMessage(envelope.error, t));
@@ -230,6 +240,7 @@ export function PaddleCheckoutButton({
           if (name === CheckoutEventNames.CHECKOUT_CLOSED) {
             setIsInitializing(false);
             if (!paymentFinished.current) {
+              onPayingChange?.(false);
               onCancel?.();
             }
             onOverlayClosed?.();
@@ -260,6 +271,7 @@ export function PaddleCheckoutButton({
       });
     } catch (err: unknown) {
       console.error("Checkout error:", err);
+      onPayingChange?.(false);
       onError?.(err instanceof Error ? err.message : t("checkout.errors.failedDot"));
       setIsInitializing(false);
     }

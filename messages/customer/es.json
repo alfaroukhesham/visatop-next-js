@@ -74,6 +74,7 @@
       "child": "Menor",
       "chooseVisaOption": "Elija un visado",
       "chooseVisaForThis": "Elija un visado para este viajero.",
+      "visaForTraveller": "Visado del viajero {number}",
       "addAtLeastOne": "Añada al menos un viajero.",
       "maxTravelers": "Máximo {count} viajeros por pago.",
       "chooseVisaForAll": "Elija un visado para cada viajero."
@@ -731,6 +732,8 @@
     "insurance": {
       "title": "Seguro de viaje",
       "add": "Añadir seguro de viaje · {price} por viajero",
+      "selectAll": "Seleccionar todos los viajeros",
+      "forTraveller": "Viajero {number} · {price}",
       "terms": "Leer las condiciones de la póliza"
     },
     "recap": {

@@ -36,11 +36,31 @@ export const TripExtrasSection: FC = () => {
       <TripExtrasPanel
         preview={preview}
         locked={quote.locked}
+        paying={quote.paying}
         switchedBack={quote.switchedBack}
         announceNote={quote.announceNote}
         updateError={quote.updateError}
         onSpeed={(processingSpeed) => void quote.patchTrip({ processingSpeed })}
-        onInsurance={(travelInsurance) => void quote.patchTrip({ travelInsurance })}
+        onInsurance={(applicationId, selected) => {
+          const chosen = new Set(preview.extraLines.flatMap((line) =>
+            line.key === "travel_insurance" && line.applicationId ? [line.applicationId] : [],
+          ));
+          if (selected) chosen.add(applicationId);
+          else chosen.delete(applicationId);
+          const memberIds = preview.visaLines.map((line) => line.applicationId);
+          void quote.patchTrip({
+            travelInsurance: (memberIds.length > 0 ? memberIds : [applicationId]).map((id) => ({
+              applicationId: id,
+              selected: chosen.has(id),
+            })),
+          });
+        }}
+        onInsuranceAll={(selected) => {
+          const memberIds = preview.visaLines.map((line) => line.applicationId);
+          void quote.patchTrip({
+            travelInsurance: memberIds.map((applicationId) => ({ applicationId, selected })),
+          });
+        }}
         onSaveDate={(travelDate) => quote.patchTrip({ travelDate })}
         onRetry={quote.retry}
         onCancelCheckout={quote.cancelCheckout}

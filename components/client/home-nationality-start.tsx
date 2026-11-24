@@ -13,6 +13,7 @@ import {
 import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
+import { markChooserFreshStart } from "@/lib/apply/chooser-draft-storage";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { trackEventOnce } from "@/lib/analytics/gtag-client";
 
@@ -94,6 +95,7 @@ export const HomeNationalityStart: FC = () => {
 
   const onContinue = () => {
     if (!selectedCode || selectedCode.length !== 2) return;
+    markChooserFreshStart();
     router.push(`/apply/start?nationality=${encodeURIComponent(selectedCode)}`);
   };
 

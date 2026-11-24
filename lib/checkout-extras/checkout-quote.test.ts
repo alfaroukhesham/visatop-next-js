@@ -89,7 +89,10 @@ describe("trip locking", () => {
         processingSpeedSource: "customer",
         insuranceSelectedByApplicationId: {},
       },
-      patch: { processingSpeed: "fast_track", travelInsurance: true },
+      patch: {
+        processingSpeed: "fast_track",
+        travelInsurance: [{ applicationId: "app-a", selected: true }],
+      },
     });
     expect(planned).toMatchObject({
       ok: false,
@@ -114,7 +117,11 @@ describe("trip locking", () => {
         processingSpeedSource: "system",
         insuranceSelectedByApplicationId: {},
       },
-      patch: { travelDate: "2026-12-02", processingSpeed: "fast_track", travelInsurance: true },
+      patch: {
+        travelDate: "2026-12-02",
+        processingSpeed: "fast_track",
+        travelInsurance: [{ applicationId: "app-a", selected: true }],
+      },
     });
     expect(planned.ok).toBe(true);
     if (!planned.ok) return;
@@ -308,5 +315,49 @@ describe("quote preview", () => {
     expect(preview.extrasAmountMinor).toBe(String(7900 * 2 + 36725 * 2));
     expect(preview.totalAmountMinor).toBe(String(35000 * 2 + 7900 * 2 + 36725 * 2));
     expect(preview.availableExtras.find((extra) => extra.key === "travel_insurance")?.selected).toBe(true);
+  });
+
+  it("charges insurance only for the travellers who opted in, and Fast Track for the whole party", () => {
+    const planned = planTripUpdate({
+      ...basePlan,
+      stored: {
+        travelDate: "2026-12-20",
+        processingSpeed: "standard",
+        processingSpeedSource: "customer",
+        insuranceSelectedByApplicationId: {},
+      },
+      patch: {
+        processingSpeed: "fast_track",
+        travelInsurance: [
+          { applicationId: "app-a", selected: true },
+          { applicationId: "app-b", selected: false },
+        ],
+      },
+    });
+    expect(planned.ok).toBe(true);
+    if (!planned.ok) return;
+    expect(planned.next.insuranceSelectedByApplicationId).toEqual({ "app-a": true, "app-b": false });
+
+    const preview = buildQuotePreview({
+      currency: "AED",
+      now: NOW,
+      travelDateRequired: true,
+      thresholdDays: 4,
+      maxDaysAhead: 180,
+      travelDate: planned.next.travelDate,
+      storedSpeed: planned.next.processingSpeed,
+      storedSource: planned.next.processingSpeedSource,
+      members,
+      visaAmounts: { "app-a": BigInt(35000), "app-b": BigInt(35000) },
+      catalog,
+      insuranceSelectedByApplicationId: planned.next.insuranceSelectedByApplicationId,
+    });
+    const insuranceLines = preview.extraLines.filter((line) => line.key === "travel_insurance");
+    const fastTrackLines = preview.extraLines.filter((line) => line.key === "fast_track");
+    expect(insuranceLines).toEqual([{ key: "travel_insurance", applicationId: "app-a", amountMinor: "7900" }]);
+    expect(fastTrackLines).toHaveLength(2);
+    expect(preview.extrasAmountMinor).toBe(String(7900 + 36725 * 2));
+    expect(preview.totalAmountMinor).toBe(String(35000 * 2 + 7900 + 36725 * 2));
+    expect(preview.availableExtras.find((extra) => extra.key === "travel_insurance")?.selected).toBe(false);
   });
 });

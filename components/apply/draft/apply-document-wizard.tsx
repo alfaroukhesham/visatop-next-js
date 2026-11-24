@@ -209,6 +209,7 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
           {t("wizard.encrypted")}
         </p>
         <ApplyOrderTotal
+          applicationId={applicationId}
           nationalityCode={primaryApp.nationalityCode}
           currency={primaryApp.catalogCurrency}
           serviceIds={ordered.map((member) => member.serviceId)}

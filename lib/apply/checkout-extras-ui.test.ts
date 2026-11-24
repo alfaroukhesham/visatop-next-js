@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { FALLBACK_CUSTOMER_LOCALE_SLUGS } from "@/lib/i18n/customer-locale";
 import { lookupCustomerMessage } from "@/lib/i18n/customer-messages";
 import {
+  applyInsuranceSelection,
   didSwitchBackToStandard,
   extrasSectionVisible,
   outcomeFromTripSave,
@@ -125,6 +126,21 @@ describe("speed recommendation", () => {
     ).toBe(false);
   });
 
+  it("keeps the Fast Track note after the customer switches to Fast Track under the threshold", () => {
+    expect(
+      speedUi({
+        preview: preview({
+          processingSpeed: "fast_track",
+          processingSpeedSource: "customer",
+          recommendFastTrack: true,
+          daysUntilTravel: 2,
+        }),
+        fastTrackAvailable: true,
+        switchedBack: false,
+      }).note,
+    ).toBe("n1");
+  });
+
   it("uses a same-day caution instead of the recommendation note", () => {
     expect(
       speedUi({
@@ -181,6 +197,10 @@ describe("customer copy", () => {
       "extras.locked",
       "extras.error.fastTrackUnavailable",
       "extras.error.insuranceUnavailable",
+      "extras.insurance.selectAll",
+      "extras.insurance.forTraveller",
+      "extras.recap.insurance",
+      "start.party.visaForTraveller",
       "extras.travellers_other",
       "common.opensNewTab",
     ];
@@ -192,6 +212,54 @@ describe("customer copy", () => {
         expect(lookupCustomerMessage(messages, key), `${slug} ${key}`).toEqual(expect.any(String));
       }
     }
+  });
+});
+
+describe("per-traveller insurance preview", () => {
+  it("replaces the insurance lines with the opted-in count and keeps Fast Track party-wide", () => {
+    const next = applyInsuranceSelection(
+      preview({
+        travellerCount: 2,
+        visaLines: [
+          { applicationId: "app-a", serviceId: "svc-1", amountMinor: "35000" },
+          { applicationId: "app-b", serviceId: "svc-1", amountMinor: "35000" },
+        ],
+        extraLines: [
+          { key: "fast_track", applicationId: "app-a", amountMinor: "36725" },
+          { key: "fast_track", applicationId: "app-b", amountMinor: "36725" },
+          { key: "travel_insurance", applicationId: "app-a", amountMinor: "7900" },
+          { key: "travel_insurance", applicationId: "app-b", amountMinor: "7900" },
+        ],
+        availableExtras: [
+          {
+            key: "travel_insurance",
+            unitAmountMinor: "7900",
+            travellerCount: 2,
+            sumAmountMinor: "15800",
+            selected: true,
+            chargeBasis: "per_traveller",
+            labelI18n: {},
+            descriptionI18n: {},
+            promiseI18n: null,
+            termsUrl: null,
+          },
+        ],
+        visaAmountMinor: "70000",
+        extrasAmountMinor: "89250",
+        totalAmountMinor: "159250",
+      }),
+      [
+        { applicationId: "app-a", selected: true },
+        { applicationId: "app-b", selected: false },
+      ],
+    );
+    expect(next.extraLines.filter((line) => line.key === "travel_insurance")).toEqual([
+      { key: "travel_insurance", applicationId: "app-a", amountMinor: "7900" },
+    ]);
+    expect(next.extraLines.filter((line) => line.key === "fast_track")).toHaveLength(2);
+    expect(next.extrasAmountMinor).toBe(String(7900 + 36725 * 2));
+    expect(next.totalAmountMinor).toBe(String(70000 + 7900 + 36725 * 2));
+    expect(next.availableExtras[0]?.selected).toBe(false);
   });
 });
 

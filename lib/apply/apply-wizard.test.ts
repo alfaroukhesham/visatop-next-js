@@ -120,8 +120,8 @@ describe("lastTravellerApplicationId", () => {
 
 describe("applyTripStepHref", () => {
   it("points at visa selection, never marketing home", () => {
-    expect(applyTripStepHref("IN")).toBe("/apply/start?nationality=IN");
-    expect(applyTripStepHref(" in ")).toBe("/apply/start?nationality=IN");
+    expect(applyTripStepHref("IN")).toBe("/apply/start?nationality=IN&resume=1");
+    expect(applyTripStepHref(" in ")).toBe("/apply/start?nationality=IN&resume=1");
     expect(applyTripStepHref("")).toBeNull();
     expect(applyTripStepHref(null)).toBeNull();
   });
@@ -135,7 +135,7 @@ describe("previousApplyScreen", () => {
       travellerId: null,
     });
     expect(applyPreviousHref("a", one, { screen: "ready", travellerId: null }, "IN")).toBe(
-      "/apply/start?nationality=IN",
+      "/apply/start?nationality=IN&resume=1",
     );
     expect(applyPreviousHref("a", one, { screen: "ready", travellerId: null }, "IN")).not.toBe("/");
     expect(applyPreviousHref("a", one, { screen: "ready", travellerId: null }, "IN")).not.toContain(

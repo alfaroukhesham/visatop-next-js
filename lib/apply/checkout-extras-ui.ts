@@ -49,10 +49,15 @@ export type TClientQuotePreview = {
   totalAmountMinor: string;
 };
 
+export type TTripInsuranceSelection = {
+  applicationId: string;
+  selected: boolean;
+};
+
 export type TTripPatchBody = {
   travelDate?: string | null;
   processingSpeed?: TProcessingSpeedChoice;
-  travelInsurance?: boolean;
+  travelInsurance?: readonly TTripInsuranceSelection[];
 };
 
 export type TSpeedNote = "n1" | "n2" | "n3" | "n4" | "n5";
@@ -226,7 +231,6 @@ export const speedUi = (input: {
 }): TSpeedUi => {
   const selected: TProcessingSpeedChoice =
     input.preview.processingSpeed === "fast_track" ? "fast_track" : "standard";
-  const source = input.preview.processingSpeedSource;
   const under = input.preview.recommendFastTrack;
   const soon = input.preview.daysUntilTravel !== null && input.preview.daysUntilTravel <= 1;
 
@@ -242,7 +246,7 @@ export const speedUi = (input: {
   let note: TSpeedNote | null = null;
   if (soon) note = "n3";
   else if (input.switchedBack && !under) note = "n5";
-  else if (under && source !== "customer") note = "n1";
+  else if (under && selected === "fast_track") note = "n1";
   else if (under && selected === "standard") note = "n2";
 
   return {
@@ -295,11 +299,49 @@ export const optimisticPreview = (
     );
   }
   if (patch.travelInsurance !== undefined) {
-    next.availableExtras = next.availableExtras.map((extra) =>
-      extra.key === "travel_insurance" ? { ...extra, selected: patch.travelInsurance === true } : extra,
-    );
+    return applyInsuranceSelection(next, patch.travelInsurance);
   }
   return next;
+};
+
+export const insuredApplicationIds = (
+  preview: Pick<TClientQuotePreview, "extraLines">,
+): string[] =>
+  preview.extraLines.flatMap((line) =>
+    line.key === "travel_insurance" && line.applicationId ? [line.applicationId] : [],
+  );
+
+/** Optimistic per-traveller insurance total: insured count × unit price. Fast Track lines stay party-wide. */
+export const applyInsuranceSelection = (
+  preview: TClientQuotePreview,
+  selections: readonly TTripInsuranceSelection[],
+): TClientQuotePreview => {
+  const insurance = extraByKey(preview, "travel_insurance");
+  const unit = insurance ? BigInt(insurance.unitAmountMinor) : BigInt(0);
+  const chosen = new Map(selections.map((row) => [row.applicationId, row.selected]));
+  const memberIds = preview.visaLines.map((line) => line.applicationId);
+  const selectedIds = memberIds.filter((id) => chosen.get(id) === true);
+  const insuranceLines = selectedIds.map((applicationId) => ({
+    key: "travel_insurance" as const,
+    applicationId,
+    amountMinor: unit.toString(),
+  }));
+  const extraLines = [
+    ...preview.extraLines.filter((line) => line.key !== "travel_insurance"),
+    ...insuranceLines,
+  ];
+  const extrasAmountMinor = extraLines.reduce((sum, line) => sum + BigInt(line.amountMinor), BigInt(0));
+  const totalAmountMinor = BigInt(preview.visaAmountMinor) + extrasAmountMinor;
+  const allSelected = memberIds.length > 0 && selectedIds.length === memberIds.length;
+  return {
+    ...preview,
+    extraLines,
+    extrasAmountMinor: extrasAmountMinor.toString(),
+    totalAmountMinor: totalAmountMinor.toString(),
+    availableExtras: preview.availableExtras.map((extra) =>
+      extra.key === "travel_insurance" ? { ...extra, selected: allSelected } : extra,
+    ),
+  };
 };
 
 export const groupedExtraLines = (

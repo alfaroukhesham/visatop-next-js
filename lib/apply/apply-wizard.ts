@@ -182,7 +182,7 @@ export const lastTravellerApplicationId = (
 export const applyTripStepHref = (nationalityCode?: string | null): string | null => {
   const code = nationalityCode?.trim().toUpperCase() ?? "";
   if (!/^[A-Z]{2}$/.test(code)) return null;
-  return `/apply/start?nationality=${encodeURIComponent(code)}`;
+  return `/apply/start?nationality=${encodeURIComponent(code)}&resume=1`;
 };
 
 export const applyPreviousHref = (

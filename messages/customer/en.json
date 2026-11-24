@@ -74,6 +74,7 @@
       "child": "Child",
       "chooseVisaOption": "Choose a visa",
       "chooseVisaForThis": "Choose a visa for this traveller.",
+      "visaForTraveller": "Visa for Traveller {number}",
       "addAtLeastOne": "Add at least one traveller.",
       "maxTravelers": "Maximum {count} travellers per checkout.",
       "chooseVisaForAll": "Choose a visa for every traveller."
@@ -731,6 +732,8 @@
     "insurance": {
       "title": "Travel insurance",
       "add": "Add travel insurance · {price} per traveller",
+      "selectAll": "Select all travellers",
+      "forTraveller": "Traveller {number} · {price}",
       "terms": "Read the policy terms"
     },
     "recap": {

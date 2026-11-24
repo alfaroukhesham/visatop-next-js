@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { parseAdminPriceMajorInput } from "@/lib/admin/catalog/parse-admin-price-input";
+import { wholeUnitPriceMessage } from "@/lib/checkout-extras/whole-unit";
 import { FALLBACK_CUSTOMER_LOCALE_SLUGS } from "@/lib/i18n/customer-locale";
 import { ADMIN_IMPORT_CURRENCIES } from "@/lib/payments/local-checkout-config";
 import { CHECKOUT_EXTRA_KEYS, type TCheckoutExtraKey } from "@/lib/db/schema/checkout-extra";
@@ -81,15 +82,48 @@ const parseTermsUrl = (raw: string | null): { ok: true; value: string | null } |
   return { ok: true, value: url.toString() };
 };
 
-const minorFromMajor = (amountMajor: string, label: string): { ok: true; value: number } | { ok: false; message: string } => {
+export type TCheckoutExtraFieldError = {
+  field: string;
+  message: string;
+};
+
+const minorFromMajor = (
+  amountMajor: string,
+  label: string,
+  currency?: string,
+): { ok: true; value: number } | { ok: false; message: string } => {
   const minor = parseAdminPriceMajorInput(amountMajor);
   if (minor === null || minor <= BigInt(0)) {
     return { ok: false, message: `${label} must be a positive amount.` };
+  }
+  if (currency) {
+    const whole = wholeUnitPriceMessage(amountMajor, currency);
+    if (whole) return { ok: false, message: whole };
   }
   if (minor > BigInt(Number.MAX_SAFE_INTEGER)) {
     return { ok: false, message: `${label} is too large.` };
   }
   return { ok: true, value: Number(minor) };
+};
+
+/** Every invalid price, in form order, so the admin UI can mark each field. */
+export const listCheckoutExtraFieldErrors = (
+  body: TCheckoutExtraWriteBody,
+): TCheckoutExtraFieldError[] => {
+  const errors: TCheckoutExtraFieldError[] = [];
+  if (body.baseAmountMajor.trim()) {
+    const base = minorFromMajor(body.baseAmountMajor, "Base price", body.baseCurrency);
+    if (!base.ok) errors.push({ field: "baseAmount", message: base.message });
+  }
+  const seen = new Set<string>();
+  for (const price of body.prices) {
+    const currency = price.currency;
+    if (!currency || seen.has(currency) || !price.amountMajor) continue;
+    seen.add(currency);
+    const amount = minorFromMajor(price.amountMajor, `${currency} price`, currency);
+    if (!amount.ok) errors.push({ field: `price:${currency}`, message: amount.message });
+  }
+  return errors;
 };
 
 export const prepareCheckoutExtraWrite = (
@@ -100,7 +134,7 @@ export const prepareCheckoutExtraWrite = (
     return { ok: false, message: "Base currency must be USD, AED, or a configured local currency." };
   }
 
-  const baseAmount = minorFromMajor(body.baseAmountMajor, "Base price");
+  const baseAmount = minorFromMajor(body.baseAmountMajor, "Base price", body.baseCurrency);
   if (!baseAmount.ok) return baseAmount;
 
   const labels = compactLocaleMap(body.labels, LABEL_MAX);
@@ -138,7 +172,7 @@ export const prepareCheckoutExtraWrite = (
     }
     seen.add(price.currency);
     if (!price.amountMajor) continue;
-    const amount = minorFromMajor(price.amountMajor, `${price.currency} price`);
+    const amount = minorFromMajor(price.amountMajor, `${price.currency} price`, price.currency);
     if (!amount.ok) return amount;
     prices.push({ currency: price.currency, amountMinor: amount.value });
   }
@@ -211,6 +245,41 @@ export const parseTravelDateMaxDaysAhead = (value: string | null | undefined): n
     DEFAULT_TRAVEL_DATE_MAX_DAYS_AHEAD,
   );
 
+export type TTravelDateSettingsField =
+  | "fastTrackThresholdDays"
+  | "travelDateMaxDaysAhead"
+  | "travelDateRequired";
+
+const travelDateSettingsField = (value: PropertyKey | undefined): TTravelDateSettingsField | null =>
+  value === "fastTrackThresholdDays" || value === "travelDateMaxDaysAhead" || value === "travelDateRequired"
+    ? value
+    : null;
+
+export const travelDateSettingsFieldError = (error: {
+  issues: readonly { code: string; path: readonly PropertyKey[]; message: string }[];
+}): { field: TTravelDateSettingsField | null; message: string } => {
+  const issue = error.issues[0];
+  if (!issue) return { field: null, message: "Check the travel date settings and try again." };
+  const field = travelDateSettingsField(issue.path[0]);
+  if (issue.code === "custom") {
+    return { field: field ?? "fastTrackThresholdDays", message: issue.message };
+  }
+  if (field === "fastTrackThresholdDays") {
+    return { field, message: "Fast Track threshold must be a whole number from 1 to 60." };
+  }
+  if (field === "travelDateMaxDaysAhead") {
+    return { field, message: "Maximum days ahead must be a whole number from 1 to 730." };
+  }
+  if (field === "travelDateRequired") {
+    return { field, message: "Require a travel date must be yes or no." };
+  }
+  return { field: null, message: issue.message || "Check the travel date settings and try again." };
+};
+
+export const travelDateSettingsErrorMessage = (error: {
+  issues: readonly { code: string; path: readonly PropertyKey[]; message: string }[];
+}): string => travelDateSettingsFieldError(error).message;
+
 export const travelDateSettingsWriteSchema = z
   .object({
     fastTrackThresholdDays: z
@@ -226,6 +295,6 @@ export const travelDateSettingsWriteSchema = z
       .max(TRAVEL_DATE_MAX_DAYS_AHEAD_MAX),
   })
   .refine((value) => value.fastTrackThresholdDays <= value.travelDateMaxDaysAhead, {
-    message: "Fast Track threshold cannot be greater than the maximum days ahead.",
+    message: "Fast Track threshold must be a whole number from 1 to 60 and cannot be greater than the maximum days ahead.",
     path: ["fastTrackThresholdDays"],
   });

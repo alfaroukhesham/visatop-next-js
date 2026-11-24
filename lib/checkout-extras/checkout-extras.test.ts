@@ -5,7 +5,9 @@ import { suggestMissingGlobalPrice } from "@/lib/checkout-extras/suggest-global-
 import { travelDateSettingsFromRows } from "@/lib/checkout-extras/travel-date-settings";
 import {
   checkoutExtraWriteBodySchema,
+  listCheckoutExtraFieldErrors,
   prepareCheckoutExtraWrite,
+  travelDateSettingsErrorMessage,
   travelDateSettingsWriteSchema,
 } from "@/lib/checkout-extras/validation";
 
@@ -116,6 +118,49 @@ describe("prepareCheckoutExtraWrite", () => {
     );
     expect(duplicate).toEqual({ ok: false, message: "Duplicate price for AED." });
   });
+
+  it("rejects NGN and ZAR decimals and accepts a whole amount written with .00", () => {
+    const ngn = prepareCheckoutExtraWrite(
+      "travel_insurance",
+      checkoutExtraWriteBodySchema.parse({
+        ...insuranceBody,
+        baseCurrency: "NGN",
+        baseAmountMajor: "1500",
+        prices: [{ currency: "NGN", amountMajor: "1500.50" }],
+      }),
+    );
+    expect(ngn).toEqual({ ok: false, message: "Enter a whole number" });
+
+    const zar = listCheckoutExtraFieldErrors(
+      checkoutExtraWriteBodySchema.parse({
+        ...insuranceBody,
+        baseCurrency: "ZAR",
+        baseAmountMajor: "200.25",
+        prices: [
+          { currency: "ZAR", amountMajor: "200.00" },
+          { currency: "NGN", amountMajor: "1500.5" },
+        ],
+      }),
+    );
+    expect(zar).toEqual([
+      { field: "baseAmount", message: "Enter a whole number" },
+      { field: "price:NGN", message: "Enter a whole number" },
+    ]);
+
+    const whole = prepareCheckoutExtraWrite(
+      "travel_insurance",
+      checkoutExtraWriteBodySchema.parse({
+        ...insuranceBody,
+        baseCurrency: "NGN",
+        baseAmountMajor: "1500.00",
+        prices: [{ currency: "NGN", amountMajor: "1500" }],
+      }),
+    );
+    expect(whole.ok).toBe(true);
+    if (!whole.ok) return;
+    expect(whole.value.baseAmountMinor).toBe(150000);
+    expect(whole.value.prices).toEqual([{ currency: "NGN", amountMinor: 150000 }]);
+  });
 });
 
 describe("planExtraPriceWrites", () => {
@@ -179,6 +224,30 @@ describe("travel date settings", () => {
     });
     expect(parsed.success).toBe(false);
   });
+
+  it("names the field and the allowed range", () => {
+    const tooHigh = travelDateSettingsWriteSchema.safeParse({
+      fastTrackThresholdDays: 61,
+      travelDateRequired: true,
+      travelDateMaxDaysAhead: 180,
+    });
+    expect(tooHigh.success).toBe(false);
+    if (tooHigh.success) return;
+    expect(travelDateSettingsErrorMessage(tooHigh.error)).toBe(
+      "Fast Track threshold must be a whole number from 1 to 60.",
+    );
+
+    const tooFar = travelDateSettingsWriteSchema.safeParse({
+      fastTrackThresholdDays: 4,
+      travelDateRequired: true,
+      travelDateMaxDaysAhead: 800,
+    });
+    expect(tooFar.success).toBe(false);
+    if (tooFar.success) return;
+    expect(travelDateSettingsErrorMessage(tooFar.error)).toBe(
+      "Maximum days ahead must be a whole number from 1 to 730.",
+    );
+  });
 });
 
 describe("toCheckoutExtraAdmin", () => {
@@ -200,6 +269,29 @@ describe("toCheckoutExtraAdmin", () => {
     );
     expect(mapped?.baseAmountMajor).toBe("100.00");
     expect(mapped?.prices).toEqual([{ currency: "USD", amountMinor: 10000, amountMajor: "100.00" }]);
+    const ngn = toCheckoutExtraAdmin(
+      {
+        key: "travel_insurance",
+        enabled: true,
+        chargeBasis: "per_traveller",
+        baseCurrency: "NGN",
+        baseAmountMinor: 1500000,
+        labelI18n: { en: "Travel insurance" },
+        descriptionI18n: {},
+        promiseI18n: null,
+        termsUrl: null,
+        sortOrder: 0,
+      },
+      [
+        { currency: "NGN", amountMinor: 1500000 },
+        { currency: "ZAR", amountMinor: 20000 },
+      ],
+    );
+    expect(ngn?.baseAmountMajor).toBe("15000");
+    expect(ngn?.prices).toEqual([
+      { currency: "NGN", amountMinor: 1500000, amountMajor: "15000" },
+      { currency: "ZAR", amountMinor: 20000, amountMajor: "200" },
+    ]);
     expect(mapped?.promise).toEqual({ en: "within 24 hours" });
     expect(
       toCheckoutExtraAdmin(

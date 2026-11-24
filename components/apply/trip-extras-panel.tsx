@@ -12,6 +12,7 @@ import {
   extraByKey,
   formatArrivalDate,
   formatMinorAmount,
+  insuredApplicationIds,
   localizedExtraCopy,
   pluralMessage,
   relativeArrivalLabel,
@@ -25,11 +26,14 @@ import {
 interface ITripExtrasPanelProps {
   preview: TClientQuotePreview;
   locked: boolean;
+  /** True from the moment Proceed to payment is clicked until it fails or is cancelled. */
+  paying: boolean;
   switchedBack: boolean;
   announceNote: boolean;
   updateError: string | null;
   onSpeed: (speed: TProcessingSpeedChoice) => void;
-  onInsurance: (selected: boolean) => void;
+  onInsurance: (applicationId: string, selected: boolean) => void;
+  onInsuranceAll: (selected: boolean) => void;
   onSaveDate: (travelDate: string | null) => Promise<boolean> | boolean;
   onRetry: () => void;
   onCancelCheckout: () => void;
@@ -78,15 +82,16 @@ const SpeedCard: FC<ISpeedCardProps> = ({
 }) => (
   <label
     className={cn(
-      "flex min-h-[72px] cursor-pointer flex-col gap-2 rounded-[12px] border-2 p-4 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-secondary",
+      "flex min-h-[72px] cursor-pointer flex-col gap-2 rounded-[12px] border-2 p-4 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-secondary has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:!outline-secondary has-[:focus-visible]:outline-offset-2",
       selected ? "border-secondary bg-accent/70 ring-2 ring-secondary/10" : "border-border bg-card hover:border-secondary/40",
       disabled && "cursor-not-allowed",
     )}
   >
     <input
       type="radio"
+      id={`processing-speed-${value}`}
       name="processing-speed"
-      className="sr-only"
+      className="sr-only focus-visible:!outline-secondary"
       value={value}
       checked={selected}
       disabled={disabled}
@@ -124,11 +129,13 @@ const SpeedCard: FC<ISpeedCardProps> = ({
 export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
   preview,
   locked,
+  paying,
   switchedBack,
   announceNote,
   updateError,
   onSpeed,
   onInsurance,
+  onInsuranceAll,
   onSaveDate,
   onRetry,
   onCancelCheckout,
@@ -146,6 +153,13 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
   );
   const [touched, setTouched] = useState(Boolean(preview.travelDateRequired && !preview.travelDate));
   const changeRef = useRef<HTMLButtonElement>(null);
+  const selectAllRef = useRef<HTMLInputElement>(null);
+  const pendingSpeedFocus = useRef<TProcessingSpeedChoice | null>(null);
+  const controlsDisabled = locked || paying;
+  const insuredIds = insuredApplicationIds(preview);
+  const memberIds = preview.visaLines.map((line) => line.applicationId);
+  const allInsured = memberIds.length > 0 && insuredIds.length === memberIds.length;
+  const someInsured = insuredIds.length > 0 && !allInsured;
   const money = (minor: string) => formatMinorAmount(minor, preview.currency, locale, "code");
   const relative =
     preview.daysUntilTravel === null
@@ -169,6 +183,22 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
     (Boolean(dateError) ||
       (preview.travelDateRequired && !preview.travelDate) ||
       (editing && draftValue !== preview.travelDate));
+
+  useEffect(() => {
+    if (selectAllRef.current) selectAllRef.current.indeterminate = someInsured;
+  }, [someInsured]);
+
+  useEffect(() => {
+    const speed = pendingSpeedFocus.current;
+    if (!speed) return;
+    pendingSpeedFocus.current = null;
+    document.getElementById(`processing-speed-${speed}`)?.focus();
+  }, [ui.selected]);
+
+  const selectSpeed = (speed: TProcessingSpeedChoice) => {
+    pendingSpeedFocus.current = speed;
+    onSpeed(speed);
+  };
 
   useEffect(() => {
     onDateBlocksPay(dateBlocks);
@@ -267,7 +297,7 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
       </div>
 
       {ui.showRadios && fastTrack ? (
-        <fieldset className="min-w-0 space-y-3" disabled={locked}>
+        <fieldset className="min-w-0 space-y-3" disabled={controlsDisabled}>
           <legend className="text-foreground mb-2 text-sm font-semibold">{t("extras.speed.legend")}</legend>
           <div className="grid gap-3 sm:grid-cols-2">
             <SpeedCard
@@ -278,8 +308,8 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
               selected={ui.selected === "standard"}
               value="standard"
               badge={null}
-              disabled={locked}
-              onSelect={onSpeed}
+              disabled={controlsDisabled}
+              onSelect={selectSpeed}
             />
             <SpeedCard
               title={localizedExtraCopy(fastTrack.labelI18n, locale, t("extras.speed.fast.title"))}
@@ -293,8 +323,8 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
               selected={ui.selected === "fast_track"}
               value="fast_track"
               badge={ui.badge ? t("extras.speed.badge") : null}
-              disabled={locked}
-              onSelect={onSpeed}
+              disabled={controlsDisabled}
+              onSelect={selectSpeed}
             />
           </div>
         </fieldset>
@@ -313,39 +343,73 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
           relative={relative}
           price={fastTrack ? money(fastTrack.unitAmountMinor) : ""}
           t={t}
-          onSwitch={() => onSpeed("fast_track")}
-          locked={locked}
+          onSwitch={() => selectSpeed("fast_track")}
+          locked={controlsDisabled}
         />
       ) : null}
 
       {insurance ? (
-        <div
+        <fieldset
           className={cn(
-            "rounded-[12px] border bg-card p-4",
-            insurance.selected ? "border-secondary" : "border-border",
+            "space-y-2 rounded-[12px] border bg-card p-4",
+            insuredIds.length > 0 ? "border-secondary" : "border-border",
           )}
+          disabled={controlsDisabled}
         >
-          <label className="flex min-h-11 items-start gap-3">
-            <input
-              type="checkbox"
-              className="accent-primary mt-0.5 size-5"
-              checked={insurance.selected}
-              disabled={locked}
-              onChange={(event) => onInsurance(event.target.checked)}
-            />
-            <span className="text-foreground text-sm font-semibold">
-              {t("extras.insurance.add", { price: money(insurance.unitAmountMinor) })}
-            </span>
-          </label>
+          <legend className="text-foreground px-1 text-sm font-semibold">{t("extras.insurance.title")}</legend>
+          {memberIds.length > 1 ? (
+            <label className="flex min-h-11 items-start gap-3">
+              <input
+                ref={selectAllRef}
+                type="checkbox"
+                className="accent-primary mt-0.5 size-5 focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:!outline-secondary"
+                checked={allInsured}
+                disabled={controlsDisabled}
+                onChange={(event) => onInsuranceAll(event.target.checked)}
+              />
+              <span className="text-foreground text-sm font-semibold">{t("extras.insurance.selectAll")}</span>
+            </label>
+          ) : null}
+          {(memberIds.length > 0 ? memberIds : [preview.visaLines[0]?.applicationId ?? "traveller"]).map(
+            (applicationId, index) => {
+              const many = memberIds.length > 1;
+              const label = many
+                ? t("extras.insurance.forTraveller", {
+                    number: index + 1,
+                    price: money(insurance.unitAmountMinor),
+                  })
+                : t("extras.insurance.add", { price: money(insurance.unitAmountMinor) });
+              return (
+                <label key={applicationId} className="flex min-h-11 items-start gap-3">
+                  <input
+                    type="checkbox"
+                    className="accent-primary mt-0.5 size-5 focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:!outline-secondary"
+                    checked={insuredIds.includes(applicationId)}
+                    disabled={controlsDisabled}
+                    onChange={(event) => onInsurance(applicationId, event.target.checked)}
+                  />
+                  <span className="text-foreground text-sm font-semibold">{label}</span>
+                </label>
+              );
+            },
+          )}
           {localizedExtraCopy(insurance.descriptionI18n, locale, "") ? (
             <p className="text-muted-foreground ps-8 text-sm">
               {localizedExtraCopy(insurance.descriptionI18n, locale, "")}
             </p>
           ) : null}
-          {sumLine(insurance.unitAmountMinor, insurance.travellerCount, insurance.sumAmountMinor) ? (
+          {sumLine(
+            insurance.unitAmountMinor,
+            insuredIds.length,
+            (BigInt(insurance.unitAmountMinor) * BigInt(insuredIds.length)).toString(),
+          ) ? (
             <p className="text-muted-foreground ps-8 text-xs">
               <bdi>
-                {sumLine(insurance.unitAmountMinor, insurance.travellerCount, insurance.sumAmountMinor)}
+                {sumLine(
+                  insurance.unitAmountMinor,
+                  insuredIds.length,
+                  (BigInt(insurance.unitAmountMinor) * BigInt(insuredIds.length)).toString(),
+                )}
               </bdi>
             </p>
           ) : null}
@@ -360,7 +424,7 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
               <span className="sr-only">{t("common.opensNewTab")}</span>
             </a>
           ) : null}
-        </div>
+        </fieldset>
       ) : null}
 
       {locked ? (

@@ -77,10 +77,16 @@ export type TTripSnapshot = {
   insuranceSelectedByApplicationId: Record<string, boolean>;
 };
 
+export type TTripInsuranceSelection = {
+  applicationId: string;
+  selected: boolean;
+};
+
 export type TTripPatch = {
   travelDate?: string | null;
   processingSpeed?: TProcessingSpeed;
-  travelInsurance?: boolean;
+  /** Per-traveller opt-in. Omitted keys keep their stored selection. */
+  travelInsurance?: readonly TTripInsuranceSelection[];
 };
 
 export type TTripPlan =
@@ -141,11 +147,20 @@ export const planTripUpdate = (input: {
       "Fast Track is not available for this currency.",
     );
   }
-  if (input.patch.travelInsurance === true && !input.insuranceAvailable) {
+  const insurancePatch = input.patch.travelInsurance;
+  if (insurancePatch?.some((row) => row.selected) && !input.insuranceAvailable) {
     return failure(
       "EXTRA_UNAVAILABLE",
       "travel_insurance_unavailable",
       "Travel insurance is not available for this currency.",
+    );
+  }
+  const memberSet = new Set(input.memberIds);
+  if (insurancePatch?.some((row) => !memberSet.has(row.applicationId))) {
+    return failure(
+      "EXTRA_UNAVAILABLE",
+      "travel_insurance_traveller",
+      "Travel insurance can only be chosen for travellers on this application.",
     );
   }
 
@@ -162,9 +177,9 @@ export const planTripUpdate = (input: {
   });
 
   const insuranceSelectedByApplicationId = { ...input.stored.insuranceSelectedByApplicationId };
-  if (input.patch.travelInsurance !== undefined) {
-    for (const memberId of input.memberIds) {
-      insuranceSelectedByApplicationId[memberId] = input.patch.travelInsurance;
+  if (insurancePatch) {
+    for (const row of insurancePatch) {
+      insuranceSelectedByApplicationId[row.applicationId] = row.selected;
     }
   }
 

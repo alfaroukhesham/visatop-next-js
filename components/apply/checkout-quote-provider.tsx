@@ -42,6 +42,8 @@ interface ICheckoutQuoteContext {
   termsResetKey: number;
   payBlocked: boolean;
   payDescribedBy: string | null;
+  paying: boolean;
+  setPaying: (paying: boolean) => void;
   patchTrip: (patch: TTripPatchBody) => Promise<boolean>;
   retry: () => void;
   refreshQuote: () => void;
@@ -81,6 +83,7 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
   const [priceChanged, setPriceChanged] = useState(false);
   const [termsResetKey, setTermsResetKey] = useState(0);
   const [dateBlocksPay, setDateBlocksPay] = useState(false);
+  const [paying, setPaying] = useState(false);
   const previewRef = useRef<TClientQuotePreview | null>(null);
   const lastSavedRef = useRef<TClientQuotePreview | null>(null);
   const seq = useRef(0);
@@ -262,8 +265,14 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
 
   const cancelCheckout = useCallback(() => {
     const cancel = cancelRef.current;
-    if (!cancel) return;
-    void cancel();
+    if (!cancel) {
+      setPaying(false);
+      return;
+    }
+    void (async () => {
+      const ok = await cancel();
+      if (ok) setPaying(false);
+    })();
   }, []);
 
   const locked = Boolean(preview?.locked) || lockedOverride;
@@ -290,6 +299,8 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
       termsResetKey,
       payBlocked,
       payDescribedBy,
+      paying,
+      setPaying,
       patchTrip,
       retry,
       refreshQuote,
@@ -311,6 +322,7 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
       termsResetKey,
       payBlocked,
       payDescribedBy,
+      paying,
       patchTrip,
       retry,
       refreshQuote,
