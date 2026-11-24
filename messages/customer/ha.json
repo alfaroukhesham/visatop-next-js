@@ -94,9 +94,11 @@
       "tomorrow": "Gobe",
       "seeVisas": "Duba visocin da suka dace",
       "notSure": "Ban tabbata ba tukuna",
-      "departureDate": "Ranar tashi",
+      "departureDate": "Ranar tafiya",
       "previousMonth": "Watan da ya gabata",
-      "nextMonth": "Wata na gaba"
+      "nextMonth": "Wata na gaba",
+      "pickDate": "Zaɓi wata rana",
+      "unavailable": "babu"
     },
     "continue": "Ci gaba"
   },

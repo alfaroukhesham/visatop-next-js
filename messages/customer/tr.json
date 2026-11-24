@@ -94,9 +94,11 @@
       "tomorrow": "Yarın",
       "seeVisas": "Uygun vizeleri gör",
       "notSure": "Henüz emin değilim",
-      "departureDate": "Kalkış tarihi",
+      "departureDate": "Seyahat tarihi",
       "previousMonth": "Önceki ay",
-      "nextMonth": "Sonraki ay"
+      "nextMonth": "Sonraki ay",
+      "pickDate": "Bir tarih seçin",
+      "unavailable": "uygun değil"
     },
     "continue": "Devam"
   },

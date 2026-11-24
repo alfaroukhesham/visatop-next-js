@@ -94,9 +94,11 @@
       "tomorrow": "Bukas",
       "seeVisas": "Tingnan ang mga tumutugmang visa",
       "notSure": "Hindi pa sigurado",
-      "departureDate": "Petsa ng pag-alis",
+      "departureDate": "Petsa ng biyahe",
       "previousMonth": "Nakaraang buwan",
-      "nextMonth": "Susunod na buwan"
+      "nextMonth": "Susunod na buwan",
+      "pickDate": "Pumili ng petsa",
+      "unavailable": "hindi available"
     },
     "continue": "Magpatuloy"
   },

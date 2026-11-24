@@ -94,9 +94,11 @@
       "tomorrow": "कल",
       "seeVisas": "मेल खाते वीज़ा देखें",
       "notSure": "अभी पक्का नहीं",
-      "departureDate": "प्रस्थान तिथि",
+      "departureDate": "यात्रा तिथि",
       "previousMonth": "पिछला महीना",
-      "nextMonth": "अगला महीना"
+      "nextMonth": "अगला महीना",
+      "pickDate": "तारीख चुनें",
+      "unavailable": "उपलब्ध नहीं"
     },
     "continue": "जारी रखें"
   },

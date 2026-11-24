@@ -82,12 +82,15 @@ export const canShiftMonth = (
 const weekdayDate = (weekStart: number, index: number): Date =>
   new Date(Date.UTC(2023, 0, 1 + ((weekStart + index) % 7)));
 
-const latinShort = (value: string): string | null => {
+const latinCompact = (value: string): string | null => {
   const compact = value.replace(/\./g, "").trim();
   if (!compact || !/^[\p{Script=Latin}]+$/u.test(compact)) return null;
-  return compact.slice(0, 2);
+  return compact;
 };
 
+const headersAreDistinct = (values: string[]): boolean => new Set(values).size === values.length;
+
+/** Visible weekday labels. Two letters when they differ; otherwise three, then the full name. */
 export const weekdayHeaders = (locale: string, weekStart: number): TWeekdayHeader[] => {
   const tag = calendarLocale(locale);
   const shortFmt = new Intl.DateTimeFormat(tag, {
@@ -105,15 +108,33 @@ export const weekdayHeaders = (locale: string, weekStart: number): TWeekdayHeade
     timeZone: "UTC",
     numberingSystem: "latn",
   });
-  return Array.from({ length: 7 }, (_, index) => {
+  const rows = Array.from({ length: 7 }, (_, index) => {
     const date = weekdayDate(weekStart, index);
-    const short = shortFmt.format(date);
-    const narrow = narrowFmt.format(date);
     return {
-      visible: latinShort(short) ?? (short.length <= 2 ? short : narrow),
+      short: shortFmt.format(date),
+      narrow: narrowFmt.format(date),
       label: longFmt.format(date),
     };
   });
+  const two = rows.map((row) => {
+    const latin = latinCompact(row.short);
+    if (latin) return latin.slice(0, 2);
+    return row.short.length <= 2 ? row.short : row.narrow;
+  });
+  const three = rows.map((row) => {
+    const latin = latinCompact(row.short) ?? latinCompact(row.label);
+    if (latin) return latin.slice(0, 3);
+    return row.label;
+  });
+  const visible = headersAreDistinct(two)
+    ? two
+    : headersAreDistinct(three)
+      ? three
+      : rows.map((row) => row.label);
+  return rows.map((row, index) => ({
+    visible: visible[index] ?? row.label,
+    label: row.label,
+  }));
 };
 
 export const formatCalendarMonthTitle = (parts: TMonthParts, locale: string): string =>
@@ -153,6 +174,18 @@ export const formatCalendarDayLabel = (iso: string, locale: string): string => {
     timeZone: "UTC",
     numberingSystem: "latn",
   }).format(new Date(Date.UTC(year!, month! - 1, day!, 12)));
+};
+
+/** Drop weeks that sit entirely in the next month. The partial closing week stays. */
+export const visibleMonthCells = (cells: readonly TMonthCell[]): TMonthCell[] => {
+  const weeks: TMonthCell[][] = [];
+  for (let index = 0; index < cells.length; index += 7) {
+    weeks.push(cells.slice(index, index + 7));
+  }
+  while (weeks.length > 1 && weeks[weeks.length - 1]?.every((cell) => !cell.inMonth)) {
+    weeks.pop();
+  }
+  return weeks.flat();
 };
 
 /** Six-week month grid. Past days and days after `maxTravelDate` are disabled. Today is allowed. */

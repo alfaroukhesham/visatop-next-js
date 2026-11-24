@@ -94,9 +94,11 @@
       "tomorrow": "غدًا",
       "seeVisas": "عرض التأشيرات المناسبة",
       "notSure": "لست متأكدًا بعد",
-      "departureDate": "تاريخ المغادرة",
+      "departureDate": "تاريخ السفر",
       "previousMonth": "الشهر السابق",
-      "nextMonth": "الشهر التالي"
+      "nextMonth": "الشهر التالي",
+      "pickDate": "اختر تاريخًا",
+      "unavailable": "غير متاح"
     },
     "continue": "متابعة"
   },

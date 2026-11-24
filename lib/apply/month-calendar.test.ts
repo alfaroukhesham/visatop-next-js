@@ -7,6 +7,7 @@ import {
   formatCalendarSelection,
   monthPartsFromIso,
   weekStartsOn,
+  visibleMonthCells,
   weekdayHeaders,
 } from "@/lib/apply/month-calendar";
 
@@ -26,6 +27,36 @@ describe("month calendar", () => {
       "Sa",
     ]);
     expect(weekdayHeaders("ar", 6)[0]?.label).toMatch(/سبت/);
+  });
+
+  it("keeps weekday headers distinct, including Hausa three-letter names", () => {
+    for (const locale of ["en", "ar", "de", "es", "fr", "ha", "hi", "it", "ru", "tl", "tr"]) {
+      const visible = weekdayHeaders(locale, weekStartsOn(locale)).map((day) => day.visible);
+      expect(new Set(visible).size, locale).toBe(visible.length);
+    }
+    expect(weekdayHeaders("ha", weekStartsOn("ha")).map((day) => day.visible)).toEqual([
+      "Lit",
+      "Tal",
+      "Lar",
+      "Alh",
+      "Jum",
+      "Asa",
+      "Lah",
+    ]);
+  });
+
+  it("drops a trailing week that is entirely in the next month", () => {
+    const cells = buildMonthGrid({
+      parts: november,
+      weekStart: 0,
+      todayUae: "2026-11-24",
+      maxTravelDate: "2027-05-23",
+    });
+    const visible = visibleMonthCells(cells);
+    expect(cells).toHaveLength(42);
+    expect(visible).toHaveLength(35);
+    expect(visible.at(-1)?.iso).toBe("2026-12-05");
+    expect(visible.some((cell) => cell.iso === "2026-12-06")).toBe(false);
   });
 
   it("builds a 6-week November 2026 grid with past days disabled and today allowed", () => {

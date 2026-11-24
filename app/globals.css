@@ -443,6 +443,11 @@ html:has([data-apply-sticky-cta]) a[data-whatsapp-fab] {
   bottom: calc(7rem + env(safe-area-inset-bottom, 0px)) !important;
 }
 
+/* Travel-date actions sit in the step card. Hide the FAB so it cannot cover "Not sure yet". */
+html:has([data-travel-date-step]) a[data-whatsapp-fab] {
+  display: none !important;
+}
+
 /* Compact ready-step bar (portal, width <=1024px inclusive). Do not change theme-client-rise.
    Tailwind max-[1024px] compiles to (width < 1024px) and would miss 1024x768. */
 @media (max-width: 1024px) {

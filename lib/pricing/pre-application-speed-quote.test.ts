@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPreApplicationSpeedQuote,
+  matchingFastTrackSumMinor,
   preApplicationCheckoutTotalMinor,
 } from "@/lib/pricing/pre-application-speed-quote";
 import type { TCheckoutExtraCatalogItem } from "@/lib/pricing/resolve-checkout-extras";
@@ -46,6 +47,29 @@ describe("pre-application speed quote", () => {
     });
     expect(quote.travellerCount).toBe(2);
     expect(quote.fastTrack?.sumAmountMinor).toBe(String(36800 * 2));
+  });
+
+  it("adds Fast Track only when the quote matches the party size", () => {
+    const quoteFor = (travellerCount: number) => ({
+      currency: "AED",
+      travellerCount,
+      fastTrack: { sumAmountMinor: String(36800 * travellerCount) },
+    });
+    const total = (visaMajor: number, partySize: number, quoteTravellers: number) =>
+      preApplicationCheckoutTotalMinor(
+        visaMajor * 100,
+        "fast_track",
+        matchingFastTrackSumMinor(quoteFor(quoteTravellers), partySize, "aed"),
+      );
+    expect(total(407, 1, 1)).toBe(77500);
+    expect(total(814, 2, 2)).toBe(155000);
+    expect(total(814, 2, 1)).toBe(81400);
+    expect(total(407, 1, 2)).toBe(40700);
+    expect(total(814, 2, 1)).not.toBe(118200);
+    expect(total(407, 1, 2)).not.toBe(114300);
+    expect(
+      preApplicationCheckoutTotalMinor(40700, "fast_track", matchingFastTrackSumMinor(null, 1, "AED")),
+    ).toBe(40700);
   });
 
   it("adds the chosen Fast Track sum to the visa total and leaves Standard unchanged", () => {

@@ -459,7 +459,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
             }}
           />
         ) : view.phase === "date" ? (
-          <div className="space-y-3">
+          <div className="space-y-3" data-travel-date-step="">
             <p className="text-muted-foreground text-sm" role="status">
               {t("start.loading")}
             </p>
