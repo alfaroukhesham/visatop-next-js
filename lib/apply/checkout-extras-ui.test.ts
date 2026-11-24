@@ -185,6 +185,8 @@ describe("customer copy", () => {
       "start.travelDate.notSure",
       "start.travelDate.seeVisas",
       "start.travelDate.departureDate",
+      "start.travelDate.pickDate",
+      "start.travelDate.unavailable",
       "start.travelDate.previousMonth",
       "start.travelDate.nextMonth",
       "start.continue",
@@ -218,6 +220,13 @@ describe("customer copy", () => {
         expect(lookupCustomerMessage(messages, key), `${slug} ${key}`).toEqual(expect.any(String));
       }
     }
+    const read = (slug: string) =>
+      JSON.parse(readFileSync(new URL(`../../messages/customer/${slug}.json`, import.meta.url), "utf8")) as unknown;
+    expect(lookupCustomerMessage(read("en"), "start.travelDate.departureDate")).toBe("Travel date");
+    expect(lookupCustomerMessage(read("en"), "start.travelDate.pickDate")).toBe("Pick a date");
+    expect(lookupCustomerMessage(read("ar"), "start.travelDate.departureDate")).toBe("تاريخ السفر");
+    expect(lookupCustomerMessage(read("ar"), "start.travelDate.pickDate")).toBe("اختر تاريخًا");
+    expect(lookupCustomerMessage(read("fr"), "start.travelDate.departureDate")).toBe("Date du voyage");
   });
 });
 

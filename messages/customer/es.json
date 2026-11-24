@@ -94,9 +94,11 @@
       "tomorrow": "Mañana",
       "seeVisas": "Ver visados compatibles",
       "notSure": "Aún no lo sé",
-      "departureDate": "Fecha de salida",
+      "departureDate": "Fecha de viaje",
       "previousMonth": "Mes anterior",
-      "nextMonth": "Mes siguiente"
+      "nextMonth": "Mes siguiente",
+      "pickDate": "Elige una fecha",
+      "unavailable": "no disponible"
     },
     "continue": "Continuar"
   },

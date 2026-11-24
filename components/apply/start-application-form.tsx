@@ -33,7 +33,10 @@ import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
 import { DEFAULT_APPLY_PRICE_BADGES, DEFAULT_PARTY_ENABLED, DEFAULT_PARTY_MAX_TRAVELERS, type TApplyPriceBadges } from "@/lib/apply/apply-config";
-import { preApplicationCheckoutTotalMinor } from "@/lib/pricing/pre-application-speed-quote";
+import {
+  matchingFastTrackSumMinor,
+  preApplicationCheckoutTotalMinor,
+} from "@/lib/pricing/pre-application-speed-quote";
 import { assertTravelersReady, canAddTraveler, resolvePartyTravelerServiceId, type TPartyTravelerDraft } from "@/lib/apply/party-travelers";
 import { filterGuidedServices, filterPartyVisaOptions, stayOptionsForChooser, needsEntryQuestion, needsKindQuestion, kindOptionsForStay, type TChooserPhase } from "@/lib/apply/guided-visa-filter";
 import type { TStayBucket, TTravelerKind } from "@/lib/catalog/guided-choice";
@@ -547,11 +550,13 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
 
   useEffect(() => {
     if (!serviceId || !nationality || !displayCurrency) return;
+    const partySize = 1 + additionalTravelers.length;
+    setSpeedQuote((current) => (current && current.travellerCount !== partySize ? null : current));
     const params = new URLSearchParams({
       serviceId,
       currency: displayCurrency,
       nationality,
-      travellerCount: String(1 + additionalTravelers.length),
+      travellerCount: String(partySize),
     });
     let cancelled = false;
     const run = async () => {
@@ -561,7 +566,11 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
         travellerCount: number | null;
         fastTrack: { unitAmountMinor: string; sumAmountMinor: string | null } | null;
       }>(apiHref(`/apply/processing-quote?${params.toString()}`), { cache: "no-store" });
-      if (cancelled || !res.ok) return;
+      if (cancelled) return;
+      if (!res.ok || res.data.travellerCount !== partySize) {
+        setSpeedQuote((current) => (current && current.travellerCount !== partySize ? null : current));
+        return;
+      }
       setSpeedQuote(res.data);
     };
     void run();
@@ -574,11 +583,17 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   const speedForSubmit = fastTrackHidden && processingSpeed === "fast_track" ? "standard" : processingSpeed;
   const sourceForSubmit =
     fastTrackHidden && processingSpeed === "fast_track" ? "system" : processingSpeedSource;
+  const chosenTravelDate = travelDate.trim();
   const travelDays =
-    travelWindow && travelDate.trim() ? calendarDaysBetween(travelWindow.todayUae, travelDate.trim()) : null;
+    chosenTravelDate && travelWindow
+      ? calendarDaysBetween(travelWindow.todayUae, chosenTravelDate)
+      : null;
   const daysUntil = travelDays !== null && travelDays >= 0 ? travelDays : null;
   const recommendFast =
-    travelWindow !== null && daysUntil !== null && daysUntil < travelWindow.fastTrackThresholdDays;
+    chosenTravelDate.length > 0 &&
+    travelWindow !== null &&
+    daysUntil !== null &&
+    daysUntil < travelWindow.fastTrackThresholdDays;
   const fastTrackForSale = Boolean(speedQuote?.fastTrackAvailable);
   const speedNote = speedQuote
     ? speedUi({
@@ -784,9 +799,10 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     }
     return sum;
   })();
+  const partySize = 1 + additionalTravelers.length;
   const fastTrackSumMinor =
-    speedForSubmit === "fast_track" && speedQuote?.currency === displayCurrency
-      ? speedQuote.fastTrack?.sumAmountMinor
+    speedForSubmit === "fast_track"
+      ? matchingFastTrackSumMinor(speedQuote, partySize, displayCurrency)
       : null;
   const checkoutMinor = preApplicationCheckoutTotalMinor(totalMinor, speedForSubmit, fastTrackSumMinor);
   const totalText =

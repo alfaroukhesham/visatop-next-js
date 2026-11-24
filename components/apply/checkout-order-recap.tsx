@@ -51,14 +51,33 @@ const entriesLabel = (entries: string | null, t: TTranslate): string | null => {
   return entries;
 };
 
-function serviceTitle(s: CatalogService, t: TTranslate): string {
+export const CatalogVisaTitle: FC<{ service: CatalogService; t: TTranslate }> = ({ service, t }) => {
   const parts: string[] = [];
-  if (s.durationDays != null) parts.push(t("chooser.durationDays", { count: s.durationDays }));
-  const ent = entriesLabel(s.entries, t);
+  if (service.durationDays != null) parts.push(t("chooser.durationDays", { count: service.durationDays }));
+  const ent = entriesLabel(service.entries, t);
   if (ent) parts.push(ent);
-  parts.push(s.name);
-  return parts.join(" · ");
-}
+  const lead = parts.join(" · ");
+  return (
+    <>
+      {lead ? <>{lead} · </> : null}
+      <bdi>{service.name}</bdi>
+    </>
+  );
+};
+
+export const PartyMemberLine: FC<{ template: string; serviceName: string }> = ({
+  template,
+  serviceName,
+}) => {
+  const [before, after = ""] = template.split("\u0000");
+  return (
+    <>
+      {before}
+      <bdi>{serviceName}</bdi>
+      {after}
+    </>
+  );
+};
 
 const badgesAreDefault = (badges: TApplyPriceBadges): boolean =>
   badges.allFeesIncluded === DEFAULT_APPLY_PRICE_BADGES.allFeesIncluded &&
@@ -321,13 +340,18 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
                 <div key={line.member.applicationId} className="flex items-start justify-between gap-4">
                   <div>
                     <p className="font-heading text-foreground text-sm font-bold leading-snug">
-                      {t("payment.travellerLine", {
-                        number: line.member.travelerIndex + 1,
-                        service: line.member.serviceName,
-                      })}
+                      <PartyMemberLine
+                        template={t("payment.travellerLine", {
+                          number: line.member.travelerIndex + 1,
+                          service: "\u0000",
+                        })}
+                        serviceName={line.member.serviceName}
+                      />
                     </p>
                     {line.service ? (
-                      <p className="text-muted-foreground mt-0.5 text-xs">{serviceTitle(line.service, t)}</p>
+                      <p className="text-muted-foreground mt-0.5 text-xs">
+                        <CatalogVisaTitle service={line.service} t={t} />
+                      </p>
                     ) : null}
                   </div>
                   <div className="text-end">
@@ -350,7 +374,9 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
             <p className="text-error text-sm">{loadError}</p>
           ) : service ? (
             <>
-              <p className="font-heading text-foreground text-base font-bold leading-snug">{serviceTitle(service, t)}</p>
+              <p className="font-heading text-foreground text-base font-bold leading-snug">
+                <CatalogVisaTitle service={service} t={t} />
+              </p>
               <dl className="text-muted-foreground mt-3 space-y-1.5 text-sm" data-clarity-mask="true">
                 <div className="flex flex-wrap gap-x-2 gap-y-0.5">
                   <dt className="sr-only">{t("payment.nameLabel")}</dt>

@@ -94,9 +94,11 @@
       "tomorrow": "Domani",
       "seeVisas": "Vedi i visti corrispondenti",
       "notSure": "Non sono ancora sicuro",
-      "departureDate": "Data di partenza",
+      "departureDate": "Data del viaggio",
       "previousMonth": "Mese precedente",
-      "nextMonth": "Mese successivo"
+      "nextMonth": "Mese successivo",
+      "pickDate": "Scegli una data",
+      "unavailable": "non disponibile"
     },
     "continue": "Continua"
   },

@@ -94,9 +94,11 @@
       "tomorrow": "Tomorrow",
       "seeVisas": "See matching visas",
       "notSure": "Not sure yet",
-      "departureDate": "Departure date",
+      "departureDate": "Travel date",
       "previousMonth": "Previous month",
-      "nextMonth": "Next month"
+      "nextMonth": "Next month",
+      "pickDate": "Pick a date",
+      "unavailable": "unavailable"
     },
     "continue": "Continue"
   },

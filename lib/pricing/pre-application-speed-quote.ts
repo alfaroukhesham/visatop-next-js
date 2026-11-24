@@ -20,6 +20,26 @@ export type TPreApplicationSpeedQuote = {
   } | null;
 };
 
+/**
+ * Fast Track party sum only when this quote was priced for the current party.
+ * A quote for a different traveller count is stale and must not be added.
+ */
+export const matchingFastTrackSumMinor = (
+  quote: {
+    currency: string;
+    travellerCount: number | null;
+    fastTrack: { sumAmountMinor: string | null } | null;
+  } | null,
+  partySize: number,
+  currency: string,
+): string | null => {
+  if (!quote || quote.travellerCount !== partySize) return null;
+  if (quote.currency.trim().toUpperCase() !== currency.trim().toUpperCase()) return null;
+  const sum = quote.fastTrack?.sumAmountMinor;
+  if (sum == null || sum === "") return null;
+  return sum;
+};
+
 /** Visa catalogue sum plus Fast Track when that speed is chosen and the quote has a party sum. */
 export const preApplicationCheckoutTotalMinor = (
   visaMinor: number | null,

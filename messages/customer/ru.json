@@ -94,9 +94,11 @@
       "tomorrow": "Завтра",
       "seeVisas": "Показать подходящие визы",
       "notSure": "Пока не уверен",
-      "departureDate": "Дата вылета",
+      "departureDate": "Дата поездки",
       "previousMonth": "Предыдущий месяц",
-      "nextMonth": "Следующий месяц"
+      "nextMonth": "Следующий месяц",
+      "pickDate": "Выберите дату",
+      "unavailable": "недоступно"
     },
     "continue": "Продолжить"
   },

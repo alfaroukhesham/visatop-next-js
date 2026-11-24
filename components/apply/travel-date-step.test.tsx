@@ -1,5 +1,7 @@
 /** @vitest-environment jsdom */
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -36,17 +38,29 @@ describe("TravelDateStep", () => {
   });
 
   it("shows an inline month grid without a date field or shortcut buttons", () => {
-    renderStep();
+    const { onChange } = renderStep();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(document.querySelector('input[type="date"]')).toBeNull();
     expect(screen.queryByRole("button", { name: "start.travelDate.today" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "start.travelDate.tomorrow" })).not.toBeInTheDocument();
     expect(screen.getByRole("grid", { name: "November 2026" })).toBeInTheDocument();
-    expect(screen.getAllByRole("gridcell")).toHaveLength(42);
+    expect(screen.getAllByRole("gridcell")).toHaveLength(35);
     expect(screen.getByRole("button", { name: "start.travelDate.previousMonth" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "start.travelDate.notSure" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "start.travelDate.seeVisas" })).toBeInTheDocument();
-    expect(screen.getByTestId("departure-date-readback")).toHaveTextContent("—");
+    expect(screen.getByTestId("departure-date-readback")).toHaveTextContent("start.travelDate.pickDate");
+    expect(screen.getByText("start.travelDate.departureDate")).toBeInTheDocument();
+    const today = screen.getByRole("gridcell", { name: /November 24, 2026/ });
+    expect(today).toHaveAttribute("aria-selected", "false");
+    expect(today).toHaveAttribute("aria-current", "date");
+    expect(today.querySelector("span")?.className).toContain("ring-inset");
+    expect(today.querySelector("span")?.className ?? "").not.toContain("bg-secondary");
+    expect(screen.getByTestId("travel-date-calendar").className).not.toContain("100vw");
+    expect(screen.getByTestId("travel-date-calendar").className).toContain("w-full");
+    expect(today.className).toContain("min-w-10");
+    expect(today.className).toContain("outline-secondary");
+    expect(document.querySelector("[data-travel-date-step]")).toBeTruthy();
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it("selects a future day, keeps today available, and ignores past days", async () => {
@@ -56,6 +70,8 @@ describe("TravelDateStep", () => {
     const today = screen.getByRole("gridcell", { name: /November 24, 2026/ });
     const later = screen.getByRole("gridcell", { name: /November 26, 2026/ });
     expect(past).toHaveAttribute("aria-disabled", "true");
+    expect(past).toHaveAttribute("aria-label", expect.stringContaining("start.travelDate.unavailable"));
+    expect(past.querySelector("span")).toHaveClass("line-through");
     expect(today).toHaveAttribute("aria-disabled", "false");
     expect(today).toHaveAttribute("aria-current", "date");
     await user.click(past);
@@ -103,5 +119,33 @@ describe("TravelDateStep", () => {
     selected.focus();
     await user.keyboard("{ArrowRight}");
     expect(screen.getByRole("gridcell", { name: /November 27, 2026/ })).toHaveFocus();
+  });
+
+  it("focuses the invalid day with a visible ring and describes the error", async () => {
+    const user = userEvent.setup();
+    renderStep("2026-11-01");
+    await user.click(screen.getByRole("button", { name: "start.travelDate.seeVisas" }));
+    const past = screen.getByRole("gridcell", { name: /November 1, 2026/ });
+    const alert = screen.getByRole("alert");
+    expect(past).toHaveFocus();
+    expect(past.className.split(/\s+/)).toEqual(expect.arrayContaining(["outline-2", "!outline-secondary"]));
+    expect(past).toHaveAttribute("aria-describedby", alert.id);
+    expect(document.getElementById("travel-date-calendar-grid")).not.toHaveFocus();
+  });
+
+  it("focuses today when a restored date is outside the visible month", async () => {
+    const user = userEvent.setup();
+    renderStep("2026-10-01");
+    await user.click(screen.getByRole("button", { name: "start.travelDate.seeVisas" }));
+    const today = screen.getByRole("gridcell", { name: /November 24, 2026/ });
+    expect(today).toHaveFocus();
+    expect(today.className.split(/\s+/)).toEqual(expect.arrayContaining(["outline-2", "!outline-secondary"]));
+    expect(today).toHaveAttribute("aria-describedby", screen.getByRole("alert").id);
+  });
+
+  it("hides the WhatsApp bubble while the travel-date step is open", () => {
+    const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
+    expect(css).toMatch(/html:has\(\[data-travel-date-step\]\) a\[data-whatsapp-fab\]/);
+    expect(css).toMatch(/display:\s*none !important/);
   });
 });
