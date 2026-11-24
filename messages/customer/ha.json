@@ -739,7 +739,6 @@
     "recap": {
       "fastTrack": "Saurin aiki",
       "insurance": "Inshorar tafiya",
-      "insuranceCount": "Inshorar tafiya x{count}",
       "updating": "Ana sabunta jimla",
       "updated": "An sabunta jimla: {total}"
     },

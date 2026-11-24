@@ -739,7 +739,6 @@
     "recap": {
       "fastTrack": "Trattamento rapido",
       "insurance": "Assicurazione di viaggio",
-      "insuranceCount": "Assicurazione di viaggio x{count}",
       "updating": "Aggiornamento del totale",
       "updated": "Totale aggiornato: {total}"
     },

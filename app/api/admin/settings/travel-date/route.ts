@@ -8,7 +8,7 @@ import {
 } from "@/lib/checkout-extras/travel-date-settings";
 import {
   PLATFORM_KEY_FAST_TRACK_THRESHOLD_DAYS,
-  travelDateSettingsErrorMessage,
+  travelDateSettingsFieldError,
   travelDateSettingsWriteSchema,
 } from "@/lib/checkout-extras/validation";
 
@@ -39,9 +39,11 @@ export const PUT = async (req: Request) => {
     async ({ tx, adminUserId }) => {
       const parsed = travelDateSettingsWriteSchema.safeParse(raw);
       if (!parsed.success) {
-        return jsonError("VALIDATION_ERROR", travelDateSettingsErrorMessage(parsed.error), {
+        const failure = travelDateSettingsFieldError(parsed.error);
+        return jsonError("VALIDATION_ERROR", failure.message, {
           status: 400,
           requestId,
+          details: failure.field ? { field: failure.field } : undefined,
         });
       }
 

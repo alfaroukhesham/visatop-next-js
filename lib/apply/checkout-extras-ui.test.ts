@@ -199,7 +199,7 @@ describe("customer copy", () => {
       "extras.error.insuranceUnavailable",
       "extras.insurance.selectAll",
       "extras.insurance.forTraveller",
-      "extras.recap.insuranceCount",
+      "extras.recap.insurance",
       "start.party.visaForTraveller",
       "extras.travellers_other",
       "common.opensNewTab",

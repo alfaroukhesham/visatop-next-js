@@ -739,7 +739,6 @@
     "recap": {
       "fastTrack": "तेज़ प्रक्रिया",
       "insurance": "यात्रा बीमा",
-      "insuranceCount": "यात्रा बीमा x{count}",
       "updating": "कुल राशि अपडेट हो रही है",
       "updated": "कुल राशि अपडेट हुई: {total}"
     },

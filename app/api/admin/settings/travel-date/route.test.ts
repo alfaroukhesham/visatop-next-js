@@ -81,8 +81,9 @@ describe("PUT /api/admin/settings/travel-date", () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error.message).toBe(
-      "Fast Track threshold cannot be greater than the maximum days ahead.",
+      "Fast Track threshold must be a whole number from 1 to 60 and cannot be greater than the maximum days ahead.",
     );
+    expect(body.error.details).toEqual({ field: "fastTrackThresholdDays" });
     expect(saveTravelDateSettings).not.toHaveBeenCalled();
   });
 

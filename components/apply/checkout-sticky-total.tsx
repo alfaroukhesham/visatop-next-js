@@ -42,7 +42,11 @@ export const CheckoutStickyTotal: FC<ICheckoutStickyTotalProps> = ({ totalText, 
 
   return (
     <>
-      <div aria-hidden data-apply-sticky-cta-spacer="" style={{ height: "8.5rem" }} />
+      <div
+        aria-hidden
+        data-apply-sticky-cta-spacer=""
+        style={{ height: "var(--apply-sticky-cta-height, calc(8.5rem + env(safe-area-inset-bottom, 0px)))" }}
+      />
       {createPortal(
         <div data-apply-sticky-cta="" data-apply-sticky-cta-portal="" data-apply-sticky-total="">
           <div className="mx-auto flex w-full max-w-4xl flex-col items-stretch gap-2">

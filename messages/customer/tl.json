@@ -739,7 +739,6 @@
     "recap": {
       "fastTrack": "Mabilis na proseso",
       "insurance": "Seguro sa paglalakbay",
-      "insuranceCount": "Seguro sa paglalakbay x{count}",
       "updating": "Ina-update ang kabuuan",
       "updated": "Na-update ang kabuuan: {total}"
     },

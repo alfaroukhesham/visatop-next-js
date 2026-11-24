@@ -739,7 +739,6 @@
     "recap": {
       "fastTrack": "Hızlı işlem",
       "insurance": "Seyahat sigortası",
-      "insuranceCount": "Seyahat sigortası x{count}",
       "updating": "Toplam güncelleniyor",
       "updated": "Toplam güncellendi: {total}"
     },

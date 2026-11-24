@@ -82,7 +82,7 @@ const SpeedCard: FC<ISpeedCardProps> = ({
 }) => (
   <label
     className={cn(
-      "flex min-h-[72px] cursor-pointer flex-col gap-2 rounded-[12px] border-2 p-4 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-secondary has-[:focus-visible]:ring-offset-2",
+      "flex min-h-[72px] cursor-pointer flex-col gap-2 rounded-[12px] border-2 p-4 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-secondary has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:!outline-secondary has-[:focus-visible]:outline-offset-2",
       selected ? "border-secondary bg-accent/70 ring-2 ring-secondary/10" : "border-border bg-card hover:border-secondary/40",
       disabled && "cursor-not-allowed",
     )}
@@ -91,7 +91,7 @@ const SpeedCard: FC<ISpeedCardProps> = ({
       type="radio"
       id={`processing-speed-${value}`}
       name="processing-speed"
-      className="sr-only"
+      className="sr-only focus-visible:!outline-secondary"
       value={value}
       checked={selected}
       disabled={disabled}
@@ -362,7 +362,7 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
               <input
                 ref={selectAllRef}
                 type="checkbox"
-                className="accent-primary mt-0.5 size-5 focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+                className="accent-primary mt-0.5 size-5 focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:!outline-secondary"
                 checked={allInsured}
                 disabled={controlsDisabled}
                 onChange={(event) => onInsuranceAll(event.target.checked)}
@@ -383,7 +383,7 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
                 <label key={applicationId} className="flex min-h-11 items-start gap-3">
                   <input
                     type="checkbox"
-                    className="accent-primary mt-0.5 size-5 focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2"
+                    className="accent-primary mt-0.5 size-5 focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:!outline-secondary"
                     checked={insuredIds.includes(applicationId)}
                     disabled={controlsDisabled}
                     onChange={(event) => onInsurance(applicationId, event.target.checked)}

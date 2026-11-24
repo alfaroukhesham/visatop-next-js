@@ -739,7 +739,6 @@
     "recap": {
       "fastTrack": "Fast Track processing",
       "insurance": "Travel insurance",
-      "insuranceCount": "Travel insurance x{count}",
       "updating": "Updating total",
       "updated": "Total updated: {total}"
     },

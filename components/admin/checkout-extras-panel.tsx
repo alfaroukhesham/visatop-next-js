@@ -2,7 +2,7 @@
 
 import { useState, type FC, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -241,6 +241,7 @@ const CheckoutExtraForm: FC<ICheckoutExtraFormProps> = ({ extra, fxAedPerUsd, ca
                 value={baseAmountMajor}
                 disabled={!canWrite || saving}
                 aria-invalid={fieldErrors.baseAmount ? true : undefined}
+                aria-describedby={fieldErrors.baseAmount ? `${extra.key}-base-amount-error` : undefined}
                 onChange={(event) => {
                   setBaseAmountMajor(event.target.value);
                   setFieldErrors((current) => {
@@ -250,11 +251,16 @@ const CheckoutExtraForm: FC<ICheckoutExtraFormProps> = ({ extra, fxAedPerUsd, ca
                     return next;
                   });
                 }}
-                className="font-mono"
+                className={fieldErrors.baseAmount ? "border-destructive font-mono" : "font-mono"}
               />
               {fieldErrors.baseAmount ? (
-                <p className="text-destructive text-xs" role="alert">
-                  {fieldErrors.baseAmount}
+                <p
+                  id={`${extra.key}-base-amount-error`}
+                  className="text-foreground flex items-start gap-1.5 text-xs"
+                  role="alert"
+                >
+                  <AlertTriangle className="text-destructive mt-0.5 size-3.5 shrink-0" aria-hidden />
+                  <span>{fieldErrors.baseAmount}</span>
                 </p>
               ) : null}
             </div>
@@ -421,6 +427,9 @@ const CheckoutExtraForm: FC<ICheckoutExtraFormProps> = ({ extra, fxAedPerUsd, ca
                       value={prices[currency] ?? ""}
                       disabled={!canWrite || saving}
                       aria-invalid={fieldErrors[`price:${currency}`] ? true : undefined}
+                      aria-describedby={
+                        fieldErrors[`price:${currency}`] ? `${extra.key}-price-${currency}-error` : undefined
+                      }
                       onChange={(event) => {
                         setPrices((current) => ({ ...current, [currency]: event.target.value }));
                         setFieldErrors((current) => {
@@ -431,12 +440,19 @@ const CheckoutExtraForm: FC<ICheckoutExtraFormProps> = ({ extra, fxAedPerUsd, ca
                           return next;
                         });
                       }}
-                      className="font-mono"
+                      className={
+                        fieldErrors[`price:${currency}`] ? "border-destructive font-mono" : "font-mono"
+                      }
                       placeholder="Blank hides it"
                     />
                     {fieldErrors[`price:${currency}`] ? (
-                      <p className="text-destructive text-xs" role="alert">
-                        {fieldErrors[`price:${currency}`]}
+                      <p
+                        id={`${extra.key}-price-${currency}-error`}
+                        className="text-foreground flex items-start gap-1.5 text-xs"
+                        role="alert"
+                      >
+                        <AlertTriangle className="text-destructive mt-0.5 size-3.5 shrink-0" aria-hidden />
+                        <span>{fieldErrors[`price:${currency}`]}</span>
                       </p>
                     ) : null}
                     {blank ? (

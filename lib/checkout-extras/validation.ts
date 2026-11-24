@@ -245,24 +245,40 @@ export const parseTravelDateMaxDaysAhead = (value: string | null | undefined): n
     DEFAULT_TRAVEL_DATE_MAX_DAYS_AHEAD,
   );
 
-export const travelDateSettingsErrorMessage = (error: {
+export type TTravelDateSettingsField =
+  | "fastTrackThresholdDays"
+  | "travelDateMaxDaysAhead"
+  | "travelDateRequired";
+
+const travelDateSettingsField = (value: PropertyKey | undefined): TTravelDateSettingsField | null =>
+  value === "fastTrackThresholdDays" || value === "travelDateMaxDaysAhead" || value === "travelDateRequired"
+    ? value
+    : null;
+
+export const travelDateSettingsFieldError = (error: {
   issues: readonly { code: string; path: readonly PropertyKey[]; message: string }[];
-}): string => {
+}): { field: TTravelDateSettingsField | null; message: string } => {
   const issue = error.issues[0];
-  if (!issue) return "Check the travel date settings and try again.";
-  if (issue.code === "custom") return issue.message;
-  const field = issue.path[0];
+  if (!issue) return { field: null, message: "Check the travel date settings and try again." };
+  const field = travelDateSettingsField(issue.path[0]);
+  if (issue.code === "custom") {
+    return { field: field ?? "fastTrackThresholdDays", message: issue.message };
+  }
   if (field === "fastTrackThresholdDays") {
-    return "Fast Track threshold must be a whole number from 1 to 60.";
+    return { field, message: "Fast Track threshold must be a whole number from 1 to 60." };
   }
   if (field === "travelDateMaxDaysAhead") {
-    return "Maximum days ahead must be a whole number from 1 to 730.";
+    return { field, message: "Maximum days ahead must be a whole number from 1 to 730." };
   }
   if (field === "travelDateRequired") {
-    return "Require a travel date must be yes or no.";
+    return { field, message: "Require a travel date must be yes or no." };
   }
-  return issue.message || "Check the travel date settings and try again.";
+  return { field: null, message: issue.message || "Check the travel date settings and try again." };
 };
+
+export const travelDateSettingsErrorMessage = (error: {
+  issues: readonly { code: string; path: readonly PropertyKey[]; message: string }[];
+}): string => travelDateSettingsFieldError(error).message;
 
 export const travelDateSettingsWriteSchema = z
   .object({
@@ -279,6 +295,6 @@ export const travelDateSettingsWriteSchema = z
       .max(TRAVEL_DATE_MAX_DAYS_AHEAD_MAX),
   })
   .refine((value) => value.fastTrackThresholdDays <= value.travelDateMaxDaysAhead, {
-    message: "Fast Track threshold cannot be greater than the maximum days ahead.",
+    message: "Fast Track threshold must be a whole number from 1 to 60 and cannot be greater than the maximum days ahead.",
     path: ["fastTrackThresholdDays"],
   });
