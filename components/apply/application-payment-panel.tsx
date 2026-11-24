@@ -218,13 +218,6 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
     return draft.cancelCheckout();
   }, [draft]);
 
-  const sawOpenCheckout = useRef(false);
-  useEffect(() => {
-    const open = draft.app?.paymentStatus === "checkout_created";
-    if (sawOpenCheckout.current && !open) quote?.refreshQuote();
-    sawOpenCheckout.current = open;
-  }, [draft.app?.paymentStatus, quote]);
-
   useEffect(() => {
     if (!quote) return;
     quote.registerCancelCheckout(cancelOpenCheckout);

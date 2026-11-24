@@ -1,9 +1,10 @@
 import { travelDateWindow } from "@/lib/checkout-extras/dubai-calendar";
+import { extraIsPriced } from "@/lib/pricing/resolve-checkout-extras";
 
-/** An extra is active only when ops enabled it and stored at least one currency price. */
+/** The start form shows the date when any extra is enabled and has a stored price. */
 export const anyCheckoutExtraActive = (
-  catalog: readonly { enabled: boolean; prices: readonly unknown[] }[],
-): boolean => catalog.some((extra) => extra.enabled && extra.prices.length > 0);
+  catalog: readonly { enabled: boolean; prices: readonly { currency: string }[] }[],
+): boolean => catalog.some((extra) => extraIsPriced(extra));
 
 /**
  * The start form asks for an arrival date only while an extra can be sold.
@@ -15,7 +16,7 @@ export const travelWindowPayload = (input: {
   maxDaysAhead: number;
   settingRequired: boolean;
   fastTrackThresholdDays: number;
-  catalog: readonly { enabled: boolean; prices: readonly unknown[] }[];
+  catalog: readonly { enabled: boolean; prices: readonly { currency: string }[] }[];
 }): {
   todayUae: string;
   maxTravelDate: string;

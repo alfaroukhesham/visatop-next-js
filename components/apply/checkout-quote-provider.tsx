@@ -240,17 +240,23 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
   }, []);
 
   const refreshQuote = useCallback(() => {
-    seq.current += 1;
+    const request = ++seq.current;
     abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setUpdating(false);
     void (async () => {
-      const res = await fetchApiEnvelope<TClientQuotePreview>(
-        apiHref(`/applications/${encodeURIComponent(applicationId)}/quote-preview`),
-        { cache: "no-store" },
-      );
-      if (!res.ok) return;
-      setLoadError(null);
-      applyPreview(res.data, false);
+      try {
+        const res = await fetchApiEnvelope<TClientQuotePreview>(
+          apiHref(`/applications/${encodeURIComponent(applicationId)}/quote-preview`),
+          { cache: "no-store", signal: controller.signal },
+        );
+        if (request !== seq.current || !res.ok) return;
+        setLoadError(null);
+        applyPreview(res.data, false);
+      } catch (error) {
+        if (request !== seq.current || isAbortError(error)) return;
+      }
     })();
   }, [applicationId, applyPreview]);
 

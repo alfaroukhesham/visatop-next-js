@@ -29,6 +29,7 @@ import { resolveCheckoutTotal } from "@/lib/pricing/resolve-customer-catalog-pri
 import {
   availabilityForCurrency,
   buildCheckoutCharge,
+  extraIsPriced,
   partySumMinor,
   resolveCheckoutExtras,
   type TCheckoutExtraCatalogItem,
@@ -410,6 +411,22 @@ const persistSpeed = async (
   }
 };
 
+export const checkoutArrivalDateError = (input: {
+  travelDate: string | null;
+  settingRequired: boolean;
+  currency: string;
+  catalog: readonly { enabled: boolean; prices: readonly { currency: string }[] }[];
+  todayUae: string;
+  maxTravelDate: string;
+}) =>
+  checkoutTravelDateError({
+    travelDate: input.travelDate,
+    required: input.settingRequired,
+    todayUae: input.todayUae,
+    maxTravelDate: input.maxTravelDate,
+    anyExtraEnabled: input.catalog.some((extra) => extraIsPriced(extra, input.currency)),
+  });
+
 export const applyPartyExtrasToCheckout = async (
   tx: DbTransaction,
   input: {
@@ -448,12 +465,13 @@ export const applyPartyExtrasToCheckout = async (
     : [];
 
   const travelDate = party?.travelDate ?? null;
-  const dateError = checkoutTravelDateError({
+  const dateError = checkoutArrivalDateError({
     travelDate,
-    required: settings.travelDateRequired,
+    settingRequired: settings.travelDateRequired,
+    currency,
+    catalog,
     todayUae,
     maxTravelDate,
-    anyExtraEnabled: catalog.some((extra) => extra.enabled),
   });
   if (dateError) {
     return { ok: false, reason: travelDateReason(dateError), message: travelDateErrorMessage(dateError, maxTravelDate) };

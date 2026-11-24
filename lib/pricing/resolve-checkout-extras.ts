@@ -49,20 +49,31 @@ export type TVisaChargeLine = {
 const chargeBasisOf = (value: TCheckoutChargeBasis): TCheckoutChargeBasis =>
   value === "per_order" ? "per_order" : "per_traveller";
 
+/**
+ * One rule for the start field, the pay step, and the checkout date gate.
+ * No currency: enabled and at least one stored price (show the date).
+ * With a currency: that price must be in the checkout currency (the extra can be sold).
+ */
+export const extraIsPriced = (
+  extra: { enabled: boolean; prices: readonly { currency: string }[] },
+  currency?: string,
+): boolean => {
+  if (!extra.enabled || extra.prices.length === 0) return false;
+  if (currency === undefined) return true;
+  return extra.prices.some((price) => price.currency === currency);
+};
+
 export const availabilityForCurrency = (
   item: TCheckoutExtraCatalogItem,
   currency: string,
 ): TExtraAvailability => {
   const chargeBasis = chargeBasisOf(item.chargeBasis);
-  if (!item.enabled) {
-    return { key: item.key, available: false, reason: "disabled", unitAmountMinor: null, chargeBasis };
-  }
   const price = item.prices.find((row) => row.currency === currency);
-  if (!price) {
+  if (!extraIsPriced(item, currency) || !price) {
     return {
       key: item.key,
       available: false,
-      reason: "missing_currency_price",
+      reason: item.enabled ? "missing_currency_price" : "disabled",
       unitAmountMinor: null,
       chargeBasis,
     };

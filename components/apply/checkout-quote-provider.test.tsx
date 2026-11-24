@@ -1,13 +1,16 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TClientQuotePreview } from "@/lib/apply/checkout-extras-ui";
 
-vi.mock("@/components/client/customer-i18n-provider", () => ({
-  useCustomerT: () => (key: string) => key,
-  useCustomerLocale: () => "en",
-}));
+vi.mock("@/components/client/customer-i18n-provider", () => {
+  const t = (key: string) => key;
+  return {
+    useCustomerT: () => t,
+    useCustomerLocale: () => "en",
+  };
+});
 
 vi.mock("@/lib/portal/fetch-envelope", () => ({
   fetchApiEnvelope: vi.fn(),
@@ -65,6 +68,9 @@ const Probe = () => {
       </button>
       <button type="button" onClick={() => void quote?.patchTrip({ processingSpeed: "standard" })}>
         std
+      </button>
+      <button type="button" onClick={() => quote?.refreshQuote()}>
+        refresh
       </button>
       <button type="button" onClick={() => quote?.registerCancelCheckout(async () => true)}>
         register
@@ -146,5 +152,57 @@ describe("checkout quote provider", () => {
       expect(screen.getByTestId("error").textContent).toBe("extras.error.fastTrackUnavailable"),
     );
     expect(screen.getByTestId("speed").textContent).toBe("standard");
+  });
+
+  it("keeps a newer saved speed when an older quote refresh returns later", async () => {
+    let previewCalls = 0;
+    let releaseSlow: (value: { ok: true; status: number; requestId: string; data: TClientQuotePreview }) => void =
+      () => {};
+    const slow = new Promise<{ ok: true; status: number; requestId: string; data: TClientQuotePreview }>(
+      (resolve) => {
+        releaseSlow = resolve;
+      },
+    );
+    fetchMock.mockImplementation(async (url: string) => {
+      if (String(url).includes("quote-preview")) {
+        previewCalls += 1;
+        if (previewCalls === 1) {
+          return { ok: true, status: 200, requestId: "load", data: preview() };
+        }
+        return slow;
+      }
+      return {
+        ok: true,
+        status: 200,
+        requestId: "patch",
+        data: preview({
+          processingSpeed: "fast_track",
+          processingSpeedSource: "customer",
+          totalAmountMinor: "15000",
+        }),
+      };
+    });
+
+    render(
+      <CheckoutQuoteProvider applicationId="app-1">
+        <Probe />
+      </CheckoutQuoteProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("speed").textContent).toBe("standard"));
+    fireEvent.click(screen.getByRole("button", { name: "refresh" }));
+    fireEvent.click(screen.getByRole("button", { name: "ft" }));
+    await waitFor(() => expect(screen.getByTestId("speed").textContent).toBe("fast_track"));
+    releaseSlow({
+      ok: true,
+      status: 200,
+      requestId: "stale",
+      data: preview({ processingSpeed: "standard", totalAmountMinor: "10000" }),
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId("speed").textContent).toBe("fast_track");
   });
 });
