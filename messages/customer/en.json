@@ -78,7 +78,18 @@
       "maxTravelers": "Maximum {count} travellers per checkout.",
       "chooseVisaForAll": "Choose a visa for every traveller."
     },
-    "travelersLabel": "Travelers"
+    "travelersLabel": "Travelers",
+    "travelDate": {
+      "label": "When do you arrive in the UAE?",
+      "optional": "(optional)",
+      "hint": "Pick the day you land. Dates follow UAE time. You can change it until you pay.",
+      "readback": "{date} · {relative}",
+      "errorEmpty": "Choose your arrival date to continue.",
+      "errorPast": "This date has passed. Choose today or a later date.",
+      "errorMax": "Choose a date up to {maxDate}. For later trips, apply closer to your travel date.",
+      "errorIncomplete": "Enter the full date: day, month and year.",
+      "soonHint": "Your trip is soon. On the payment step we'll suggest Fast Track ({price} per traveller). You can choose Standard instead."
+    }
   },
   "chooser": {
     "back": "Back",
@@ -582,7 +593,8 @@
     "loadingVisaOptions": "Loading visa options",
     "loadingApplications": "Loading applications",
     "loadingOrderSummary": "Loading order summary",
-    "whatsappSupport": "Chat on WhatsApp"
+    "whatsappSupport": "Chat on WhatsApp",
+    "opensNewTab": "(opens in a new tab)"
   },
   "seo": {
     "homeTitle": "Apply for UAE Tourist Visa Online",
@@ -672,5 +684,69 @@
     "reading": "Reading your passport…",
     "succeeded": "Details filled in — please check they are correct.",
     "needsReview": "We could not read some details clearly. Review the highlighted fields."
+  },
+  "relative": {
+    "today": "today",
+    "tomorrow": "tomorrow",
+    "inDays_one": "in {n} day",
+    "inDays_two": "in {n} days",
+    "inDays_few": "in {n} days",
+    "inDays_many": "in {n} days",
+    "inDays_other": "in {n} days"
+  },
+  "extras": {
+    "sectionTitle": "Your trip and extras",
+    "arrivalLabel": "Arrival in the UAE",
+    "change": "Change",
+    "saveDate": "Save date",
+    "cancel": "Cancel",
+    "speed": {
+      "legend": "Processing speed",
+      "standard": {
+        "title": "Standard",
+        "promise": "Usually 3 working days once your documents are complete",
+        "price": "Included"
+      },
+      "fast": {
+        "title": "Fast Track",
+        "promiseDefault": "Usually within 24 hours",
+        "price": "+{price} per traveller"
+      },
+      "badge": "Recommended for your date"
+    },
+    "perTravellerSum": "{price} × {n} {travellersWord} = {sum}",
+    "travellers_one": "traveller",
+    "travellers_two": "travellers",
+    "travellers_few": "travellers",
+    "travellers_many": "travellers",
+    "travellers_other": "travellers",
+    "notes": {
+      "n1": "You arrive {relative}, so we've selected Fast Track ({price} per traveller). Standard usually takes 3 working days. You can switch to Standard.",
+      "n2": "You arrive {relative}. Standard usually takes 3 working days, so your visa may not be ready in time. You can still pay with Standard.",
+      "n2Action": "Switch to Fast Track",
+      "n3": "You arrive {relative}. Even with Fast Track, your visa may not be ready in time. {whatsapp} before you pay and we'll check what's possible.",
+      "n4": "You arrive {relative}. Standard usually takes 3 working days. {whatsapp} before you pay so we can check your options.",
+      "n5": "For your new date ({relative}), we've switched you back to Standard."
+    },
+    "insurance": {
+      "title": "Travel insurance",
+      "add": "Add travel insurance · {price} per traveller",
+      "terms": "Read the policy terms"
+    },
+    "recap": {
+      "fastTrack": "Fast Track processing",
+      "insurance": "Travel insurance",
+      "updating": "Updating total",
+      "updated": "Total updated: {total}"
+    },
+    "error": {
+      "update": "We couldn't update your total. Check your connection and try again.",
+      "retry": "Try again"
+    },
+    "priceChanged": "The price changed since you opened this page. Check the new total before you pay.",
+    "locked": "To change your extras, cancel this payment first.",
+    "bar": {
+      "cta": "Continue to payment"
+    }
   }
 }

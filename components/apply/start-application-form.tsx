@@ -18,7 +18,7 @@ import { Loader2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
-import { useCustomerT } from "@/components/client/customer-i18n-provider";
+import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
 import { convertMinorBetweenUsdAed, parsePublicDisplayFxAedPerUsd } from "@/lib/catalog/display-price";
 import {
   pickDefaultCatalogCurrency,
@@ -41,6 +41,13 @@ import { ApplyStepsRail } from "@/components/apply/apply-steps-rail";
 import { GuidedVisaChooser, type IService } from "@/components/apply/guided-visa-chooser";
 import { readChooserDraft, writeChooserDraft } from "@/lib/apply/chooser-draft-storage";
 import { cn } from "@/lib/utils";
+import { ArrivalDateField } from "@/components/apply/arrival-date-field";
+import { validateTravelDate } from "@/lib/checkout-extras/dubai-calendar";
+import {
+  formatArrivalDate,
+  travelDateErrorKey,
+  type TTravelWindow,
+} from "@/lib/apply/checkout-extras-ui";
 
 type Nationality = { code: string; name: string };
 type Service = IService;
@@ -204,6 +211,7 @@ const bootChooserForm = (nationalityCode: string) => {
       : EMPTY_ANSWERS,
     additionalTravelers: restored?.additionalTravelers ?? [],
     chooserPhase: restored?.phase ?? ("stay" as TChooserPhase),
+    travelDate: restored?.travelDate ?? "",
   };
 };
 
@@ -230,6 +238,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   nationalityName,
 }) => {
   const t = useCustomerT();
+  const locale = useCustomerLocale();
   const router = useRouter();
   const sessionEmail = useClientAuthStore((s) => s.session?.user?.email);
   const [boot] = useState(() => bootChooserForm(initialNationalityCode));
@@ -238,6 +247,11 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   const [services, setServices] = useState<Service[]>([]);
   const [serviceId, setServiceId] = useState(boot.serviceId);
   const [email, setEmail] = useState(boot.email);
+  const [travelDate, setTravelDate] = useState(boot.travelDate);
+  const [travelDateError, setTravelDateError] = useState<string | null>(null);
+  const [travelDateTouched, setTravelDateTouched] = useState(false);
+  const [travelWindow, setTravelWindow] = useState<TTravelWindow | null>(null);
+  const travelDateRef = useRef<HTMLInputElement>(null);
   const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>(boot.displayCurrency ?? "");
   const [visibleCurrencies, setVisibleCurrencies] = useState<TVisibleCatalogCurrency[]>([]);
   const localPricedServiceIdsRef = useRef<string[]>([]);
@@ -467,8 +481,24 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       phase: chooserPhase,
       additionalTravelers,
       email,
+      travelDate,
     });
-  }, [nationality, displayCurrency, serviceId, answers, chooserPhase, additionalTravelers, email]);
+  }, [nationality, displayCurrency, serviceId, answers, chooserPhase, additionalTravelers, email, travelDate]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      const res = await fetchApiEnvelope<TTravelWindow>(apiHref("/apply/travel-window"), {
+        cache: "no-store",
+      });
+      if (cancelled || !res.ok) return;
+      setTravelWindow(res.data);
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -505,6 +535,41 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       return;
     }
     setMissingVisaKeys([]);
+    let windowForDate = travelWindow;
+    if (!windowForDate) {
+      const windowRes = await fetchApiEnvelope<TTravelWindow>(apiHref("/apply/travel-window"), {
+        cache: "no-store",
+      });
+      if (windowRes.ok) {
+        windowForDate = windowRes.data;
+        setTravelWindow(windowRes.data);
+      }
+    }
+    if (windowForDate) {
+      const input = travelDateRef.current;
+      if (input?.validity.badInput) {
+        setTravelDateError(t("start.travelDate.errorIncomplete"));
+        setTravelDateTouched(true);
+        input.focus();
+        return;
+      }
+      const validated = validateTravelDate(travelDate.trim() ? travelDate : null, {
+        required: windowForDate.travelDateRequired,
+        todayUae: windowForDate.todayUae,
+        maxTravelDate: windowForDate.maxTravelDate,
+      });
+      if (!validated.ok) {
+        setTravelDateError(
+          t(travelDateErrorKey(validated.code), {
+            maxDate: formatArrivalDate(windowForDate.maxTravelDate, locale),
+          }),
+        );
+        setTravelDateTouched(true);
+        window.setTimeout(() => document.getElementById("apply-travel-date")?.focus(), 0);
+        return;
+      }
+      setTravelDateError(null);
+    }
     if (!trimmedEmail) {
       setError(t("start.enterEmailError"));
       return;
@@ -519,8 +584,9 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       serviceId,
       catalogCurrency: displayCurrency,
       guestEmail: trimmedEmail.toLowerCase(),
-      travelers: travelers.map((t) => ({ serviceId: t.serviceId, kind: t.kind })),
+      travelers: travelers.map((traveler) => ({ serviceId: traveler.serviceId, kind: traveler.kind })),
     };
+    if (travelDate.trim()) body.travelDate = travelDate.trim();
     const res = await fetchApiEnvelope<{ application: { id: string; isGuest: boolean } }>(
       apiHref("/applications"),
       {
@@ -845,7 +911,23 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                 {t("start.priceIncludesNote")}
               </p>
 
-              <div className="border-t border-border/80 pt-6">
+              <div className="border-border/80 space-y-6 border-t pt-6">
+                {travelWindow ? (
+                  <ArrivalDateField
+                    id="apply-travel-date"
+                    value={travelDate}
+                    onChange={setTravelDate}
+                    todayUae={travelWindow.todayUae}
+                    maxTravelDate={travelWindow.maxTravelDate}
+                    required={travelWindow.travelDateRequired}
+                    error={travelDateError}
+                    onError={setTravelDateError}
+                    inputRef={travelDateRef}
+                    touched={travelDateTouched}
+                    onTouched={() => setTravelDateTouched(true)}
+                    disabled={submitting}
+                  />
+                ) : null}
                 <ClientField id="apply-email" label={t("start.emailLabel")}>
                   <ClientInput
                     id="apply-email"
@@ -897,7 +979,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
           >
             {submitting ? (
               <>
-                <Loader2 className="mr-2 size-4 animate-spin" aria-hidden />
+                <Loader2 className="me-2 size-4 animate-spin" aria-hidden />
                 {t("start.loading")}
               </>
             ) : (

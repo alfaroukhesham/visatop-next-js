@@ -78,7 +78,18 @@
       "maxTravelers": "Maximum {count} voyageurs par paiement.",
       "chooseVisaForAll": "Choisissez un visa pour chaque voyageur."
     },
-    "travelersLabel": "Voyageurs"
+    "travelersLabel": "Voyageurs",
+    "travelDate": {
+      "label": "Quand arrivez-vous aux Émirats ?",
+      "optional": "(facultatif)",
+      "hint": "Choisissez le jour de votre arrivée. Les dates suivent l'heure des Émirats. Vous pouvez la modifier jusqu'au paiement.",
+      "readback": "{date} · {relative}",
+      "errorEmpty": "Choisissez votre date d'arrivée pour continuer.",
+      "errorPast": "Cette date est passée. Choisissez aujourd'hui ou une date ultérieure.",
+      "errorMax": "Choisissez une date jusqu'au {maxDate}. Pour un voyage plus tardif, faites la demande plus près de votre départ.",
+      "errorIncomplete": "Saisissez la date complète : jour, mois et année.",
+      "soonHint": "Votre voyage est proche. À l'étape de paiement, nous proposerons le traitement rapide ({price} par voyageur). Vous pouvez choisir le traitement standard."
+    }
   },
   "chooser": {
     "back": "Retour",
@@ -560,7 +571,8 @@
     "loadingVisaOptions": "Chargement des options de visa",
     "loadingApplications": "Chargement des demandes",
     "loadingOrderSummary": "Chargement du récapitulatif de commande",
-    "whatsappSupport": "Discuter sur WhatsApp"
+    "whatsappSupport": "Discuter sur WhatsApp",
+    "opensNewTab": "(s'ouvre dans un nouvel onglet)"
   },
   "seo": {
     "homeTitle": "Demander un visa touristique UAE en ligne",
@@ -672,5 +684,69 @@
     "jumpAheadHint": "Terminez d'abord cette étape, puis touchez Continuer",
     "docShowDetails": "{name}, afficher les détails",
     "docHideDetails": "{name}, masquer les détails"
+  },
+  "relative": {
+    "today": "aujourd'hui",
+    "tomorrow": "demain",
+    "inDays_one": "dans {n} jour",
+    "inDays_two": "dans {n} jours",
+    "inDays_few": "dans {n} jours",
+    "inDays_many": "dans {n} jours",
+    "inDays_other": "dans {n} jours"
+  },
+  "extras": {
+    "sectionTitle": "Votre voyage et les services supplémentaires",
+    "arrivalLabel": "Arrivée aux Émirats",
+    "change": "Modifier",
+    "saveDate": "Enregistrer la date",
+    "cancel": "Annuler",
+    "speed": {
+      "legend": "Vitesse de traitement",
+      "standard": {
+        "title": "Standard",
+        "promise": "Généralement 3 jours ouvrables une fois vos documents complets",
+        "price": "Inclus"
+      },
+      "fast": {
+        "title": "Traitement rapide",
+        "promiseDefault": "Généralement sous 24 heures",
+        "price": "+{price} par voyageur"
+      },
+      "badge": "Recommandé pour votre date"
+    },
+    "perTravellerSum": "{price} × {n} {travellersWord} = {sum}",
+    "travellers_one": "voyageur",
+    "travellers_two": "voyageurs",
+    "travellers_few": "voyageurs",
+    "travellers_many": "voyageurs",
+    "travellers_other": "voyageurs",
+    "notes": {
+      "n1": "Vous arrivez {relative}, nous avons donc sélectionné le traitement rapide ({price} par voyageur). Le traitement standard prend généralement 3 jours ouvrables. Vous pouvez passer au standard.",
+      "n2": "Vous arrivez {relative}. Le traitement standard prend généralement 3 jours ouvrables, votre visa peut donc ne pas être prêt à temps. Vous pouvez quand même payer avec le standard.",
+      "n2Action": "Passer au traitement rapide",
+      "n3": "Vous arrivez {relative}. Même avec le traitement rapide, votre visa peut ne pas être prêt à temps. {whatsapp} avant de payer et nous vérifierons ce qui est possible.",
+      "n4": "Vous arrivez {relative}. Le traitement standard prend généralement 3 jours ouvrables. {whatsapp} avant de payer pour que nous vérifiions vos options.",
+      "n5": "Pour votre nouvelle date ({relative}), nous vous avons remis sur le traitement standard."
+    },
+    "insurance": {
+      "title": "Assurance voyage",
+      "add": "Ajouter l'assurance voyage · {price} par voyageur",
+      "terms": "Lire les conditions de la police"
+    },
+    "recap": {
+      "fastTrack": "Traitement rapide",
+      "insurance": "Assurance voyage",
+      "updating": "Mise à jour du total",
+      "updated": "Total mis à jour : {total}"
+    },
+    "error": {
+      "update": "Nous n'avons pas pu mettre à jour votre total. Vérifiez votre connexion et réessayez.",
+      "retry": "Réessayer"
+    },
+    "priceChanged": "Le prix a changé depuis l'ouverture de cette page. Vérifiez le nouveau total avant de payer.",
+    "locked": "Pour modifier vos services supplémentaires, annulez d'abord ce paiement.",
+    "bar": {
+      "cta": "Continuer vers le paiement"
+    }
   }
 }

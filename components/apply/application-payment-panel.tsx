@@ -7,6 +7,7 @@ import { ClientDraftPanelSkeleton } from "@/components/client/client-loading";
 import { DraftPanelError } from "@/components/apply/draft/draft-panel-error";
 import { DraftPaymentSection } from "@/components/apply/draft/draft-payment-section";
 import { useApplicationDraft } from "@/components/apply/draft/use-application-draft";
+import { useCheckoutQuoteOptional } from "@/components/apply/checkout-quote-provider";
 import { ClientButton } from "@/components/client/client-button";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { applyPreviousHref, type TApplyWizardMember } from "@/lib/apply/apply-wizard";
@@ -22,6 +23,7 @@ interface IApplicationPaymentPanelProps {
 
 export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ applicationId }) => {
   const t = useCustomerT();
+  const quote = useCheckoutQuoteOptional();
   const router = useRouter();
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [embeddedUrl, setEmbeddedUrl] = useState<string | null>(null);
@@ -206,6 +208,22 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
     setCheckoutError(t("checkout.errors.paymentNotCompleted"));
   }, [t]);
 
+  const cancelOpenCheckout = useCallback(() => {
+    setCheckoutError(null);
+    setEmbeddedUrl(null);
+    setFincraInline(null);
+    setConfirming(false);
+    setShowPaddleRetry(false);
+    pollCleanupRef.current?.();
+    void draft.cancelCheckout();
+  }, [draft]);
+
+  useEffect(() => {
+    if (!quote) return;
+    quote.registerCancelCheckout(cancelOpenCheckout);
+    return () => quote.registerCancelCheckout(null);
+  }, [quote, cancelOpenCheckout]);
+
   if (draft.loading) {
     return <ClientDraftPanelSkeleton />;
   }
@@ -259,15 +277,10 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
         countdown={draft.countdown}
         checkoutError={checkoutError}
         onDismissCheckoutError={() => setCheckoutError(null)}
-        onCancelCheckout={() => {
-          setCheckoutError(null);
-          setEmbeddedUrl(null);
-          setFincraInline(null);
-          setConfirming(false);
-          setShowPaddleRetry(false);
-          pollCleanupRef.current?.();
-          void draft.cancelCheckout();
-        }}
+        onCancelCheckout={cancelOpenCheckout}
+        payBlocked={quote?.payBlocked ?? false}
+        payDescribedBy={quote?.payDescribedBy ?? null}
+        termsResetKey={quote?.termsResetKey ?? 0}
         checkout={{
           onZiinaEmbedded,
           onFincraInline,

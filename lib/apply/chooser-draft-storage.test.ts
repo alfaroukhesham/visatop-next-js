@@ -29,6 +29,7 @@ describe("chooser draft storage", () => {
       phase: "results",
       additionalTravelers: [{ key: "t2", kind: "child", serviceId: "svc-2" }],
       email: "a@b.co",
+      travelDate: "2026-12-02",
     });
     expect(readChooserDraft("EG")).toEqual({
       displayCurrency: "AED",
@@ -39,6 +40,7 @@ describe("chooser draft storage", () => {
       phase: "results",
       additionalTravelers: [{ key: "t2", kind: "child", serviceId: "svc-2" }],
       email: "a@b.co",
+      travelDate: "2026-12-02",
     });
   });
 
@@ -52,6 +54,7 @@ describe("chooser draft storage", () => {
       phase: "results",
       additionalTravelers: [],
       email: "",
+      travelDate: "",
     });
     expect(readChooserDraft("NG")?.displayCurrency).toBe("NGN");
   });
