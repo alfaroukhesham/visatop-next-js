@@ -70,11 +70,13 @@ const renderPanel = (value: TClientQuotePreview, locked = false) =>
     <TripExtrasPanel
       preview={value}
       locked={locked}
+      paying={false}
       switchedBack={false}
       announceNote={false}
       updateError={null}
       onSpeed={() => undefined}
       onInsurance={() => undefined}
+      onInsuranceAll={() => undefined}
       onSaveDate={() => false}
       onRetry={() => undefined}
       onCancelCheckout={() => undefined}

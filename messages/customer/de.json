@@ -74,6 +74,7 @@
       "child": "Kind",
       "chooseVisaOption": "Visum wählen",
       "chooseVisaForThis": "Wählen Sie ein Visum für diese/n Reisende/n.",
+      "visaForTraveller": "Visum für Reisende/n {number}",
       "addAtLeastOne": "Fügen Sie mindestens eine/n Reisende/n hinzu.",
       "maxTravelers": "Maximal {count} Reisende pro Checkout.",
       "chooseVisaForAll": "Wählen Sie für jede/n Reisende/n ein Visum."
@@ -731,11 +732,14 @@
     "insurance": {
       "title": "Reiseversicherung",
       "add": "Reiseversicherung hinzufügen · {price} pro Reisender",
+      "selectAll": "Alle Reisenden auswählen",
+      "forTraveller": "Reisende/r {number} · {price}",
       "terms": "Versicherungsbedingungen lesen"
     },
     "recap": {
       "fastTrack": "Expressbearbeitung",
       "insurance": "Reiseversicherung",
+      "insuranceCount": "Reiseversicherung x{count}",
       "updating": "Gesamtbetrag wird aktualisiert",
       "updated": "Gesamtbetrag aktualisiert: {total}"
     },

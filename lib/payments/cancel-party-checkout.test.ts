@@ -131,7 +131,13 @@ describe("cancelPartyCheckout", () => {
         processingSpeedSource: "system",
         insuranceSelectedByApplicationId: {},
       },
-      patch: { travelDate: "2026-12-24", travelInsurance: true },
+      patch: {
+        travelDate: "2026-12-24",
+        travelInsurance: [
+          { applicationId: "lead", selected: true },
+          { applicationId: "companion", selected: true },
+        ],
+      },
       memberIds: ["lead", "companion"],
       todayUae: "2026-11-24",
       maxTravelDate: "2027-05-23",

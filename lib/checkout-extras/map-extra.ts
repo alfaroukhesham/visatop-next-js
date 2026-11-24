@@ -1,4 +1,4 @@
-import { formatMajorFromMinor } from "@/lib/admin/catalog/service-price-fx-fill";
+import { formatCheckoutMajor } from "@/lib/checkout-extras/whole-unit";
 import {
   CHECKOUT_CHARGE_BASIS,
   CHECKOUT_EXTRA_KEYS,
@@ -38,7 +38,8 @@ const asChargeBasis = (value: string): TCheckoutChargeBasis =>
 const asExtraKey = (value: string): TCheckoutExtraKey | null =>
   (CHECKOUT_EXTRA_KEYS as readonly string[]).includes(value) ? (value as TCheckoutExtraKey) : null;
 
-const majorFromMinor = (amountMinor: number): string => formatMajorFromMinor(BigInt(amountMinor));
+const majorFromMinor = (amountMinor: number, currency: string): string =>
+  formatCheckoutMajor(BigInt(amountMinor), currency);
 
 export const toCheckoutExtraAdmin = (
   row: TCheckoutExtraRow,
@@ -51,7 +52,7 @@ export const toCheckoutExtraAdmin = (
     .map((price) => ({
       currency: price.currency,
       amountMinor: price.amountMinor,
-      amountMajor: majorFromMinor(price.amountMinor),
+      amountMajor: majorFromMinor(price.amountMinor, price.currency),
     }));
   return {
     key,
@@ -59,7 +60,7 @@ export const toCheckoutExtraAdmin = (
     chargeBasis: asChargeBasis(row.chargeBasis),
     baseCurrency: row.baseCurrency,
     baseAmountMinor: row.baseAmountMinor,
-    baseAmountMajor: majorFromMinor(row.baseAmountMinor),
+    baseAmountMajor: majorFromMinor(row.baseAmountMinor, row.baseCurrency),
     labels: readLocaleMap(row.labelI18n),
     descriptions: readLocaleMap(row.descriptionI18n),
     promise: key === "fast_track" ? readLocaleMap(row.promiseI18n) : null,

@@ -220,8 +220,11 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
     const minor = lines.find((line) => line.applicationId === applicationId)?.amountMinor ?? null;
     return minor ? formatQuote(minor) : fallback;
   };
-  const extraLineLabel = (key: TCheckoutExtraKey): string =>
-    key === "fast_track" ? t("extras.recap.fastTrack") : t("extras.recap.insurance");
+  const extraLineLabel = (key: TCheckoutExtraKey, count: number): string => {
+    if (key === "fast_track") return t("extras.recap.fastTrack");
+    if (count > 1) return t("extras.recap.insuranceCount", { count });
+    return t("extras.recap.insurance");
+  };
   const extraRows = groupedExtraLines({
     extraLines: settled?.extraLines ?? serverPreview?.extraLines ?? [],
   });
@@ -417,10 +420,12 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
           {extraRows.map((row) => (
             <div key={row.key} className="flex items-start justify-between gap-4 text-sm">
               <div>
-                <p className="text-foreground font-medium">{extraLineLabel(row.key)}</p>
-                <p className="text-muted-foreground text-xs">
-                  <bdi>× {row.count}</bdi>
-                </p>
+                <p className="text-foreground font-medium">{extraLineLabel(row.key, row.count)}</p>
+                {row.key === "fast_track" ? (
+                  <p className="text-muted-foreground text-xs">
+                    <bdi>× {row.count}</bdi>
+                  </p>
+                ) : null}
               </div>
               <p className="text-foreground font-heading text-end font-bold tabular-nums">
                 <bdi>{formatQuote(row.amountMinor)}</bdi>

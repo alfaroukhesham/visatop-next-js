@@ -1,14 +1,14 @@
 import { headers } from "next/headers";
 import { runAdminDbJson } from "@/lib/admin-api/require-admin-db";
 import { writeAdminAudit } from "@/lib/admin-api/write-admin-audit";
-import { parseJsonBody } from "@/lib/api/parse-json-body";
-import { jsonOk } from "@/lib/api/response";
+import { jsonError, jsonOk } from "@/lib/api/response";
 import {
   getTravelDateSettingsFromTx,
   saveTravelDateSettings,
 } from "@/lib/checkout-extras/travel-date-settings";
 import {
   PLATFORM_KEY_FAST_TRACK_THRESHOLD_DAYS,
+  travelDateSettingsErrorMessage,
   travelDateSettingsWriteSchema,
 } from "@/lib/checkout-extras/validation";
 
@@ -27,12 +27,23 @@ export const GET = async () => {
 export const PUT = async (req: Request) => {
   const hdrs = await headers();
   const requestId = hdrs.get("x-request-id");
+  let raw: unknown;
+  try {
+    raw = await req.json();
+  } catch {
+    return jsonError("VALIDATION_ERROR", "Malformed JSON body", { status: 400, requestId });
+  }
   return runAdminDbJson(
     requestId,
     ["settings.read", "settings.write", "audit.write"],
     async ({ tx, adminUserId }) => {
-      const parsed = await parseJsonBody(req, travelDateSettingsWriteSchema, requestId);
-      if (!parsed.ok) return parsed.response;
+      const parsed = travelDateSettingsWriteSchema.safeParse(raw);
+      if (!parsed.success) {
+        return jsonError("VALIDATION_ERROR", travelDateSettingsErrorMessage(parsed.error), {
+          status: 400,
+          requestId,
+        });
+      }
 
       const saved = await saveTravelDateSettings(tx, parsed.data);
       await writeAdminAudit(tx, {

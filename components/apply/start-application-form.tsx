@@ -39,7 +39,14 @@ import type { TStayBucket, TTravelerKind } from "@/lib/catalog/guided-choice";
 import { AllInPriceBadges } from "@/components/apply/all-in-price-badges";
 import { ApplyStepsRail } from "@/components/apply/apply-steps-rail";
 import { GuidedVisaChooser, type IService } from "@/components/apply/guided-visa-chooser";
-import { readChooserDraft, writeChooserDraft } from "@/lib/apply/chooser-draft-storage";
+import {
+  clearChooserDraft,
+  consumeChooserFreshStart,
+  peekChooserFreshStart,
+  readChooserDraft,
+  shouldRestoreChooserDraft,
+  writeChooserDraft,
+} from "@/lib/apply/chooser-draft-storage";
 import { cn } from "@/lib/utils";
 import { ArrivalDateField } from "@/components/apply/arrival-date-field";
 import { validateTravelDate } from "@/lib/checkout-extras/dubai-calendar";
@@ -198,8 +205,23 @@ const EMPTY_ANSWERS = {
   kind: "adult" as const,
 };
 
+const pageWasReloaded = (): boolean => {
+  if (typeof performance === "undefined" || typeof performance.getEntriesByType !== "function") return false;
+  const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+  return nav?.type === "reload";
+};
+
 const bootChooserForm = (nationalityCode: string) => {
-  const restored = readChooserDraft(nationalityCode);
+  const resume =
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("resume") === "1";
+  const restored = shouldRestoreChooserDraft({
+    fresh: peekChooserFreshStart(),
+    resume,
+    reloaded: pageWasReloaded(),
+  })
+    ? readChooserDraft(nationalityCode)
+    : null;
+  if (!restored) clearChooserDraft(nationalityCode);
   const code = nationalityCode.trim().toUpperCase();
   return {
     nationality: code.length === 2 ? code : "",
@@ -242,6 +264,9 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   const router = useRouter();
   const sessionEmail = useClientAuthStore((s) => s.session?.user?.email);
   const [boot] = useState(() => bootChooserForm(initialNationalityCode));
+  useEffect(() => {
+    consumeChooserFreshStart();
+  }, []);
   const [nationalities, setNationalities] = useState<Nationality[]>([]);
   const [nationality, setNationality] = useState(boot.nationality);
   const [services, setServices] = useState<Service[]>([]);
@@ -866,6 +891,9 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                       </div>
                     ) : (
                       <div className="space-y-1.5">
+                        <label htmlFor={visaFieldId} className="text-foreground text-sm font-medium">
+                          {t("start.party.visaForTraveller", { number: idx + 2 })}
+                        </label>
                         <select
                           id={visaFieldId}
                           value={traveler.serviceId}

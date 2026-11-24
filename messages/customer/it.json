@@ -74,6 +74,7 @@
       "child": "Minore",
       "chooseVisaOption": "Scelga un visto",
       "chooseVisaForThis": "Scelga un visto per questo viaggiatore.",
+      "visaForTraveller": "Visto per il viaggiatore {number}",
       "addAtLeastOne": "Aggiunga almeno un viaggiatore.",
       "maxTravelers": "Massimo {count} viaggiatori per checkout.",
       "chooseVisaForAll": "Scelga un visto per ogni viaggiatore."
@@ -731,11 +732,14 @@
     "insurance": {
       "title": "Assicurazione di viaggio",
       "add": "Aggiungi l'assicurazione di viaggio · {price} a viaggiatore",
+      "selectAll": "Seleziona tutti i viaggiatori",
+      "forTraveller": "Viaggiatore {number} · {price}",
       "terms": "Leggi le condizioni della polizza"
     },
     "recap": {
       "fastTrack": "Trattamento rapido",
       "insurance": "Assicurazione di viaggio",
+      "insuranceCount": "Assicurazione di viaggio x{count}",
       "updating": "Aggiornamento del totale",
       "updated": "Totale aggiornato: {total}"
     },

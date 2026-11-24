@@ -42,11 +42,11 @@ export const CheckoutStickyTotal: FC<ICheckoutStickyTotalProps> = ({ totalText, 
 
   return (
     <>
-      <div aria-hidden data-apply-sticky-cta-spacer="" style={{ height: "5.5rem" }} />
+      <div aria-hidden data-apply-sticky-cta-spacer="" style={{ height: "8.5rem" }} />
       {createPortal(
-        <div data-apply-sticky-cta="" data-apply-sticky-cta-portal="">
-          <div className="mx-auto flex w-full max-w-4xl items-center gap-3">
-            <div className="min-w-0 flex-1">
+        <div data-apply-sticky-cta="" data-apply-sticky-cta-portal="" data-apply-sticky-total="">
+          <div className="mx-auto flex w-full max-w-4xl flex-col items-stretch gap-2">
+            <div className="min-w-0">
               <p className="text-muted-foreground text-xs">{t("payment.total")}</p>
               <p className="font-heading text-foreground font-bold tabular-nums">
                 <bdi>{totalText}</bdi>
@@ -55,7 +55,7 @@ export const CheckoutStickyTotal: FC<ICheckoutStickyTotalProps> = ({ totalText, 
             <ClientButton
               type="button"
               brand="cta"
-              className="shrink-0"
+              className="h-auto min-h-[46px] w-full min-w-0 whitespace-normal py-2"
               onClick={goToPayment}
             >
               {t("extras.bar.cta")}

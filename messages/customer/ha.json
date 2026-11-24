@@ -74,6 +74,7 @@
       "child": "Yaro",
       "chooseVisaOption": "Zaɓi visa",
       "chooseVisaForThis": "Zaɓi visa ga wannan matafiyi.",
+      "visaForTraveller": "Visa ga matafiyi {number}",
       "addAtLeastOne": "Ƙara aƙalla mafiya tafiya ɗaya.",
       "maxTravelers": "Mafiya tafiya {count} a mafi yawa a kowace biya.",
       "chooseVisaForAll": "Zaɓi visa ga kowane mafiya tafiya."
@@ -731,11 +732,14 @@
     "insurance": {
       "title": "Inshorar tafiya",
       "add": "Ƙara inshorar tafiya · {price} ga kowane matafiyi",
+      "selectAll": "Zaɓi dukkan matafiya",
+      "forTraveller": "Matafiyi {number} · {price}",
       "terms": "Karanta sharuɗɗan takardar inshora"
     },
     "recap": {
       "fastTrack": "Saurin aiki",
       "insurance": "Inshorar tafiya",
+      "insuranceCount": "Inshorar tafiya x{count}",
       "updating": "Ana sabunta jimla",
       "updated": "An sabunta jimla: {total}"
     },

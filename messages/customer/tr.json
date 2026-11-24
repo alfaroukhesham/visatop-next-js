@@ -74,6 +74,7 @@
       "child": "Çocuk",
       "chooseVisaOption": "Vize seçin",
       "chooseVisaForThis": "Bu yolcu için bir vize seçin.",
+      "visaForTraveller": "Yolcu {number} için vize",
       "addAtLeastOne": "En az bir yolcu ekleyin.",
       "maxTravelers": "Ödeme başına en fazla {count} yolcu.",
       "chooseVisaForAll": "Her yolcu için bir vize seçin."
@@ -731,11 +732,14 @@
     "insurance": {
       "title": "Seyahat sigortası",
       "add": "Seyahat sigortası ekle · yolcu başına {price}",
+      "selectAll": "Tüm yolcuları seç",
+      "forTraveller": "Yolcu {number} · {price}",
       "terms": "Poliçe şartlarını okuyun"
     },
     "recap": {
       "fastTrack": "Hızlı işlem",
       "insurance": "Seyahat sigortası",
+      "insuranceCount": "Seyahat sigortası x{count}",
       "updating": "Toplam güncelleniyor",
       "updated": "Toplam güncellendi: {total}"
     },

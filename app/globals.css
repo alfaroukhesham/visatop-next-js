@@ -475,6 +475,14 @@ html:has([data-apply-sticky-cta]) a[data-whatsapp-fab] {
     padding-bottom: calc(0.625rem + env(safe-area-inset-bottom, 0px));
     backdrop-filter: blur(12px);
   }
+
+  html:has([data-apply-sticky-total]) {
+    --apply-sticky-cta-height: calc(8.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  html:has([data-apply-sticky-total]) a[data-whatsapp-fab] {
+    bottom: calc(10rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
 }
 
 @media (min-width: 1025px) {

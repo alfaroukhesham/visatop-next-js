@@ -42,6 +42,8 @@ interface ICheckoutQuoteContext {
   termsResetKey: number;
   payBlocked: boolean;
   payDescribedBy: string | null;
+  paying: boolean;
+  setPaying: (paying: boolean) => void;
   patchTrip: (patch: TTripPatchBody) => Promise<boolean>;
   retry: () => void;
   refreshQuote: () => void;
@@ -81,6 +83,7 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
   const [priceChanged, setPriceChanged] = useState(false);
   const [termsResetKey, setTermsResetKey] = useState(0);
   const [dateBlocksPay, setDateBlocksPay] = useState(false);
+  const [paying, setPaying] = useState(false);
   const previewRef = useRef<TClientQuotePreview | null>(null);
   const lastSavedRef = useRef<TClientQuotePreview | null>(null);
   const seq = useRef(0);
@@ -89,7 +92,7 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
   const initialPrices = useRef<string | null>(null);
   const cancelRef = useRef<(() => Promise<boolean> | boolean) | null>(null);
 
-  const rememberPrices = useCallback((next: TClientQuotePreview) => {
+  const rememberPrices = useCallback((next: TClientQuotePreview, resetTerms: boolean) => {
     const signature = extraPriceSignature(next);
     if (initialPrices.current === null) {
       initialPrices.current = signature;
@@ -98,17 +101,17 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
     if (initialPrices.current !== signature) {
       initialPrices.current = signature;
       setPriceChanged(true);
-      setTermsResetKey((key) => key + 1);
+      if (resetTerms) setTermsResetKey((key) => key + 1);
     }
   }, []);
 
   const applyPreview = useCallback(
-    (next: TClientQuotePreview, announce: boolean) => {
+    (next: TClientQuotePreview, announce: boolean, resetTerms = true) => {
       lastSavedRef.current = next;
       previewRef.current = next;
       setPreview(next);
       setLockedOverride(false);
-      rememberPrices(next);
+      rememberPrices(next, resetTerms);
       if (!announce) return;
       const display = quoteUsesCodeFormat(next) ? "code" : "symbol";
       setAnnouncement(
@@ -195,7 +198,7 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
                 setSwitchedBack(true);
               }
               if (patch.travelDate !== undefined) setAnnounceNote(true);
-              applyPreview(outcome.preview, true);
+              applyPreview(outcome.preview, true, patch.travelDate === undefined);
               resolve(true);
             } else if (outcome.kind === "locked") {
               restoreSaved();
@@ -262,8 +265,14 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
 
   const cancelCheckout = useCallback(() => {
     const cancel = cancelRef.current;
-    if (!cancel) return;
-    void cancel();
+    if (!cancel) {
+      setPaying(false);
+      return;
+    }
+    void (async () => {
+      const ok = await cancel();
+      if (ok) setPaying(false);
+    })();
   }, []);
 
   const locked = Boolean(preview?.locked) || lockedOverride;
@@ -290,6 +299,8 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
       termsResetKey,
       payBlocked,
       payDescribedBy,
+      paying,
+      setPaying,
       patchTrip,
       retry,
       refreshQuote,
@@ -311,6 +322,7 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
       termsResetKey,
       payBlocked,
       payDescribedBy,
+      paying,
       patchTrip,
       retry,
       refreshQuote,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FC } from "react";
+import type { FC } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
@@ -49,7 +49,12 @@ interface IDraftPaymentSectionProps {
   showPaddleRetry: boolean;
   payBlocked?: boolean;
   payDescribedBy?: string | null;
-  termsResetKey?: number;
+  termsAccepted: boolean;
+  onTermsAcceptedChange: (accepted: boolean) => void;
+  termsError: string | null;
+  onTermsError: (message: string | null) => void;
+  onPayingChange?: (paying: boolean) => void;
+  onCheckoutStarted?: () => void;
 }
 
 export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
@@ -70,17 +75,15 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
   showPaddleRetry,
   payBlocked = false,
   payDescribedBy = null,
-  termsResetKey = 0,
+  termsAccepted,
+  onTermsAcceptedChange,
+  termsError,
+  onTermsError,
+  onPayingChange,
+  onCheckoutStarted,
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
-  const [termsAccepted, setTermsAccepted] = useState(false);
-  const [termsError, setTermsError] = useState<string | null>(null);
-  const [seenTermsResetKey, setSeenTermsResetKey] = useState(termsResetKey);
-  if (seenTermsResetKey !== termsResetKey) {
-    setSeenTermsResetKey(termsResetKey);
-    setTermsAccepted(false);
-  }
   const payCopyComplete = customerLooksCompleteForPayCopy({
     requiredSlotKeys,
     uploadedTypes,
@@ -104,8 +107,8 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
       <CheckoutTermsCheckbox
         checked={termsAccepted}
         onCheckedChange={(next) => {
-          setTermsAccepted(next);
-          if (next) setTermsError(null);
+          onTermsAcceptedChange(next);
+          if (next) onTermsError(null);
         }}
         error={termsError}
       />
@@ -119,7 +122,9 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
         termsAccepted={termsAccepted}
         disabled={payBlocked}
         describedBy={payDescribedBy}
-        onTermsRejected={() => setTermsError(t("checkout.errors.termsRequired"))}
+        onPayingChange={onPayingChange}
+        onCheckoutStarted={onCheckoutStarted}
+        onTermsRejected={() => onTermsError(t("checkout.errors.termsRequired"))}
         onZiinaEmbedded={(url) => {
           onDismissCheckoutError();
           checkout.onZiinaEmbedded(url);

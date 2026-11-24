@@ -12,6 +12,8 @@ import {
   suggestMissingGlobalPrice,
   type TGlobalCheckoutCurrency,
 } from "@/lib/checkout-extras/suggest-global-price";
+import { listCheckoutExtraFieldErrors } from "@/lib/checkout-extras/validation";
+import { isWholeUnitCurrency } from "@/lib/checkout-extras/whole-unit";
 import type { TCheckoutExtraAdmin, TCheckoutExtraKey } from "@/lib/checkout-extras/types";
 import { FALLBACK_CUSTOMER_LOCALE_SLUGS } from "@/lib/i18n/customer-locale";
 import { ADMIN_IMPORT_CURRENCIES } from "@/lib/payments/local-checkout-config";
@@ -84,6 +86,7 @@ const CheckoutExtraForm: FC<ICheckoutExtraFormProps> = ({ extra, fxAedPerUsd, ca
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [rateSuggestion, setRateSuggestion] = useState<{
     currency: TGlobalCheckoutCurrency;
     amountMajor: string;
@@ -120,29 +123,44 @@ const CheckoutExtraForm: FC<ICheckoutExtraFormProps> = ({ extra, fxAedPerUsd, ca
     setRateSuggestion(null);
   };
 
+  const priceFieldId = (field: string): string | null => {
+    if (field === "baseAmount") return `${extra.key}-base-amount`;
+    if (field.startsWith("price:")) return `${extra.key}-price-${field.slice("price:".length)}`;
+    return null;
+  };
+
   const onSave = async (event: FormEvent) => {
     event.preventDefault();
-    setSaving(true);
     setMessage(null);
     setError(null);
+    const body = {
+      enabled,
+      baseCurrency,
+      baseAmountMajor,
+      labels,
+      descriptions,
+      promise: isFastTrack ? promise : null,
+      termsUrl: termsUrl.trim() ? termsUrl.trim() : null,
+      prices: ADMIN_IMPORT_CURRENCIES.map((currency) => ({
+        currency,
+        amountMajor: prices[currency] ?? "",
+      })),
+    };
+    const issues = listCheckoutExtraFieldErrors(body);
+    if (issues.length > 0) {
+      setFieldErrors(Object.fromEntries(issues.map((issue) => [issue.field, issue.message])));
+      const firstId = priceFieldId(issues[0]?.field ?? "");
+      if (firstId) document.getElementById(firstId)?.focus();
+      return;
+    }
+    setFieldErrors({});
+    setSaving(true);
     const res = await fetchApiEnvelope<{ extra: TCheckoutExtraAdmin }>(
       apiHref(`/admin/catalog/extras/${extra.key}`),
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          enabled,
-          baseCurrency,
-          baseAmountMajor,
-          labels,
-          descriptions,
-          promise: isFastTrack ? promise : null,
-          termsUrl: termsUrl.trim() ? termsUrl.trim() : null,
-          prices: ADMIN_IMPORT_CURRENCIES.map((currency) => ({
-            currency,
-            amountMajor: prices[currency] ?? "",
-          })),
-        }),
+        body: JSON.stringify(body),
       },
     );
     setSaving(false);
@@ -168,7 +186,9 @@ const CheckoutExtraForm: FC<ICheckoutExtraFormProps> = ({ extra, fxAedPerUsd, ca
       <CardHeader className="border-border bg-muted/20 border-b">
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle className="font-heading text-lg">{copy.title}</CardTitle>
-          <Badge variant={enabled ? "default" : "secondary"}>{enabled ? "Enabled" : "Disabled"}</Badge>
+          <Badge variant={extra.enabled ? "default" : "secondary"}>
+            {extra.enabled ? "Enabled" : "Disabled"}
+          </Badge>
         </div>
         <CardDescription>{copy.blurb} Applies to every service.</CardDescription>
       </CardHeader>
@@ -216,13 +236,27 @@ const CheckoutExtraForm: FC<ICheckoutExtraFormProps> = ({ extra, fxAedPerUsd, ca
               <Label htmlFor={`${extra.key}-base-amount`}>Base amount</Label>
               <Input
                 id={`${extra.key}-base-amount`}
-                inputMode="decimal"
+                inputMode={isWholeUnitCurrency(baseCurrency) ? "numeric" : "decimal"}
                 required
                 value={baseAmountMajor}
                 disabled={!canWrite || saving}
-                onChange={(event) => setBaseAmountMajor(event.target.value)}
+                aria-invalid={fieldErrors.baseAmount ? true : undefined}
+                onChange={(event) => {
+                  setBaseAmountMajor(event.target.value);
+                  setFieldErrors((current) => {
+                    if (!current.baseAmount) return current;
+                    const next = { ...current };
+                    delete next.baseAmount;
+                    return next;
+                  });
+                }}
                 className="font-mono"
               />
+              {fieldErrors.baseAmount ? (
+                <p className="text-destructive text-xs" role="alert">
+                  {fieldErrors.baseAmount}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -383,15 +417,28 @@ const CheckoutExtraForm: FC<ICheckoutExtraFormProps> = ({ extra, fxAedPerUsd, ca
                     <Label htmlFor={`${extra.key}-price-${currency}`}>{currency}</Label>
                     <Input
                       id={`${extra.key}-price-${currency}`}
-                      inputMode="decimal"
+                      inputMode={isWholeUnitCurrency(currency) ? "numeric" : "decimal"}
                       value={prices[currency] ?? ""}
                       disabled={!canWrite || saving}
-                      onChange={(event) =>
-                        setPrices((current) => ({ ...current, [currency]: event.target.value }))
-                      }
+                      aria-invalid={fieldErrors[`price:${currency}`] ? true : undefined}
+                      onChange={(event) => {
+                        setPrices((current) => ({ ...current, [currency]: event.target.value }));
+                        setFieldErrors((current) => {
+                          const key = `price:${currency}`;
+                          if (!current[key]) return current;
+                          const next = { ...current };
+                          delete next[key];
+                          return next;
+                        });
+                      }}
                       className="font-mono"
                       placeholder="Blank hides it"
                     />
+                    {fieldErrors[`price:${currency}`] ? (
+                      <p className="text-destructive text-xs" role="alert">
+                        {fieldErrors[`price:${currency}`]}
+                      </p>
+                    ) : null}
                     {blank ? (
                       <p className="text-muted-foreground text-xs">No {currency} price — hidden for that checkout.</p>
                     ) : (
@@ -423,10 +470,6 @@ export const CheckoutExtrasPanel: FC<ICheckoutExtrasPanelProps> = ({ extras, fxA
 
   return (
     <div className="space-y-6">
-      <p className="text-muted-foreground max-w-3xl text-sm leading-relaxed">
-        Customers do not see these options on the apply or pay pages yet. Enabling an extra stores the flag for
-        the checkout release. Checkout will use the saved currency amount and will not call a live exchange rate.
-      </p>
       {(["travel_insurance", "fast_track"] as const).map((key) => {
         const extra = byKey.get(key);
         if (!extra) {
