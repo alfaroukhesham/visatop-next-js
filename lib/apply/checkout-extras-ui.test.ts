@@ -83,7 +83,7 @@ describe("extras section visibility", () => {
 });
 
 describe("speed recommendation", () => {
-  it("preselects fast track and shows the badge when the preview recommends it", () => {
+  it("keeps Standard selected and shows the recommended badge when the trip is soon", () => {
     expect(
       speedUi({
         preview: preview(),
@@ -92,28 +92,23 @@ describe("speed recommendation", () => {
       }),
     ).toEqual({
       showRadios: true,
-      selected: "fast_track",
+      selected: "standard",
       badge: true,
-      note: "n1",
+      note: "soon",
     });
   });
 
-  it("keeps a customer Standard choice and warns without blocking", () => {
+  it("keeps a customer Fast Track choice", () => {
     expect(
       speedUi({
         preview: preview({
-          processingSpeed: "standard",
+          processingSpeed: "fast_track",
           processingSpeedSource: "customer",
         }),
         fastTrackAvailable: true,
         switchedBack: false,
-      }),
-    ).toEqual({
-      showRadios: true,
-      selected: "standard",
-      badge: true,
-      note: "n2",
-    });
+      }).selected,
+    ).toBe("fast_track");
   });
 
   it("hides the speed cards when fast track is not available", () => {
@@ -138,17 +133,17 @@ describe("speed recommendation", () => {
         fastTrackAvailable: true,
         switchedBack: false,
       }).note,
-    ).toBe("n1");
+    ).toBe("soon");
   });
 
-  it("uses a same-day caution instead of the recommendation note", () => {
+  it("uses the short recommendation note on the same day", () => {
     expect(
       speedUi({
         preview: preview({ daysUntilTravel: 0 }),
         fastTrackAvailable: true,
         switchedBack: false,
       }).note,
-    ).toBe("n3");
+    ).toBe("soon");
   });
 });
 
@@ -185,6 +180,10 @@ describe("customer copy", () => {
   it("includes the extras strings in every locale", () => {
     const keys = [
       "start.travelDate.label",
+      "start.travelDate.today",
+      "start.travelDate.tomorrow",
+      "start.travelDate.notSure",
+      "start.continue",
       "start.travelDate.hint",
       "relative.inDays_one",
       "relative.inDays_two",
@@ -193,6 +192,9 @@ describe("customer copy", () => {
       "relative.inDays_other",
       "extras.sectionTitle",
       "extras.speed.badge",
+      "extras.speed.standard.promise",
+      "extras.speed.fast.promiseDefault",
+      "extras.notes.soon",
       "extras.notes.n1",
       "extras.locked",
       "extras.error.fastTrackUnavailable",

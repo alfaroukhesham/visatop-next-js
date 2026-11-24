@@ -81,7 +81,7 @@
     },
     "travelersLabel": "Matafiya",
     "travelDate": {
-      "label": "Yaushe kuke isa Hadaddiyar Daular Larabawa?",
+      "label": "Yaushe kake tafiya?",
       "optional": "(na zaɓi)",
       "hint": "Zaɓi ranar isa. Kwanakin suna bin lokacin Hadaddiyar Daular Larabawa. Kuna iya canza shi har sai kun biya.",
       "readback": "{date} · {relative}",
@@ -89,8 +89,12 @@
       "errorPast": "Wannan kwanan ya wuce. Zaɓi yau ko kwanan nan gaba.",
       "errorMax": "Zaɓi kwanan har zuwa {maxDate}. Don tafiye-tafiye masu nisa, shigar da buƙata a lokacin da ya kusa tafiya.",
       "errorIncomplete": "Shigar da cikakken kwanan: rana, wata da shekara.",
-      "soonHint": "Tafiyar ku ta kusa. A matakin biyan kuɗi za mu ba da shawarar saurin aiki ({price} ga kowane matafiyi). Kuna iya zaɓar na al'ada."
-    }
+      "soonHint": "Tafiyar ku ta kusa. A matakin biyan kuɗi za mu ba da shawarar saurin aiki ({price} ga kowane matafiyi). Kuna iya zaɓar na al'ada.",
+      "today": "Yau",
+      "tomorrow": "Gobe",
+      "notSure": "Ban tabbata ba tukuna"
+    },
+    "continue": "Ci gaba"
   },
   "chooser": {
     "back": "Baya",
@@ -705,15 +709,15 @@
       "legend": "Saurin aiki",
       "standard": {
         "title": "Na al'ada",
-        "promise": "Yawanci kwanakin aiki 3 bayan cikar takardun ku",
+        "promise": "Kwana 3 na aiki",
         "price": "An haɗa"
       },
       "fast": {
         "title": "Saurin aiki",
-        "promiseDefault": "Yawanci cikin awa 24",
+        "promiseDefault": "cikin awa 24",
         "price": "+{price} ga kowane matafiyi"
       },
-      "badge": "An ba da shawara don kwanan ku"
+      "badge": "Ana ba da shawara"
     },
     "perTravellerSum": "{price} × {n} {travellersWord} = {sum}",
     "travellers_one": "matafiyi",
@@ -727,7 +731,8 @@
       "n2Action": "Canza zuwa saurin aiki",
       "n3": "Za ku iso {relative}. Ko da saurin aiki, visa na iya rashin shirya a lokaci. {whatsapp} kafin biya, mu duba abin da yake yiwuwa.",
       "n4": "Za ku iso {relative}. Na al'ada yawanci yana ɗaukar kwanakin aiki 3. {whatsapp} kafin biya domin mu duba zaɓuɓɓuka.",
-      "n5": "Don sabon kwanan ku ({relative}), mun mayar da zaɓin zuwa na al'ada."
+      "n5": "Don sabon kwanan ku ({relative}), mun mayar da zaɓin zuwa na al'ada.",
+      "soon": "Tafiyarka tana kasa da kwana 4. Ana ba da shawarar Fast Track. Standard ya ci gaba da zama zaɓi."
     },
     "insurance": {
       "title": "Inshorar tafiya",

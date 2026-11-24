@@ -29,7 +29,7 @@ export const applicationParty = pgTable(
     /** 'standard' | 'fast_track'. Null until the customer saves a trip or checkout quotes one. */
     processingSpeed: text("processing_speed"),
     /**
-     * Who set `processing_speed`: 'system' (recommendation) or 'customer'.
+     * Who set `processing_speed`: 'system' (the Standard default) or 'customer'.
      * A later travel-date change must not overwrite a customer choice.
      */
     processingSpeedSource: text("processing_speed_source"),

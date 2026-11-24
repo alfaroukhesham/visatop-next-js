@@ -4,7 +4,7 @@ import { travelWindowPayload } from "@/lib/checkout-extras/travel-window";
 const NOW = new Date("2026-06-01T08:00:00.000Z");
 
 describe("travel window while extras are off", () => {
-  it("does not require a date when the setting defaults on and no extra is priced", () => {
+  it("still shows the date step when no extra is priced", () => {
     const window = travelWindowPayload({
       now: NOW,
       maxDaysAhead: 180,
@@ -13,6 +13,7 @@ describe("travel window while extras are off", () => {
       catalog: [],
     });
     expect(window.extrasActive).toBe(false);
+    expect(window.showTravelDateStep).toBe(true);
     expect(window.travelDateRequired).toBe(false);
   });
 
@@ -31,7 +32,7 @@ describe("travel window while extras are off", () => {
     expect(disabled.travelDateRequired).toBe(false);
   });
 
-  it("requires the date only when the setting is on and an extra is priced", () => {
+  it("keeps the date optional when an extra is priced", () => {
     const active = travelWindowPayload({
       now: NOW,
       maxDaysAhead: 180,
@@ -40,7 +41,8 @@ describe("travel window while extras are off", () => {
       catalog: [{ enabled: true, prices: [{ currency: "AED" }] }],
     });
     expect(active.extrasActive).toBe(true);
-    expect(active.travelDateRequired).toBe(true);
+    expect(active.showTravelDateStep).toBe(true);
+    expect(active.travelDateRequired).toBe(false);
 
     const optional = travelWindowPayload({
       now: NOW,
@@ -51,5 +53,14 @@ describe("travel window while extras are off", () => {
     });
     expect(optional.extrasActive).toBe(true);
     expect(optional.travelDateRequired).toBe(false);
+    const hidden = travelWindowPayload({
+      now: NOW,
+      maxDaysAhead: 180,
+      settingRequired: false,
+      showTravelDateStep: false,
+      fastTrackThresholdDays: 4,
+      catalog: [{ enabled: true, prices: [{ currency: "AED" }] }],
+    });
+    expect(hidden.showTravelDateStep).toBe(false);
   });
 });

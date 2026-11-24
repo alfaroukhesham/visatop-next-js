@@ -7,30 +7,35 @@ export const anyCheckoutExtraActive = (
 ): boolean => catalog.some((extra) => extraIsPriced(extra));
 
 /**
- * The start form asks for an arrival date only while an extra can be sold.
- * A missing settings row defaults the flag to required; that default must not
- * add the field while every extra is off.
+ * The date step can show while extras are off. `showTravelDateStep` hides it.
+ * A missing date is allowed either way: the step is skippable, and the required
+ * flag does not block checkout.
  */
 export const travelWindowPayload = (input: {
   now: Date;
   maxDaysAhead: number;
   settingRequired: boolean;
+  showTravelDateStep?: boolean;
   fastTrackThresholdDays: number;
   catalog: readonly { enabled: boolean; prices: readonly { currency: string }[] }[];
 }): {
   todayUae: string;
   maxTravelDate: string;
   extrasActive: boolean;
+  showTravelDateStep: boolean;
   travelDateRequired: boolean;
   fastTrackThresholdDays: number;
 } => {
   const window = travelDateWindow(input.now, input.maxDaysAhead);
   const extrasActive = anyCheckoutExtraActive(input.catalog);
+  // `settingRequired` stays on the admin row. The customer step is skippable either way.
+  void input.settingRequired;
   return {
     todayUae: window.todayUae,
     maxTravelDate: window.maxTravelDate,
     extrasActive,
-    travelDateRequired: input.settingRequired && extrasActive,
+    showTravelDateStep: input.showTravelDateStep !== false,
+    travelDateRequired: false,
     fastTrackThresholdDays: input.fastTrackThresholdDays,
   };
 };

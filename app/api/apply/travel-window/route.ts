@@ -19,6 +19,7 @@ export async function GET() {
       now: new Date(),
       maxDaysAhead: settings.travelDateMaxDaysAhead,
       settingRequired: settings.travelDateRequired,
+      showTravelDateStep: settings.travelDateStepEnabled,
       fastTrackThresholdDays: settings.fastTrackThresholdDays,
       catalog,
     });

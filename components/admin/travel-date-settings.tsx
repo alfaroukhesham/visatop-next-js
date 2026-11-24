@@ -13,12 +13,17 @@ interface ITravelDateSettingsProps {
   settings: TTravelDateSettings;
 }
 
-type TTravelDateField = "fastTrackThresholdDays" | "travelDateMaxDaysAhead" | "travelDateRequired";
+type TTravelDateField =
+  | "fastTrackThresholdDays"
+  | "travelDateMaxDaysAhead"
+  | "travelDateRequired"
+  | "travelDateStepEnabled";
 
 const TRAVEL_DATE_FIELDS: readonly TTravelDateField[] = [
   "fastTrackThresholdDays",
   "travelDateMaxDaysAhead",
   "travelDateRequired",
+  "travelDateStepEnabled",
 ];
 
 const travelDateErrorField = (details: unknown): TTravelDateField | null => {
@@ -27,15 +32,35 @@ const travelDateErrorField = (details: unknown): TTravelDateField | null => {
   return TRAVEL_DATE_FIELDS.find((candidate) => candidate === field) ?? null;
 };
 
+const travelDateErrorFields = (details: unknown): Partial<Record<TTravelDateField, string>> => {
+  if (typeof details === "object" && details !== null && "fields" in details) {
+    const rows = (details as { fields?: unknown }).fields;
+    if (Array.isArray(rows)) {
+      const map: Partial<Record<TTravelDateField, string>> = {};
+      for (const row of rows) {
+        if (typeof row !== "object" || row === null) continue;
+        const field = TRAVEL_DATE_FIELDS.find((candidate) => candidate === (row as { field?: unknown }).field);
+        const message = (row as { message?: unknown }).message;
+        if (field && typeof message === "string") map[field] = message;
+      }
+      if (Object.keys(map).length > 0) return map;
+    }
+  }
+  const field = travelDateErrorField(details);
+  return field ? { [field]: "Check this field." } : {};
+};
+
 const FIELD_CONTROL_ID: Record<TTravelDateField, string> = {
   fastTrackThresholdDays: "fast-track-threshold-days",
   travelDateMaxDaysAhead: "travel-date-max-days",
   travelDateRequired: "travel-date-required",
+  travelDateStepEnabled: "travel-date-step-enabled",
 };
 
 export const TravelDateSettings: FC<ITravelDateSettingsProps> = ({ settings }) => {
   const [thresholdDays, setThresholdDays] = useState(String(settings.fastTrackThresholdDays));
   const [required, setRequired] = useState(settings.travelDateRequired);
+  const [stepEnabled, setStepEnabled] = useState(settings.travelDateStepEnabled);
   const [maxDaysAhead, setMaxDaysAhead] = useState(String(settings.travelDateMaxDaysAhead));
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -54,15 +79,18 @@ export const TravelDateSettings: FC<ITravelDateSettingsProps> = ({ settings }) =
       body: JSON.stringify({
         fastTrackThresholdDays: Number.parseInt(thresholdDays, 10),
         travelDateRequired: required,
+        travelDateStepEnabled: stepEnabled,
         travelDateMaxDaysAhead: Number.parseInt(maxDaysAhead, 10),
       }),
     });
     setSaving(false);
     if (!res.ok) {
-      const field = travelDateErrorField(res.error.details);
-      if (field) {
-        setFieldErrors({ [field]: res.error.message });
-        document.getElementById(FIELD_CONTROL_ID[field])?.focus();
+      const fields = travelDateErrorFields(res.error.details);
+      const named = Object.keys(fields) as TTravelDateField[];
+      if (named.length > 0) {
+        setFieldErrors(fields);
+        const first = named[0];
+        if (first) document.getElementById(FIELD_CONTROL_ID[first])?.focus();
       } else {
         setError(res.error.message);
       }
@@ -70,6 +98,7 @@ export const TravelDateSettings: FC<ITravelDateSettingsProps> = ({ settings }) =
     }
     setThresholdDays(String(res.data.fastTrackThresholdDays));
     setRequired(res.data.travelDateRequired);
+    setStepEnabled(res.data.travelDateStepEnabled);
     setMaxDaysAhead(String(res.data.travelDateMaxDaysAhead));
     setMessage("Saved.");
   };
@@ -124,8 +153,8 @@ export const TravelDateSettings: FC<ITravelDateSettingsProps> = ({ settings }) =
           </p>
         ) : null}
         <p className="text-muted-foreground text-xs leading-relaxed">
-          When the travel date is sooner than this many days, Fast Track is recommended and pre-selected. Customers
-          can always choose standard processing. Payment is never blocked.
+          When the travel date is sooner than this many days, Fast Track shows a Recommended badge. Standard stays
+          selected. Customers can always choose standard processing. Payment is never blocked.
         </p>
       </div>
       <div className="space-y-2">
@@ -151,6 +180,37 @@ export const TravelDateSettings: FC<ITravelDateSettingsProps> = ({ settings }) =
             Require a travel date on new applications
           </Label>
         </div>
+        <p className="text-muted-foreground text-xs leading-relaxed">
+          Off by default. The date step stays skippable, and checkout accepts an application with no date.
+        </p>
+        <div className="flex items-center gap-2">
+          <input
+            id="travel-date-step-enabled"
+            type="checkbox"
+            className="accent-primary size-4"
+            checked={stepEnabled}
+            aria-invalid={fieldErrors.travelDateStepEnabled ? true : undefined}
+            aria-describedby={fieldErrors.travelDateStepEnabled ? "travel-date-step-enabled-error" : undefined}
+            onChange={(event) => {
+              setStepEnabled(event.target.checked);
+              setFieldErrors((current) => {
+                if (!current.travelDateStepEnabled) return current;
+                const next = { ...current };
+                delete next.travelDateStepEnabled;
+                return next;
+              });
+            }}
+          />
+          <Label htmlFor="travel-date-step-enabled" className="font-normal">
+            Show the travel date step
+          </Label>
+        </div>
+        {fieldErrors.travelDateStepEnabled ? (
+          <p id="travel-date-step-enabled-error" className="text-foreground flex items-start gap-1.5 text-xs" role="alert">
+            <AlertTriangle className="text-destructive mt-0.5 size-3.5 shrink-0" aria-hidden />
+            <span>{fieldErrors.travelDateStepEnabled}</span>
+          </p>
+        ) : null}
         {fieldErrors.travelDateRequired ? (
           <p
             id="travel-date-required-error"

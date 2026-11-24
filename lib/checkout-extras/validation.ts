@@ -197,10 +197,13 @@ export const isCheckoutExtraKey = (value: string): value is TCheckoutExtraKey =>
 
 export const PLATFORM_KEY_FAST_TRACK_THRESHOLD_DAYS = "fast_track_threshold_days";
 export const PLATFORM_KEY_TRAVEL_DATE_REQUIRED = "travel_date_required";
+export const PLATFORM_KEY_TRAVEL_DATE_STEP_ENABLED = "travel_date_step_enabled";
 export const PLATFORM_KEY_TRAVEL_DATE_MAX_DAYS_AHEAD = "travel_date_max_days_ahead";
 
 export const DEFAULT_FAST_TRACK_THRESHOLD_DAYS = 4;
-export const DEFAULT_TRAVEL_DATE_REQUIRED = true;
+/** The date step is skippable. Missing rows stay optional until an admin turns this on. */
+export const DEFAULT_TRAVEL_DATE_REQUIRED = false;
+export const DEFAULT_TRAVEL_DATE_STEP_ENABLED = true;
 export const DEFAULT_TRAVEL_DATE_MAX_DAYS_AHEAD = 180;
 
 export const FAST_TRACK_THRESHOLD_MIN = 1;
@@ -237,6 +240,13 @@ export const parseTravelDateRequired = (value: string | null | undefined): boole
   return DEFAULT_TRAVEL_DATE_REQUIRED;
 };
 
+export const parseTravelDateStepEnabled = (value: string | null | undefined): boolean => {
+  if (value === undefined || value === null || value.trim() === "") return DEFAULT_TRAVEL_DATE_STEP_ENABLED;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return DEFAULT_TRAVEL_DATE_STEP_ENABLED;
+};
+
 export const parseTravelDateMaxDaysAhead = (value: string | null | undefined): number =>
   parseBoundedInt(
     value,
@@ -248,33 +258,63 @@ export const parseTravelDateMaxDaysAhead = (value: string | null | undefined): n
 export type TTravelDateSettingsField =
   | "fastTrackThresholdDays"
   | "travelDateMaxDaysAhead"
-  | "travelDateRequired";
+  | "travelDateRequired"
+  | "travelDateStepEnabled";
 
 const travelDateSettingsField = (value: PropertyKey | undefined): TTravelDateSettingsField | null =>
-  value === "fastTrackThresholdDays" || value === "travelDateMaxDaysAhead" || value === "travelDateRequired"
+  value === "fastTrackThresholdDays" ||
+  value === "travelDateMaxDaysAhead" ||
+  value === "travelDateRequired" ||
+  value === "travelDateStepEnabled"
     ? value
     : null;
 
-export const travelDateSettingsFieldError = (error: {
-  issues: readonly { code: string; path: readonly PropertyKey[]; message: string }[];
-}): { field: TTravelDateSettingsField | null; message: string } => {
-  const issue = error.issues[0];
-  if (!issue) return { field: null, message: "Check the travel date settings and try again." };
-  const field = travelDateSettingsField(issue.path[0]);
-  if (issue.code === "custom") {
-    return { field: field ?? "fastTrackThresholdDays", message: issue.message };
-  }
+const messageForTravelDateField = (
+  field: TTravelDateSettingsField | null,
+  issue: { code: string; message: string },
+): string => {
+  if (issue.code === "custom") return issue.message;
   if (field === "fastTrackThresholdDays") {
-    return { field, message: "Fast Track threshold must be a whole number from 1 to 60." };
+    return "Fast Track threshold must be a whole number from 1 to 60.";
   }
   if (field === "travelDateMaxDaysAhead") {
-    return { field, message: "Maximum days ahead must be a whole number from 1 to 730." };
+    return "Maximum days ahead must be a whole number from 1 to 730.";
   }
   if (field === "travelDateRequired") {
-    return { field, message: "Require a travel date must be yes or no." };
+    return "Require a travel date must be yes or no.";
   }
-  return { field: null, message: issue.message || "Check the travel date settings and try again." };
+  if (field === "travelDateStepEnabled") {
+    return "Show the travel date step must be yes or no.";
+  }
+  return issue.message || "Check the travel date settings and try again.";
 };
+
+export const travelDateSettingsFieldErrors = (error: {
+  issues: readonly { code: string; path: readonly PropertyKey[]; message: string }[];
+}): Array<{ field: TTravelDateSettingsField | null; message: string }> => {
+  const seen = new Set<string>();
+  const errors: Array<{ field: TTravelDateSettingsField | null; message: string }> = [];
+  for (const issue of error.issues) {
+    const field = issue.code === "custom" ? (travelDateSettingsField(issue.path[0]) ?? "fastTrackThresholdDays") : travelDateSettingsField(issue.path[0]);
+    const message = messageForTravelDateField(field, issue);
+    const key = `${field ?? ""}:${message}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    errors.push({ field, message });
+  }
+  if (errors.length === 0) {
+    return [{ field: null, message: "Check the travel date settings and try again." }];
+  }
+  return errors;
+};
+
+export const travelDateSettingsFieldError = (error: {
+  issues: readonly { code: string; path: readonly PropertyKey[]; message: string }[];
+}): { field: TTravelDateSettingsField | null; message: string } =>
+  travelDateSettingsFieldErrors(error)[0] ?? {
+    field: null,
+    message: "Check the travel date settings and try again.",
+  };
 
 export const travelDateSettingsErrorMessage = (error: {
   issues: readonly { code: string; path: readonly PropertyKey[]; message: string }[];
@@ -288,6 +328,7 @@ export const travelDateSettingsWriteSchema = z
       .min(FAST_TRACK_THRESHOLD_MIN)
       .max(FAST_TRACK_THRESHOLD_MAX),
     travelDateRequired: z.boolean(),
+    travelDateStepEnabled: z.boolean().default(DEFAULT_TRAVEL_DATE_STEP_ENABLED),
     travelDateMaxDaysAhead: z
       .number()
       .int()

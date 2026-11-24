@@ -45,7 +45,7 @@ export const visibleStayBuckets = (services: TGuidedService[]): TStayBucket[] =>
   return STAY_BUCKETS.filter((b) => have.has(b));
 };
 
-export type TChooserPhase = "stay" | "entry" | "kind" | "results";
+export type TChooserPhase = "stay" | "entry" | "kind" | "date" | "results";
 
 /** Stay buttons that actually have catalog options. Never invent empty buckets. */
 export const stayOptionsForChooser = (services: TGuidedService[]): TStayBucket[] =>

@@ -7,6 +7,7 @@ export type TTravelWindow = {
   todayUae: string;
   maxTravelDate: string;
   extrasActive: boolean;
+  showTravelDateStep: boolean;
   travelDateRequired: boolean;
   fastTrackThresholdDays: number;
 };
@@ -60,7 +61,7 @@ export type TTripPatchBody = {
   travelInsurance?: readonly TTripInsuranceSelection[];
 };
 
-export type TSpeedNote = "n1" | "n2" | "n3" | "n4" | "n5";
+export type TSpeedNote = "n1" | "n2" | "n3" | "n4" | "n5" | "soon";
 
 export type TSpeedUi = {
   showRadios: boolean;
@@ -229,10 +230,10 @@ export const speedUi = (input: {
   fastTrackAvailable: boolean;
   switchedBack: boolean;
 }): TSpeedUi => {
-  const selected: TProcessingSpeedChoice =
-    input.preview.processingSpeed === "fast_track" ? "fast_track" : "standard";
-  const under = input.preview.recommendFastTrack;
-  const soon = input.preview.daysUntilTravel !== null && input.preview.daysUntilTravel <= 1;
+  const customerChoseFast =
+    input.preview.processingSpeed === "fast_track" && input.preview.processingSpeedSource === "customer";
+  const selected: TProcessingSpeedChoice = customerChoseFast ? "fast_track" : "standard";
+  const under = input.preview.recommendFastTrack && input.preview.daysUntilTravel !== null;
 
   if (!input.fastTrackAvailable) {
     return {
@@ -243,17 +244,11 @@ export const speedUi = (input: {
     };
   }
 
-  let note: TSpeedNote | null = null;
-  if (soon) note = "n3";
-  else if (input.switchedBack && !under) note = "n5";
-  else if (under && selected === "fast_track") note = "n1";
-  else if (under && selected === "standard") note = "n2";
-
   return {
     showRadios: true,
     selected,
     badge: under,
-    note,
+    note: under ? "soon" : input.switchedBack ? "n5" : null,
   };
 };
 

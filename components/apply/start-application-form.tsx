@@ -48,10 +48,13 @@ import {
   writeChooserDraft,
 } from "@/lib/apply/chooser-draft-storage";
 import { cn } from "@/lib/utils";
-import { ArrivalDateField } from "@/components/apply/arrival-date-field";
+import { VisaSpeedChoice } from "@/components/apply/visa-speed-choice";
 import { validateTravelDate } from "@/lib/checkout-extras/dubai-calendar";
 import {
+  calendarDaysBetween,
   formatArrivalDate,
+  formatMinorAmount,
+  pluralMessage,
   travelDateErrorKey,
   type TTravelWindow,
 } from "@/lib/apply/checkout-extras-ui";
@@ -273,10 +276,16 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   const [serviceId, setServiceId] = useState(boot.serviceId);
   const [email, setEmail] = useState(boot.email);
   const [travelDate, setTravelDate] = useState(boot.travelDate);
-  const [travelDateError, setTravelDateError] = useState<string | null>(null);
-  const [travelDateTouched, setTravelDateTouched] = useState(false);
+  const [applyStep, setApplyStep] = useState<"visa" | "travellers" | "email">("visa");
+  const [processingSpeed, setProcessingSpeed] = useState<"standard" | "fast_track">("standard");
+  const [processingSpeedSource, setProcessingSpeedSource] = useState<"system" | "customer">("system");
+  const [speedQuote, setSpeedQuote] = useState<{
+    fastTrackAvailable: boolean;
+    currency: string;
+    travellerCount: number | null;
+    fastTrack: { unitAmountMinor: string; sumAmountMinor: string | null } | null;
+  } | null>(null);
   const [travelWindow, setTravelWindow] = useState<TTravelWindow | null>(null);
-  const travelDateRef = useRef<HTMLInputElement>(null);
   const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>(boot.displayCurrency ?? "");
   const [visibleCurrencies, setVisibleCurrencies] = useState<TVisibleCatalogCurrency[]>([]);
   const localPricedServiceIdsRef = useRef<string[]>([]);
@@ -525,6 +534,37 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     };
   }, []);
 
+  useEffect(() => {
+    if (!serviceId || !nationality || !displayCurrency) return;
+    const countKnown = applyStep !== "visa" || additionalTravelers.length > 0;
+    const params = new URLSearchParams({
+      serviceId,
+      currency: displayCurrency,
+      nationality,
+    });
+    if (countKnown) params.set("travellerCount", String(1 + additionalTravelers.length));
+    let cancelled = false;
+    const run = async () => {
+      const res = await fetchApiEnvelope<{
+        fastTrackAvailable: boolean;
+        currency: string;
+        travellerCount: number | null;
+        fastTrack: { unitAmountMinor: string; sumAmountMinor: string | null } | null;
+      }>(apiHref(`/apply/processing-quote?${params.toString()}`), { cache: "no-store" });
+      if (cancelled || !res.ok) return;
+      setSpeedQuote(res.data);
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [serviceId, nationality, displayCurrency, applyStep, additionalTravelers.length]);
+
+  const fastTrackHidden = Boolean(speedQuote && !speedQuote.fastTrackAvailable);
+  const speedForSubmit = fastTrackHidden && processingSpeed === "fast_track" ? "standard" : processingSpeed;
+  const sourceForSubmit =
+    fastTrackHidden && processingSpeed === "fast_track" ? "system" : processingSpeedSource;
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -570,30 +610,20 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
         setTravelWindow(windowRes.data);
       }
     }
-    if (windowForDate?.extrasActive) {
-      const input = travelDateRef.current;
-      if (input?.validity.badInput) {
-        setTravelDateError(t("start.travelDate.errorIncomplete"));
-        setTravelDateTouched(true);
-        input.focus();
-        return;
-      }
-      const validated = validateTravelDate(travelDate.trim() ? travelDate : null, {
-        required: windowForDate.travelDateRequired,
+    if (travelDate.trim() && windowForDate) {
+      const validated = validateTravelDate(travelDate.trim(), {
+        required: false,
         todayUae: windowForDate.todayUae,
         maxTravelDate: windowForDate.maxTravelDate,
       });
       if (!validated.ok) {
-        setTravelDateError(
+        setError(
           t(travelDateErrorKey(validated.code), {
             maxDate: formatArrivalDate(windowForDate.maxTravelDate, locale),
           }),
         );
-        setTravelDateTouched(true);
-        window.setTimeout(() => document.getElementById("apply-travel-date")?.focus(), 0);
         return;
       }
-      setTravelDateError(null);
     }
     if (!trimmedEmail) {
       setError(t("start.enterEmailError"));
@@ -611,7 +641,9 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       guestEmail: trimmedEmail.toLowerCase(),
       travelers: travelers.map((traveler) => ({ serviceId: traveler.serviceId, kind: traveler.kind })),
     };
-    if (travelWindow?.extrasActive && travelDate.trim()) body.travelDate = travelDate.trim();
+    if (travelDate.trim()) body.travelDate = travelDate.trim();
+    body.processingSpeed = speedForSubmit;
+    body.processingSpeedSource = sourceForSubmit;
     const res = await fetchApiEnvelope<{ application: { id: string; isGuest: boolean } }>(
       apiHref("/applications"),
       {
@@ -670,6 +702,8 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
 
   const stayCount = stayOptionsForChooser(services).length;
   const chooserHasBack =
+    applyStep !== "visa" ||
+    chooserPhase === "date" ||
     chooserPhase === "kind" ||
     (chooserPhase === "entry" && stayCount > 0) ||
     (chooserPhase === "results" &&
@@ -780,7 +814,15 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
             </div>
           </div>
 
-          {!nationality ? null : loadingServices && services.length === 0 ? (
+          {applyStep !== "visa" ? (
+            <button
+              type="button"
+              onClick={() => setApplyStep(applyStep === "email" && partyEnabled ? "travellers" : "visa")}
+              className="text-secondary hover:text-foreground inline-flex items-center gap-1 text-sm font-semibold"
+            >
+              {t("chooser.back")}
+            </button>
+          ) : !nationality ? null : loadingServices && services.length === 0 ? (
             <ClientServiceCardsSkeleton />
           ) : (
             <GuidedVisaChooser
@@ -789,6 +831,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
               selectedServiceId={serviceId}
               onSelectService={(id) => {
                 setServiceId(id);
+                setApplyStep("visa");
                 if (currencyTouchedRef.current) return;
                 const next = pickDefaultCatalogCurrency({
                   visible: visibleCurrencies,
@@ -797,19 +840,88 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                 });
                 if (next && next !== displayCurrency) setDisplayCurrency(next);
               }}
-              partyEnabled={partyEnabled}
-              canAddTraveler={canAddTraveler(additionalTravelers.length + 1, partyMaxTravelers)}
-              onAddTraveler={addTraveler}
+              partyEnabled={false}
               onAnswersChange={setAnswers}
-              onPhaseChange={setChooserPhase}
+              onPhaseChange={(next) => {
+                setChooserPhase(next);
+                if (next !== "results") setApplyStep("visa");
+              }}
               initialPhase={chooserPhase}
               initialStay={answers.stay}
               initialEntry={answers.entry}
               initialKind={answers.kind}
+              showDateStep={travelWindow ? travelWindow.showTravelDateStep : true}
+              travelDate={travelDate}
+              onTravelDateChange={setTravelDate}
+              todayUae={travelWindow?.todayUae}
+              maxTravelDate={travelWindow?.maxTravelDate}
+              selectedVisaExtra={
+                <VisaSpeedChoice
+                  fastTrackAvailable={Boolean(speedQuote?.fastTrackAvailable)}
+                  selected={speedForSubmit}
+                  recommend={Boolean(
+                    speedQuote?.fastTrackAvailable &&
+                      travelWindow &&
+                      travelDate &&
+                      (calendarDaysBetween(travelWindow.todayUae, travelDate) ?? -1) >= 0 &&
+                      (calendarDaysBetween(travelWindow.todayUae, travelDate) ?? 99) <
+                        travelWindow.fastTrackThresholdDays,
+                  )}
+                  unitText={
+                    speedQuote?.fastTrack
+                      ? t("extras.speed.fast.price", {
+                          price: formatMinorAmount(speedQuote.fastTrack.unitAmountMinor, speedQuote.currency, locale, "code"),
+                        })
+                      : null
+                  }
+                  sumText={
+                    speedQuote?.fastTrack?.sumAmountMinor && speedQuote.travellerCount && speedQuote.travellerCount > 1
+                      ? t("extras.perTravellerSum", {
+                          price: formatMinorAmount(speedQuote.fastTrack.unitAmountMinor, speedQuote.currency, locale, "code"),
+                          n: speedQuote.travellerCount,
+                          travellersWord: pluralMessage(t, "extras.travellers", locale, speedQuote.travellerCount),
+                          sum: formatMinorAmount(speedQuote.fastTrack.sumAmountMinor, speedQuote.currency, locale, "code"),
+                        })
+                      : null
+                  }
+                  onSelect={(speed) => {
+                    setProcessingSpeed(speed);
+                    setProcessingSpeedSource("customer");
+                  }}
+                />
+              }
             />
           )}
 
-          {serviceId && partyEnabled && additionalTravelers.length > 0 ? (
+          {applyStep === "visa" && chooserPhase === "results" && serviceId ? (
+            <div className="flex justify-end">
+              <ClientButton
+                type="button"
+                brand="cta"
+                className="w-full justify-center rounded-xl font-semibold sm:w-auto"
+                onClick={() => setApplyStep(partyEnabled ? "travellers" : "email")}
+              >
+                {t("start.continue")}
+              </ClientButton>
+            </div>
+          ) : null}
+
+          {applyStep === "travellers" && partyEnabled ? (
+            <div className="border-border bg-card space-y-3 rounded-2xl border-2 px-5 py-5">
+              <p className="text-foreground text-sm font-semibold">{t("chooser.travellingWithOthersTitle")}</p>
+              <p className="text-muted-foreground text-sm leading-relaxed">{t("chooser.travellingWithOthersBody")}</p>
+              <button
+                type="button"
+                onClick={addTraveler}
+                disabled={!canAddTraveler(additionalTravelers.length + 1, partyMaxTravelers)}
+                className="border-secondary text-secondary hover:bg-secondary hover:text-white rounded-xl border-2 px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {t("chooser.addTraveller")}
+              </button>
+            </div>
+          ) : null}
+
+          {applyStep === "travellers" && serviceId && partyEnabled && additionalTravelers.length > 0 ? (
             <div className="space-y-4">
               {additionalTravelers.map((traveler, idx) => {
                 const shortlist = answers.stay
@@ -933,29 +1045,21 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
             </div>
           ) : null}
 
-          {serviceId ? (
+          {applyStep === "travellers" && partyEnabled ? (
+            <div className="flex justify-end">
+              <ClientButton type="button" brand="cta" onClick={() => setApplyStep("email")}>
+                {t("start.continue")}
+              </ClientButton>
+            </div>
+          ) : null}
+
+          {applyStep === "email" && serviceId ? (
             <>
               <p className="text-muted-foreground text-xs leading-relaxed">
                 {t("start.priceIncludesNote")}
               </p>
 
               <div className="border-border/80 space-y-6 border-t pt-6">
-                {travelWindow?.extrasActive ? (
-                  <ArrivalDateField
-                    id="apply-travel-date"
-                    value={travelDate}
-                    onChange={setTravelDate}
-                    todayUae={travelWindow.todayUae}
-                    maxTravelDate={travelWindow.maxTravelDate}
-                    required={travelWindow.travelDateRequired}
-                    error={travelDateError}
-                    onError={setTravelDateError}
-                    inputRef={travelDateRef}
-                    touched={travelDateTouched}
-                    onTouched={() => setTravelDateTouched(true)}
-                    disabled={submitting}
-                  />
-                ) : null}
                 <ClientField id="apply-email" label={t("start.emailLabel")}>
                   <ClientInput
                     id="apply-email"
@@ -998,7 +1102,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
             {t("start.previousButton")}
           </ClientButton>
         ) : null}
-        {serviceId ? (
+        {applyStep === "email" && serviceId ? (
           <ClientButton
             type="submit"
             brand="cta"

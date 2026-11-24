@@ -38,15 +38,17 @@ interface ITripExtrasPanelProps {
   onRetry: () => void;
   onCancelCheckout: () => void;
   onDateBlocksPay: (blocked: boolean) => void;
+  showDate?: boolean;
+  showInsurance?: boolean;
 }
 
 const noteClass = (note: TSpeedNote): string =>
-  note === "n1" || note === "n5"
+  note === "n1" || note === "n5" || note === "soon"
     ? "border-secondary/30 bg-accent text-foreground"
     : "border-primary bg-primary/15 text-foreground";
 
 const NoteIcon: FC<{ note: TSpeedNote }> = ({ note }) =>
-  note === "n1" || note === "n5" ? (
+  note === "n1" || note === "n5" || note === "soon" ? (
     <Info className="text-secondary mt-0.5 size-4 shrink-0" aria-hidden />
   ) : (
     <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -140,6 +142,8 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
   onRetry,
   onCancelCheckout,
   onDateBlocksPay,
+  showDate = true,
+  showInsurance = true,
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
@@ -179,6 +183,7 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
 
   const draftValue = draft.trim() || null;
   const dateBlocks =
+    showDate &&
     !locked &&
     (Boolean(dateError) ||
       (preview.travelDateRequired && !preview.travelDate) ||
@@ -229,6 +234,7 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
         {t("extras.sectionTitle")}
       </h2>
 
+      {showDate ? (
       <div className="rounded-[12px] border border-border bg-card p-4 shadow-[0_4px_20px_rgba(0,0,0,0.06)] sm:p-5">
         {editing && !locked ? (
           <div className="space-y-3">
@@ -295,6 +301,7 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
           </div>
         )}
       </div>
+      ) : null}
 
       {ui.showRadios && fastTrack ? (
         <fieldset className="min-w-0 space-y-3" disabled={controlsDisabled}>
@@ -348,7 +355,7 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
         />
       ) : null}
 
-      {insurance ? (
+      {showInsurance && insurance ? (
         <fieldset
           className={cn(
             "space-y-2 rounded-[12px] border bg-card p-4",

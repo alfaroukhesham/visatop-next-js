@@ -5,7 +5,8 @@ import { AlertCircle } from "lucide-react";
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
-import { validateTravelDate } from "@/lib/checkout-extras/dubai-calendar";
+import { addCalendarDays, isRealIsoDate, validateTravelDate } from "@/lib/checkout-extras/dubai-calendar";
+import { cn } from "@/lib/utils";
 import {
   arrivalReadback,
   formatArrivalDate,
@@ -66,6 +67,18 @@ export const ArrivalDateField: FC<IArrivalDateFieldProps> = ({
   const label = required
     ? `${t("start.travelDate.label")} *`
     : `${t("start.travelDate.label")} ${t("start.travelDate.optional")}`;
+  const tomorrow = isRealIsoDate(todayUae) ? addCalendarDays(todayUae, 1) : "";
+  const tomorrowAllowed = Boolean(tomorrow) && tomorrow <= maxTravelDate;
+  const chipClass = (active: boolean) =>
+    cn(
+      "border-border bg-card text-foreground inline-flex min-h-11 items-center rounded-xl border-2 px-3 text-sm font-semibold",
+      active ? "border-secondary bg-accent/70" : "hover:border-secondary/40",
+    );
+  const pickShortcut = (next: string) => {
+    onChange(next);
+    onTouched();
+    validate(next, false);
+  };
 
   const validate = (next: string, badInput: boolean) => {
     if (badInput) {
@@ -84,29 +97,51 @@ export const ArrivalDateField: FC<IArrivalDateFieldProps> = ({
 
   return (
     <ClientField id={id} label={label}>
-      <ClientInput
-        ref={inputRef}
-        id={id}
-        type="date"
-        required={required}
-        aria-required={required}
-        disabled={disabled}
-        value={value}
-        min={todayUae}
-        max={maxTravelDate}
-        invalid={Boolean(error)}
-        aria-describedby={describedBy}
-        onChange={(event) => {
-          const next = event.target.value;
-          onChange(next);
-          if (touched || error) validate(next, event.target.validity.badInput);
-        }}
-        onBlur={(event) => {
-          onTouched();
-          validate(event.target.value, event.target.validity.badInput);
-        }}
-        className="h-12 min-h-12 w-full rounded-xl sm:max-w-64"
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <ClientInput
+          ref={inputRef}
+          id={id}
+          type="date"
+          required={required}
+          aria-required={required}
+          disabled={disabled}
+          value={value}
+          min={todayUae}
+          max={maxTravelDate}
+          invalid={Boolean(error)}
+          aria-describedby={describedBy}
+          onChange={(event) => {
+            const next = event.target.value;
+            onChange(next);
+            if (touched || error) validate(next, event.target.validity.badInput);
+          }}
+          onBlur={(event) => {
+            onTouched();
+            validate(event.target.value, event.target.validity.badInput);
+          }}
+          className="h-12 min-h-12 w-full rounded-xl sm:max-w-64"
+        />
+        <button
+          type="button"
+          className={chipClass(value === todayUae)}
+          disabled={disabled}
+          aria-pressed={value === todayUae}
+          onClick={() => pickShortcut(todayUae)}
+        >
+          {t("start.travelDate.today")}
+        </button>
+        {tomorrowAllowed ? (
+          <button
+            type="button"
+            className={chipClass(value === tomorrow)}
+            disabled={disabled}
+            aria-pressed={value === tomorrow}
+            onClick={() => pickShortcut(tomorrow)}
+          >
+            {t("start.travelDate.tomorrow")}
+          </button>
+        ) : null}
+      </div>
       {readback ? (
         <p id={readbackId} className="text-foreground text-sm font-medium">
           <bdi>{readback}</bdi>

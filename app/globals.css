@@ -459,6 +459,10 @@ html:has([data-apply-sticky-cta]) a[data-whatsapp-fab] {
     padding-bottom: var(--apply-sticky-cta-height, 5.5rem);
   }
 
+  [data-apply-ready-section]:has([data-apply-sticky-cta-spacer]) {
+    padding-bottom: 0;
+  }
+
   [data-apply-ready-inline-previous] {
     display: none;
   }

@@ -116,12 +116,12 @@ describe("TripExtrasPanel", () => {
     expect(screen.getByRole("checkbox", { name: /extras.insurance.add/ })).not.toBeChecked();
   });
 
-  it("preselects fast track and shows the recommendation without disabling standard", () => {
+  it("keeps Standard selected and badges Fast Track when the trip is soon", () => {
     renderPanel(preview());
-    expect(screen.getByRole("radio", { name: /extras.speed.fast.title/ })).toBeChecked();
-    expect(screen.getByRole("radio", { name: /extras.speed.standard.title/ })).toBeEnabled();
+    expect(screen.getByRole("radio", { name: /extras.speed.standard.title/ })).toBeChecked();
+    expect(screen.getByRole("radio", { name: /extras.speed.fast.title/ })).toBeEnabled();
     expect(screen.getByText("extras.speed.badge")).toBeInTheDocument();
-    expect(screen.getByText(/extras.notes.n1/)).toBeInTheDocument();
+    expect(screen.getByText("extras.notes.soon")).toBeInTheDocument();
   });
 
   it("locks the extras and shows the cancel note for a frozen checkout", () => {

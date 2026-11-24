@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { buildQuotePreview, checkoutArrivalDateError } from "./party-checkout-quote";
 import type { TCheckoutExtraCatalog } from "./party-checkout-quote";
-import { checkoutTravelDateError, planTripUpdate, planTripWrite, tripEditsLocked } from "./trip-rules";
+import {
+  checkoutTravelDateError,
+  planTripUpdate,
+  planTripWrite,
+  resolveDraftProcessingSpeed,
+  tripEditsLocked,
+} from "./trip-rules";
 import { buildCheckoutCharge, resolveCheckoutExtras } from "@/lib/pricing/resolve-checkout-extras";
 
 const NOW = new Date("2026-11-23T20:00:00.000Z");
@@ -160,14 +166,40 @@ describe("system preselect", () => {
     insuranceSelectedByApplicationId: {},
   };
 
-  it("preselects Fast Track under 4 days and Standard at 4 and 5", () => {
+  it("keeps Standard selected under 4 days and does not preselect Fast Track", () => {
     const soon = planTripUpdate({ ...basePlan, stored, patch: { travelDate: "2026-11-27" } });
     const onThreshold = planTripUpdate({ ...basePlan, stored, patch: { travelDate: "2026-11-28" } });
     const later = planTripUpdate({ ...basePlan, stored, patch: { travelDate: "2026-11-29" } });
-    expect(soon.ok && soon.next.processingSpeed).toBe("fast_track");
+    expect(soon.ok && soon.next.processingSpeed).toBe("standard");
     expect(soon.ok && soon.next.processingSpeedSource).toBe("system");
     expect(onThreshold.ok && onThreshold.next.processingSpeed).toBe("standard");
     expect(later.ok && later.next.processingSpeed).toBe("standard");
+  });
+
+  it("lets a customer skip the date and still saves Standard as system", () => {
+    const skipped = planTripUpdate({
+      ...basePlan,
+      travelDateRequired: true,
+      stored,
+      patch: { travelDate: null },
+    });
+    expect(skipped.ok && skipped.next.travelDate).toBeNull();
+    expect(skipped.ok && skipped.next.processingSpeed).toBe("standard");
+    expect(skipped.ok && skipped.next.processingSpeedSource).toBe("system");
+    expect(
+      resolveDraftProcessingSpeed({
+        requestedSpeed: "fast_track",
+        requestedSource: "customer",
+        fastTrackAvailable: true,
+      }),
+    ).toEqual({ processingSpeed: "fast_track", processingSpeedSource: "customer" });
+    expect(
+      resolveDraftProcessingSpeed({
+        requestedSpeed: null,
+        requestedSource: null,
+        fastTrackAvailable: true,
+      }),
+    ).toEqual({ processingSpeed: "standard", processingSpeedSource: "system" });
   });
 
   it("does not overwrite a customer choice when the date moves under the threshold", () => {
@@ -216,7 +248,7 @@ describe("system preselect", () => {
 });
 
 describe("checkout travel date gate", () => {
-  it("requires an arrival date only once an extra is enabled", () => {
+  it("allows a missing arrival date even when an extra is enabled", () => {
     expect(
       checkoutTravelDateError({
         travelDate: null,
@@ -234,7 +266,7 @@ describe("checkout travel date gate", () => {
         maxTravelDate: "2027-05-23",
         anyExtraEnabled: true,
       }),
-    ).toBe("required");
+    ).toBeNull();
     expect(
       checkoutTravelDateError({
         travelDate: "2026-11-23",
@@ -293,7 +325,7 @@ describe("quote preview", () => {
     expect(preview.maxTravelDate).toBe("2027-05-23");
   });
 
-  it("includes the system Fast Track preselect in the total when arrival is in 3 days", () => {
+  it("leaves Fast Track out of the total when arrival is in 3 days and nobody chose it", () => {
     const preview = buildQuotePreview({
       currency: "AED",
       now: NOW,
@@ -310,10 +342,10 @@ describe("quote preview", () => {
     });
 
     expect(preview.recommendFastTrack).toBe(true);
-    expect(preview.processingSpeed).toBe("fast_track");
+    expect(preview.processingSpeed).toBe("standard");
     expect(preview.processingSpeedSource).toBe("system");
-    expect(preview.extrasAmountMinor).toBe(String(7900 * 2 + 36725 * 2));
-    expect(preview.totalAmountMinor).toBe(String(35000 * 2 + 7900 * 2 + 36725 * 2));
+    expect(preview.extrasAmountMinor).toBe(String(7900 * 2));
+    expect(preview.totalAmountMinor).toBe(String(35000 * 2 + 7900 * 2));
     expect(preview.availableExtras.find((extra) => extra.key === "travel_insurance")?.selected).toBe(true);
   });
 

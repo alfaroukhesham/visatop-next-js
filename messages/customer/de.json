@@ -81,7 +81,7 @@
     },
     "travelersLabel": "Reisende",
     "travelDate": {
-      "label": "Wann kommen Sie in den VAE an?",
+      "label": "Wann reisen Sie?",
       "optional": "(freiwillig)",
       "hint": "Wählen Sie den Tag Ihrer Ankunft. Die Daten folgen der VAE-Zeit. Sie können ihn bis zur Zahlung ändern.",
       "readback": "{date} · {relative}",
@@ -89,8 +89,12 @@
       "errorPast": "Dieses Datum liegt in der Vergangenheit. Wählen Sie heute oder ein späteres Datum.",
       "errorMax": "Wählen Sie ein Datum bis zum {maxDate}. Für spätere Reisen beantragen Sie näher an Ihrem Reisedatum.",
       "errorIncomplete": "Geben Sie das vollständige Datum ein: Tag, Monat und Jahr.",
-      "soonHint": "Ihre Reise ist bald. Beim Bezahlen schlagen wir Express vor ({price} pro Reisender). Sie können Standard wählen."
-    }
+      "soonHint": "Ihre Reise ist bald. Beim Bezahlen schlagen wir Express vor ({price} pro Reisender). Sie können Standard wählen.",
+      "today": "Heute",
+      "tomorrow": "Morgen",
+      "notSure": "Noch unsicher"
+    },
+    "continue": "Weiter"
   },
   "chooser": {
     "back": "Zurück",
@@ -705,15 +709,15 @@
       "legend": "Bearbeitungsgeschwindigkeit",
       "standard": {
         "title": "Standard",
-        "promise": "In der Regel 3 Werktage, sobald Ihre Unterlagen vollständig sind",
+        "promise": "3 Werktage",
         "price": "Enthalten"
       },
       "fast": {
         "title": "Express",
-        "promiseDefault": "In der Regel innerhalb von 24 Stunden",
+        "promiseDefault": "innerhalb von 24 Stunden",
         "price": "+{price} pro Reisender"
       },
-      "badge": "Empfohlen für Ihr Datum"
+      "badge": "Empfohlen"
     },
     "perTravellerSum": "{price} × {n} {travellersWord} = {sum}",
     "travellers_one": "Reisender",
@@ -727,7 +731,8 @@
       "n2Action": "Zu Express wechseln",
       "n3": "Sie kommen {relative} an. Auch mit Express ist Ihr Visum vielleicht nicht rechtzeitig fertig. {whatsapp}, bevor Sie bezahlen, dann prüfen wir, was möglich ist.",
       "n4": "Sie kommen {relative} an. Standard dauert in der Regel 3 Werktage. {whatsapp}, bevor Sie bezahlen, damit wir Ihre Möglichkeiten prüfen.",
-      "n5": "Für Ihr neues Datum ({relative}) haben wir wieder Standard gewählt."
+      "n5": "Für Ihr neues Datum ({relative}) haben wir wieder Standard gewählt.",
+      "soon": "Ihre Reise ist in weniger als 4 Tagen. Fast Track wird empfohlen. Standard bleibt ausgewählt."
     },
     "insurance": {
       "title": "Reiseversicherung",

@@ -25,8 +25,8 @@ describe("normalizeCreateDraftBody", () => {
     const body = {
       nationalityCode: "US",
       travelers: [
-        { serviceId: "svc-adult", kind: "adult" },
-        { serviceId: "svc-child", kind: "child" },
+        { serviceId: "svc-adult", kind: "adult" as const },
+        { serviceId: "svc-child", kind: "child" as const },
       ],
       catalogCurrency: "USD" as const,
     };

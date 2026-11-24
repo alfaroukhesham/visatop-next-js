@@ -264,14 +264,28 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
   }, [applicationId, applyPreview]);
 
   const cancelCheckout = useCallback(() => {
-    const cancel = cancelRef.current;
-    if (!cancel) {
-      setPaying(false);
-      return;
+    const wasLocked = Boolean(previewRef.current?.locked);
+    setPaying(false);
+    setLockedOverride(false);
+    if (previewRef.current?.locked) {
+      const unlocked = { ...previewRef.current, locked: false };
+      previewRef.current = unlocked;
+      setPreview(unlocked);
     }
+    const cancel = cancelRef.current;
+    if (!cancel) return;
     void (async () => {
       const ok = await cancel();
-      if (ok) setPaying(false);
+      if (ok) {
+        setPaying(false);
+        setLockedOverride(false);
+        return;
+      }
+      if (!wasLocked || !previewRef.current) return;
+      const relocked = { ...previewRef.current, locked: true };
+      previewRef.current = relocked;
+      setPreview(relocked);
+      setLockedOverride(true);
     })();
   }, []);
 
