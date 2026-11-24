@@ -1,7 +1,8 @@
 import { headers } from "next/headers";
 import { jsonOk } from "@/lib/api/response";
-import { travelDateWindow } from "@/lib/checkout-extras/dubai-calendar";
+import { loadCheckoutExtraCatalog } from "@/lib/checkout-extras/party-checkout-quote";
 import { getTravelDateSettingsFromTx } from "@/lib/checkout-extras/travel-date-settings";
+import { travelWindowPayload } from "@/lib/checkout-extras/travel-window";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 
 export const runtime = "nodejs";
@@ -13,13 +14,14 @@ export async function GET() {
   const requestId = hdrs.get("x-request-id");
   const data = await withSystemDbActor(async (tx) => {
     const settings = await getTravelDateSettingsFromTx(tx);
-    const window = travelDateWindow(new Date(), settings.travelDateMaxDaysAhead);
-    return {
-      todayUae: window.todayUae,
-      maxTravelDate: window.maxTravelDate,
-      travelDateRequired: settings.travelDateRequired,
+    const catalog = await loadCheckoutExtraCatalog(tx);
+    return travelWindowPayload({
+      now: new Date(),
+      maxDaysAhead: settings.travelDateMaxDaysAhead,
+      settingRequired: settings.travelDateRequired,
       fastTrackThresholdDays: settings.fastTrackThresholdDays,
-    };
+      catalog,
+    });
   });
   return jsonOk(data, { requestId });
 }

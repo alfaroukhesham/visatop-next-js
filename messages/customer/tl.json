@@ -729,19 +729,21 @@
       "n5": "Para sa bagong petsa ({relative}), ibinalik namin kayo sa karaniwang proseso."
     },
     "insurance": {
-      "title": "Travel insurance",
-      "add": "Magdagdag ng travel insurance · {price} bawat manlalakbay",
+      "title": "Seguro sa paglalakbay",
+      "add": "Magdagdag ng seguro sa paglalakbay · {price} bawat manlalakbay",
       "terms": "Basahin ang mga tuntunin ng polisiya"
     },
     "recap": {
       "fastTrack": "Mabilis na proseso",
-      "insurance": "Travel insurance",
+      "insurance": "Seguro sa paglalakbay",
       "updating": "Ina-update ang kabuuan",
       "updated": "Na-update ang kabuuan: {total}"
     },
     "error": {
       "update": "Hindi namin na-update ang kabuuan. Tingnan ang koneksyon at subukan muli.",
-      "retry": "Subukan muli"
+      "retry": "Subukan muli",
+      "fastTrackUnavailable": "Hindi available ang mabilis na proseso sa perang ito.",
+      "insuranceUnavailable": "Hindi available ang seguro sa paglalakbay sa perang ito."
     },
     "priceChanged": "Nagbago ang presyo mula nang buksan ninyo ang pahinang ito. Tingnan ang bagong kabuuan bago magbayad.",
     "locked": "Para baguhin ang mga extra, kanselahin muna ang bayad na ito.",

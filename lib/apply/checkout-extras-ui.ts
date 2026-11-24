@@ -6,6 +6,7 @@ export type TTranslate = (key: string, vars?: TCustomerMessageVars) => string;
 export type TTravelWindow = {
   todayUae: string;
   maxTravelDate: string;
+  extrasActive: boolean;
   travelDateRequired: boolean;
   fastTrackThresholdDays: number;
 };
@@ -66,8 +67,33 @@ export type TSpeedUi = {
 export type TTripSaveOutcome =
   | { kind: "saved"; preview: TClientQuotePreview }
   | { kind: "locked" }
-  | { kind: "failed"; message: string }
+  | { kind: "failed"; messageKey: string }
   | { kind: "ignored" };
+
+export const tripFailureMessageKey = (reason: string | undefined): string => {
+  switch (reason) {
+    case "travel_date_required":
+      return "start.travelDate.errorEmpty";
+    case "travel_date_past":
+      return "start.travelDate.errorPast";
+    case "travel_date_too_far":
+      return "start.travelDate.errorMax";
+    case "travel_date_invalid":
+      return "start.travelDate.errorIncomplete";
+    case "fast_track_unavailable":
+      return "extras.error.fastTrackUnavailable";
+    case "travel_insurance_unavailable":
+      return "extras.error.insuranceUnavailable";
+    default:
+      return "extras.error.update";
+  }
+};
+
+export const reasonFromErrorDetails = (details: unknown): string | undefined => {
+  if (!details || typeof details !== "object") return undefined;
+  const reason = (details as { reason?: unknown }).reason;
+  return typeof reason === "string" ? reason : undefined;
+};
 
 const MS_PER_DAY = 86_400_000;
 
@@ -243,13 +269,13 @@ export const outcomeFromTripSave = (input: {
   ok: boolean;
   status: number;
   code?: string;
-  message?: string;
+  reason?: string;
   preview?: TClientQuotePreview;
 }): TTripSaveOutcome => {
   if (input.aborted) return { kind: "ignored" };
   if (input.ok && input.preview) return { kind: "saved", preview: input.preview };
   if (isExtrasLockedResponse(input.status, input.code)) return { kind: "locked" };
-  return { kind: "failed", message: input.message?.trim() || "extras.error.update" };
+  return { kind: "failed", messageKey: tripFailureMessageKey(input.reason) };
 };
 
 export const optimisticPreview = (
@@ -277,7 +303,7 @@ export const optimisticPreview = (
 };
 
 export const groupedExtraLines = (
-  preview: TClientQuotePreview,
+  preview: Pick<TClientQuotePreview, "extraLines">,
 ): Array<{ key: TCheckoutExtraKey; amountMinor: string; count: number }> => {
   const order: TCheckoutExtraKey[] = ["fast_track", "travel_insurance"];
   const groups = new Map<TCheckoutExtraKey, { amount: bigint; count: number }>();

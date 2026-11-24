@@ -545,7 +545,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
         setTravelWindow(windowRes.data);
       }
     }
-    if (windowForDate) {
+    if (windowForDate?.extrasActive) {
       const input = travelDateRef.current;
       if (input?.validity.badInput) {
         setTravelDateError(t("start.travelDate.errorIncomplete"));
@@ -586,7 +586,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       guestEmail: trimmedEmail.toLowerCase(),
       travelers: travelers.map((traveler) => ({ serviceId: traveler.serviceId, kind: traveler.kind })),
     };
-    if (travelDate.trim()) body.travelDate = travelDate.trim();
+    if (travelWindow?.extrasActive && travelDate.trim()) body.travelDate = travelDate.trim();
     const res = await fetchApiEnvelope<{ application: { id: string; isGuest: boolean } }>(
       apiHref("/applications"),
       {
@@ -912,7 +912,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
               </p>
 
               <div className="border-border/80 space-y-6 border-t pt-6">
-                {travelWindow ? (
+                {travelWindow?.extrasActive ? (
                   <ArrivalDateField
                     id="apply-travel-date"
                     value={travelDate}

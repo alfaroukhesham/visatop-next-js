@@ -29,6 +29,7 @@ import {
   quoteUsesCodeFormat,
   type TCheckoutExtraKey,
 } from "@/lib/apply/checkout-extras-ui";
+import type { TSettledRecap } from "@/lib/apply/charged-recap";
 import type { TCustomerMessageVars } from "@/lib/i18n/customer-messages";
 
 type CatalogService = {
@@ -73,12 +74,15 @@ interface ICheckoutOrderRecapProps {
   members?: TPublicPartyMember[];
   /** Payment page only — documents/thank-you recaps also reuse this UI. */
   trackCheckoutViewed?: boolean;
+  /** Server quote or the charged payment. When set, the total is not computed in the browser. */
+  settled?: TSettledRecap | null;
 }
 
 export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
   application,
   members = [],
   trackCheckoutViewed = false,
+  settled = null,
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
@@ -173,7 +177,7 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
   }, [services, members, currency]);
 
   const totalMinor = useMemo(() => {
-    if (quoteState) return null;
+    if (settled || quoteState) return null;
     if (!services) return null;
     if (members.length <= 1) {
       return service ? priceMinorForDisplay(service, currency) : null;
@@ -185,30 +189,42 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
       sum += minor;
     }
     return sum;
-  }, [quoteState, services, members, memberLines, service, currency]);
+  }, [settled, quoteState, services, members, memberLines, service, currency]);
 
   const serverPreview = quoteState?.preview ?? null;
-  const usingServerQuote = quoteState !== null;
+  const usingServerQuote = settled !== null || quoteState !== null;
+  const amountCurrency = settled?.currency ?? serverPreview?.currency ?? currency;
   const resolvedTotalMinor = usingServerQuote
-    ? serverPreview
-      ? BigInt(serverPreview.totalAmountMinor)
-      : null
+    ? settled
+      ? BigInt(settled.totalAmountMinor)
+      : serverPreview
+        ? BigInt(serverPreview.totalAmountMinor)
+        : null
     : totalMinor;
-  const quoteFormat = serverPreview && quoteUsesCodeFormat(serverPreview) ? "code" : "symbol";
+  const quoteFormat =
+    settled !== null
+      ? settled.extraLines.length > 0
+        ? "code"
+        : "symbol"
+      : serverPreview && quoteUsesCodeFormat(serverPreview)
+        ? "code"
+        : "symbol";
   const formatQuote = (minor: string): string =>
-    serverPreview
-      ? formatMinorAmount(minor, serverPreview.currency, locale, quoteFormat)
+    usingServerQuote
+      ? formatMinorAmount(minor, amountCurrency, locale, quoteFormat)
       : (formatDisplayMinor(minor, currency) ?? "");
   const visaAmountText = (applicationId: string, fallback: string | null): string | null => {
     if (!usingServerQuote) return fallback;
-    if (!serverPreview) return null;
-    const minor =
-      serverPreview.visaLines.find((line) => line.applicationId === applicationId)?.amountMinor ?? null;
-    return minor ? formatQuote(minor) : null;
+    const lines = settled?.visaLines ?? serverPreview?.visaLines ?? null;
+    if (!lines) return null;
+    const minor = lines.find((line) => line.applicationId === applicationId)?.amountMinor ?? null;
+    return minor ? formatQuote(minor) : fallback;
   };
   const extraLineLabel = (key: TCheckoutExtraKey): string =>
     key === "fast_track" ? t("extras.recap.fastTrack") : t("extras.recap.insurance");
-  const extraRows = serverPreview ? groupedExtraLines(serverPreview) : [];
+  const extraRows = groupedExtraLines({
+    extraLines: settled?.extraLines ?? serverPreview?.extraLines ?? [],
+  });
 
   const totalText =
     resolvedTotalMinor === null ? null : formatQuote(resolvedTotalMinor.toString());
@@ -218,7 +234,7 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
     rememberCheckoutRecapTotal({
       applicationId: application.id,
       value: Number(resolvedTotalMinor) / 100,
-      currency: serverPreview?.currency ?? currency,
+      currency: amountCurrency,
       nationality: application.nationalityCode,
       serviceId: application.serviceId,
     });
@@ -229,7 +245,7 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
         application_id: application.id,
         nationality: application.nationalityCode,
         service_id: application.serviceId,
-        currency: serverPreview?.currency ?? currency,
+        currency: amountCurrency,
         value: Number(resolvedTotalMinor) / 100,
         traveler_count: Math.max(members.length, 1),
       },
@@ -239,6 +255,7 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
     trackCheckoutViewed,
     resolvedTotalMinor,
     serverPreview?.currency,
+    amountCurrency,
     application.id,
     application.nationalityCode,
     application.serviceId,
@@ -276,7 +293,7 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
 
   const subtotalText = price?.text ?? null;
 
-  if (services === null || (usingServerQuote && quoteState.loading && !serverPreview)) {
+  if (services === null || (quoteState?.loading && !serverPreview && !settled)) {
     return <ClientOrderRecapSkeleton />;
   }
 
@@ -413,7 +430,7 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
         </div>
       ) : null}
 
-      {usingServerQuote && quoteState.loadError && !serverPreview ? (
+      {quoteState?.loadError && !serverPreview && !settled ? (
         <p className="text-foreground text-sm" role="alert">
           {quoteState.loadError}
         </p>

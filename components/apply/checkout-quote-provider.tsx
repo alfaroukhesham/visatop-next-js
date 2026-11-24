@@ -19,9 +19,11 @@ import {
   extraPriceSignature,
   extrasSectionVisible,
   formatMinorAmount,
+  formatArrivalDate,
   optimisticPreview,
   outcomeFromTripSave,
   quoteUsesCodeFormat,
+  reasonFromErrorDetails,
   type TClientQuotePreview,
   type TTripPatchBody,
 } from "@/lib/apply/checkout-extras-ui";
@@ -42,8 +44,9 @@ interface ICheckoutQuoteContext {
   payDescribedBy: string | null;
   patchTrip: (patch: TTripPatchBody) => Promise<boolean>;
   retry: () => void;
+  refreshQuote: () => void;
   setDateBlocksPay: (blocked: boolean) => void;
-  registerCancelCheckout: (cancel: (() => void) | null) => void;
+  registerCancelCheckout: (cancel: (() => Promise<boolean> | boolean) | null) => void;
   cancelCheckout: () => void;
 }
 
@@ -79,11 +82,12 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
   const [termsResetKey, setTermsResetKey] = useState(0);
   const [dateBlocksPay, setDateBlocksPay] = useState(false);
   const previewRef = useRef<TClientQuotePreview | null>(null);
+  const lastSavedRef = useRef<TClientQuotePreview | null>(null);
   const seq = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const lastPatch = useRef<TTripPatchBody | null>(null);
   const initialPrices = useRef<string | null>(null);
-  const cancelRef = useRef<(() => void) | null>(null);
+  const cancelRef = useRef<(() => Promise<boolean> | boolean) | null>(null);
 
   const rememberPrices = useCallback((next: TClientQuotePreview) => {
     const signature = extraPriceSignature(next);
@@ -100,6 +104,7 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
 
   const applyPreview = useCallback(
     (next: TClientQuotePreview, announce: boolean) => {
+      lastSavedRef.current = next;
       previewRef.current = next;
       setPreview(next);
       setLockedOverride(false);
@@ -147,13 +152,19 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
-      const snapshot = current;
+      const previous = lastSavedRef.current;
       const optimistic = optimisticPreview(current, patch);
       previewRef.current = optimistic;
       setPreview(optimistic);
       setUpdating(true);
       setUpdateError(null);
       if (patch.processingSpeed) setSwitchedBack(false);
+
+      const restoreSaved = () => {
+        if (!previous) return;
+        previewRef.current = previous;
+        setPreview(previous);
+      };
 
       return new Promise((resolve) => {
         const run = async () => {
@@ -176,26 +187,27 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
               ok: res.ok,
               status: res.status,
               code: res.ok ? undefined : res.error.code,
-              message: res.ok ? undefined : res.error.message,
+              reason: res.ok ? undefined : reasonFromErrorDetails(res.error.details),
               preview: res.ok ? res.data : undefined,
             });
             if (outcome.kind === "saved") {
-              if (patch.travelDate !== undefined && didSwitchBackToStandard(snapshot, outcome.preview)) {
+              if (patch.travelDate !== undefined && previous && didSwitchBackToStandard(previous, outcome.preview)) {
                 setSwitchedBack(true);
               }
               if (patch.travelDate !== undefined) setAnnounceNote(true);
               applyPreview(outcome.preview, true);
               resolve(true);
             } else if (outcome.kind === "locked") {
-              previewRef.current = snapshot;
-              setPreview(snapshot);
+              restoreSaved();
               setLockedOverride(true);
               resolve(false);
             } else if (outcome.kind === "failed") {
-              previewRef.current = snapshot;
-              setPreview(snapshot);
+              restoreSaved();
+              const maxDate = previous?.maxTravelDate;
               setUpdateError(
-                outcome.message === "extras.error.update" ? t("extras.error.update") : outcome.message,
+                outcome.messageKey === "start.travelDate.errorMax" && maxDate
+                  ? t(outcome.messageKey, { maxDate: formatArrivalDate(maxDate, locale) })
+                  : t(outcome.messageKey),
               );
               resolve(false);
             } else {
@@ -206,8 +218,7 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
               resolve(false);
               return;
             }
-            previewRef.current = snapshot;
-            setPreview(snapshot);
+            restoreSaved();
             setUpdateError(t("extras.error.update"));
             resolve(false);
           } finally {
@@ -217,20 +228,41 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
         void run();
       });
     },
-    [applicationId, applyPreview, t],
+    [applicationId, applyPreview, locale, t],
   );
 
   const retry = useCallback(() => {
     if (lastPatch.current) void patchTrip(lastPatch.current);
   }, [patchTrip]);
 
-  const registerCancelCheckout = useCallback((cancel: (() => void) | null) => {
+  const registerCancelCheckout = useCallback((cancel: (() => Promise<boolean> | boolean) | null) => {
     cancelRef.current = cancel;
   }, []);
 
+  const refreshQuote = useCallback(() => {
+    seq.current += 1;
+    abortRef.current?.abort();
+    setUpdating(false);
+    void (async () => {
+      const res = await fetchApiEnvelope<TClientQuotePreview>(
+        apiHref(`/applications/${encodeURIComponent(applicationId)}/quote-preview`),
+        { cache: "no-store" },
+      );
+      if (!res.ok) return;
+      setLoadError(null);
+      applyPreview(res.data, false);
+    })();
+  }, [applicationId, applyPreview]);
+
   const cancelCheckout = useCallback(() => {
-    cancelRef.current?.();
-  }, []);
+    void (async () => {
+      const cancel = cancelRef.current;
+      if (!cancel) return;
+      const ok = await cancel();
+      if (!ok) return;
+      refreshQuote();
+    })();
+  }, [refreshQuote]);
 
   const locked = Boolean(preview?.locked) || lockedOverride;
   const sectionVisible = preview ? extrasSectionVisible(preview) : false;
@@ -258,6 +290,7 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
       payDescribedBy,
       patchTrip,
       retry,
+      refreshQuote,
       setDateBlocksPay,
       registerCancelCheckout,
       cancelCheckout,
@@ -278,6 +311,7 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
       payDescribedBy,
       patchTrip,
       retry,
+      refreshQuote,
       registerCancelCheckout,
       cancelCheckout,
     ],

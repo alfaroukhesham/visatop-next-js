@@ -741,7 +741,9 @@
     },
     "error": {
       "update": "No pudimos actualizar su total. Compruebe su conexión e inténtelo de nuevo.",
-      "retry": "Intentar de nuevo"
+      "retry": "Intentar de nuevo",
+      "fastTrackUnavailable": "El trámite rápido no está disponible en esta moneda.",
+      "insuranceUnavailable": "El seguro de viaje no está disponible en esta moneda."
     },
     "priceChanged": "El precio cambió desde que abrió esta página. Revise el nuevo total antes de pagar.",
     "locked": "Para cambiar sus extras, cancele primero este pago.",

@@ -741,7 +741,9 @@
     },
     "error": {
       "update": "Non siamo riusciti ad aggiornare il totale. Controllate la connessione e riprovate.",
-      "retry": "Riprova"
+      "retry": "Riprova",
+      "fastTrackUnavailable": "Il percorso rapido non è disponibile in questa valuta.",
+      "insuranceUnavailable": "L'assicurazione di viaggio non è disponibile in questa valuta."
     },
     "priceChanged": "Il prezzo è cambiato da quando avete aperto questa pagina. Controllate il nuovo totale prima di pagare.",
     "locked": "Per modificare gli extra, annullate prima questo pagamento.",

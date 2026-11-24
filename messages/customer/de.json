@@ -81,14 +81,14 @@
     "travelersLabel": "Reisende",
     "travelDate": {
       "label": "Wann kommen Sie in den VAE an?",
-      "optional": "(optional)",
+      "optional": "(freiwillig)",
       "hint": "Wählen Sie den Tag Ihrer Ankunft. Die Daten folgen der VAE-Zeit. Sie können ihn bis zur Zahlung ändern.",
       "readback": "{date} · {relative}",
       "errorEmpty": "Wählen Sie Ihr Ankunftsdatum, um fortzufahren.",
       "errorPast": "Dieses Datum liegt in der Vergangenheit. Wählen Sie heute oder ein späteres Datum.",
       "errorMax": "Wählen Sie ein Datum bis zum {maxDate}. Für spätere Reisen beantragen Sie näher an Ihrem Reisedatum.",
       "errorIncomplete": "Geben Sie das vollständige Datum ein: Tag, Monat und Jahr.",
-      "soonHint": "Ihre Reise ist bald. Beim Bezahlen schlagen wir Fast Track vor ({price} pro Reisender). Sie können Standard wählen."
+      "soonHint": "Ihre Reise ist bald. Beim Bezahlen schlagen wir Express vor ({price} pro Reisender). Sie können Standard wählen."
     }
   },
   "chooser": {
@@ -708,7 +708,7 @@
         "price": "Enthalten"
       },
       "fast": {
-        "title": "Fast Track",
+        "title": "Express",
         "promiseDefault": "In der Regel innerhalb von 24 Stunden",
         "price": "+{price} pro Reisender"
       },
@@ -721,10 +721,10 @@
     "travellers_many": "Reisende",
     "travellers_other": "Reisende",
     "notes": {
-      "n1": "Sie kommen {relative} an, deshalb haben wir Fast Track gewählt ({price} pro Reisender). Standard dauert in der Regel 3 Werktage. Sie können zu Standard wechseln.",
+      "n1": "Sie kommen {relative} an, deshalb haben wir Express gewählt ({price} pro Reisender). Standard dauert in der Regel 3 Werktage. Sie können zu Standard wechseln.",
       "n2": "Sie kommen {relative} an. Standard dauert in der Regel 3 Werktage, Ihr Visum ist daher vielleicht nicht rechtzeitig fertig. Sie können trotzdem mit Standard bezahlen.",
-      "n2Action": "Zu Fast Track wechseln",
-      "n3": "Sie kommen {relative} an. Auch mit Fast Track ist Ihr Visum vielleicht nicht rechtzeitig fertig. {whatsapp}, bevor Sie bezahlen, dann prüfen wir, was möglich ist.",
+      "n2Action": "Zu Express wechseln",
+      "n3": "Sie kommen {relative} an. Auch mit Express ist Ihr Visum vielleicht nicht rechtzeitig fertig. {whatsapp}, bevor Sie bezahlen, dann prüfen wir, was möglich ist.",
       "n4": "Sie kommen {relative} an. Standard dauert in der Regel 3 Werktage. {whatsapp}, bevor Sie bezahlen, damit wir Ihre Möglichkeiten prüfen.",
       "n5": "Für Ihr neues Datum ({relative}) haben wir wieder Standard gewählt."
     },
@@ -734,14 +734,16 @@
       "terms": "Versicherungsbedingungen lesen"
     },
     "recap": {
-      "fastTrack": "Fast-Track-Bearbeitung",
+      "fastTrack": "Expressbearbeitung",
       "insurance": "Reiseversicherung",
       "updating": "Gesamtbetrag wird aktualisiert",
       "updated": "Gesamtbetrag aktualisiert: {total}"
     },
     "error": {
       "update": "Wir konnten Ihren Gesamtbetrag nicht aktualisieren. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
-      "retry": "Erneut versuchen"
+      "retry": "Erneut versuchen",
+      "fastTrackUnavailable": "Express ist in dieser Währung nicht verfügbar.",
+      "insuranceUnavailable": "Die Reiseversicherung ist in dieser Währung nicht verfügbar."
     },
     "priceChanged": "Der Preis hat sich geändert, seit Sie diese Seite geöffnet haben. Prüfen Sie den neuen Gesamtbetrag vor der Zahlung.",
     "locked": "Um Ihre Extras zu ändern, brechen Sie zuerst diese Zahlung ab.",

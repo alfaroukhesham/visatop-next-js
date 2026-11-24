@@ -741,7 +741,9 @@
     },
     "error": {
       "update": "Nous n'avons pas pu mettre à jour votre total. Vérifiez votre connexion et réessayez.",
-      "retry": "Réessayer"
+      "retry": "Réessayer",
+      "fastTrackUnavailable": "Le traitement accéléré n'est pas disponible dans cette devise.",
+      "insuranceUnavailable": "L'assurance voyage n'est pas disponible dans cette devise."
     },
     "priceChanged": "Le prix a changé depuis l'ouverture de cette page. Vérifiez le nouveau total avant de payer.",
     "locked": "Pour modifier vos services supplémentaires, annulez d'abord ce paiement.",

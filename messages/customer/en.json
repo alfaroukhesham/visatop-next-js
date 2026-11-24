@@ -741,7 +741,9 @@
     },
     "error": {
       "update": "We couldn't update your total. Check your connection and try again.",
-      "retry": "Try again"
+      "retry": "Try again",
+      "fastTrackUnavailable": "Fast Track isn't available in this currency.",
+      "insuranceUnavailable": "Travel insurance isn't available in this currency."
     },
     "priceChanged": "The price changed since you opened this page. Check the new total before you pay.",
     "locked": "To change your extras, cancel this payment first.",

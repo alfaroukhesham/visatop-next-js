@@ -208,15 +208,22 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
     setCheckoutError(t("checkout.errors.paymentNotCompleted"));
   }, [t]);
 
-  const cancelOpenCheckout = useCallback(() => {
+  const cancelOpenCheckout = useCallback(async (): Promise<boolean> => {
     setCheckoutError(null);
     setEmbeddedUrl(null);
     setFincraInline(null);
     setConfirming(false);
     setShowPaddleRetry(false);
     pollCleanupRef.current?.();
-    void draft.cancelCheckout();
+    return draft.cancelCheckout();
   }, [draft]);
+
+  const sawOpenCheckout = useRef(false);
+  useEffect(() => {
+    const open = draft.app?.paymentStatus === "checkout_created";
+    if (sawOpenCheckout.current && !open) quote?.refreshQuote();
+    sawOpenCheckout.current = open;
+  }, [draft.app?.paymentStatus, quote]);
 
   useEffect(() => {
     if (!quote) return;
@@ -277,7 +284,7 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
         countdown={draft.countdown}
         checkoutError={checkoutError}
         onDismissCheckoutError={() => setCheckoutError(null)}
-        onCancelCheckout={cancelOpenCheckout}
+        onCancelCheckout={quote ? quote.cancelCheckout : () => void cancelOpenCheckout()}
         payBlocked={quote?.payBlocked ?? false}
         payDescribedBy={quote?.payDescribedBy ?? null}
         termsResetKey={quote?.termsResetKey ?? 0}

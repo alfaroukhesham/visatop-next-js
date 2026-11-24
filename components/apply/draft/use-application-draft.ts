@@ -429,11 +429,12 @@ export function useApplicationDraft(applicationId: string) {
     });
     if (!res.ok) {
       setActionMsg(res.error.message);
-      return;
+      return false;
     }
     setCountdown(null);
     setActionMsg(tRef.current("draft.actionMessages.checkoutCancelled"));
     await load({ silent: true });
+    return true;
   }, [applicationId, load]);
 
   useEffect(() => {

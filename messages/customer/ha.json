@@ -741,7 +741,9 @@
     },
     "error": {
       "update": "Ba mu iya sabunta jimlar ku ba. Duba haɗin ku sai ku sake gwadawa.",
-      "retry": "Sake gwadawa"
+      "retry": "Sake gwadawa",
+      "fastTrackUnavailable": "Saurin aiki ba ya samuwa a wannan kudin.",
+      "insuranceUnavailable": "Inshorar tafiya ba ta samuwa a wannan kudin."
     },
     "priceChanged": "Farashin ya canza tun lokacin da kuka buɗe wannan shafi. Duba sabuwar jimla kafin biya.",
     "locked": "Don canza ƙarin ayyuka, fara soke wannan biyan kuɗi.",

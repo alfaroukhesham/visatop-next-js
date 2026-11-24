@@ -144,7 +144,6 @@ describe("409 lock handling", () => {
         ok: false,
         status: 409,
         code: "CHECKOUT_FROZEN",
-        message: "To change your extras, cancel this payment first.",
       }),
     ).toEqual({ kind: "locked" });
   });
@@ -156,9 +155,9 @@ describe("409 lock handling", () => {
         ok: false,
         status: 400,
         code: "VALIDATION_ERROR",
-        message: "Choose your arrival date to continue.",
+        reason: "travel_date_past",
       }),
-    ).toEqual({ kind: "failed", message: "Choose your arrival date to continue." });
+    ).toEqual({ kind: "failed", messageKey: "start.travelDate.errorPast" });
   });
 
   it("ignores an aborted save so the latest change wins", () => {
@@ -180,6 +179,8 @@ describe("customer copy", () => {
       "extras.speed.badge",
       "extras.notes.n1",
       "extras.locked",
+      "extras.error.fastTrackUnavailable",
+      "extras.error.insuranceUnavailable",
       "extras.travellers_other",
       "common.opensNewTab",
     ];
