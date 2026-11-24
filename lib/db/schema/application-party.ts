@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, date, boolean, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { nationality } from "./visa";
 
@@ -24,6 +24,15 @@ export const applicationParty = pgTable(
     /** Last document/details screen the customer confirmed. No personal data. */
     wizardCursorScreen: text("wizard_cursor_screen"),
     wizardCursorTravellerId: text("wizard_cursor_traveller_id"),
+    /** Calendar date in Asia/Dubai. Null until the customer flow writes it. */
+    travelDate: date("travel_date"),
+    /** 'standard' | 'fast_track'. Null until a later checkout release writes it. */
+    processingSpeed: text("processing_speed"),
+    /**
+     * Who set `processing_speed`: 'system' (recommendation) or 'customer'.
+     * A later travel-date change must not overwrite a customer choice.
+     */
+    processingSpeedSource: text("processing_speed_source"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
