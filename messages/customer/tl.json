@@ -74,7 +74,7 @@
       "child": "Bata",
       "chooseVisaOption": "Pumili ng visa",
       "chooseVisaForThis": "Pumili ng visa para sa traveler na ito.",
-      "visaForTraveller": "Visa para sa Traveler {number}",
+      "visaForTraveller": "Visa para sa manlalakbay {number}",
       "addAtLeastOne": "Magdagdag ng kahit isang traveler.",
       "maxTravelers": "Maximum na {count} traveler bawat checkout.",
       "chooseVisaForAll": "Pumili ng visa para sa bawat traveler."
@@ -732,8 +732,8 @@
     "insurance": {
       "title": "Seguro sa paglalakbay",
       "add": "Magdagdag ng seguro sa paglalakbay · {price} bawat manlalakbay",
-      "selectAll": "Piliin ang lahat ng traveler",
-      "forTraveller": "Traveler {number} · {price}",
+      "selectAll": "Piliin ang lahat ng manlalakbay",
+      "forTraveller": "Manlalakbay {number} · {price}",
       "terms": "Basahin ang mga tuntunin ng polisiya"
     },
     "recap": {
