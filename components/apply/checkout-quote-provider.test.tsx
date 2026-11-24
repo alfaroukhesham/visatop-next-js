@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
 
+import { useState } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TClientQuotePreview } from "@/lib/apply/checkout-extras-ui";
@@ -18,6 +19,7 @@ vi.mock("@/lib/portal/fetch-envelope", () => ({
 
 import { CheckoutQuoteProvider, useCheckoutQuoteOptional } from "@/components/apply/checkout-quote-provider";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
+import { useRefreshQuoteWhenCheckoutEnds } from "@/components/apply/use-refresh-quote-when-checkout-ends";
 
 const fetchMock = vi.mocked(fetchApiEnvelope);
 
@@ -82,35 +84,81 @@ const Probe = () => {
   );
 };
 
+const Session = ({ mode }: { mode: "poll" | "cancel" }) => {
+  const quote = useCheckoutQuoteOptional();
+  const [status, setStatus] = useState("checkout_created");
+  useRefreshQuoteWhenCheckoutEnds(status, quote?.refreshQuote);
+  return (
+    <>
+      <span data-testid="locked">{String(Boolean(quote?.locked))}</span>
+      <button type="button" onClick={() => setStatus("unpaid")}>
+        session-end
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          quote?.registerCancelCheckout(async () => {
+            setStatus("unpaid");
+            return true;
+          })
+        }
+      >
+        register
+      </button>
+      <button type="button" onClick={() => quote?.cancelCheckout()}>
+        cancel
+      </button>
+      <span data-testid="mode">{mode}</span>
+    </>
+  );
+};
+
+const lockedPreviewLoads = () => {
+  let loads = 0;
+  fetchMock.mockImplementation(async () => {
+    loads += 1;
+    return {
+      ok: true as const,
+      status: 200,
+      requestId: String(loads),
+      data: preview({ locked: loads === 1 }),
+    };
+  });
+  return () => loads;
+};
+
 describe("checkout quote provider", () => {
   afterEach(() => {
     cleanup();
     fetchMock.mockReset();
   });
 
-  it("unlocks a loaded lock after cancel succeeds and the preview is refetched", async () => {
-    let loads = 0;
-    fetchMock.mockImplementation(async (url: string) => {
-      loads += 1;
-      return {
-        ok: true,
-        status: 200,
-        requestId: String(loads),
-        data: preview({ locked: !String(url).includes("quote-preview") || loads === 1 }),
-      };
-    });
-
+  it("unlocks once when the countdown or poll sees the checkout session end", async () => {
+    const loads = lockedPreviewLoads();
     render(
       <CheckoutQuoteProvider applicationId="app-1">
-        <Probe />
+        <Session mode="poll" />
       </CheckoutQuoteProvider>,
     );
+    await waitFor(() => expect(screen.getByTestId("locked").textContent).toBe("true"));
+    expect(loads()).toBe(1);
+    fireEvent.click(screen.getByRole("button", { name: "session-end" }));
+    await waitFor(() => expect(screen.getByTestId("locked").textContent).toBe("false"));
+    expect(loads()).toBe(2);
+  });
 
+  it("does not fetch a second quote when the cancel button ends the same session", async () => {
+    const loads = lockedPreviewLoads();
+    render(
+      <CheckoutQuoteProvider applicationId="app-1">
+        <Session mode="cancel" />
+      </CheckoutQuoteProvider>,
+    );
     await waitFor(() => expect(screen.getByTestId("locked").textContent).toBe("true"));
     fireEvent.click(screen.getByRole("button", { name: "register" }));
     fireEvent.click(screen.getByRole("button", { name: "cancel" }));
     await waitFor(() => expect(screen.getByTestId("locked").textContent).toBe("false"));
-    expect(loads).toBeGreaterThanOrEqual(2);
+    expect(loads()).toBe(2);
   });
 
   it("restores the last saved speed when Fast Track then Standard fails", async () => {

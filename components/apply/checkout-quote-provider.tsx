@@ -261,14 +261,10 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
   }, [applicationId, applyPreview]);
 
   const cancelCheckout = useCallback(() => {
-    void (async () => {
-      const cancel = cancelRef.current;
-      if (!cancel) return;
-      const ok = await cancel();
-      if (!ok) return;
-      refreshQuote();
-    })();
-  }, [refreshQuote]);
+    const cancel = cancelRef.current;
+    if (!cancel) return;
+    void cancel();
+  }, []);
 
   const locked = Boolean(preview?.locked) || lockedOverride;
   const sectionVisible = preview ? extrasSectionVisible(preview) : false;

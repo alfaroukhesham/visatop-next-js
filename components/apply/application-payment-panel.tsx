@@ -8,6 +8,7 @@ import { DraftPanelError } from "@/components/apply/draft/draft-panel-error";
 import { DraftPaymentSection } from "@/components/apply/draft/draft-payment-section";
 import { useApplicationDraft } from "@/components/apply/draft/use-application-draft";
 import { useCheckoutQuoteOptional } from "@/components/apply/checkout-quote-provider";
+import { useRefreshQuoteWhenCheckoutEnds } from "@/components/apply/use-refresh-quote-when-checkout-ends";
 import { ClientButton } from "@/components/client/client-button";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { applyPreviousHref, type TApplyWizardMember } from "@/lib/apply/apply-wizard";
@@ -217,6 +218,8 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
     pollCleanupRef.current?.();
     return draft.cancelCheckout();
   }, [draft]);
+
+  useRefreshQuoteWhenCheckoutEnds(draft.app?.paymentStatus, quote?.refreshQuote);
 
   useEffect(() => {
     if (!quote) return;
