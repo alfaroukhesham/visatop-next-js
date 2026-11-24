@@ -8,6 +8,8 @@ import { ApplicationDraftPanel } from "@/components/apply/application-draft-pane
 import { ClientDraftPanelSkeleton } from "@/components/client/client-loading";
 import { loadApplicationRowForRequest } from "@/lib/applications/load-application-row-for-request";
 import { loadPartyMembers } from "@/lib/applications/load-party-members";
+import { settledRecapFromPreview } from "@/lib/apply/charged-recap";
+import { previewPartyQuote } from "@/lib/checkout-extras/party-checkout-quote";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { toPublicApplication } from "@/lib/applications/public-application";
 import { CUSTOMER_LOCALE_COOKIE, parseCustomerLocale } from "@/lib/i18n/customer-locale";
@@ -41,7 +43,14 @@ const ApplyApplicationPage = async ({ params, searchParams }: Props) => {
   if (row.paymentStatus === "checkout_created" && !explicitWizardScreenRequested(query.screen)) {
     redirect(`/apply/applications/${encodeURIComponent(id)}/payment`);
   }
-  const members = await withSystemDbActor((tx) => loadPartyMembers(tx, row));
+  const { members, settled } = await withSystemDbActor(async (tx) => {
+    const members = await loadPartyMembers(tx, row);
+    const preview = await previewPartyQuote(tx, id);
+    return {
+      members,
+      settled: preview.ok ? settledRecapFromPreview(preview.preview) : null,
+    };
+  });
   const cookieStore = await cookies();
   const t = createCustomerT(parseCustomerLocale(cookieStore.get(CUSTOMER_LOCALE_COOKIE)?.value));
   return (
@@ -54,7 +63,13 @@ const ApplyApplicationPage = async ({ params, searchParams }: Props) => {
         detailsTravellerId={lastTravellerApplicationId(members)}
         hasSelectedVisa
         contentFirstOnMobile
-        visaSummary={<CheckoutOrderRecap application={toPublicApplication(row, undefined, t)} members={members} />}
+        visaSummary={
+          <CheckoutOrderRecap
+            application={toPublicApplication(row, undefined, t)}
+            members={members}
+            settled={settled}
+          />
+        }
         contentClassName="theme-client-rise mx-auto w-full max-w-4xl space-y-8"
       >
         <Suspense fallback={<ClientDraftPanelSkeleton />}>

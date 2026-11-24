@@ -12,6 +12,8 @@ export type TChooserDraft = {
   phase: TChooserPhase;
   additionalTravelers: TPartyTravelerDraft[];
   email: string;
+  /** YYYY-MM-DD arrival date, or empty when the customer has not chosen one. */
+  travelDate: string;
 };
 
 const storageKey = (nationality: string): string =>
@@ -72,6 +74,7 @@ export function readChooserDraft(nationality: string): TChooserDraft | null {
           )
         : [],
       email: typeof parsed.email === "string" ? parsed.email : "",
+      travelDate: typeof parsed.travelDate === "string" ? parsed.travelDate : "",
     };
   } catch {
     return null;

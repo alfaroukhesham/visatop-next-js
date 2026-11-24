@@ -24,6 +24,8 @@ interface IPaddleCheckoutButtonProps {
   termsAccepted?: boolean;
   /** Called when the user tries to pay without accepting Terms (inline error). */
   onTermsRejected?: () => void;
+  /** Points at the "Updating total" status while a quote save is in flight. */
+  describedBy?: string | null;
   onSuccess?: () => void;
   /** Called with Ziina `embedded_url` so checkout stays on the payment step. */
   onZiinaEmbedded?: (embeddedUrl: string) => void;
@@ -38,6 +40,7 @@ interface IPaddleCheckoutButtonProps {
 export function PaddleCheckoutButton({
   applicationId,
   disabled,
+  describedBy = null,
   termsAccepted = false,
   onTermsRejected,
   onSuccess,
@@ -267,11 +270,12 @@ export function PaddleCheckoutButton({
       onClick={handleCheckout}
       disabled={disabled || isInitializing || !termsAccepted}
       aria-disabled={disabled || isInitializing || !termsAccepted}
+      aria-describedby={describedBy ?? undefined}
       className="h-12 w-full text-lg font-bold shadow-lg transition-all hover:shadow-xl"
     >
       {isInitializing ? (
         <>
-          <Loader2 className="mr-2 size-5 animate-spin" />
+          <Loader2 className="me-2 size-5 animate-spin" />
           {t("payment.preparingCheckout")}
         </>
       ) : (

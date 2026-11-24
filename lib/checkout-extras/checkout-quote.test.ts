@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildQuotePreview } from "./party-checkout-quote";
+import { buildQuotePreview, checkoutArrivalDateError } from "./party-checkout-quote";
 import type { TCheckoutExtraCatalog } from "./party-checkout-quote";
 import { checkoutTravelDateError, planTripUpdate, planTripWrite, tripEditsLocked } from "./trip-rules";
 import { buildCheckoutCharge, resolveCheckoutExtras } from "@/lib/pricing/resolve-checkout-extras";
@@ -237,6 +237,19 @@ describe("checkout travel date gate", () => {
         anyExtraEnabled: false,
       }),
     ).toBe("past");
+  });
+
+  it("lets checkout proceed without a date when the extra is enabled but has no price", () => {
+    expect(
+      checkoutArrivalDateError({
+        travelDate: null,
+        settingRequired: true,
+        currency: "AED",
+        catalog: [{ enabled: true, prices: [] }],
+        todayUae: TODAY,
+        maxTravelDate: "2027-05-23",
+      }),
+    ).toBeNull();
   });
 });
 

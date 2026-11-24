@@ -78,7 +78,18 @@
       "maxTravelers": "Massimo {count} viaggiatori per checkout.",
       "chooseVisaForAll": "Scelga un visto per ogni viaggiatore."
     },
-    "travelersLabel": "Viaggiatori"
+    "travelersLabel": "Viaggiatori",
+    "travelDate": {
+      "label": "Quando arrivate negli EAU?",
+      "optional": "(facoltativo)",
+      "hint": "Scegliete il giorno di arrivo. Le date seguono l'ora degli EAU. Potete cambiarla fino al pagamento.",
+      "readback": "{date} · {relative}",
+      "errorEmpty": "Scegliete la data di arrivo per continuare.",
+      "errorPast": "Questa data è passata. Scegliete oggi o una data successiva.",
+      "errorMax": "Scegliete una data entro il {maxDate}. Per viaggi più lontani, presentate la domanda più vicino alla partenza.",
+      "errorIncomplete": "Inserite la data completa: giorno, mese e anno.",
+      "soonHint": "Il viaggio è vicino. Nel pagamento suggeriremo il trattamento rapido ({price} a viaggiatore). Potete scegliere il trattamento standard."
+    }
   },
   "chooser": {
     "back": "Indietro",
@@ -560,7 +571,8 @@
     "loadingVisaOptions": "Caricamento opzioni visto",
     "loadingApplications": "Caricamento domande",
     "loadingOrderSummary": "Caricamento riepilogo ordine",
-    "whatsappSupport": "Chatta su WhatsApp"
+    "whatsappSupport": "Chatta su WhatsApp",
+    "opensNewTab": "(si apre in una nuova scheda)"
   },
   "seo": {
     "homeTitle": "Richiedi online il visto turistico per gli Emirati Arabi Uniti",
@@ -672,5 +684,71 @@
     "jumpAheadHint": "Finish this step first, then tap Continue",
     "docShowDetails": "{name}, show details",
     "docHideDetails": "{name}, hide details"
+  },
+  "relative": {
+    "today": "oggi",
+    "tomorrow": "domani",
+    "inDays_one": "tra {n} giorno",
+    "inDays_two": "tra {n} giorni",
+    "inDays_few": "tra {n} giorni",
+    "inDays_many": "tra {n} giorni",
+    "inDays_other": "tra {n} giorni"
+  },
+  "extras": {
+    "sectionTitle": "Il vostro viaggio e gli extra",
+    "arrivalLabel": "Arrivo negli EAU",
+    "change": "Modifica",
+    "saveDate": "Salva data",
+    "cancel": "Annulla",
+    "speed": {
+      "legend": "Velocità di lavorazione",
+      "standard": {
+        "title": "Standard",
+        "promise": "Di solito 3 giorni lavorativi quando i documenti sono completi",
+        "price": "Incluso"
+      },
+      "fast": {
+        "title": "Trattamento rapido",
+        "promiseDefault": "Di solito entro 24 ore",
+        "price": "+{price} a viaggiatore"
+      },
+      "badge": "Consigliato per la vostra data"
+    },
+    "perTravellerSum": "{price} × {n} {travellersWord} = {sum}",
+    "travellers_one": "viaggiatore",
+    "travellers_two": "viaggiatori",
+    "travellers_few": "viaggiatori",
+    "travellers_many": "viaggiatori",
+    "travellers_other": "viaggiatori",
+    "notes": {
+      "n1": "Arrivate {relative}, quindi abbiamo selezionato il trattamento rapido ({price} a viaggiatore). Lo standard richiede di solito 3 giorni lavorativi. Potete passare allo standard.",
+      "n2": "Arrivate {relative}. Lo standard richiede di solito 3 giorni lavorativi, quindi il visto potrebbe non essere pronto in tempo. Potete comunque pagare con lo standard.",
+      "n2Action": "Passa al trattamento rapido",
+      "n3": "Arrivate {relative}. Anche con il trattamento rapido, il visto potrebbe non essere pronto in tempo. {whatsapp} prima di pagare e controlleremo cosa è possibile.",
+      "n4": "Arrivate {relative}. Lo standard richiede di solito 3 giorni lavorativi. {whatsapp} prima di pagare così verifichiamo le opzioni.",
+      "n5": "Per la nuova data ({relative}), siamo tornati al trattamento standard."
+    },
+    "insurance": {
+      "title": "Assicurazione di viaggio",
+      "add": "Aggiungi l'assicurazione di viaggio · {price} a viaggiatore",
+      "terms": "Leggi le condizioni della polizza"
+    },
+    "recap": {
+      "fastTrack": "Trattamento rapido",
+      "insurance": "Assicurazione di viaggio",
+      "updating": "Aggiornamento del totale",
+      "updated": "Totale aggiornato: {total}"
+    },
+    "error": {
+      "update": "Non siamo riusciti ad aggiornare il totale. Controllate la connessione e riprovate.",
+      "retry": "Riprova",
+      "fastTrackUnavailable": "Il percorso rapido non è disponibile in questa valuta.",
+      "insuranceUnavailable": "L'assicurazione di viaggio non è disponibile in questa valuta."
+    },
+    "priceChanged": "Il prezzo è cambiato da quando avete aperto questa pagina. Controllate il nuovo totale prima di pagare.",
+    "locked": "Per modificare gli extra, annullate prima questo pagamento.",
+    "bar": {
+      "cta": "Continua al pagamento"
+    }
   }
 }

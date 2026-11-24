@@ -5,6 +5,7 @@ import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
 import { CheckoutOrderRecap } from "@/components/apply/checkout-order-recap";
 import { SubmittedApplicationClient } from "@/components/apply/submitted-application-client";
 import { loadApplicationRowForRequest } from "@/lib/applications/load-application-row-for-request";
+import { loadChargedRecap } from "@/lib/applications/load-charged-recap";
 import { loadPartyMembers } from "@/lib/applications/load-party-members";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { toPublicApplicationWithCharge } from "@/lib/applications/load-application-charge";
@@ -30,7 +31,10 @@ const SubmittedApplicationPage = async ({ params }: ISubmittedApplicationPagePro
   if (!row) {
     notFound();
   }
-  const members = await withSystemDbActor((tx) => loadPartyMembers(tx, row));
+  const { members, settled } = await withSystemDbActor(async (tx) => ({
+    members: await loadPartyMembers(tx, row),
+    settled: await loadChargedRecap(tx, id),
+  }));
   const cookieStore = await cookies();
   const t = createCustomerT(parseCustomerLocale(cookieStore.get(CUSTOMER_LOCALE_COOKIE)?.value));
   const publicApp = await toPublicApplicationWithCharge(row, t);
@@ -43,7 +47,7 @@ const SubmittedApplicationPage = async ({ params }: ISubmittedApplicationPagePro
         tripHref={applyTripStepHref(row.nationalityCode)}
         detailsTravellerId={lastTravellerApplicationId(members)}
         hasSelectedVisa
-        visaSummary={<CheckoutOrderRecap application={publicApp} members={members} />}
+        visaSummary={<CheckoutOrderRecap application={publicApp} members={members} settled={settled} />}
         contentClassName="theme-client-rise mx-auto w-full max-w-2xl"
       >
         <SubmittedApplicationClient applicationId={id} initialApplication={publicApp} />

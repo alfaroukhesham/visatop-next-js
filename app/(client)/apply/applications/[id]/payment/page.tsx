@@ -3,6 +3,8 @@ import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
 import { CheckoutOrderRecap } from "@/components/apply/checkout-order-recap";
+import { CheckoutQuoteProvider } from "@/components/apply/checkout-quote-provider";
+import { TripExtrasSection } from "@/components/apply/trip-extras-section";
 import { ApplicationPaymentPanel } from "@/components/apply/application-payment-panel";
 import { loadApplicationRowForRequest } from "@/lib/applications/load-application-row-for-request";
 import { loadPaymentUploadPresence } from "@/lib/applications/load-payment-upload-presence";
@@ -43,29 +45,32 @@ const ApplyApplicationPaymentPage = async ({ params }: IApplyApplicationPaymentP
   }
 
   return (
-    <div className="max-w-6xl">
-      <ApplyTwoColumn
-        currentStep={4}
-        applicationId={id}
-        tripHref={applyTripStepHref(row.nationalityCode)}
-        detailsTravellerId={lastTravellerApplicationId(members)}
-        hasSelectedVisa
-        visaSummary={
-          <CheckoutOrderRecap application={publicApp} members={members} trackCheckoutViewed />
-        }
-        contentClassName="theme-client-rise mx-auto w-full max-w-4xl space-y-8"
-      >
-        <header className="space-y-1.5">
-          <h1 className="font-heading text-foreground text-xl! font-semibold leading-snug tracking-tight md:text-[1.75rem]!">
-            {t("payment.title")}
-          </h1>
-          <p className="text-muted-foreground max-w-[62ch] text-sm leading-relaxed">
-            {t("payment.subtitle")}
-          </p>
-        </header>
-        <ApplicationPaymentPanel applicationId={id} />
-      </ApplyTwoColumn>
-    </div>
+    <CheckoutQuoteProvider applicationId={id}>
+      <div className="max-w-6xl">
+        <ApplyTwoColumn
+          currentStep={4}
+          applicationId={id}
+          tripHref={applyTripStepHref(row.nationalityCode)}
+          detailsTravellerId={lastTravellerApplicationId(members)}
+          hasSelectedVisa
+          visaSummary={
+            <CheckoutOrderRecap application={publicApp} members={members} trackCheckoutViewed />
+          }
+          contentClassName="theme-client-rise mx-auto w-full max-w-4xl space-y-8"
+        >
+          <header className="space-y-1.5">
+            <h1 className="font-heading text-foreground text-xl! font-semibold leading-snug tracking-tight md:text-[1.75rem]!">
+              {t("payment.title")}
+            </h1>
+            <p className="text-muted-foreground max-w-[62ch] text-sm leading-relaxed">
+              {t("payment.subtitle")}
+            </p>
+          </header>
+          <TripExtrasSection />
+          <ApplicationPaymentPanel applicationId={id} />
+        </ApplyTwoColumn>
+      </div>
+    </CheckoutQuoteProvider>
   );
 };
 

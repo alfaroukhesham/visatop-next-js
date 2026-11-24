@@ -47,6 +47,9 @@ interface IDraftPaymentSectionProps {
   confirming: boolean;
   sessionLoading: boolean;
   showPaddleRetry: boolean;
+  payBlocked?: boolean;
+  payDescribedBy?: string | null;
+  termsResetKey?: number;
 }
 
 export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
@@ -65,11 +68,19 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
   confirming,
   sessionLoading,
   showPaddleRetry,
+  payBlocked = false,
+  payDescribedBy = null,
+  termsResetKey = 0,
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [termsError, setTermsError] = useState<string | null>(null);
+  const [seenTermsResetKey, setSeenTermsResetKey] = useState(termsResetKey);
+  if (seenTermsResetKey !== termsResetKey) {
+    setSeenTermsResetKey(termsResetKey);
+    setTermsAccepted(false);
+  }
   const payCopyComplete = customerLooksCompleteForPayCopy({
     requiredSlotKeys,
     uploadedTypes,
@@ -106,6 +117,8 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
       <PaddleCheckoutButton
         applicationId={applicationId}
         termsAccepted={termsAccepted}
+        disabled={payBlocked}
+        describedBy={payDescribedBy}
         onTermsRejected={() => setTermsError(t("checkout.errors.termsRequired"))}
         onZiinaEmbedded={(url) => {
           onDismissCheckoutError();
@@ -138,7 +151,7 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
 
       {showUnpaidPay && (
         <div className="space-y-4 rounded-[12px] border-2 border-primary bg-primary/5 p-5 shadow-[0_8px_32px_rgba(1,32,49,0.08)] sm:p-6">
-          <h2 className="font-heading text-base! font-semibold md:text-lg!">{t("payment.initiatePaymentTitle")}</h2>
+          <h2 tabIndex={-1} className="font-heading text-base! font-semibold md:text-lg!">{t("payment.initiatePaymentTitle")}</h2>
           <p className="text-sm text-muted-foreground">
             {payCopyComplete ? t("pay.payNowComplete") : t("pay.payNowIncomplete")}
           </p>
@@ -151,7 +164,7 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
         <div className="space-y-6 rounded-[12px] border-2 border-primary bg-primary/5 p-5 shadow-[0_8px_32px_rgba(1,32,49,0.08)] sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="font-heading text-base! font-semibold md:text-lg!">{t("payment.completePaymentTitle")}</h2>
+              <h2 tabIndex={-1} className="font-heading text-base! font-semibold md:text-lg!">{t("payment.completePaymentTitle")}</h2>
               <p className="text-sm text-muted-foreground">
                 {embeddedUrl || fincraInline ? t("payment.completeInWidget") : t("payment.checkoutInProgress")}
               </p>

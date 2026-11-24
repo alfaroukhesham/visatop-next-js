@@ -78,7 +78,18 @@
       "maxTravelers": "Maximum na {count} traveler bawat checkout.",
       "chooseVisaForAll": "Pumili ng visa para sa bawat traveler."
     },
-    "travelersLabel": "Mga manlalakbay"
+    "travelersLabel": "Mga manlalakbay",
+    "travelDate": {
+      "label": "Kailan kayo darating sa UAE?",
+      "optional": "(opsyonal)",
+      "hint": "Piliin ang araw ng pagdating. Sumusunod ang mga petsa sa oras ng UAE. Maaari ninyo itong baguhin hanggang magbayad kayo.",
+      "readback": "{date} · {relative}",
+      "errorEmpty": "Piliin ang petsa ng pagdating para magpatuloy.",
+      "errorPast": "Lumipas na ang petsang ito. Piliin ang ngayon o mas susunod na petsa.",
+      "errorMax": "Pumili ng petsa hanggang {maxDate}. Para sa mas malayong biyahe, mag-apply nang mas malapit sa biyahe.",
+      "errorIncomplete": "Ilagay ang buong petsa: araw, buwan at taon.",
+      "soonHint": "Malapit na ang biyahe ninyo. Sa pagbabayad, imumungkahi namin ang mabilis na proseso ({price} bawat manlalakbay). Maaari ninyong piliin ang karaniwan."
+    }
   },
   "chooser": {
     "back": "Bumalik",
@@ -560,7 +571,8 @@
     "loadingVisaOptions": "Naglo-load ng visa options",
     "loadingApplications": "Naglo-load ng mga application",
     "loadingOrderSummary": "Naglo-load ng order summary",
-    "whatsappSupport": "Mag-chat sa WhatsApp"
+    "whatsappSupport": "Mag-chat sa WhatsApp",
+    "opensNewTab": "(bubukas sa bagong tab)"
   },
   "seo": {
     "homeTitle": "Mag-apply para sa UAE Tourist Visa Online",
@@ -672,5 +684,71 @@
     "jumpAheadHint": "Finish this step first, then tap Continue",
     "docShowDetails": "{name}, show details",
     "docHideDetails": "{name}, hide details"
+  },
+  "relative": {
+    "today": "ngayon",
+    "tomorrow": "bukas",
+    "inDays_one": "sa loob ng {n} araw",
+    "inDays_two": "sa loob ng {n} araw",
+    "inDays_few": "sa loob ng {n} araw",
+    "inDays_many": "sa loob ng {n} araw",
+    "inDays_other": "sa loob ng {n} araw"
+  },
+  "extras": {
+    "sectionTitle": "Ang biyahe ninyo at mga extra",
+    "arrivalLabel": "Pagdating sa UAE",
+    "change": "Baguhin",
+    "saveDate": "I-save ang petsa",
+    "cancel": "Kanselahin",
+    "speed": {
+      "legend": "Bilis ng proseso",
+      "standard": {
+        "title": "Karaniwan",
+        "promise": "Karaniwang 3 araw ng trabaho kapag kumpleto na ang mga dokumento",
+        "price": "Kasama"
+      },
+      "fast": {
+        "title": "Mabilis na proseso",
+        "promiseDefault": "Karaniwang sa loob ng 24 na oras",
+        "price": "+{price} bawat manlalakbay"
+      },
+      "badge": "Inirerekomenda para sa petsa ninyo"
+    },
+    "perTravellerSum": "{price} × {n} {travellersWord} = {sum}",
+    "travellers_one": "manlalakbay",
+    "travellers_two": "manlalakbay",
+    "travellers_few": "manlalakbay",
+    "travellers_many": "manlalakbay",
+    "travellers_other": "manlalakbay",
+    "notes": {
+      "n1": "Darating kayo {relative}, kaya pinili namin ang mabilis na proseso ({price} bawat manlalakbay). Ang karaniwan ay kadalasang 3 araw ng trabaho. Maaari kayong lumipat sa karaniwan.",
+      "n2": "Darating kayo {relative}. Ang karaniwan ay kadalasang 3 araw ng trabaho, kaya maaaring hindi handa ang visa sa oras. Maaari pa rin kayong magbayad gamit ang karaniwan.",
+      "n2Action": "Lumipat sa mabilis na proseso",
+      "n3": "Darating kayo {relative}. Kahit sa mabilis na proseso, maaaring hindi handa ang visa sa oras. {whatsapp} bago magbayad at titingnan namin kung ano ang posible.",
+      "n4": "Darating kayo {relative}. Ang karaniwan ay kadalasang 3 araw ng trabaho. {whatsapp} bago magbayad para matingnan namin ang mga opsyon.",
+      "n5": "Para sa bagong petsa ({relative}), ibinalik namin kayo sa karaniwang proseso."
+    },
+    "insurance": {
+      "title": "Seguro sa paglalakbay",
+      "add": "Magdagdag ng seguro sa paglalakbay · {price} bawat manlalakbay",
+      "terms": "Basahin ang mga tuntunin ng polisiya"
+    },
+    "recap": {
+      "fastTrack": "Mabilis na proseso",
+      "insurance": "Seguro sa paglalakbay",
+      "updating": "Ina-update ang kabuuan",
+      "updated": "Na-update ang kabuuan: {total}"
+    },
+    "error": {
+      "update": "Hindi namin na-update ang kabuuan. Tingnan ang koneksyon at subukan muli.",
+      "retry": "Subukan muli",
+      "fastTrackUnavailable": "Hindi available ang mabilis na proseso sa perang ito.",
+      "insuranceUnavailable": "Hindi available ang seguro sa paglalakbay sa perang ito."
+    },
+    "priceChanged": "Nagbago ang presyo mula nang buksan ninyo ang pahinang ito. Tingnan ang bagong kabuuan bago magbayad.",
+    "locked": "Para baguhin ang mga extra, kanselahin muna ang bayad na ito.",
+    "bar": {
+      "cta": "Magpatuloy sa pagbabayad"
+    }
   }
 }

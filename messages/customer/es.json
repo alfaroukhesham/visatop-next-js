@@ -78,7 +78,18 @@
       "maxTravelers": "Máximo {count} viajeros por pago.",
       "chooseVisaForAll": "Elija un visado para cada viajero."
     },
-    "travelersLabel": "Viajeros"
+    "travelersLabel": "Viajeros",
+    "travelDate": {
+      "label": "¿Cuándo llega a los EAU?",
+      "optional": "(opcional)",
+      "hint": "Elija el día en que aterriza. Las fechas siguen la hora de los EAU. Puede cambiarla hasta que pague.",
+      "readback": "{date} · {relative}",
+      "errorEmpty": "Elija su fecha de llegada para continuar.",
+      "errorPast": "Esta fecha ya pasó. Elija hoy o una fecha posterior.",
+      "errorMax": "Elija una fecha hasta el {maxDate}. Para viajes más lejanos, solicite más cerca de su fecha de viaje.",
+      "errorIncomplete": "Escriba la fecha completa: día, mes y año.",
+      "soonHint": "Su viaje es pronto. En el pago le sugeriremos el trámite rápido ({price} por viajero). Puede elegir el trámite estándar."
+    }
   },
   "chooser": {
     "back": "Atrás",
@@ -560,7 +571,8 @@
     "loadingVisaOptions": "Cargando opciones de visado",
     "loadingApplications": "Cargando solicitudes",
     "loadingOrderSummary": "Cargando resumen del pedido",
-    "whatsappSupport": "Chatear por WhatsApp"
+    "whatsappSupport": "Chatear por WhatsApp",
+    "opensNewTab": "(se abre en una pestaña nueva)"
   },
   "seo": {
     "homeTitle": "Solicite en línea su visado turístico para los EAU",
@@ -672,5 +684,71 @@
     "jumpAheadHint": "Finish this step first, then tap Continue",
     "docShowDetails": "{name}, show details",
     "docHideDetails": "{name}, hide details"
+  },
+  "relative": {
+    "today": "hoy",
+    "tomorrow": "mañana",
+    "inDays_one": "en {n} día",
+    "inDays_two": "en {n} días",
+    "inDays_few": "en {n} días",
+    "inDays_many": "en {n} días",
+    "inDays_other": "en {n} días"
+  },
+  "extras": {
+    "sectionTitle": "Su viaje y los extras",
+    "arrivalLabel": "Llegada a los EAU",
+    "change": "Cambiar",
+    "saveDate": "Guardar fecha",
+    "cancel": "Cancelar",
+    "speed": {
+      "legend": "Velocidad de trámite",
+      "standard": {
+        "title": "Estándar",
+        "promise": "Normalmente 3 días laborables cuando sus documentos estén completos",
+        "price": "Incluido"
+      },
+      "fast": {
+        "title": "Trámite rápido",
+        "promiseDefault": "Normalmente en 24 horas",
+        "price": "+{price} por viajero"
+      },
+      "badge": "Recomendado para su fecha"
+    },
+    "perTravellerSum": "{price} × {n} {travellersWord} = {sum}",
+    "travellers_one": "viajero",
+    "travellers_two": "viajeros",
+    "travellers_few": "viajeros",
+    "travellers_many": "viajeros",
+    "travellers_other": "viajeros",
+    "notes": {
+      "n1": "Llega {relative}, así que hemos seleccionado el trámite rápido ({price} por viajero). El estándar suele tardar 3 días laborables. Puede cambiar al estándar.",
+      "n2": "Llega {relative}. El estándar suele tardar 3 días laborables, así que su visado puede no estar listo a tiempo. Aun así puede pagar con el estándar.",
+      "n2Action": "Cambiar al trámite rápido",
+      "n3": "Llega {relative}. Incluso con el trámite rápido, su visado puede no estar listo a tiempo. {whatsapp} antes de pagar y comprobaremos qué es posible.",
+      "n4": "Llega {relative}. El estándar suele tardar 3 días laborables. {whatsapp} antes de pagar para revisar sus opciones.",
+      "n5": "Para su nueva fecha ({relative}), volvimos a seleccionar el trámite estándar."
+    },
+    "insurance": {
+      "title": "Seguro de viaje",
+      "add": "Añadir seguro de viaje · {price} por viajero",
+      "terms": "Leer las condiciones de la póliza"
+    },
+    "recap": {
+      "fastTrack": "Trámite rápido",
+      "insurance": "Seguro de viaje",
+      "updating": "Actualizando el total",
+      "updated": "Total actualizado: {total}"
+    },
+    "error": {
+      "update": "No pudimos actualizar su total. Compruebe su conexión e inténtelo de nuevo.",
+      "retry": "Intentar de nuevo",
+      "fastTrackUnavailable": "El trámite rápido no está disponible en esta moneda.",
+      "insuranceUnavailable": "El seguro de viaje no está disponible en esta moneda."
+    },
+    "priceChanged": "El precio cambió desde que abrió esta página. Revise el nuevo total antes de pagar.",
+    "locked": "Para cambiar sus extras, cancele primero este pago.",
+    "bar": {
+      "cta": "Continuar al pago"
+    }
   }
 }

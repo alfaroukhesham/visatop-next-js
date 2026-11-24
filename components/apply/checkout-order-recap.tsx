@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FC } from "react";
+import { Loader2 } from "lucide-react";
 import { ClientOrderRecapSkeleton } from "@/components/client/client-loading";
 import { AllInPriceBadges } from "@/components/apply/all-in-price-badges";
-import { useCustomerT } from "@/components/client/customer-i18n-provider";
+import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
+import { useCheckoutQuoteOptional } from "@/components/apply/checkout-quote-provider";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import {
   catalogCurrencyTab,
@@ -21,6 +23,13 @@ import { trackEventOnce } from "@/lib/analytics/gtag-client";
 import { setMetaAdvancedMatchingPhone } from "@/lib/analytics/meta-pixel-advanced-matching";
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { formatIsoDateAsDdMmYyyy } from "@/lib/documents/validation-readiness";
+import {
+  formatMinorAmount,
+  groupedExtraLines,
+  quoteUsesCodeFormat,
+  type TCheckoutExtraKey,
+} from "@/lib/apply/checkout-extras-ui";
+import type { TSettledRecap } from "@/lib/apply/charged-recap";
 import type { TCustomerMessageVars } from "@/lib/i18n/customer-messages";
 
 type CatalogService = {
@@ -65,14 +74,19 @@ interface ICheckoutOrderRecapProps {
   members?: TPublicPartyMember[];
   /** Payment page only — documents/thank-you recaps also reuse this UI. */
   trackCheckoutViewed?: boolean;
+  /** Server quote or the charged payment. When set, the total is not computed in the browser. */
+  settled?: TSettledRecap | null;
 }
 
 export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
   application,
   members = [],
   trackCheckoutViewed = false,
+  settled = null,
 }) => {
   const t = useCustomerT();
+  const locale = useCustomerLocale();
+  const quoteState = useCheckoutQuoteOptional();
   const signedInUserId = useClientAuthStore((s) => s.session?.user?.id);
   const [services, setServices] = useState<CatalogService[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -163,6 +177,7 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
   }, [services, members, currency]);
 
   const totalMinor = useMemo(() => {
+    if (settled || quoteState) return null;
     if (!services) return null;
     if (members.length <= 1) {
       return service ? priceMinorForDisplay(service, currency) : null;
@@ -174,16 +189,52 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
       sum += minor;
     }
     return sum;
-  }, [services, members, memberLines, service, currency]);
+  }, [settled, quoteState, services, members, memberLines, service, currency]);
 
-  const totalText = totalMinor === null ? null : formatDisplayMinor(totalMinor.toString(), currency);
+  const serverPreview = quoteState?.preview ?? null;
+  const usingServerQuote = settled !== null || quoteState !== null;
+  const amountCurrency = settled?.currency ?? serverPreview?.currency ?? currency;
+  const resolvedTotalMinor = usingServerQuote
+    ? settled
+      ? BigInt(settled.totalAmountMinor)
+      : serverPreview
+        ? BigInt(serverPreview.totalAmountMinor)
+        : null
+    : totalMinor;
+  const quoteFormat =
+    settled !== null
+      ? settled.extraLines.length > 0
+        ? "code"
+        : "symbol"
+      : serverPreview && quoteUsesCodeFormat(serverPreview)
+        ? "code"
+        : "symbol";
+  const formatQuote = (minor: string): string =>
+    usingServerQuote
+      ? formatMinorAmount(minor, amountCurrency, locale, quoteFormat)
+      : (formatDisplayMinor(minor, currency) ?? "");
+  const visaAmountText = (applicationId: string, fallback: string | null): string | null => {
+    if (!usingServerQuote) return fallback;
+    const lines = settled?.visaLines ?? serverPreview?.visaLines ?? null;
+    if (!lines) return null;
+    const minor = lines.find((line) => line.applicationId === applicationId)?.amountMinor ?? null;
+    return minor ? formatQuote(minor) : fallback;
+  };
+  const extraLineLabel = (key: TCheckoutExtraKey): string =>
+    key === "fast_track" ? t("extras.recap.fastTrack") : t("extras.recap.insurance");
+  const extraRows = groupedExtraLines({
+    extraLines: settled?.extraLines ?? serverPreview?.extraLines ?? [],
+  });
+
+  const totalText =
+    resolvedTotalMinor === null ? null : formatQuote(resolvedTotalMinor.toString());
 
   useEffect(() => {
-    if (totalMinor === null) return;
+    if (resolvedTotalMinor === null) return;
     rememberCheckoutRecapTotal({
       applicationId: application.id,
-      value: Number(totalMinor) / 100,
-      currency,
+      value: Number(resolvedTotalMinor) / 100,
+      currency: amountCurrency,
       nationality: application.nationalityCode,
       serviceId: application.serviceId,
     });
@@ -194,15 +245,17 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
         application_id: application.id,
         nationality: application.nationalityCode,
         service_id: application.serviceId,
-        currency,
-        value: Number(totalMinor) / 100,
+        currency: amountCurrency,
+        value: Number(resolvedTotalMinor) / 100,
         traveler_count: Math.max(members.length, 1),
       },
       `${APPLY_FUNNEL_EVENTS.checkoutViewed}:${application.id}`,
     );
   }, [
     trackCheckoutViewed,
-    totalMinor,
+    resolvedTotalMinor,
+    serverPreview?.currency,
+    amountCurrency,
     application.id,
     application.nationalityCode,
     application.serviceId,
@@ -240,7 +293,7 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
 
   const subtotalText = price?.text ?? null;
 
-  if (services === null) {
+  if (services === null || (quoteState?.loading && !serverPreview && !settled)) {
     return <ClientOrderRecapSkeleton />;
   }
 
@@ -276,9 +329,11 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
                       <p className="text-muted-foreground mt-0.5 text-xs">{serviceTitle(line.service, t)}</p>
                     ) : null}
                   </div>
-                  <div className="text-right">
-                    {line.price ? (
-                      <p className="text-foreground font-heading text-base font-bold tabular-nums">{line.price.text}</p>
+                  <div className="text-end">
+                    {visaAmountText(line.member.applicationId, line.price?.text ?? null) ? (
+                      <p className="text-foreground font-heading text-base font-bold tabular-nums">
+                        <bdi>{visaAmountText(line.member.applicationId, line.price?.text ?? null)}</bdi>
+                      </p>
                     ) : (
                       <p className="text-muted-foreground text-sm">{t("payment.totalAtCheckout")}</p>
                     )}
@@ -333,15 +388,17 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
 
               <div className="mt-4 flex items-end justify-between gap-4 border-t border-border pt-4">
                 <p className="text-muted-foreground text-sm tabular-nums">{t("payment.quantityOne")}</p>
-                <div className="text-right">
-                  {subtotalText ? (
-                    <p className="text-foreground font-heading text-lg font-bold tabular-nums">{subtotalText}</p>
+                <div className="text-end">
+                  {visaAmountText(application.id, subtotalText) ? (
+                    <p className="text-foreground font-heading text-lg font-bold tabular-nums">
+                      <bdi>{visaAmountText(application.id, subtotalText)}</bdi>
+                    </p>
                   ) : (
                     <p className="text-muted-foreground text-sm">{t("payment.totalAtCheckout")}</p>
                   )}
                 </div>
               </div>
-              {price?.isEstimate ? (
+              {price?.isEstimate && quoteFormat === "symbol" ? (
                 <p className="text-muted-foreground mt-2 text-[10px] font-medium uppercase tracking-wide">
                   {t("payment.estimatedCheckoutNote")}
                 </p>
@@ -355,11 +412,53 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
         </div>
       )}
 
-      {totalText ? (
-        <div className="text-muted-foreground flex justify-between gap-4 text-sm">
-          <span>{t("payment.total")}</span>
-          <span className="text-foreground font-heading text-base font-bold tabular-nums">{totalText}</span>
+      {extraRows.length > 0 ? (
+        <div className="space-y-3">
+          {extraRows.map((row) => (
+            <div key={row.key} className="flex items-start justify-between gap-4 text-sm">
+              <div>
+                <p className="text-foreground font-medium">{extraLineLabel(row.key)}</p>
+                <p className="text-muted-foreground text-xs">
+                  <bdi>× {row.count}</bdi>
+                </p>
+              </div>
+              <p className="text-foreground font-heading text-end font-bold tabular-nums">
+                <bdi>{formatQuote(row.amountMinor)}</bdi>
+              </p>
+            </div>
+          ))}
         </div>
+      ) : null}
+
+      {quoteState?.loadError && !serverPreview && !settled ? (
+        <p className="text-foreground text-sm" role="alert">
+          {quoteState.loadError}
+        </p>
+      ) : null}
+
+      {totalText || quoteState?.updating ? (
+        <div
+          className="text-muted-foreground flex justify-between gap-4 text-sm"
+          aria-busy={quoteState?.updating || undefined}
+        >
+          <span className="inline-flex items-center gap-2">
+            {t("payment.total")}
+            {quoteState?.updating ? (
+              <>
+                <Loader2 className="size-4 animate-spin motion-reduce:animate-none" aria-hidden />
+                <span id="extras-recap-updating">{t("extras.recap.updating")}</span>
+              </>
+            ) : null}
+          </span>
+          <span className="text-foreground font-heading text-end text-base font-bold tabular-nums">
+            {totalText ? <bdi>{totalText}</bdi> : null}
+          </span>
+        </div>
+      ) : null}
+      {quoteState?.announcement ? (
+        <p className="sr-only" role="status">
+          {quoteState.announcement}
+        </p>
       ) : null}
     </div>
   );
