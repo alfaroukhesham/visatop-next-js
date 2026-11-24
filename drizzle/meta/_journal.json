@@ -288,6 +288,13 @@
       "when": 1782430000000,
       "tag": "0040_fincra_attempt_lifecycle",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1782440000000,
+      "tag": "0041_checkout_extras",
+      "breakpoints": true
     }
   ]
 }

@@ -11,6 +11,7 @@ export * from "./payments";
 export * from "./affiliate";
 export * from "./catalog-customer-price";
 export * from "./catalog-currency";
+export * from "./checkout-extra";
 export * from "./catalog-document-requirement";
 export * from "./catalog-document-type";
 export * from "./analytics-funnel-event";

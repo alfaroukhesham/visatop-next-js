@@ -12,10 +12,11 @@ import type { CatalogNationality, CatalogService } from "@/lib/admin/catalog/cat
 
 const normalizeTab = (
   value: string | string[] | undefined,
-): "services" | "nationalities" | "local-currencies" => {
+): "services" | "nationalities" | "local-currencies" | "extras" => {
   const raw = Array.isArray(value) ? value[0] : value;
   if (raw === "nationalities") return "nationalities";
   if (raw === "local-currencies") return "local-currencies";
+  if (raw === "extras") return "extras";
   return "services";
 };
 
@@ -54,13 +55,15 @@ export default async function AdminCatalogPage({ searchParams }: PageProps) {
     <AdminShell
       title="Catalog"
       active="catalog"
-      subtitle="Manage services, nationalities, and local currencies."
+      subtitle="Manage services, nationalities, local currencies, and checkout extras."
     >
       <CatalogHub
         tab={tab}
         nationalities={nationalities}
         services={services}
         localCurrencies={view.localCurrencies}
+        extras={view.extras}
+        fxAedPerUsd={view.fxAedPerUsd}
         canWrite={view.canWrite}
       />
     </AdminShell>

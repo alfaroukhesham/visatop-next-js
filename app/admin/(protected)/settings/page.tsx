@@ -5,9 +5,11 @@ import { DisplayFxSettings } from "@/components/admin/display-fx-settings";
 import { PaymentsSettings } from "@/components/admin/payments-settings";
 import { PartySettings } from "@/components/admin/party-settings";
 import { ApplyPriceBadgeSettings } from "@/components/admin/apply-price-badge-settings";
+import { TravelDateSettings } from "@/components/admin/travel-date-settings";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { withAdminDbActor } from "@/lib/db/actor-context";
 import { getApplyConfigFromTx } from "@/lib/apply/apply-config-from-tx";
+import { getTravelDateSettingsFromTx } from "@/lib/checkout-extras/travel-date-settings";
 
 export default async function AdminSettingsPage() {
   const adminUserId = await getAdminUserId();
@@ -16,8 +18,11 @@ export default async function AdminSettingsPage() {
     if (!permissions.includes("settings.read")) {
       return "forbidden" as const;
     }
-    const applyConfig = await getApplyConfigFromTx(tx);
-    return { applyConfig } as const;
+    const [applyConfig, travelDate] = await Promise.all([
+      getApplyConfigFromTx(tx),
+      getTravelDateSettingsFromTx(tx),
+    ]);
+    return { applyConfig, travelDate } as const;
   });
 
   if (gate === "forbidden") {
@@ -118,6 +123,27 @@ export default async function AdminSettingsPage() {
           </div>
         </div>
         <DisplayFxSettings />
+      </section>
+
+      <section
+        id="travel-date"
+        className="border-border mt-8 max-w-xl space-y-4 border border-b-2 border-b-primary bg-card p-6"
+      >
+        <div className="flex items-start gap-3">
+          <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center border border-primary/20">
+            <SlidersHorizontal className="size-5" aria-hidden />
+          </span>
+          <div>
+            <h2 className="font-heading text-base font-semibold tracking-tight">Travel date and Fast Track</h2>
+            <p className="text-muted-foreground mt-1 text-sm leading-relaxed">
+              Keys <span className="font-mono text-xs">fast_track_threshold_days</span>,{" "}
+              <span className="font-mono text-xs">travel_date_required</span>, and{" "}
+              <span className="font-mono text-xs">travel_date_max_days_ahead</span> in{" "}
+              <span className="font-mono text-xs">platform_setting</span>. Prices for the extras live in Catalog.
+            </p>
+          </div>
+        </div>
+        <TravelDateSettings settings={gate.travelDate} />
       </section>
 
       <section className="border-border mt-8 max-w-3xl space-y-4 border border-b-2 border-b-primary bg-card p-6">

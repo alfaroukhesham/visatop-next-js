@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { FC } from "react";
 import { CatalogNationalityList } from "@/components/admin/catalog-nationality-list";
 import { CatalogServiceList } from "@/components/admin/catalog-service-list";
+import { CheckoutExtrasPanel } from "@/components/admin/checkout-extras-panel";
 import { LocalCurrenciesPanel } from "@/components/admin/local-currencies-panel";
 import { cn } from "@/lib/utils";
 import type {
@@ -11,14 +12,17 @@ import type {
   CatalogNationality,
   CatalogService,
 } from "@/lib/admin/catalog/catalog-types";
+import type { TCheckoutExtraAdmin } from "@/lib/checkout-extras/types";
 
-type TCatalogHubTab = "services" | "nationalities" | "local-currencies";
+type TCatalogHubTab = "services" | "nationalities" | "local-currencies" | "extras";
 
 interface ICatalogHubProps {
   tab: TCatalogHubTab;
   nationalities: CatalogNationality[];
   services: CatalogService[];
   localCurrencies: CatalogLocalCurrency[];
+  extras: TCheckoutExtraAdmin[];
+  fxAedPerUsd: string | null;
   canWrite: boolean;
 }
 
@@ -26,6 +30,7 @@ const TABS = [
   { id: "services" as const, href: "/admin/catalog?tab=services", label: "Services" },
   { id: "nationalities" as const, href: "/admin/catalog?tab=nationalities", label: "Nationalities" },
   { id: "local-currencies" as const, href: "/admin/catalog?tab=local-currencies", label: "Local currencies" },
+  { id: "extras" as const, href: "/admin/catalog?tab=extras", label: "Extras" },
 ] as const;
 
 export const CatalogHub: FC<ICatalogHubProps> = ({
@@ -33,6 +38,8 @@ export const CatalogHub: FC<ICatalogHubProps> = ({
   nationalities,
   services,
   localCurrencies,
+  extras,
+  fxAedPerUsd,
   canWrite,
 }) => {
   return (
@@ -63,12 +70,14 @@ export const CatalogHub: FC<ICatalogHubProps> = ({
         <CatalogServiceList services={services} canWrite={canWrite} />
       ) : tab === "nationalities" ? (
         <CatalogNationalityList nationalities={nationalities} canWrite={canWrite} />
-      ) : (
+      ) : tab === "local-currencies" ? (
         <LocalCurrenciesPanel
           localCurrencies={localCurrencies}
           nationalities={nationalities}
           canWrite={canWrite}
         />
+      ) : (
+        <CheckoutExtrasPanel extras={extras} fxAedPerUsd={fxAedPerUsd} canWrite={canWrite} />
       )}
     </div>
   );
