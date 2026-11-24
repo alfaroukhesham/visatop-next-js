@@ -529,6 +529,12 @@ html:has([data-apply-sticky-cta]) a[data-whatsapp-fab] {
   padding-top: var(--wp-shell-header-height, 0px);
 }
 
+/* Tailwind's .sr-only uses margin: -1px, which sticks 1px past the inline end in RTL. */
+.theme-client .sr-only {
+  margin: 0;
+  inset-inline-start: 0;
+}
+
 /* Desktop WP header is ~130px on prod. Lock that above 414px so the hero
    does not sit 12px high. Keep the #50 118px reserve at 414px and below. */
 .theme-client-wp-header {

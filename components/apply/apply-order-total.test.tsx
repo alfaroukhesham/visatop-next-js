@@ -15,12 +15,26 @@ vi.mock("@/lib/portal/fetch-envelope", () => ({
   fetchApiEnvelope: vi.fn(),
 }));
 
+const liveQuote = vi.hoisted(() => ({
+  preview: null as null | {
+    currency: string;
+    totalAmountMinor: string;
+    extraLines: Array<{ key: string }>;
+    availableExtras: Array<{ key: string }>;
+  },
+}));
+
+vi.mock("@/components/apply/checkout-quote-provider", () => ({
+  useCheckoutQuoteOptional: () => (liveQuote.preview ? { preview: liveQuote.preview } : null),
+}));
+
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { ApplyOrderTotal } from "./apply-order-total";
 
 describe("ApplyOrderTotal", () => {
   afterEach(() => {
     cleanup();
+    liveQuote.preview = null;
     vi.clearAllMocks();
   });
 
@@ -79,5 +93,41 @@ describe("ApplyOrderTotal", () => {
 
     await waitFor(() => expect(screen.getByText(/Order total NGN[\s\u00a0]?200,000\.00/)).toBeTruthy());
     expect(screen.queryByText(/185,000\.00/)).toBeNull();
+  });
+
+  it("follows the live quote when the chosen speed changes", async () => {
+    liveQuote.preview = {
+      currency: "AED",
+      totalAmountMinor: "155000",
+      extraLines: [{ key: "fast_track" }],
+      availableExtras: [{ key: "fast_track" }],
+    };
+    const view = render(
+      <ApplyOrderTotal
+        applicationId="app-1"
+        nationalityCode="IN"
+        currency="AED"
+        serviceIds={["svc-1", "svc-1"]}
+      />,
+    );
+    await waitFor(() => expect(screen.getByText(/Order total AED[\s\u00a0]?1,550\.00/)).toBeTruthy());
+    expect(fetchApiEnvelope).not.toHaveBeenCalled();
+
+    liveQuote.preview = {
+      currency: "AED",
+      totalAmountMinor: "81400",
+      extraLines: [],
+      availableExtras: [{ key: "fast_track" }],
+    };
+    view.rerender(
+      <ApplyOrderTotal
+        applicationId="app-1"
+        nationalityCode="IN"
+        currency="AED"
+        serviceIds={["svc-1", "svc-1"]}
+      />,
+    );
+    await waitFor(() => expect(screen.getByText(/Order total AED[\s\u00a0]?814\.00/)).toBeTruthy());
+    expect(screen.queryByText(/1,550\.00/)).toBeNull();
   });
 });

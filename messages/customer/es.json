@@ -93,7 +93,10 @@
       "today": "Hoy",
       "tomorrow": "Mañana",
       "seeVisas": "Ver visados compatibles",
-      "notSure": "Aún no lo sé"
+      "notSure": "Aún no lo sé",
+      "departureDate": "Fecha de salida",
+      "previousMonth": "Mes anterior",
+      "nextMonth": "Mes siguiente"
     },
     "continue": "Continuar"
   },

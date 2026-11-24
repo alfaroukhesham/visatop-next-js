@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildPreApplicationSpeedQuote } from "@/lib/pricing/pre-application-speed-quote";
+import {
+  buildPreApplicationSpeedQuote,
+  preApplicationCheckoutTotalMinor,
+} from "@/lib/pricing/pre-application-speed-quote";
 import type { TCheckoutExtraCatalogItem } from "@/lib/pricing/resolve-checkout-extras";
 
 const fastTrack: TCheckoutExtraCatalogItem = {
@@ -43,6 +46,13 @@ describe("pre-application speed quote", () => {
     });
     expect(quote.travellerCount).toBe(2);
     expect(quote.fastTrack?.sumAmountMinor).toBe(String(36800 * 2));
+  });
+
+  it("adds the chosen Fast Track sum to the visa total and leaves Standard unchanged", () => {
+    expect(preApplicationCheckoutTotalMinor(81400, "fast_track", String(36800 * 2))).toBe(81400 + 73600);
+    expect(preApplicationCheckoutTotalMinor(81400, "standard", String(36800 * 2))).toBe(81400);
+    expect(preApplicationCheckoutTotalMinor(81400, "fast_track", null)).toBe(81400);
+    expect(preApplicationCheckoutTotalMinor(null, "fast_track", "73600")).toBeNull();
   });
 
   it("hides Fast Track when the extra is off or has no price in the currency", () => {

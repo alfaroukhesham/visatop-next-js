@@ -93,7 +93,10 @@
       "today": "Yau",
       "tomorrow": "Gobe",
       "seeVisas": "Duba visocin da suka dace",
-      "notSure": "Ban tabbata ba tukuna"
+      "notSure": "Ban tabbata ba tukuna",
+      "departureDate": "Ranar tashi",
+      "previousMonth": "Watan da ya gabata",
+      "nextMonth": "Wata na gaba"
     },
     "continue": "Ci gaba"
   },

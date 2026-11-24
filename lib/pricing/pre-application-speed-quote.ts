@@ -20,6 +20,19 @@ export type TPreApplicationSpeedQuote = {
   } | null;
 };
 
+/** Visa catalogue sum plus Fast Track when that speed is chosen and the quote has a party sum. */
+export const preApplicationCheckoutTotalMinor = (
+  visaMinor: number | null,
+  speed: "standard" | "fast_track",
+  fastTrackSumMinor: string | null | undefined,
+): number | null => {
+  if (visaMinor === null) return null;
+  if (speed !== "fast_track" || fastTrackSumMinor == null || fastTrackSumMinor === "") return visaMinor;
+  const extra = Number(fastTrackSumMinor);
+  if (!Number.isSafeInteger(extra)) return visaMinor;
+  return visaMinor + extra;
+};
+
 const fastTrackItem = (
   catalog: readonly TCheckoutExtraCatalogItem[],
 ): TCheckoutExtraCatalogItem | null => catalog.find((extra) => extra.key === ("fast_track" as TCheckoutExtraKey)) ?? null;

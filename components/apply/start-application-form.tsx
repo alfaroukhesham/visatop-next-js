@@ -33,6 +33,7 @@ import { useOnBfcacheRestore } from "@/lib/client/use-on-bfcache-restore";
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
 import { DEFAULT_APPLY_PRICE_BADGES, DEFAULT_PARTY_ENABLED, DEFAULT_PARTY_MAX_TRAVELERS, type TApplyPriceBadges } from "@/lib/apply/apply-config";
+import { preApplicationCheckoutTotalMinor } from "@/lib/pricing/pre-application-speed-quote";
 import { assertTravelersReady, canAddTraveler, resolvePartyTravelerServiceId, type TPartyTravelerDraft } from "@/lib/apply/party-travelers";
 import { filterGuidedServices, filterPartyVisaOptions, stayOptionsForChooser, needsEntryQuestion, needsKindQuestion, kindOptionsForStay, type TChooserPhase } from "@/lib/apply/guided-visa-filter";
 import type { TStayBucket, TTravelerKind } from "@/lib/catalog/guided-choice";
@@ -142,7 +143,9 @@ const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
     <aside className="border-secondary/25 bg-card h-fit space-y-4 rounded-2xl border p-4 shadow-[0_12px_30px_rgba(1,32,49,0.08)] lg:sticky lg:top-24">
       <div>
         <p className="text-secondary text-[10px] font-bold uppercase tracking-[0.2em]">{t("start.yourVisaEyebrow")}</p>
-        <h2 className="font-heading text-foreground mt-1 text-lg font-bold leading-snug">{service.name}</h2>
+        <h2 className="font-heading text-foreground mt-1 text-lg font-bold leading-snug">
+          <bdi>{service.name}</bdi>
+        </h2>
       </div>
       <dl className="text-muted-foreground space-y-1.5 text-xs">
         {service.durationDays != null ? (
@@ -544,13 +547,12 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
 
   useEffect(() => {
     if (!serviceId || !nationality || !displayCurrency) return;
-    const countKnown = applyStep !== "visa" || additionalTravelers.length > 0;
     const params = new URLSearchParams({
       serviceId,
       currency: displayCurrency,
       nationality,
+      travellerCount: String(1 + additionalTravelers.length),
     });
-    if (countKnown) params.set("travellerCount", String(1 + additionalTravelers.length));
     let cancelled = false;
     const run = async () => {
       const res = await fetchApiEnvelope<{
@@ -566,7 +568,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [serviceId, nationality, displayCurrency, applyStep, additionalTravelers.length]);
+  }, [serviceId, nationality, displayCurrency, additionalTravelers.length]);
 
   const fastTrackHidden = Boolean(speedQuote && !speedQuote.fastTrackAvailable);
   const speedForSubmit = fastTrackHidden && processingSpeed === "fast_track" ? "standard" : processingSpeed;
@@ -782,8 +784,13 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     }
     return sum;
   })();
+  const fastTrackSumMinor =
+    speedForSubmit === "fast_track" && speedQuote?.currency === displayCurrency
+      ? speedQuote.fastTrack?.sumAmountMinor
+      : null;
+  const checkoutMinor = preApplicationCheckoutTotalMinor(totalMinor, speedForSubmit, fastTrackSumMinor);
   const totalText =
-    totalMinor === null ? null : formatDisplayMinor(totalMinor.toString(), displayCurrency);
+    checkoutMinor === null ? null : formatDisplayMinor(checkoutMinor.toString(), displayCurrency);
 
   if (loadingList) {
     return (

@@ -93,7 +93,10 @@
       "today": "اليوم",
       "tomorrow": "غدًا",
       "seeVisas": "عرض التأشيرات المناسبة",
-      "notSure": "لست متأكدًا بعد"
+      "notSure": "لست متأكدًا بعد",
+      "departureDate": "تاريخ المغادرة",
+      "previousMonth": "الشهر السابق",
+      "nextMonth": "الشهر التالي"
     },
     "continue": "متابعة"
   },

@@ -93,7 +93,10 @@
       "today": "Heute",
       "tomorrow": "Morgen",
       "seeVisas": "Passende Visa anzeigen",
-      "notSure": "Noch unsicher"
+      "notSure": "Noch unsicher",
+      "departureDate": "Abreisedatum",
+      "previousMonth": "Vorheriger Monat",
+      "nextMonth": "Nächster Monat"
     },
     "continue": "Weiter"
   },
