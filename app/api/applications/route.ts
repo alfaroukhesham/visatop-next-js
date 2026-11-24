@@ -74,6 +74,7 @@ export async function POST(req: Request) {
         userId,
         isGuest,
         resumeTokenHash: hash,
+        travelDate: body.travelDate ?? null,
       }),
     );
 

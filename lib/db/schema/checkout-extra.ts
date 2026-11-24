@@ -27,7 +27,7 @@ export type TProcessingSpeedSource = (typeof PROCESSING_SPEED_SOURCES)[number];
 
 /**
  * Optional checkout extras. Disabled rows stay hidden from customers.
- * Prices live in checkout_extra_price; checkout must not invent a missing currency.
+ * Prices live in checkout_extra_price. Checkout reads those stored amounts and does not convert currency.
  */
 export const checkoutExtra = pgTable(
   "checkout_extra",
@@ -77,7 +77,7 @@ export const checkoutExtraPrice = pgTable(
   ],
 );
 
-/** Per-traveller opt-in. Written by a later checkout release; unused by totals today. */
+/** Per-traveller opt-in. Fast Track rows mirror application_party.processing_speed. */
 export const applicationExtraSelection = pgTable(
   "application_extra_selection",
   {

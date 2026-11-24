@@ -19,6 +19,11 @@ export const createDraftBodySchema = z
     guestEmail: z.email().max(320).optional(),
     /** Price book for checkout. Server validates visibility + stored local prices. */
     catalogCurrency: zIso4217Alpha3.default("USD"),
+    /** Arrival date in the UAE, YYYY-MM-DD. Optional until the apply form sends it. */
+    travelDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
   })
   .refine((b) => Boolean(b.travelers?.length || b.serviceId), {
     message: "Choose a service.",

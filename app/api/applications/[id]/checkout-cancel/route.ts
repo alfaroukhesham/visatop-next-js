@@ -2,8 +2,7 @@ import { headers } from "next/headers";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { withSystemDbActor, withClientDbActor } from "@/lib/db/actor-context";
 import { resolveApplicationAccess } from "@/lib/applications/application-access";
-import * as schema from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { cancelPartyCheckout } from "@/lib/payments/cancel-party-checkout";
 import type { DbTransaction } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -22,38 +21,15 @@ export async function POST(
   }
 
   const runTx = async (tx: DbTransaction) => {
-    // Only allow cancellation if in checkout_created status and pending lock
-    const [updated] = await tx
-      .update(schema.application)
-      .set({ 
-        checkoutState: "none",
-        paymentStatus: "unpaid" 
-      })
-      .where(and(
-        eq(schema.application.id, applicationId),
-        eq(schema.application.checkoutState, "pending")
-      ))
-      .returning();
-
-    if (!updated) {
+    const cancelled = await cancelPartyCheckout(tx, applicationId);
+    if (!cancelled.ok) {
       return jsonError("CONFLICT", "Checkout not in a cancellable state", { status: 409, requestId });
     }
-
-    // Also update any pending payment rows
-    await tx
-      .update(schema.payment)
-      .set({ status: "failed" })
-      .where(and(
-        eq(schema.payment.applicationId, applicationId),
-        eq(schema.payment.status, "checkout_created")
-      ));
-
     return jsonOk({ cancelled: true }, { requestId });
   };
 
   if (accessRes.access.kind === "user") {
     return await withClientDbActor(accessRes.access.userId, runTx);
-  } else {
-    return await withSystemDbActor(runTx);
   }
+  return await withSystemDbActor(runTx);
 }
