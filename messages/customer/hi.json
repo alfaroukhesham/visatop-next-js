@@ -93,7 +93,10 @@
       "today": "आज",
       "tomorrow": "कल",
       "seeVisas": "मेल खाते वीज़ा देखें",
-      "notSure": "अभी पक्का नहीं"
+      "notSure": "अभी पक्का नहीं",
+      "departureDate": "प्रस्थान तिथि",
+      "previousMonth": "पिछला महीना",
+      "nextMonth": "अगला महीना"
     },
     "continue": "जारी रखें"
   },

@@ -93,7 +93,10 @@
       "today": "Today",
       "tomorrow": "Tomorrow",
       "seeVisas": "See matching visas",
-      "notSure": "Not sure yet"
+      "notSure": "Not sure yet",
+      "departureDate": "Departure date",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month"
     },
     "continue": "Continue"
   },

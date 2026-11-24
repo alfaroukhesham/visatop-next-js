@@ -93,7 +93,10 @@
       "today": "Oggi",
       "tomorrow": "Domani",
       "seeVisas": "Vedi i visti corrispondenti",
-      "notSure": "Non sono ancora sicuro"
+      "notSure": "Non sono ancora sicuro",
+      "departureDate": "Data di partenza",
+      "previousMonth": "Mese precedente",
+      "nextMonth": "Mese successivo"
     },
     "continue": "Continua"
   },

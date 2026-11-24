@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState, type FC } from "react";
+import { useState, type FC } from "react";
+import { AlertCircle } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
-import { ArrivalDateField } from "@/components/apply/arrival-date-field";
+import { InlineMonthCalendar } from "@/components/apply/inline-month-calendar";
 import { validateTravelDate } from "@/lib/checkout-extras/dubai-calendar";
 import { formatArrivalDate, travelDateErrorKey } from "@/lib/apply/checkout-extras-ui";
 
@@ -26,9 +27,19 @@ export const TravelDateStep: FC<ITravelDateStepProps> = ({
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
-  const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
-  const [touched, setTouched] = useState(false);
+
+  const pickDate = (next: string) => {
+    onChange(next);
+    const validated = validateTravelDate(next, { required: false, todayUae, maxTravelDate });
+    setError(
+      validated.ok
+        ? null
+        : t(travelDateErrorKey(validated.code), {
+            maxDate: formatArrivalDate(maxTravelDate, locale),
+          }),
+    );
+  };
 
   const continueWithDate = () => {
     const validated = validateTravelDate(value.trim() ? value : null, {
@@ -37,13 +48,12 @@ export const TravelDateStep: FC<ITravelDateStepProps> = ({
       maxTravelDate,
     });
     if (!validated.ok) {
-      setTouched(true);
       setError(
         t(travelDateErrorKey(validated.code), {
           maxDate: formatArrivalDate(maxTravelDate, locale),
         }),
       );
-      window.setTimeout(() => inputRef.current?.focus(), 0);
+      window.setTimeout(() => document.getElementById("travel-date-calendar-grid")?.focus(), 0);
       return;
     }
     if (!validated.date) {
@@ -61,21 +71,19 @@ export const TravelDateStep: FC<ITravelDateStepProps> = ({
           {t("start.travelDate.label")}
         </h3>
       </div>
-      <ArrivalDateField
-        id="apply-travel-date"
+      <InlineMonthCalendar
         value={value}
-        onChange={onChange}
+        onChange={pickDate}
         todayUae={todayUae}
         maxTravelDate={maxTravelDate}
-        required={false}
-        error={error}
-        onError={setError}
-        inputRef={inputRef}
-        touched={touched}
-        onTouched={() => setTouched(true)}
-        labelClassName="sr-only"
       />
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      {error ? (
+        <p role="alert" className="text-foreground mx-auto flex max-w-lg items-start gap-2 text-sm">
+          <AlertCircle className="text-destructive mt-0.5 size-4 shrink-0" aria-hidden />
+          <span>{error}</span>
+        </p>
+      ) : null}
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
         <ClientButton type="button" brand="white" className="min-h-11" onClick={onSkip}>
           {t("start.travelDate.notSure")}
         </ClientButton>

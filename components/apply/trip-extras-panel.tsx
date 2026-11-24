@@ -424,7 +424,11 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
       ) : null}
 
       {locked ? (
-        <div className="border-primary bg-primary/15 text-foreground space-y-2 rounded-[12px] border p-3 text-sm" role="status">
+        <div
+          id="checkout-lock-note"
+          className="border-primary bg-primary/15 text-foreground scroll-mt-[var(--wp-shell-header-height,130px)] space-y-2 rounded-[12px] border p-3 text-sm"
+          role="status"
+        >
           <p className="flex items-start gap-2">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
             <span>{t("extras.locked")}</span>

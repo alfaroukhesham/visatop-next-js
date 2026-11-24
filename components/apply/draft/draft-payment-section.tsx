@@ -147,7 +147,11 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
   );
 
   return (
-    <section id="draft-payment-section" className="space-y-4" data-clarity-mask="true">
+    <section
+      id="draft-payment-section"
+      className="scroll-mt-[var(--wp-shell-header-height,130px)] space-y-4"
+      data-clarity-mask="true"
+    >
       {paymentReadiness !== "ready" && app.paymentStatus === "unpaid" && (
         <div className="rounded-[12px] border border-border bg-muted/20 p-5 sm:p-6">
           <p className="text-muted-foreground text-sm">{t("pay.blockedMissingDocs")}</p>
@@ -219,7 +223,7 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
 
           <ClientButton
             variant="ghost"
-            className="hover:bg-destructive/10 hover:text-destructive"
+            className="hover:bg-destructive/10 hover:text-destructive h-11 min-h-11"
             onClick={onCancelCheckout}
           >
             {t("payment.cancelAndReset")}

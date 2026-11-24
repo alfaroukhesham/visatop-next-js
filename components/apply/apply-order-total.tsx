@@ -4,6 +4,7 @@ import { useEffect, useState, type FC } from "react";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
+import { useCheckoutQuoteOptional } from "@/components/apply/checkout-quote-provider";
 import {
   formatMinorAmount,
   quoteUsesCodeFormat,
@@ -31,10 +32,22 @@ export const ApplyOrderTotal: FC<IApplyOrderTotalProps> = ({
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
-  const [total, setTotal] = useState<string | null>(null);
+  const quoteState = useCheckoutQuoteOptional();
+  const liveQuote = quoteState?.preview ?? null;
+  const liveTotal =
+    quoteState && liveQuote
+      ? formatMinorAmount(
+          liveQuote.totalAmountMinor,
+          liveQuote.currency,
+          locale,
+          quoteUsesCodeFormat(liveQuote) ? "code" : "symbol",
+        )
+      : null;
+  const [fetchedTotal, setFetchedTotal] = useState<string | null>(null);
   const serviceKey = serviceIds.join("|");
   const tab = catalogCurrencyTab(currency);
   useEffect(() => {
+    if (quoteState) return;
     let cancelled = false;
     const ids = serviceKey.split("|").filter(Boolean);
     const run = async () => {
@@ -55,7 +68,7 @@ export const ApplyOrderTotal: FC<IApplyOrderTotalProps> = ({
       if (cancelled) return;
       const quote = quoteRes && quoteRes.ok ? quoteRes.data : null;
       if (quote && (quote.extraLines.length > 0 || quote.availableExtras.length > 0)) {
-        setTotal(
+        setFetchedTotal(
           formatMinorAmount(
             quote.totalAmountMinor,
             quote.currency,
@@ -68,13 +81,14 @@ export const ApplyOrderTotal: FC<IApplyOrderTotalProps> = ({
       if (!catalogRes.ok) return;
       const sum = sumCatalogServicesTotalMinor(catalogRes.data.services, ids, tab);
       if (sum === null || cancelled) return;
-      setTotal(formatDisplayMinor(sum.toString(), tab));
+      setFetchedTotal(formatDisplayMinor(sum.toString(), tab));
     };
     void run();
     return () => {
       cancelled = true;
     };
-  }, [applicationId, locale, nationalityCode, serviceKey, tab]);
+  }, [applicationId, locale, nationalityCode, quoteState, serviceKey, tab]);
+  const total = quoteState ? liveTotal : fetchedTotal;
   if (!total) return null;
   return (
     <p className="text-muted-foreground text-center text-sm">

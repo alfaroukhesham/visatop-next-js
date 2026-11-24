@@ -93,7 +93,10 @@
       "today": "Ngayon",
       "tomorrow": "Bukas",
       "seeVisas": "Tingnan ang mga tumutugmang visa",
-      "notSure": "Hindi pa sigurado"
+      "notSure": "Hindi pa sigurado",
+      "departureDate": "Petsa ng pag-alis",
+      "previousMonth": "Nakaraang buwan",
+      "nextMonth": "Susunod na buwan"
     },
     "continue": "Magpatuloy"
   },

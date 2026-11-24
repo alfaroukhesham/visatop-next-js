@@ -524,7 +524,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                               selected && "text-secondary",
                             )}
                           >
-                            {s.name}
+                            <bdi>{s.name}</bdi>
                           </span>
                           {subtitle ? (
                             <span className="text-muted-foreground mt-1 block text-xs">{subtitle}</span>
