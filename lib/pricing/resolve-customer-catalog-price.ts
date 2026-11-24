@@ -5,10 +5,10 @@
  * Reads from catalog_customer_price + env FX; no affiliate/margin tables.
  *
  * Add-ons decision (spec open product check):
- *   Per spec §1, the customer price in the sheet IS the exact customer total.
- *   Add-ons are NOT applied on top of catalog_customer_price in this resolver.
- *   This matches the spec's intent: "checkout uses the locked quote amount."
- *   Documented here so future devs understand the deliberate choice.
+ *   The visa amount in catalog_customer_price is the visa line only.
+ *   Travel insurance and Fast Track are added by POST /api/checkout from
+ *   checkout_extra_price (see lib/pricing/resolve-checkout-extras.ts).
+ *   This resolver does not convert those extras and does not invent a missing currency.
  *
  * Local currencies (e.g. NGN) are stored-only: never FX-derived from USD/AED
  * and never used to derive USD/AED.
@@ -119,7 +119,7 @@ const storedOnlyTotal = (
  *
  * Local currencies: stored row required; never FX-derived.
  *
- * Add-ons: NOT applied (see module JSDoc above).
+ * Checkout extras are not part of this total. The checkout route adds them.
  */
 export const resolveCheckoutTotal = async (
   tx: SchemaDb,

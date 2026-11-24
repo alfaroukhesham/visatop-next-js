@@ -26,7 +26,7 @@ export const applicationParty = pgTable(
     wizardCursorTravellerId: text("wizard_cursor_traveller_id"),
     /** Calendar date in Asia/Dubai. Null until the customer flow writes it. */
     travelDate: date("travel_date"),
-    /** 'standard' | 'fast_track'. Null until a later checkout release writes it. */
+    /** 'standard' | 'fast_track'. Null until the customer saves a trip or checkout quotes one. */
     processingSpeed: text("processing_speed"),
     /**
      * Who set `processing_speed`: 'system' (recommendation) or 'customer'.

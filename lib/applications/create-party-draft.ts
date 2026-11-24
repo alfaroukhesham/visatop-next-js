@@ -1,5 +1,5 @@
 import type { DbTransaction } from "@/lib/db";
-import { application, applicationParty } from "@/lib/db/schema";
+import { application, applicationExtraSelection, applicationParty } from "@/lib/db/schema";
 import type { TApplyConfig } from "@/lib/apply/apply-config";
 import { getApplyConfigFromTx } from "@/lib/apply/apply-config-from-tx";
 import { listPublicServicesForNationality } from "@/lib/catalog/queries";
@@ -14,6 +14,17 @@ import {
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { serverFunnelEventId } from "@/lib/analytics/funnel-event-names";
 import { recordFunnelEvent } from "@/lib/analytics/record-funnel-event";
+import {
+  travelDateErrorMessage,
+  travelDateWindow,
+  validateTravelDate,
+} from "@/lib/checkout-extras/dubai-calendar";
+import { getTravelDateSettingsFromTx } from "@/lib/checkout-extras/travel-date-settings";
+import {
+  initialDraftSpeed,
+  loadCheckoutExtraCatalog,
+} from "@/lib/checkout-extras/party-checkout-quote";
+import { availabilityForCurrency } from "@/lib/pricing/resolve-checkout-extras";
 
 export type TCatalogServiceRow = { id: string; travelerKind: TTravelerKind };
 
@@ -82,6 +93,7 @@ export type TCreatePartyDraftParams = {
   userId: string | null;
   isGuest: boolean;
   resumeTokenHash: string | null;
+  travelDate?: string | null;
 };
 
 export type TCreatePartyDraftResult = {
@@ -123,6 +135,39 @@ export const createPartyDraft = async (
     throw new CreatePartyDraftValidationError(currencyAssertion.message);
   }
 
+  let travelDate: string | null = null;
+  let processingSpeed: "standard" | "fast_track" | null = null;
+  let processingSpeedSource: "system" | null = null;
+  let fastTrackExtraId: string | null = null;
+  if (params.travelDate) {
+    const settings = await getTravelDateSettingsFromTx(tx);
+    const { todayUae, maxTravelDate } = travelDateWindow(now, settings.travelDateMaxDaysAhead);
+    const validated = validateTravelDate(params.travelDate, {
+      required: true,
+      todayUae,
+      maxTravelDate,
+    });
+    if (!validated.ok || !validated.date) {
+      throw new CreatePartyDraftValidationError(
+        travelDateErrorMessage(validated.ok ? "invalid" : validated.code, maxTravelDate),
+      );
+    }
+    const catalog = await loadCheckoutExtraCatalog(tx);
+    const fastTrack = catalog.find((extra) => extra.key === "fast_track");
+    const speed = initialDraftSpeed({
+      travelDate: validated.date,
+      now,
+      thresholdDays: settings.fastTrackThresholdDays,
+      fastTrackAvailable: fastTrack
+        ? availabilityForCurrency(fastTrack, params.catalogCurrency).available
+        : false,
+    });
+    travelDate = validated.date;
+    processingSpeed = speed.processingSpeed;
+    processingSpeedSource = speed.processingSpeedSource;
+    fastTrackExtraId = fastTrack?.id ?? null;
+  }
+
   const draftExpiresAt = computeDraftExpiresAt(now, ttlHours);
   const email = params.guestEmail?.trim() ? params.guestEmail.trim().toLowerCase() : null;
 
@@ -137,6 +182,9 @@ export const createPartyDraft = async (
       resumeTokenHash: params.resumeTokenHash,
       draftExpiresAt,
       paymentStatus: "unpaid",
+      travelDate,
+      processingSpeed,
+      processingSpeedSource,
     })
     .returning();
 
@@ -168,6 +216,17 @@ export const createPartyDraft = async (
 
   const primary = members.find((m) => m.travelerRole === "primary");
   if (!primary) throw new Error("Failed to create primary application");
+
+  if (fastTrackExtraId && processingSpeed) {
+    const extraId = fastTrackExtraId;
+    await tx.insert(applicationExtraSelection).values(
+      members.map((member) => ({
+        applicationId: member.id,
+        extraId,
+        selected: processingSpeed === "fast_track",
+      })),
+    );
+  }
 
   for (const member of members) {
     await recordFunnelEvent(tx, {

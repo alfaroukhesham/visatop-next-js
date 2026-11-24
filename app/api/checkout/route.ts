@@ -49,7 +49,8 @@ import type { CheckoutSessionData } from "@/lib/payments/checkout-types";
 import { diagnoseCheckoutBlock } from "@/lib/payments/diagnose-checkout-block";
 import { loadPaymentUploadPresence } from "@/lib/applications/load-payment-upload-presence";
 import { passportsPresentForPayment } from "@/lib/documents/validation-readiness";
-import { sumCheckoutTotals, sumPartyLines, type TPartyLine } from "@/lib/payments/party-checkout-total";
+import { sumCheckoutTotals, type TPartyLine } from "@/lib/payments/party-checkout-total";
+import { applyPartyExtrasToCheckout } from "@/lib/checkout-extras/party-checkout-quote";
 import { FUNNEL_CHECKOUT_CREATED, serverFunnelEventId } from "@/lib/analytics/funnel-event-names";
 import { recordFunnelEvent } from "@/lib/analytics/record-funnel-event";
 import { isCheckoutTermsAccepted } from "@/lib/legal/terms";
@@ -295,8 +296,27 @@ export async function POST(req: Request) {
         amountMinor: prices[i]!.displayMinor,
         currency: prices[i]!.currency,
       }));
-      const totalMinor = sumPartyLines(lines);
       const currency = prices[0]!.currency;
+      const quoted = await applyPartyExtrasToCheckout(tx, {
+        partyId: requestedApp.partyId,
+        members: lines,
+        fxSource: provider === "fincra" ? "fixed_list" : null,
+      });
+      if (!quoted.ok) {
+        await tx
+          .update(schema.application)
+          .set({ checkoutState: "none" })
+          .where(inArray(schema.application.id, memberIds));
+        return jsonError("VALIDATION_ERROR", quoted.message, {
+          status: 400,
+          requestId,
+          details: { reason: quoted.reason },
+        });
+      }
+      if (quoted.dropped.length > 0) {
+        log.warn({ dropped: quoted.dropped }, "[checkout] extra omitted from quote");
+      }
+      const totalMinor = quoted.totalMinor;
 
       try {
         minorUnitsToJsonSafeNumber(totalMinor);
@@ -315,18 +335,7 @@ export async function POST(req: Request) {
         applicationId: primary.id,
         totalAmount: totalMinor,
         currency,
-        breakdownJson: JSON.stringify({
-          kind: "customer_catalog",
-          amountMinor: totalMinor.toString(),
-          currency,
-          fxSource: provider === "fincra" ? "fixed_list" : null,
-          lines: prices.map((p, i) => ({
-            applicationId: lockedRows[i]!.id,
-            serviceId: lockedRows[i]!.serviceId,
-            amountMinor: p!.displayMinor.toString(),
-            currency: p!.currency,
-          })),
-        }),
+        breakdownJson: quoted.breakdownJson,
         lockedAt: new Date(),
       });
 
