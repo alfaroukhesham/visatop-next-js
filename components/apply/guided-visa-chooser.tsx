@@ -350,7 +350,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
           onClick={goBack}
           className="text-secondary hover:text-foreground inline-flex items-center gap-1 text-sm font-semibold transition-colors"
         >
-          <ChevronLeft className="size-4" aria-hidden /> {t("chooser.back")}
+          <ChevronLeft className="size-4 rtl:rotate-180" aria-hidden /> {t("chooser.back")}
         </button>
       ) : null}
       <div key={view.phase} className="theme-client-rise space-y-4">

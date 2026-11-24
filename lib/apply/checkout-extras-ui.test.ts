@@ -94,7 +94,7 @@ describe("speed recommendation", () => {
       showRadios: true,
       selected: "standard",
       badge: true,
-      note: "soon",
+      note: "n2",
     });
   });
 
@@ -111,17 +111,17 @@ describe("speed recommendation", () => {
     ).toBe("fast_track");
   });
 
-  it("hides the speed cards when fast track is not available", () => {
+  it("hides the speed cards and shows the no-fast-track caution when the trip is soon", () => {
     expect(
       speedUi({
         preview: preview({ processingSpeed: "standard", processingSpeedSource: "system" }),
         fastTrackAvailable: false,
         switchedBack: false,
-      }).showRadios,
-    ).toBe(false);
+      }),
+    ).toMatchObject({ showRadios: false, note: "n4" });
   });
 
-  it("keeps the Fast Track note after the customer switches to Fast Track under the threshold", () => {
+  it("drops the caution after the customer switches to Fast Track under the threshold", () => {
     expect(
       speedUi({
         preview: preview({
@@ -133,17 +133,17 @@ describe("speed recommendation", () => {
         fastTrackAvailable: true,
         switchedBack: false,
       }).note,
-    ).toBe("soon");
+    ).toBeNull();
   });
 
-  it("uses the short recommendation note on the same day", () => {
+  it("uses the today-or-tomorrow caution on the same day", () => {
     expect(
       speedUi({
         preview: preview({ daysUntilTravel: 0 }),
         fastTrackAvailable: true,
         switchedBack: false,
       }).note,
-    ).toBe("soon");
+    ).toBe("n3");
   });
 });
 
@@ -183,6 +183,7 @@ describe("customer copy", () => {
       "start.travelDate.today",
       "start.travelDate.tomorrow",
       "start.travelDate.notSure",
+      "start.travelDate.seeVisas",
       "start.continue",
       "start.travelDate.hint",
       "relative.inDays_one",

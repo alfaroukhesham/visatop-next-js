@@ -233,22 +233,24 @@ export const speedUi = (input: {
   const customerChoseFast =
     input.preview.processingSpeed === "fast_track" && input.preview.processingSpeedSource === "customer";
   const selected: TProcessingSpeedChoice = customerChoseFast ? "fast_track" : "standard";
-  const under = input.preview.recommendFastTrack && input.preview.daysUntilTravel !== null;
+  const days = input.preview.daysUntilTravel;
+  const under = input.preview.recommendFastTrack && days !== null;
+  const todayOrTomorrow = days !== null && days <= 1;
+  let note: TSpeedNote | null = null;
+  if (!input.fastTrackAvailable) note = under ? "n4" : null;
+  else if (todayOrTomorrow) note = "n3";
+  else if (under && selected === "standard") note = "n2";
+  else if (input.switchedBack) note = "n5";
 
   if (!input.fastTrackAvailable) {
-    return {
-      showRadios: false,
-      selected: "standard",
-      badge: false,
-      note: under ? "n4" : null,
-    };
+    return { showRadios: false, selected: "standard", badge: false, note };
   }
 
   return {
     showRadios: true,
     selected,
     badge: under,
-    note: under ? "soon" : input.switchedBack ? "n5" : null,
+    note,
   };
 };
 

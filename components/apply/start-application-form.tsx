@@ -55,6 +55,8 @@ import {
   formatArrivalDate,
   formatMinorAmount,
   pluralMessage,
+  relativeArrivalLabel,
+  speedUi,
   travelDateErrorKey,
   type TTravelWindow,
 } from "@/lib/apply/checkout-extras-ui";
@@ -570,6 +572,34 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   const speedForSubmit = fastTrackHidden && processingSpeed === "fast_track" ? "standard" : processingSpeed;
   const sourceForSubmit =
     fastTrackHidden && processingSpeed === "fast_track" ? "system" : processingSpeedSource;
+  const travelDays =
+    travelWindow && travelDate.trim() ? calendarDaysBetween(travelWindow.todayUae, travelDate.trim()) : null;
+  const daysUntil = travelDays !== null && travelDays >= 0 ? travelDays : null;
+  const recommendFast =
+    travelWindow !== null && daysUntil !== null && daysUntil < travelWindow.fastTrackThresholdDays;
+  const fastTrackForSale = Boolean(speedQuote?.fastTrackAvailable);
+  const speedNote = speedQuote
+    ? speedUi({
+        preview: {
+          recommendFastTrack: recommendFast,
+          daysUntilTravel: daysUntil,
+          processingSpeed: speedForSubmit,
+          processingSpeedSource: sourceForSubmit,
+        },
+        fastTrackAvailable: fastTrackForSale,
+        switchedBack: false,
+      }).note
+    : null;
+  const speedRelative = daysUntil !== null ? relativeArrivalLabel(locale, daysUntil, t) : "";
+  const fastTrackPartySum =
+    speedQuote?.fastTrack?.sumAmountMinor && speedQuote.travellerCount
+      ? t("extras.perTravellerSum", {
+          price: formatMinorAmount(speedQuote.fastTrack.unitAmountMinor, speedQuote.currency, locale, "code"),
+          n: speedQuote.travellerCount,
+          travellersWord: pluralMessage(t, "extras.travellers", locale, speedQuote.travellerCount),
+          sum: formatMinorAmount(speedQuote.fastTrack.sumAmountMinor, speedQuote.currency, locale, "code"),
+        })
+      : null;
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -865,16 +895,11 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
               maxTravelDate={travelWindow?.maxTravelDate}
               selectedVisaExtra={
                 <VisaSpeedChoice
-                  fastTrackAvailable={Boolean(speedQuote?.fastTrackAvailable)}
+                  fastTrackAvailable={fastTrackForSale}
                   selected={speedForSubmit}
-                  recommend={Boolean(
-                    speedQuote?.fastTrackAvailable &&
-                      travelWindow &&
-                      travelDate &&
-                      (calendarDaysBetween(travelWindow.todayUae, travelDate) ?? -1) >= 0 &&
-                      (calendarDaysBetween(travelWindow.todayUae, travelDate) ?? 99) <
-                        travelWindow.fastTrackThresholdDays,
-                  )}
+                  recommend={recommendFast && fastTrackForSale}
+                  note={speedNote}
+                  relative={speedRelative}
                   unitText={
                     speedQuote?.fastTrack
                       ? t("extras.speed.fast.price", {
@@ -882,16 +907,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                         })
                       : null
                   }
-                  sumText={
-                    speedQuote?.fastTrack?.sumAmountMinor && speedQuote.travellerCount && speedQuote.travellerCount > 1
-                      ? t("extras.perTravellerSum", {
-                          price: formatMinorAmount(speedQuote.fastTrack.unitAmountMinor, speedQuote.currency, locale, "code"),
-                          n: speedQuote.travellerCount,
-                          travellersWord: pluralMessage(t, "extras.travellers", locale, speedQuote.travellerCount),
-                          sum: formatMinorAmount(speedQuote.fastTrack.sumAmountMinor, speedQuote.currency, locale, "code"),
-                        })
-                      : null
-                  }
+                  sumText={speedQuote?.travellerCount && speedQuote.travellerCount > 1 ? fastTrackPartySum : null}
                   onSelect={(speed) => {
                     setProcessingSpeed(speed);
                     setProcessingSpeedSource("customer");
@@ -912,6 +928,14 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                 {t("start.continue")}
               </ClientButton>
             </div>
+          ) : null}
+
+          {applyStep === "travellers" && speedForSubmit === "fast_track" && fastTrackPartySum ? (
+            <p className="text-foreground text-sm">
+              {t("extras.speed.fast.title")}
+              {" · "}
+              <bdi>{fastTrackPartySum}</bdi>
+            </p>
           ) : null}
 
           {applyStep === "travellers" && partyEnabled ? (

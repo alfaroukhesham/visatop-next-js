@@ -121,7 +121,7 @@ describe("TripExtrasPanel", () => {
     expect(screen.getByRole("radio", { name: /extras.speed.standard.title/ })).toBeChecked();
     expect(screen.getByRole("radio", { name: /extras.speed.fast.title/ })).toBeEnabled();
     expect(screen.getByText("extras.speed.badge")).toBeInTheDocument();
-    expect(screen.getByText("extras.notes.soon")).toBeInTheDocument();
+    expect(screen.getByText("extras.notes.n2")).toBeInTheDocument();
   });
 
   it("does not block pay when the required flag is on and there is no date", () => {

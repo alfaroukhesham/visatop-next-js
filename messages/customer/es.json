@@ -92,6 +92,7 @@
       "soonHint": "Su viaje es pronto. En el pago le sugeriremos el trámite rápido ({price} por viajero). Puede elegir el trámite estándar.",
       "today": "Hoy",
       "tomorrow": "Mañana",
+      "seeVisas": "Ver visados compatibles",
       "notSure": "Aún no lo sé"
     },
     "continue": "Continuar"
@@ -727,10 +728,10 @@
     "travellers_other": "viajeros",
     "notes": {
       "n1": "Llega {relative}, así que hemos seleccionado el trámite rápido ({price} por viajero). El estándar suele tardar 3 días laborables. Puede cambiar al estándar.",
-      "n2": "Llega {relative}. El estándar suele tardar 3 días laborables, así que su visado puede no estar listo a tiempo. Aun así puede pagar con el estándar.",
+      "n2": "Viaja {relative}. El estándar suele tardar 3 días laborables, así que su visado puede no estar listo a tiempo. Aun así puede pagar con el estándar.",
       "n2Action": "Cambiar al trámite rápido",
-      "n3": "Llega {relative}. Incluso con el trámite rápido, su visado puede no estar listo a tiempo. {whatsapp} antes de pagar y comprobaremos qué es posible.",
-      "n4": "Llega {relative}. El estándar suele tardar 3 días laborables. {whatsapp} antes de pagar para revisar sus opciones.",
+      "n3": "Viaja {relative}. Incluso con el trámite rápido, su visado puede no estar listo a tiempo. {whatsapp} antes de pagar y comprobaremos qué es posible.",
+      "n4": "Viaja {relative}. El estándar suele tardar 3 días laborables. {whatsapp} antes de pagar para revisar sus opciones.",
       "n5": "Para su nueva fecha ({relative}), volvimos a seleccionar el trámite estándar.",
       "soon": "Tu viaje es en menos de 4 días. Recomendamos el trámite rápido. El estándar sigue seleccionado."
     },

@@ -92,6 +92,7 @@
       "soonHint": "Malapit na ang biyahe ninyo. Sa pagbabayad, imumungkahi namin ang mabilis na proseso ({price} bawat manlalakbay). Maaari ninyong piliin ang karaniwan.",
       "today": "Ngayon",
       "tomorrow": "Bukas",
+      "seeVisas": "Tingnan ang mga tumutugmang visa",
       "notSure": "Hindi pa sigurado"
     },
     "continue": "Magpatuloy"
@@ -727,10 +728,10 @@
     "travellers_other": "manlalakbay",
     "notes": {
       "n1": "Darating kayo {relative}, kaya pinili namin ang mabilis na proseso ({price} bawat manlalakbay). Ang karaniwan ay kadalasang 3 araw ng trabaho. Maaari kayong lumipat sa karaniwan.",
-      "n2": "Darating kayo {relative}. Ang karaniwan ay kadalasang 3 araw ng trabaho, kaya maaaring hindi handa ang visa sa oras. Maaari pa rin kayong magbayad gamit ang karaniwan.",
+      "n2": "Nagbibiyahe kayo {relative}. Ang karaniwan ay kadalasang 3 araw ng trabaho, kaya maaaring hindi handa ang visa sa oras. Maaari pa rin kayong magbayad gamit ang karaniwan.",
       "n2Action": "Lumipat sa mabilis na proseso",
-      "n3": "Darating kayo {relative}. Kahit sa mabilis na proseso, maaaring hindi handa ang visa sa oras. {whatsapp} bago magbayad at titingnan namin kung ano ang posible.",
-      "n4": "Darating kayo {relative}. Ang karaniwan ay kadalasang 3 araw ng trabaho. {whatsapp} bago magbayad para matingnan namin ang mga opsyon.",
+      "n3": "Nagbibiyahe kayo {relative}. Kahit sa mabilis na proseso, maaaring hindi handa ang visa sa oras. {whatsapp} bago magbayad at titingnan namin kung ano ang posible.",
+      "n4": "Nagbibiyahe kayo {relative}. Ang karaniwan ay kadalasang 3 araw ng trabaho. {whatsapp} bago magbayad para matingnan namin ang mga opsyon.",
       "n5": "Para sa bagong petsa ({relative}), ibinalik namin kayo sa karaniwang proseso.",
       "soon": "Wala pang 4 na araw ang biyahe mo. Inirerekomenda ang mabilis na proseso. Nananatiling napili ang karaniwan."
     },

@@ -92,6 +92,7 @@
       "soonHint": "Ihre Reise ist bald. Beim Bezahlen schlagen wir Express vor ({price} pro Reisender). Sie können Standard wählen.",
       "today": "Heute",
       "tomorrow": "Morgen",
+      "seeVisas": "Passende Visa anzeigen",
       "notSure": "Noch unsicher"
     },
     "continue": "Weiter"
@@ -727,10 +728,10 @@
     "travellers_other": "Reisende",
     "notes": {
       "n1": "Sie kommen {relative} an, deshalb haben wir Express gewählt ({price} pro Reisender). Standard dauert in der Regel 3 Werktage. Sie können zu Standard wechseln.",
-      "n2": "Sie kommen {relative} an. Standard dauert in der Regel 3 Werktage, Ihr Visum ist daher vielleicht nicht rechtzeitig fertig. Sie können trotzdem mit Standard bezahlen.",
+      "n2": "Sie reisen {relative}. Standard dauert in der Regel 3 Werktage, Ihr Visum ist daher vielleicht nicht rechtzeitig fertig. Sie können trotzdem mit Standard bezahlen.",
       "n2Action": "Zu Express wechseln",
-      "n3": "Sie kommen {relative} an. Auch mit Express ist Ihr Visum vielleicht nicht rechtzeitig fertig. {whatsapp}, bevor Sie bezahlen, dann prüfen wir, was möglich ist.",
-      "n4": "Sie kommen {relative} an. Standard dauert in der Regel 3 Werktage. {whatsapp}, bevor Sie bezahlen, damit wir Ihre Möglichkeiten prüfen.",
+      "n3": "Sie reisen {relative}. Auch mit Express ist Ihr Visum vielleicht nicht rechtzeitig fertig. {whatsapp}, bevor Sie bezahlen, dann prüfen wir, was möglich ist.",
+      "n4": "Sie reisen {relative}. Standard dauert in der Regel 3 Werktage. {whatsapp}, bevor Sie bezahlen, damit wir Ihre Möglichkeiten prüfen.",
       "n5": "Für Ihr neues Datum ({relative}) haben wir wieder Standard gewählt.",
       "soon": "Ihre Reise ist in weniger als 4 Tagen. Express wird empfohlen. Standard bleibt ausgewählt."
     },

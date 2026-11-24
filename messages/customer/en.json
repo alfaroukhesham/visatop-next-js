@@ -92,6 +92,7 @@
       "soonHint": "Your trip is soon. On the payment step we'll suggest Fast Track ({price} per traveller). You can choose Standard instead.",
       "today": "Today",
       "tomorrow": "Tomorrow",
+      "seeVisas": "See matching visas",
       "notSure": "Not sure yet"
     },
     "continue": "Continue"
@@ -727,10 +728,10 @@
     "travellers_other": "travellers",
     "notes": {
       "n1": "You arrive {relative}, so we've selected Fast Track ({price} per traveller). Standard usually takes 3 working days. You can switch to Standard.",
-      "n2": "You arrive {relative}. Standard usually takes 3 working days, so your visa may not be ready in time. You can still pay with Standard.",
+      "n2": "You're travelling {relative}. Standard usually takes 3 working days, so your visa may not be ready in time. You can still pay with Standard.",
       "n2Action": "Switch to Fast Track",
-      "n3": "You arrive {relative}. Even with Fast Track, your visa may not be ready in time. {whatsapp} before you pay and we'll check what's possible.",
-      "n4": "You arrive {relative}. Standard usually takes 3 working days. {whatsapp} before you pay so we can check your options.",
+      "n3": "You're travelling {relative}. Even with Fast Track, your visa may not be ready in time. {whatsapp} before you pay and we'll check what's possible.",
+      "n4": "You're travelling {relative}. Standard usually takes 3 working days. {whatsapp} before you pay so we can check your options.",
       "n5": "For your new date ({relative}), we've switched you back to Standard.",
       "soon": "Your trip is in under 4 days. Fast Track is recommended. Standard stays selected."
     },

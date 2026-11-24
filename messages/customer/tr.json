@@ -92,6 +92,7 @@
       "soonHint": "Seyahatiniz yakın. Ödeme adımında hızlı işlemi önereceğiz ({price} / yolcu). Standart işlemi de seçebilirsiniz.",
       "today": "Bugün",
       "tomorrow": "Yarın",
+      "seeVisas": "Uygun vizeleri gör",
       "notSure": "Henüz emin değilim"
     },
     "continue": "Devam"
@@ -727,10 +728,10 @@
     "travellers_other": "yolcu",
     "notes": {
       "n1": "Varışınız {relative}, bu yüzden hızlı işlemi seçtik (yolcu başına {price}). Standart genellikle 3 iş günü sürer. Standart işleme geçebilirsiniz.",
-      "n2": "Varışınız {relative}. Standart genellikle 3 iş günü sürer, vizeniz zamanında hazır olmayabilir. Yine de standart ile ödeyebilirsiniz.",
+      "n2": "Seyahatiniz {relative}. Standart genellikle 3 iş günü sürer, vizeniz zamanında hazır olmayabilir. Yine de standart ile ödeyebilirsiniz.",
       "n2Action": "Hızlı işleme geç",
-      "n3": "Varışınız {relative}. Hızlı işlemle bile vizeniz zamanında hazır olmayabilir. Ödemeden önce {whatsapp}, neyin mümkün olduğuna bakalım.",
-      "n4": "Varışınız {relative}. Standart genellikle 3 iş günü sürer. Ödemeden önce {whatsapp}, seçeneklerinizi kontrol edelim.",
+      "n3": "Seyahatiniz {relative}. Hızlı işlemle bile vizeniz zamanında hazır olmayabilir. Ödemeden önce {whatsapp}, neyin mümkün olduğuna bakalım.",
+      "n4": "Seyahatiniz {relative}. Standart genellikle 3 iş günü sürer. Ödemeden önce {whatsapp}, seçeneklerinizi kontrol edelim.",
       "n5": "Yeni tarihiniz ({relative}) için yeniden standart işlemi seçtik.",
       "soon": "Seyahatiniz 4 günden kısa sürede. Hızlı işlem önerilir. Standart seçili kalır."
     },

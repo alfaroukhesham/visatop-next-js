@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FC } from "react";
+import { useRef, useState, type FC } from "react";
 import { ClientButton } from "@/components/client/client-button";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
 import { ArrivalDateField } from "@/components/apply/arrival-date-field";
@@ -26,6 +26,7 @@ export const TravelDateStep: FC<ITravelDateStepProps> = ({
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
 
@@ -42,6 +43,7 @@ export const TravelDateStep: FC<ITravelDateStepProps> = ({
           maxDate: formatArrivalDate(maxTravelDate, locale),
         }),
       );
+      window.setTimeout(() => inputRef.current?.focus(), 0);
       return;
     }
     if (!validated.date) {
@@ -54,6 +56,11 @@ export const TravelDateStep: FC<ITravelDateStepProps> = ({
 
   return (
     <div className="space-y-4">
+      <div className="mx-auto max-w-2xl">
+        <h3 className="font-heading text-foreground text-center text-2xl font-semibold tracking-tight sm:text-3xl">
+          {t("start.travelDate.label")}
+        </h3>
+      </div>
       <ArrivalDateField
         id="apply-travel-date"
         value={value}
@@ -63,15 +70,17 @@ export const TravelDateStep: FC<ITravelDateStepProps> = ({
         required={false}
         error={error}
         onError={setError}
+        inputRef={inputRef}
         touched={touched}
         onTouched={() => setTouched(true)}
+        labelClassName="sr-only"
       />
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <ClientButton type="button" brand="white" className="min-h-11" onClick={onSkip}>
           {t("start.travelDate.notSure")}
         </ClientButton>
         <ClientButton type="button" brand="cta" className="min-h-11" onClick={continueWithDate}>
-          {t("start.continue")}
+          {t("start.travelDate.seeVisas")}
         </ClientButton>
       </div>
     </div>

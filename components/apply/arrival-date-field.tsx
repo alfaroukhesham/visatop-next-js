@@ -27,6 +27,7 @@ interface IArrivalDateFieldProps {
   disabled?: boolean;
   touched: boolean;
   onTouched: () => void;
+  labelClassName?: string;
 }
 
 const messageFor = (
@@ -52,6 +53,7 @@ export const ArrivalDateField: FC<IArrivalDateFieldProps> = ({
   disabled,
   touched,
   onTouched,
+  labelClassName,
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
@@ -96,7 +98,7 @@ export const ArrivalDateField: FC<IArrivalDateFieldProps> = ({
   };
 
   return (
-    <ClientField id={id} label={label}>
+    <ClientField id={id} label={label} labelClassName={labelClassName}>
       <div className="flex flex-wrap items-center gap-2">
         <ClientInput
           ref={inputRef}

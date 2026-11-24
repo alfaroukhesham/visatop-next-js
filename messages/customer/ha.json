@@ -92,6 +92,7 @@
       "soonHint": "Tafiyar ku ta kusa. A matakin biyan kuɗi za mu ba da shawarar saurin aiki ({price} ga kowane matafiyi). Kuna iya zaɓar na al'ada.",
       "today": "Yau",
       "tomorrow": "Gobe",
+      "seeVisas": "Duba visocin da suka dace",
       "notSure": "Ban tabbata ba tukuna"
     },
     "continue": "Ci gaba"
@@ -727,10 +728,10 @@
     "travellers_other": "matafiya",
     "notes": {
       "n1": "Za ku iso {relative}, don haka mun zaɓi saurin aiki ({price} ga kowane matafiyi). Na al'ada yawanci yana ɗaukar kwanakin aiki 3. Kuna iya canzawa zuwa na al'ada.",
-      "n2": "Za ku iso {relative}. Na al'ada yawanci yana ɗaukar kwanakin aiki 3, don haka visa na iya rashin shirya a lokaci. Kuna iya ci gaba da biya ta na al'ada.",
+      "n2": "Kuna tafiya {relative}. Na al'ada yawanci yana ɗaukar kwanakin aiki 3, don haka visa na iya rashin shirya a lokaci. Kuna iya ci gaba da biya ta na al'ada.",
       "n2Action": "Canza zuwa saurin aiki",
-      "n3": "Za ku iso {relative}. Ko da saurin aiki, visa na iya rashin shirya a lokaci. {whatsapp} kafin biya, mu duba abin da yake yiwuwa.",
-      "n4": "Za ku iso {relative}. Na al'ada yawanci yana ɗaukar kwanakin aiki 3. {whatsapp} kafin biya domin mu duba zaɓuɓɓuka.",
+      "n3": "Kuna tafiya {relative}. Ko da saurin aiki, visa na iya rashin shirya a lokaci. {whatsapp} kafin biya, mu duba abin da yake yiwuwa.",
+      "n4": "Kuna tafiya {relative}. Na al'ada yawanci yana ɗaukar kwanakin aiki 3. {whatsapp} kafin biya domin mu duba zaɓuɓɓuka.",
       "n5": "Don sabon kwanan ku ({relative}), mun mayar da zaɓin zuwa na al'ada.",
       "soon": "Tafiyarka tana kasa da kwana 4. Ana ba da shawarar Saurin aiki. Na al'ada ya ci gaba da zama zaɓi."
     },

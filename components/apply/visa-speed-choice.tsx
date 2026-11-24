@@ -1,37 +1,77 @@
 "use client";
 
-import type { FC } from "react";
+import type { FC, ReactNode } from "react";
+import { AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
+import { SUPPORT_WHATSAPP_URL } from "@/lib/support-contact";
+import type { TSpeedNote } from "@/lib/apply/checkout-extras-ui";
 import { cn } from "@/lib/utils";
 
 interface IVisaSpeedChoiceProps {
   fastTrackAvailable: boolean;
   selected: "standard" | "fast_track";
   recommend: boolean;
+  note: TSpeedNote | null;
+  relative: string;
   unitText: string | null;
   sumText: string | null;
   onSelect: (speed: "standard" | "fast_track") => void;
 }
 
+const caution = (body: ReactNode) => (
+  <div className="border-primary bg-primary/15 text-foreground flex items-start gap-2 rounded-[12px] border p-3 text-sm">
+    <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+    <div className="space-y-1">{body}</div>
+  </div>
+);
+
 export const VisaSpeedChoice: FC<IVisaSpeedChoiceProps> = ({
   fastTrackAvailable,
   selected,
   recommend,
+  note,
+  relative,
   unitText,
   sumText,
   onSelect,
 }) => {
   const t = useCustomerT();
-  if (!fastTrackAvailable) {
-    return (
-      <p className="text-foreground text-sm">
-        {t("extras.speed.standard.title")}
-        {" · "}
-        {t("extras.speed.standard.promise")}
-      </p>
+  const noteBody = () => {
+    if (!note || (note !== "n2" && note !== "n3" && note !== "n4")) return null;
+    if (note === "n2") {
+      return caution(
+        <>
+          <p>{t("extras.notes.n2", { relative })}</p>
+          <button
+            type="button"
+            className="text-secondary min-h-11 underline"
+            onClick={() => onSelect("fast_track")}
+          >
+            {t("extras.notes.n2Action")}
+          </button>
+        </>,
+      );
+    }
+    const template = t(`extras.notes.${note}`, { relative });
+    const [before, after] = template.split("{whatsapp}");
+    return caution(
+      <p>
+        {before ?? template}
+        <a
+          href={SUPPORT_WHATSAPP_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-secondary underline"
+        >
+          {t("payment.whatsappHelpLink")}
+        </a>
+        {after ?? ""}
+      </p>,
     );
-  }
+  };
+
+  if (!fastTrackAvailable) return noteBody();
 
   const card = (speed: "standard" | "fast_track", title: string, promise: string, price: string) => {
     const active = selected === speed;
@@ -87,11 +127,7 @@ export const VisaSpeedChoice: FC<IVisaSpeedChoiceProps> = ({
         {card("standard", t("extras.speed.standard.title"), t("extras.speed.standard.promise"), t("extras.speed.standard.price"))}
         {card("fast_track", t("extras.speed.fast.title"), t("extras.speed.fast.promiseDefault"), unitText ?? t("extras.speed.fast.price", { price: "" }))}
       </div>
-      {recommend ? (
-        <p className="border-secondary/30 bg-accent text-foreground rounded-[12px] border p-3 text-sm">
-          {t("extras.notes.soon")}
-        </p>
-      ) : null}
+      {noteBody()}
     </fieldset>
   );
 };
