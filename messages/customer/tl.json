@@ -81,7 +81,7 @@
     },
     "travelersLabel": "Mga manlalakbay",
     "travelDate": {
-      "label": "Kailan kayo darating sa UAE?",
+      "label": "Kailan ka magbibiyahe?",
       "optional": "(opsyonal)",
       "hint": "Piliin ang araw ng pagdating. Sumusunod ang mga petsa sa oras ng UAE. Maaari ninyo itong baguhin hanggang magbayad kayo.",
       "readback": "{date} · {relative}",
@@ -89,8 +89,13 @@
       "errorPast": "Lumipas na ang petsang ito. Piliin ang ngayon o mas susunod na petsa.",
       "errorMax": "Pumili ng petsa hanggang {maxDate}. Para sa mas malayong biyahe, mag-apply nang mas malapit sa biyahe.",
       "errorIncomplete": "Ilagay ang buong petsa: araw, buwan at taon.",
-      "soonHint": "Malapit na ang biyahe ninyo. Sa pagbabayad, imumungkahi namin ang mabilis na proseso ({price} bawat manlalakbay). Maaari ninyong piliin ang karaniwan."
-    }
+      "soonHint": "Malapit na ang biyahe ninyo. Sa pagbabayad, imumungkahi namin ang mabilis na proseso ({price} bawat manlalakbay). Maaari ninyong piliin ang karaniwan.",
+      "today": "Ngayon",
+      "tomorrow": "Bukas",
+      "seeVisas": "Tingnan ang mga tumutugmang visa",
+      "notSure": "Hindi pa sigurado"
+    },
+    "continue": "Magpatuloy"
   },
   "chooser": {
     "back": "Bumalik",
@@ -265,7 +270,7 @@
     "paymentConfirmedDetail": "Kinukumpirma namin ang payment mo at sinisimulan na ang processing.",
     "payAndSubmit": "Magpatuloy sa pagbabayad",
     "whatsappHelpPrefix": "Having trouble with payment?",
-    "whatsappHelpLink": "Message us on WhatsApp",
+    "whatsappHelpLink": "Magmensahe sa amin sa WhatsApp",
     "whatsappHelpSuffix": ", we're available 24/7.",
     "continueFincraPayment": "Ipagpatuloy ang bayad",
     "fincraWindowClosed": "Isinara ang window ng bayad. Maaari kang magpatuloy nang hindi umaalis sa page na ito, o kanselahin at i-reset.",
@@ -705,15 +710,15 @@
       "legend": "Bilis ng proseso",
       "standard": {
         "title": "Karaniwan",
-        "promise": "Karaniwang 3 araw ng trabaho kapag kumpleto na ang mga dokumento",
+        "promise": "3 araw ng trabaho",
         "price": "Kasama"
       },
       "fast": {
         "title": "Mabilis na proseso",
-        "promiseDefault": "Karaniwang sa loob ng 24 na oras",
+        "promiseDefault": "sa loob ng 24 oras",
         "price": "+{price} bawat manlalakbay"
       },
-      "badge": "Inirerekomenda para sa petsa ninyo"
+      "badge": "Inirerekomenda"
     },
     "perTravellerSum": "{price} × {n} {travellersWord} = {sum}",
     "travellers_one": "manlalakbay",
@@ -723,11 +728,12 @@
     "travellers_other": "manlalakbay",
     "notes": {
       "n1": "Darating kayo {relative}, kaya pinili namin ang mabilis na proseso ({price} bawat manlalakbay). Ang karaniwan ay kadalasang 3 araw ng trabaho. Maaari kayong lumipat sa karaniwan.",
-      "n2": "Darating kayo {relative}. Ang karaniwan ay kadalasang 3 araw ng trabaho, kaya maaaring hindi handa ang visa sa oras. Maaari pa rin kayong magbayad gamit ang karaniwan.",
+      "n2": "Nagbibiyahe kayo {relative}. Ang karaniwan ay kadalasang 3 araw ng trabaho, kaya maaaring hindi handa ang visa sa oras. Maaari pa rin kayong magbayad gamit ang karaniwan.",
       "n2Action": "Lumipat sa mabilis na proseso",
-      "n3": "Darating kayo {relative}. Kahit sa mabilis na proseso, maaaring hindi handa ang visa sa oras. {whatsapp} bago magbayad at titingnan namin kung ano ang posible.",
-      "n4": "Darating kayo {relative}. Ang karaniwan ay kadalasang 3 araw ng trabaho. {whatsapp} bago magbayad para matingnan namin ang mga opsyon.",
-      "n5": "Para sa bagong petsa ({relative}), ibinalik namin kayo sa karaniwang proseso."
+      "n3": "Nagbibiyahe kayo {relative}. Kahit sa mabilis na proseso, maaaring hindi handa ang visa sa oras. {whatsapp} bago magbayad at titingnan namin kung ano ang posible.",
+      "n4": "Nagbibiyahe kayo {relative}. Ang karaniwan ay kadalasang 3 araw ng trabaho. {whatsapp} bago magbayad para matingnan namin ang mga opsyon.",
+      "n5": "Para sa bagong petsa ({relative}), ibinalik namin kayo sa karaniwang proseso.",
+      "soon": "Wala pang 4 na araw ang biyahe mo. Inirerekomenda ang mabilis na proseso. Nananatiling napili ang karaniwan."
     },
     "insurance": {
       "title": "Seguro sa paglalakbay",

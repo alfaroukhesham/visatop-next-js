@@ -295,6 +295,13 @@
       "when": 1782440000000,
       "tag": "0041_checkout_extras",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1782450000000,
+      "tag": "0042_travel_date_optional",
+      "breakpoints": true
     }
   ]
 }

@@ -459,6 +459,18 @@ html:has([data-apply-sticky-cta]) a[data-whatsapp-fab] {
     padding-bottom: var(--apply-sticky-cta-height, 5.5rem);
   }
 
+  [data-apply-ready-section]:has([data-apply-sticky-cta-spacer]) {
+    padding-bottom: 0;
+  }
+
+  /* The in-flow spacer is above the WP footer. Keep the disclaimer clear of the bar. */
+  html:has([data-apply-sticky-cta]) [data-wp-shell="footer"],
+  html:has([data-apply-sticky-total]) [data-wp-shell="footer"],
+  html:has([data-apply-sticky-cta]) footer,
+  html:has([data-apply-sticky-total]) footer {
+    margin-bottom: var(--apply-sticky-cta-height, 0px);
+  }
+
   [data-apply-ready-inline-previous] {
     display: none;
   }

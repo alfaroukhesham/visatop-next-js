@@ -750,22 +750,3 @@ export const previewPartyQuote = async (
     }),
   };
 };
-
-export const initialDraftSpeed = (input: {
-  travelDate: string;
-  now: Date;
-  thresholdDays: number;
-  fastTrackAvailable: boolean;
-}): { processingSpeed: TProcessingSpeed; processingSpeedSource: "system" } => {
-  const speed = nextProcessingSpeed({
-    stored: { speed: null, source: null },
-    daysUntil: daysUntilTravel(input.travelDate, input.now),
-    thresholdDays: input.thresholdDays,
-    fastTrackAvailable: input.fastTrackAvailable,
-    customerChoice: null,
-  });
-  return {
-    processingSpeed: speed.speed ?? "standard",
-    processingSpeedSource: "system",
-  };
-};

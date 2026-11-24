@@ -116,12 +116,40 @@ describe("TripExtrasPanel", () => {
     expect(screen.getByRole("checkbox", { name: /extras.insurance.add/ })).not.toBeChecked();
   });
 
-  it("preselects fast track and shows the recommendation without disabling standard", () => {
+  it("keeps Standard selected and badges Fast Track when the trip is soon", () => {
     renderPanel(preview());
-    expect(screen.getByRole("radio", { name: /extras.speed.fast.title/ })).toBeChecked();
-    expect(screen.getByRole("radio", { name: /extras.speed.standard.title/ })).toBeEnabled();
+    expect(screen.getByRole("radio", { name: /extras.speed.standard.title/ })).toBeChecked();
+    expect(screen.getByRole("radio", { name: /extras.speed.fast.title/ })).toBeEnabled();
     expect(screen.getByText("extras.speed.badge")).toBeInTheDocument();
-    expect(screen.getByText(/extras.notes.n1/)).toBeInTheDocument();
+    expect(screen.getByText("extras.notes.n2")).toBeInTheDocument();
+  });
+
+  it("does not block pay when the required flag is on and there is no date", () => {
+    const onDateBlocksPay = vi.fn();
+    render(
+      <TripExtrasPanel
+        preview={preview({
+          travelDate: null,
+          daysUntilTravel: null,
+          travelDateRequired: true,
+          recommendFastTrack: false,
+        })}
+        locked={false}
+        paying={false}
+        switchedBack={false}
+        announceNote={false}
+        updateError={null}
+        onSpeed={() => undefined}
+        onInsurance={() => undefined}
+        onInsuranceAll={() => undefined}
+        onSaveDate={() => false}
+        onRetry={() => undefined}
+        onCancelCheckout={() => undefined}
+        onDateBlocksPay={onDateBlocksPay}
+      />,
+    );
+    expect(onDateBlocksPay).toHaveBeenLastCalledWith(false);
+    expect(screen.queryByText("start.travelDate.errorEmpty")).not.toBeInTheDocument();
   });
 
   it("locks the extras and shows the cancel note for a frozen checkout", () => {

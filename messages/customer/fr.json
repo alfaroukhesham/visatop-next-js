@@ -81,7 +81,7 @@
     },
     "travelersLabel": "Voyageurs",
     "travelDate": {
-      "label": "Quand arrivez-vous aux Émirats ?",
+      "label": "Quand voyagez-vous ?",
       "optional": "(facultatif)",
       "hint": "Choisissez le jour de votre arrivée. Les dates suivent l'heure des Émirats. Vous pouvez la modifier jusqu'au paiement.",
       "readback": "{date} · {relative}",
@@ -89,8 +89,13 @@
       "errorPast": "Cette date est passée. Choisissez aujourd'hui ou une date ultérieure.",
       "errorMax": "Choisissez une date jusqu'au {maxDate}. Pour un voyage plus tardif, faites la demande plus près de votre départ.",
       "errorIncomplete": "Saisissez la date complète : jour, mois et année.",
-      "soonHint": "Votre voyage est proche. À l'étape de paiement, nous proposerons le traitement rapide ({price} par voyageur). Vous pouvez choisir le traitement standard."
-    }
+      "soonHint": "Votre voyage est proche. À l'étape de paiement, nous proposerons le traitement rapide ({price} par voyageur). Vous pouvez choisir le traitement standard.",
+      "today": "Aujourd'hui",
+      "tomorrow": "Demain",
+      "seeVisas": "Voir les visas correspondants",
+      "notSure": "Pas encore sûr"
+    },
+    "continue": "Continuer"
   },
   "chooser": {
     "back": "Retour",
@@ -705,15 +710,15 @@
       "legend": "Vitesse de traitement",
       "standard": {
         "title": "Standard",
-        "promise": "Généralement 3 jours ouvrables une fois vos documents complets",
+        "promise": "3 jours ouvrés",
         "price": "Inclus"
       },
       "fast": {
         "title": "Traitement rapide",
-        "promiseDefault": "Généralement sous 24 heures",
+        "promiseDefault": "sous 24 heures",
         "price": "+{price} par voyageur"
       },
-      "badge": "Recommandé pour votre date"
+      "badge": "Recommandé"
     },
     "perTravellerSum": "{price} × {n} {travellersWord} = {sum}",
     "travellers_one": "voyageur",
@@ -723,11 +728,12 @@
     "travellers_other": "voyageurs",
     "notes": {
       "n1": "Vous arrivez {relative}, nous avons donc sélectionné le traitement rapide ({price} par voyageur). Le traitement standard prend généralement 3 jours ouvrables. Vous pouvez passer au standard.",
-      "n2": "Vous arrivez {relative}. Le traitement standard prend généralement 3 jours ouvrables, votre visa peut donc ne pas être prêt à temps. Vous pouvez quand même payer avec le standard.",
+      "n2": "Vous voyagez {relative}. Le traitement standard prend généralement 3 jours ouvrables, votre visa peut donc ne pas être prêt à temps. Vous pouvez quand même payer avec le standard.",
       "n2Action": "Passer au traitement rapide",
-      "n3": "Vous arrivez {relative}. Même avec le traitement rapide, votre visa peut ne pas être prêt à temps. {whatsapp} avant de payer et nous vérifierons ce qui est possible.",
-      "n4": "Vous arrivez {relative}. Le traitement standard prend généralement 3 jours ouvrables. {whatsapp} avant de payer pour que nous vérifiions vos options.",
-      "n5": "Pour votre nouvelle date ({relative}), nous vous avons remis sur le traitement standard."
+      "n3": "Vous voyagez {relative}. Même avec le traitement rapide, votre visa peut ne pas être prêt à temps. {whatsapp} avant de payer et nous vérifierons ce qui est possible.",
+      "n4": "Vous voyagez {relative}. Le traitement standard prend généralement 3 jours ouvrables. {whatsapp} avant de payer pour que nous vérifiions vos options.",
+      "n5": "Pour votre nouvelle date ({relative}), nous vous avons remis sur le traitement standard.",
+      "soon": "Votre voyage est dans moins de 4 jours. Le traitement accéléré est recommandé. Le standard reste sélectionné."
     },
     "insurance": {
       "title": "Assurance voyage",

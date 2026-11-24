@@ -81,7 +81,7 @@
     },
     "travelersLabel": "Viajeros",
     "travelDate": {
-      "label": "¿Cuándo llega a los EAU?",
+      "label": "¿Cuándo viajas?",
       "optional": "(opcional)",
       "hint": "Elija el día en que aterriza. Las fechas siguen la hora de los EAU. Puede cambiarla hasta que pague.",
       "readback": "{date} · {relative}",
@@ -89,8 +89,13 @@
       "errorPast": "Esta fecha ya pasó. Elija hoy o una fecha posterior.",
       "errorMax": "Elija una fecha hasta el {maxDate}. Para viajes más lejanos, solicite más cerca de su fecha de viaje.",
       "errorIncomplete": "Escriba la fecha completa: día, mes y año.",
-      "soonHint": "Su viaje es pronto. En el pago le sugeriremos el trámite rápido ({price} por viajero). Puede elegir el trámite estándar."
-    }
+      "soonHint": "Su viaje es pronto. En el pago le sugeriremos el trámite rápido ({price} por viajero). Puede elegir el trámite estándar.",
+      "today": "Hoy",
+      "tomorrow": "Mañana",
+      "seeVisas": "Ver visados compatibles",
+      "notSure": "Aún no lo sé"
+    },
+    "continue": "Continuar"
   },
   "chooser": {
     "back": "Atrás",
@@ -265,7 +270,7 @@
     "paymentConfirmedDetail": "Estamos confirmando su pago e iniciando el procesamiento.",
     "payAndSubmit": "Continuar al pago",
     "whatsappHelpPrefix": "Having trouble with payment?",
-    "whatsappHelpLink": "Message us on WhatsApp",
+    "whatsappHelpLink": "Escríbanos por WhatsApp",
     "whatsappHelpSuffix": ", we're available 24/7.",
     "continueFincraPayment": "Continuar el pago",
     "fincraWindowClosed": "Se cerró la ventana de pago. Puede continuar sin salir de esta página, o cancelar y restablecer.",
@@ -705,15 +710,15 @@
       "legend": "Velocidad de trámite",
       "standard": {
         "title": "Estándar",
-        "promise": "Normalmente 3 días laborables cuando sus documentos estén completos",
+        "promise": "3 días laborables",
         "price": "Incluido"
       },
       "fast": {
         "title": "Trámite rápido",
-        "promiseDefault": "Normalmente en 24 horas",
+        "promiseDefault": "en 24 horas",
         "price": "+{price} por viajero"
       },
-      "badge": "Recomendado para su fecha"
+      "badge": "Recomendado"
     },
     "perTravellerSum": "{price} × {n} {travellersWord} = {sum}",
     "travellers_one": "viajero",
@@ -723,11 +728,12 @@
     "travellers_other": "viajeros",
     "notes": {
       "n1": "Llega {relative}, así que hemos seleccionado el trámite rápido ({price} por viajero). El estándar suele tardar 3 días laborables. Puede cambiar al estándar.",
-      "n2": "Llega {relative}. El estándar suele tardar 3 días laborables, así que su visado puede no estar listo a tiempo. Aun así puede pagar con el estándar.",
+      "n2": "Viaja {relative}. El estándar suele tardar 3 días laborables, así que su visado puede no estar listo a tiempo. Aun así puede pagar con el estándar.",
       "n2Action": "Cambiar al trámite rápido",
-      "n3": "Llega {relative}. Incluso con el trámite rápido, su visado puede no estar listo a tiempo. {whatsapp} antes de pagar y comprobaremos qué es posible.",
-      "n4": "Llega {relative}. El estándar suele tardar 3 días laborables. {whatsapp} antes de pagar para revisar sus opciones.",
-      "n5": "Para su nueva fecha ({relative}), volvimos a seleccionar el trámite estándar."
+      "n3": "Viaja {relative}. Incluso con el trámite rápido, su visado puede no estar listo a tiempo. {whatsapp} antes de pagar y comprobaremos qué es posible.",
+      "n4": "Viaja {relative}. El estándar suele tardar 3 días laborables. {whatsapp} antes de pagar para revisar sus opciones.",
+      "n5": "Para su nueva fecha ({relative}), volvimos a seleccionar el trámite estándar.",
+      "soon": "Tu viaje es en menos de 4 días. Recomendamos el trámite rápido. El estándar sigue seleccionado."
     },
     "insurance": {
       "title": "Seguro de viaje",

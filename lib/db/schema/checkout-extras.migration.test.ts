@@ -83,3 +83,20 @@ describe("0041 checkout extras migration", () => {
     expect(journal.entries.filter((entry) => entry.tag === "0040_fincra_attempt_lifecycle")).toHaveLength(1);
   });
 });
+
+describe("0042 travel date optional migration", () => {
+  it("turns the seeded required flag off and allows the step setting", () => {
+    const sql = readFileSync("drizzle/0042_travel_date_optional.sql", "utf8");
+    expect(sql).toContain("'travel_date_required' AND \"value\" = 'true'");
+    expect(sql).toContain("'travel_date_step_enabled'");
+    expect(sql).not.toMatch(/\bDROP TABLE\b/i);
+    expect(sql).not.toMatch(/DROP COLUMN/i);
+    const journal = JSON.parse(readFileSync("drizzle/meta/_journal.json", "utf8")) as {
+      entries: Array<{ idx: number; tag: string; when: number }>;
+    };
+    const previous = journal.entries.find((entry) => entry.tag === "0041_checkout_extras");
+    const next = journal.entries.find((entry) => entry.tag === "0042_travel_date_optional");
+    expect(next?.idx).toBe(42);
+    expect(next && previous && next.when).toBeGreaterThan(previous!.when);
+  });
+});

@@ -13,6 +13,7 @@ import {
   Repeat2,
   UserRound,
 } from "lucide-react";
+import { ClientButton } from "@/components/client/client-button";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import {
   defaultEntryForStay,
@@ -28,6 +29,7 @@ import {
 } from "@/lib/apply/guided-visa-filter";
 import type { TEntryKind, TStayBucket, TTravelerKind } from "@/lib/catalog/guided-choice";
 import { cn } from "@/lib/utils";
+import { TravelDateStep } from "@/components/apply/travel-date-step";
 
 export interface IService {
   id: string;
@@ -56,6 +58,12 @@ export interface IGuidedVisaChooserProps {
   initialStay?: TStayBucket | null;
   initialEntry?: "single" | "multiple";
   initialKind?: TTravelerKind;
+  showDateStep?: boolean;
+  travelDate?: string;
+  onTravelDateChange?: (value: string) => void;
+  todayUae?: string;
+  maxTravelDate?: string;
+  selectedVisaExtra?: ReactNode;
 }
 
 const EMPTY_SHORTLIST_KEY = "chooser.noMatches";
@@ -225,6 +233,12 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
   initialStay = null,
   initialEntry = "single",
   initialKind = "adult",
+  showDateStep = false,
+  travelDate = "",
+  onTravelDateChange,
+  todayUae = "",
+  maxTravelDate = "",
+  selectedVisaExtra = null,
 }) => {
   const t = useCustomerT();
   const stayBuckets = useMemo(() => stayOptionsForChooser(services), [services]);
@@ -234,11 +248,14 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
   const [kind, setKind] = useState<TTravelerKind>(initialKind);
 
   const view = useMemo(() => {
+    if (phase === "date" && !showDateStep) {
+      return { phase: "results" as const, stay, entry, kind };
+    }
     if (phase === "stay" && stayBuckets.length === 0) {
       return { phase: "results" as const, stay: null, entry, kind };
     }
     return { phase, stay, entry, kind };
-  }, [phase, stay, entry, kind, stayBuckets]);
+  }, [phase, stay, entry, kind, stayBuckets, showDateStep]);
 
   useEffect(() => {
     onAnswersChange?.({ stay: view.stay, entry: view.entry, kind: view.kind });
@@ -256,6 +273,9 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
     return services.filter((s) => ids.has(s.id));
   }, [services, view.stay, view.entry, view.kind]);
 
+  const afterQuestions = (phase: TChooserPhase): TChooserPhase =>
+    phase === "results" && showDateStep ? "date" : phase;
+
   const goStay = (next: TStayBucket) => {
     const nextEntry = defaultEntryForStay(services, next);
     const nextKind = defaultKindForStay(services, next, nextEntry);
@@ -263,7 +283,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
     setEntry(nextEntry);
     setKind(nextKind);
     onSelectService("");
-    setPhase(nextPhaseAfterStay(services, next));
+    setPhase(afterQuestions(nextPhaseAfterStay(services, next)));
   };
 
   const goEntry = (next: "single" | "multiple") => {
@@ -273,18 +293,31 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
     setEntry(next);
     setKind(nextKind);
     onSelectService("");
-    setPhase(nextPhaseAfterEntry(services, stayForEntry, next));
+    setPhase(afterQuestions(nextPhaseAfterEntry(services, stayForEntry, next)));
   };
 
   const goKind = (next: TTravelerKind) => {
     setKind(next);
     onSelectService("");
-    setPhase("results");
+    setPhase(showDateStep ? "date" : "results");
+  };
+
+  const backFromList = () => {
+    if (showDateStep) return void setPhase("date");
+    if (view.stay && nextPhaseAfterEntry(services, view.stay, view.entry) === "kind") {
+      return void setPhase("kind");
+    }
+    if (view.stay && needsEntryQuestion(services, view.stay)) return void setPhase("entry");
+    if (stayBuckets.length > 0) return void setPhase("stay");
   };
 
   const goBack = () => {
     onSelectService("");
     if (view.phase === "results") {
+      backFromList();
+      return;
+    }
+    if (view.phase === "date") {
       if (view.stay && nextPhaseAfterEntry(services, view.stay, view.entry) === "kind") {
         return void setPhase("kind");
       }
@@ -302,6 +335,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
 
   const showChooserBack =
     view.phase === "results" ||
+    view.phase === "date" ||
     view.phase === "kind" ||
     (view.phase === "entry" && stayBuckets.length > 0);
 
@@ -316,7 +350,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
           onClick={goBack}
           className="text-secondary hover:text-foreground inline-flex items-center gap-1 text-sm font-semibold transition-colors"
         >
-          <ChevronLeft className="size-4" aria-hidden /> {t("chooser.back")}
+          <ChevronLeft className="size-4 rtl:rotate-180" aria-hidden /> {t("chooser.back")}
         </button>
       ) : null}
       <div key={view.phase} className="theme-client-rise space-y-4">
@@ -412,6 +446,36 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
             </div>
           </div>
         ) : null}
+        {view.phase === "date" && todayUae && maxTravelDate ? (
+          <TravelDateStep
+            value={travelDate}
+            onChange={(next) => onTravelDateChange?.(next)}
+            todayUae={todayUae}
+            maxTravelDate={maxTravelDate}
+            onContinue={() => setPhase("results")}
+            onSkip={() => {
+              onTravelDateChange?.("");
+              setPhase("results");
+            }}
+          />
+        ) : view.phase === "date" ? (
+          <div className="space-y-3">
+            <p className="text-muted-foreground text-sm" role="status">
+              {t("start.loading")}
+            </p>
+            <ClientButton
+              type="button"
+              brand="white"
+              className="min-h-11"
+              onClick={() => {
+                onTravelDateChange?.("");
+                setPhase("results");
+              }}
+            >
+              {t("start.travelDate.notSure")}
+            </ClientButton>
+          </div>
+        ) : null}
         {view.phase === "results" ? (
           matches.length === 0 ? (
             <p className="text-muted-foreground text-sm leading-relaxed" role="status">
@@ -483,6 +547,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                           )}
                         </span>
                       </button>
+                      {selected && selectedVisaExtra ? <div className="mt-3">{selectedVisaExtra}</div> : null}
                     </li>
                   );
                 })}

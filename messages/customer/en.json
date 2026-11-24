@@ -81,7 +81,7 @@
     },
     "travelersLabel": "Travelers",
     "travelDate": {
-      "label": "When do you arrive in the UAE?",
+      "label": "When are you travelling?",
       "optional": "(optional)",
       "hint": "Pick the day you land. Dates follow UAE time. You can change it until you pay.",
       "readback": "{date} · {relative}",
@@ -89,8 +89,13 @@
       "errorPast": "This date has passed. Choose today or a later date.",
       "errorMax": "Choose a date up to {maxDate}. For later trips, apply closer to your travel date.",
       "errorIncomplete": "Enter the full date: day, month and year.",
-      "soonHint": "Your trip is soon. On the payment step we'll suggest Fast Track ({price} per traveller). You can choose Standard instead."
-    }
+      "soonHint": "Your trip is soon. On the payment step we'll suggest Fast Track ({price} per traveller). You can choose Standard instead.",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "seeVisas": "See matching visas",
+      "notSure": "Not sure yet"
+    },
+    "continue": "Continue"
   },
   "chooser": {
     "back": "Back",
@@ -705,15 +710,15 @@
       "legend": "Processing speed",
       "standard": {
         "title": "Standard",
-        "promise": "Usually 3 working days once your documents are complete",
+        "promise": "3 working days",
         "price": "Included"
       },
       "fast": {
         "title": "Fast Track",
-        "promiseDefault": "Usually within 24 hours",
+        "promiseDefault": "within 24 hours",
         "price": "+{price} per traveller"
       },
-      "badge": "Recommended for your date"
+      "badge": "Recommended"
     },
     "perTravellerSum": "{price} × {n} {travellersWord} = {sum}",
     "travellers_one": "traveller",
@@ -723,11 +728,12 @@
     "travellers_other": "travellers",
     "notes": {
       "n1": "You arrive {relative}, so we've selected Fast Track ({price} per traveller). Standard usually takes 3 working days. You can switch to Standard.",
-      "n2": "You arrive {relative}. Standard usually takes 3 working days, so your visa may not be ready in time. You can still pay with Standard.",
+      "n2": "You're travelling {relative}. Standard usually takes 3 working days, so your visa may not be ready in time. You can still pay with Standard.",
       "n2Action": "Switch to Fast Track",
-      "n3": "You arrive {relative}. Even with Fast Track, your visa may not be ready in time. {whatsapp} before you pay and we'll check what's possible.",
-      "n4": "You arrive {relative}. Standard usually takes 3 working days. {whatsapp} before you pay so we can check your options.",
-      "n5": "For your new date ({relative}), we've switched you back to Standard."
+      "n3": "You're travelling {relative}. Even with Fast Track, your visa may not be ready in time. {whatsapp} before you pay and we'll check what's possible.",
+      "n4": "You're travelling {relative}. Standard usually takes 3 working days. {whatsapp} before you pay so we can check your options.",
+      "n5": "For your new date ({relative}), we've switched you back to Standard.",
+      "soon": "Your trip is in under 4 days. Fast Track is recommended. Standard stays selected."
     },
     "insurance": {
       "title": "Travel insurance",

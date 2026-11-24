@@ -83,28 +83,10 @@ describe("extras section visibility", () => {
 });
 
 describe("speed recommendation", () => {
-  it("preselects fast track and shows the badge when the preview recommends it", () => {
+  it("keeps Standard selected and shows the recommended badge when the trip is soon", () => {
     expect(
       speedUi({
         preview: preview(),
-        fastTrackAvailable: true,
-        switchedBack: false,
-      }),
-    ).toEqual({
-      showRadios: true,
-      selected: "fast_track",
-      badge: true,
-      note: "n1",
-    });
-  });
-
-  it("keeps a customer Standard choice and warns without blocking", () => {
-    expect(
-      speedUi({
-        preview: preview({
-          processingSpeed: "standard",
-          processingSpeedSource: "customer",
-        }),
         fastTrackAvailable: true,
         switchedBack: false,
       }),
@@ -116,17 +98,30 @@ describe("speed recommendation", () => {
     });
   });
 
-  it("hides the speed cards when fast track is not available", () => {
+  it("keeps a customer Fast Track choice", () => {
+    expect(
+      speedUi({
+        preview: preview({
+          processingSpeed: "fast_track",
+          processingSpeedSource: "customer",
+        }),
+        fastTrackAvailable: true,
+        switchedBack: false,
+      }).selected,
+    ).toBe("fast_track");
+  });
+
+  it("hides the speed cards and shows the no-fast-track caution when the trip is soon", () => {
     expect(
       speedUi({
         preview: preview({ processingSpeed: "standard", processingSpeedSource: "system" }),
         fastTrackAvailable: false,
         switchedBack: false,
-      }).showRadios,
-    ).toBe(false);
+      }),
+    ).toMatchObject({ showRadios: false, note: "n4" });
   });
 
-  it("keeps the Fast Track note after the customer switches to Fast Track under the threshold", () => {
+  it("drops the caution after the customer switches to Fast Track under the threshold", () => {
     expect(
       speedUi({
         preview: preview({
@@ -138,10 +133,10 @@ describe("speed recommendation", () => {
         fastTrackAvailable: true,
         switchedBack: false,
       }).note,
-    ).toBe("n1");
+    ).toBeNull();
   });
 
-  it("uses a same-day caution instead of the recommendation note", () => {
+  it("uses the today-or-tomorrow caution on the same day", () => {
     expect(
       speedUi({
         preview: preview({ daysUntilTravel: 0 }),
@@ -185,6 +180,11 @@ describe("customer copy", () => {
   it("includes the extras strings in every locale", () => {
     const keys = [
       "start.travelDate.label",
+      "start.travelDate.today",
+      "start.travelDate.tomorrow",
+      "start.travelDate.notSure",
+      "start.travelDate.seeVisas",
+      "start.continue",
       "start.travelDate.hint",
       "relative.inDays_one",
       "relative.inDays_two",
@@ -193,6 +193,9 @@ describe("customer copy", () => {
       "relative.inDays_other",
       "extras.sectionTitle",
       "extras.speed.badge",
+      "extras.speed.standard.promise",
+      "extras.speed.fast.promiseDefault",
+      "extras.notes.soon",
       "extras.notes.n1",
       "extras.locked",
       "extras.error.fastTrackUnavailable",

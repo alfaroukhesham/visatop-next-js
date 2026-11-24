@@ -8,6 +8,7 @@ import {
   listCheckoutExtraFieldErrors,
   prepareCheckoutExtraWrite,
   travelDateSettingsErrorMessage,
+  travelDateSettingsFieldErrors,
   travelDateSettingsWriteSchema,
 } from "@/lib/checkout-extras/validation";
 
@@ -200,7 +201,8 @@ describe("travel date settings", () => {
   it("uses defaults when rows are missing or invalid", () => {
     expect(travelDateSettingsFromRows([])).toEqual({
       fastTrackThresholdDays: 4,
-      travelDateRequired: true,
+      travelDateRequired: false,
+      travelDateStepEnabled: true,
       travelDateMaxDaysAhead: 180,
     });
     expect(
@@ -212,6 +214,7 @@ describe("travel date settings", () => {
     ).toEqual({
       fastTrackThresholdDays: 4,
       travelDateRequired: false,
+      travelDateStepEnabled: true,
       travelDateMaxDaysAhead: 365,
     });
   });
@@ -247,6 +250,21 @@ describe("travel date settings", () => {
     expect(travelDateSettingsErrorMessage(tooFar.error)).toBe(
       "Maximum days ahead must be a whole number from 1 to 730.",
     );
+  });
+
+  it("reports every invalid field at once", () => {
+    const parsed = travelDateSettingsWriteSchema.safeParse({
+      fastTrackThresholdDays: 0,
+      travelDateRequired: true,
+      travelDateStepEnabled: true,
+      travelDateMaxDaysAhead: 0,
+    });
+    expect(parsed.success).toBe(false);
+    if (parsed.success) return;
+    expect(travelDateSettingsFieldErrors(parsed.error).map((row) => row.field)).toEqual([
+      "fastTrackThresholdDays",
+      "travelDateMaxDaysAhead",
+    ]);
   });
 });
 

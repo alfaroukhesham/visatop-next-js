@@ -81,7 +81,7 @@
     },
     "travelersLabel": "Viaggiatori",
     "travelDate": {
-      "label": "Quando arrivate negli EAU?",
+      "label": "Quando viaggi?",
       "optional": "(facoltativo)",
       "hint": "Scegliete il giorno di arrivo. Le date seguono l'ora degli EAU. Potete cambiarla fino al pagamento.",
       "readback": "{date} · {relative}",
@@ -89,8 +89,13 @@
       "errorPast": "Questa data è passata. Scegliete oggi o una data successiva.",
       "errorMax": "Scegliete una data entro il {maxDate}. Per viaggi più lontani, presentate la domanda più vicino alla partenza.",
       "errorIncomplete": "Inserite la data completa: giorno, mese e anno.",
-      "soonHint": "Il viaggio è vicino. Nel pagamento suggeriremo il trattamento rapido ({price} a viaggiatore). Potete scegliere il trattamento standard."
-    }
+      "soonHint": "Il viaggio è vicino. Nel pagamento suggeriremo il trattamento rapido ({price} a viaggiatore). Potete scegliere il trattamento standard.",
+      "today": "Oggi",
+      "tomorrow": "Domani",
+      "seeVisas": "Vedi i visti corrispondenti",
+      "notSure": "Non sono ancora sicuro"
+    },
+    "continue": "Continua"
   },
   "chooser": {
     "back": "Indietro",
@@ -265,7 +270,7 @@
     "paymentConfirmedDetail": "Stiamo confermando il pagamento e avviando l'elaborazione.",
     "payAndSubmit": "Procedi al pagamento",
     "whatsappHelpPrefix": "Having trouble with payment?",
-    "whatsappHelpLink": "Message us on WhatsApp",
+    "whatsappHelpLink": "Scriveteci su WhatsApp",
     "whatsappHelpSuffix": ", we're available 24/7.",
     "continueFincraPayment": "Continua il pagamento",
     "fincraWindowClosed": "La finestra di pagamento è stata chiusa. Può continuare senza lasciare questa pagina, oppure annullare e reimpostare.",
@@ -705,15 +710,15 @@
       "legend": "Velocità di lavorazione",
       "standard": {
         "title": "Standard",
-        "promise": "Di solito 3 giorni lavorativi quando i documenti sono completi",
+        "promise": "3 giorni lavorativi",
         "price": "Incluso"
       },
       "fast": {
         "title": "Trattamento rapido",
-        "promiseDefault": "Di solito entro 24 ore",
+        "promiseDefault": "entro 24 ore",
         "price": "+{price} a viaggiatore"
       },
-      "badge": "Consigliato per la vostra data"
+      "badge": "Consigliato"
     },
     "perTravellerSum": "{price} × {n} {travellersWord} = {sum}",
     "travellers_one": "viaggiatore",
@@ -723,11 +728,12 @@
     "travellers_other": "viaggiatori",
     "notes": {
       "n1": "Arrivate {relative}, quindi abbiamo selezionato il trattamento rapido ({price} a viaggiatore). Lo standard richiede di solito 3 giorni lavorativi. Potete passare allo standard.",
-      "n2": "Arrivate {relative}. Lo standard richiede di solito 3 giorni lavorativi, quindi il visto potrebbe non essere pronto in tempo. Potete comunque pagare con lo standard.",
+      "n2": "Viaggiate {relative}. Lo standard richiede di solito 3 giorni lavorativi, quindi il visto potrebbe non essere pronto in tempo. Potete comunque pagare con lo standard.",
       "n2Action": "Passa al trattamento rapido",
-      "n3": "Arrivate {relative}. Anche con il trattamento rapido, il visto potrebbe non essere pronto in tempo. {whatsapp} prima di pagare e controlleremo cosa è possibile.",
-      "n4": "Arrivate {relative}. Lo standard richiede di solito 3 giorni lavorativi. {whatsapp} prima di pagare così verifichiamo le opzioni.",
-      "n5": "Per la nuova data ({relative}), siamo tornati al trattamento standard."
+      "n3": "Viaggiate {relative}. Anche con il trattamento rapido, il visto potrebbe non essere pronto in tempo. {whatsapp} prima di pagare e controlleremo cosa è possibile.",
+      "n4": "Viaggiate {relative}. Lo standard richiede di solito 3 giorni lavorativi. {whatsapp} prima di pagare così verifichiamo le opzioni.",
+      "n5": "Per la nuova data ({relative}), siamo tornati al trattamento standard.",
+      "soon": "Il viaggio è tra meno di 4 giorni. Il trattamento rapido è consigliato. Lo standard resta selezionato."
     },
     "insurance": {
       "title": "Assicurazione di viaggio",

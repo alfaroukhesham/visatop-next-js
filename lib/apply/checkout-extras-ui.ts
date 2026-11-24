@@ -7,6 +7,7 @@ export type TTravelWindow = {
   todayUae: string;
   maxTravelDate: string;
   extrasActive: boolean;
+  showTravelDateStep: boolean;
   travelDateRequired: boolean;
   fastTrackThresholdDays: number;
 };
@@ -60,7 +61,7 @@ export type TTripPatchBody = {
   travelInsurance?: readonly TTripInsuranceSelection[];
 };
 
-export type TSpeedNote = "n1" | "n2" | "n3" | "n4" | "n5";
+export type TSpeedNote = "n1" | "n2" | "n3" | "n4" | "n5" | "soon";
 
 export type TSpeedUi = {
   showRadios: boolean;
@@ -229,25 +230,21 @@ export const speedUi = (input: {
   fastTrackAvailable: boolean;
   switchedBack: boolean;
 }): TSpeedUi => {
-  const selected: TProcessingSpeedChoice =
-    input.preview.processingSpeed === "fast_track" ? "fast_track" : "standard";
-  const under = input.preview.recommendFastTrack;
-  const soon = input.preview.daysUntilTravel !== null && input.preview.daysUntilTravel <= 1;
+  const customerChoseFast =
+    input.preview.processingSpeed === "fast_track" && input.preview.processingSpeedSource === "customer";
+  const selected: TProcessingSpeedChoice = customerChoseFast ? "fast_track" : "standard";
+  const days = input.preview.daysUntilTravel;
+  const under = input.preview.recommendFastTrack && days !== null;
+  const todayOrTomorrow = days !== null && days <= 1;
+  let note: TSpeedNote | null = null;
+  if (!input.fastTrackAvailable) note = under ? "n4" : null;
+  else if (todayOrTomorrow) note = "n3";
+  else if (under && selected === "standard") note = "n2";
+  else if (input.switchedBack) note = "n5";
 
   if (!input.fastTrackAvailable) {
-    return {
-      showRadios: false,
-      selected: "standard",
-      badge: false,
-      note: under ? "n4" : null,
-    };
+    return { showRadios: false, selected: "standard", badge: false, note };
   }
-
-  let note: TSpeedNote | null = null;
-  if (soon) note = "n3";
-  else if (input.switchedBack && !under) note = "n5";
-  else if (under && selected === "fast_track") note = "n1";
-  else if (under && selected === "standard") note = "n2";
 
   return {
     showRadios: true,

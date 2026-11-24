@@ -81,7 +81,7 @@
     },
     "travelersLabel": "Yolcular",
     "travelDate": {
-      "label": "BAE'ye ne zaman varıyorsunuz?",
+      "label": "Ne zaman seyahat ediyorsunuz?",
       "optional": "(isteğe bağlı)",
       "hint": "İndiğiniz günü seçin. Tarihler BAE saatine göredir. Ödeyene kadar değiştirebilirsiniz.",
       "readback": "{date} · {relative}",
@@ -89,8 +89,13 @@
       "errorPast": "Bu tarih geçti. Bugünü veya daha sonraki bir tarihi seçin.",
       "errorMax": "{maxDate} tarihine kadar bir gün seçin. Daha sonraki seyahatler için başvurunuzu seyahatinize daha yakın yapın.",
       "errorIncomplete": "Tarihi eksiksiz girin: gün, ay ve yıl.",
-      "soonHint": "Seyahatiniz yakın. Ödeme adımında hızlı işlemi önereceğiz ({price} / yolcu). Standart işlemi de seçebilirsiniz."
-    }
+      "soonHint": "Seyahatiniz yakın. Ödeme adımında hızlı işlemi önereceğiz ({price} / yolcu). Standart işlemi de seçebilirsiniz.",
+      "today": "Bugün",
+      "tomorrow": "Yarın",
+      "seeVisas": "Uygun vizeleri gör",
+      "notSure": "Henüz emin değilim"
+    },
+    "continue": "Devam"
   },
   "chooser": {
     "back": "Geri",
@@ -265,7 +270,7 @@
     "paymentConfirmedDetail": "Ödemenizi onaylıyor ve işleme başlıyoruz.",
     "payAndSubmit": "Ödemeye geç",
     "whatsappHelpPrefix": "Having trouble with payment?",
-    "whatsappHelpLink": "Message us on WhatsApp",
+    "whatsappHelpLink": "WhatsApp'tan bize yazın",
     "whatsappHelpSuffix": ", we're available 24/7.",
     "continueFincraPayment": "Ödemeye devam et",
     "fincraWindowClosed": "Ödeme penceresi kapatıldı. Bu sayfadan ayrılmadan devam edebilir veya iptal edip sıfırlayabilirsiniz.",
@@ -705,15 +710,15 @@
       "legend": "İşlem hızı",
       "standard": {
         "title": "Standart",
-        "promise": "Belgeleriniz tamamlandıktan sonra genellikle 3 iş günü",
+        "promise": "3 iş günü",
         "price": "Dahil"
       },
       "fast": {
         "title": "Hızlı işlem",
-        "promiseDefault": "Genellikle 24 saat içinde",
+        "promiseDefault": "24 saat içinde",
         "price": "Yolcu başına +{price}"
       },
-      "badge": "Tarihiniz için önerilir"
+      "badge": "Önerilen"
     },
     "perTravellerSum": "{price} × {n} {travellersWord} = {sum}",
     "travellers_one": "yolcu",
@@ -723,11 +728,12 @@
     "travellers_other": "yolcu",
     "notes": {
       "n1": "Varışınız {relative}, bu yüzden hızlı işlemi seçtik (yolcu başına {price}). Standart genellikle 3 iş günü sürer. Standart işleme geçebilirsiniz.",
-      "n2": "Varışınız {relative}. Standart genellikle 3 iş günü sürer, vizeniz zamanında hazır olmayabilir. Yine de standart ile ödeyebilirsiniz.",
+      "n2": "Seyahatiniz {relative}. Standart genellikle 3 iş günü sürer, vizeniz zamanında hazır olmayabilir. Yine de standart ile ödeyebilirsiniz.",
       "n2Action": "Hızlı işleme geç",
-      "n3": "Varışınız {relative}. Hızlı işlemle bile vizeniz zamanında hazır olmayabilir. Ödemeden önce {whatsapp}, neyin mümkün olduğuna bakalım.",
-      "n4": "Varışınız {relative}. Standart genellikle 3 iş günü sürer. Ödemeden önce {whatsapp}, seçeneklerinizi kontrol edelim.",
-      "n5": "Yeni tarihiniz ({relative}) için yeniden standart işlemi seçtik."
+      "n3": "Seyahatiniz {relative}. Hızlı işlemle bile vizeniz zamanında hazır olmayabilir. Ödemeden önce {whatsapp}, neyin mümkün olduğuna bakalım.",
+      "n4": "Seyahatiniz {relative}. Standart genellikle 3 iş günü sürer. Ödemeden önce {whatsapp}, seçeneklerinizi kontrol edelim.",
+      "n5": "Yeni tarihiniz ({relative}) için yeniden standart işlemi seçtik.",
+      "soon": "Seyahatiniz 4 günden kısa sürede. Hızlı işlem önerilir. Standart seçili kalır."
     },
     "insurance": {
       "title": "Seyahat sigortası",

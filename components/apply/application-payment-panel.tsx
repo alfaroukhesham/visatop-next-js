@@ -36,6 +36,7 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
     setTermsAccepted(false);
   }
   const sessionEpoch = useRef(0);
+  const skipResume = useRef(false);
   const [embeddedUrl, setEmbeddedUrl] = useState<string | null>(null);
   const [fincraInline, setFincraInline] = useState<TFincraInlineCheckoutData | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -78,8 +79,11 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
   }, [app?.paymentStatus, goToSubmitted]);
 
   useEffect(() => {
-    if (app?.paymentStatus !== "checkout_created") return;
-    if (embeddedUrl || fincraInline) return;
+    if (app?.paymentStatus !== "checkout_created") {
+      skipResume.current = false;
+      return;
+    }
+    if (skipResume.current || embeddedUrl || fincraInline) return;
 
     let cancelled = false;
     const epoch = sessionEpoch.current;
@@ -224,6 +228,7 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
 
   const cancelOpenCheckout = useCallback(async (): Promise<boolean> => {
     sessionEpoch.current += 1;
+    skipResume.current = true;
     setCheckoutError(null);
     setEmbeddedUrl(null);
     setFincraInline(null);
@@ -231,7 +236,8 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
     setShowPaddleRetry(false);
     pollCleanupRef.current?.();
     const cancelled = await draft.cancelCheckout();
-    if (cancelled) setCheckoutError(null);
+    setCheckoutError(null);
+    if (!cancelled) skipResume.current = false;
     return cancelled;
   }, [draft]);
 

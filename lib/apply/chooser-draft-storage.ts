@@ -27,7 +27,7 @@ const isStayBucket = (value: unknown): value is TStayBucket =>
   value === "5_year";
 
 const isPhase = (value: unknown): value is TChooserPhase =>
-  value === "stay" || value === "entry" || value === "kind" || value === "results";
+  value === "stay" || value === "entry" || value === "kind" || value === "date" || value === "results";
 
 const FRESH_START_KEY = "visatop:chooser-fresh";
 

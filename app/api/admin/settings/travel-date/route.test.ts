@@ -26,6 +26,7 @@ import { GET, PUT } from "./route";
 const settings = {
   fastTrackThresholdDays: 4,
   travelDateRequired: true,
+  travelDateStepEnabled: true,
   travelDateMaxDaysAhead: 180,
 };
 
@@ -83,8 +84,34 @@ describe("PUT /api/admin/settings/travel-date", () => {
     expect(body.error.message).toBe(
       "Fast Track threshold must be a whole number from 1 to 60 and cannot be greater than the maximum days ahead.",
     );
-    expect(body.error.details).toEqual({ field: "fastTrackThresholdDays" });
+    expect(body.error.details).toEqual({
+      field: "fastTrackThresholdDays",
+      fields: [
+        {
+          field: "fastTrackThresholdDays",
+          message:
+            "Fast Track threshold must be a whole number from 1 to 60 and cannot be greater than the maximum days ahead.",
+        },
+      ],
+    });
     expect(saveTravelDateSettings).not.toHaveBeenCalled();
+  });
+
+  it("returns every invalid field", async () => {
+    const res = await PUT(
+      jsonRequest({
+        fastTrackThresholdDays: 0,
+        travelDateRequired: true,
+        travelDateStepEnabled: true,
+        travelDateMaxDaysAhead: 0,
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.details.fields.map((row: { field: string }) => row.field)).toEqual([
+      "fastTrackThresholdDays",
+      "travelDateMaxDaysAhead",
+    ]);
   });
 
   it("upserts the settings and writes an audit row", async () => {

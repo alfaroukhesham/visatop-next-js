@@ -20,11 +20,9 @@ import {
   validateTravelDate,
 } from "@/lib/checkout-extras/dubai-calendar";
 import { getTravelDateSettingsFromTx } from "@/lib/checkout-extras/travel-date-settings";
-import {
-  initialDraftSpeed,
-  loadCheckoutExtraCatalog,
-} from "@/lib/checkout-extras/party-checkout-quote";
+import { loadCheckoutExtraCatalog } from "@/lib/checkout-extras/party-checkout-quote";
 import { availabilityForCurrency } from "@/lib/pricing/resolve-checkout-extras";
+import { resolveDraftProcessingSpeed } from "@/lib/checkout-extras/trip-rules";
 
 export type TCatalogServiceRow = { id: string; travelerKind: TTravelerKind };
 
@@ -94,6 +92,8 @@ export type TCreatePartyDraftParams = {
   isGuest: boolean;
   resumeTokenHash: string | null;
   travelDate?: string | null;
+  processingSpeed?: "standard" | "fast_track" | null;
+  processingSpeedSource?: "system" | "customer" | null;
 };
 
 export type TCreatePartyDraftResult = {
@@ -135,38 +135,33 @@ export const createPartyDraft = async (
     throw new CreatePartyDraftValidationError(currencyAssertion.message);
   }
 
+  const settings = await getTravelDateSettingsFromTx(tx);
+  const catalog = await loadCheckoutExtraCatalog(tx);
+  const fastTrack = catalog.find((extra) => extra.key === "fast_track");
+  const fastTrackAvailable = fastTrack
+    ? availabilityForCurrency(fastTrack, params.catalogCurrency).available
+    : false;
   let travelDate: string | null = null;
-  let processingSpeed: "standard" | "fast_track" | null = null;
-  let processingSpeedSource: "system" | null = null;
-  let fastTrackExtraId: string | null = null;
   if (params.travelDate) {
-    const settings = await getTravelDateSettingsFromTx(tx);
     const { todayUae, maxTravelDate } = travelDateWindow(now, settings.travelDateMaxDaysAhead);
     const validated = validateTravelDate(params.travelDate, {
-      required: true,
+      required: false,
       todayUae,
       maxTravelDate,
     });
-    if (!validated.ok || !validated.date) {
-      throw new CreatePartyDraftValidationError(
-        travelDateErrorMessage(validated.ok ? "invalid" : validated.code, maxTravelDate),
-      );
+    if (!validated.ok) {
+      throw new CreatePartyDraftValidationError(travelDateErrorMessage(validated.code, maxTravelDate));
     }
-    const catalog = await loadCheckoutExtraCatalog(tx);
-    const fastTrack = catalog.find((extra) => extra.key === "fast_track");
-    const speed = initialDraftSpeed({
-      travelDate: validated.date,
-      now,
-      thresholdDays: settings.fastTrackThresholdDays,
-      fastTrackAvailable: fastTrack
-        ? availabilityForCurrency(fastTrack, params.catalogCurrency).available
-        : false,
-    });
     travelDate = validated.date;
-    processingSpeed = speed.processingSpeed;
-    processingSpeedSource = speed.processingSpeedSource;
-    fastTrackExtraId = fastTrack?.id ?? null;
   }
+  const speed = resolveDraftProcessingSpeed({
+    requestedSpeed: params.processingSpeed ?? null,
+    requestedSource: params.processingSpeedSource ?? null,
+    fastTrackAvailable,
+  });
+  const processingSpeed = speed.processingSpeed;
+  const processingSpeedSource = speed.processingSpeedSource;
+  const fastTrackExtraId = fastTrack?.id ?? null;
 
   const draftExpiresAt = computeDraftExpiresAt(now, ttlHours);
   const email = params.guestEmail?.trim() ? params.guestEmail.trim().toLowerCase() : null;

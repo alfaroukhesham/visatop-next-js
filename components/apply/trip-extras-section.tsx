@@ -12,11 +12,16 @@ import {
   quoteUsesCodeFormat,
 } from "@/lib/apply/checkout-extras-ui";
 
-export const TripExtrasSection: FC = () => {
+interface ITripExtrasSectionProps {
+  variant?: "full" | "speed";
+}
+
+export const TripExtrasSection: FC<ITripExtrasSectionProps> = ({ variant = "full" }) => {
   const quote = useCheckoutQuoteOptional();
   const t = useCustomerT();
   const locale = useCustomerLocale();
-  if (!quote?.preview || !extrasSectionVisible(quote.preview)) return null;
+  if (!quote?.preview) return null;
+  if (variant === "full" && !extrasSectionVisible(quote.preview)) return null;
   const preview = quote.preview;
   const totalText = formatMinorAmount(
     preview.totalAmountMinor,
@@ -65,8 +70,10 @@ export const TripExtrasSection: FC = () => {
         onRetry={quote.retry}
         onCancelCheckout={quote.cancelCheckout}
         onDateBlocksPay={quote.setDateBlocksPay}
+        showDate={variant === "full"}
+        showInsurance={variant === "full"}
       />
-      <CheckoutStickyTotal totalText={totalText} hidden={quote.locked} />
+      {variant === "full" ? <CheckoutStickyTotal totalText={totalText} hidden={quote.locked} /> : null}
     </>
   );
 };

@@ -42,5 +42,7 @@ export type TCheckoutExtraWrite = {
 export type TTravelDateSettings = {
   fastTrackThresholdDays: number;
   travelDateRequired: boolean;
+  /** When false, /apply/start skips the travel-date step. */
+  travelDateStepEnabled: boolean;
   travelDateMaxDaysAhead: number;
 };

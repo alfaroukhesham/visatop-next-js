@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, type FC, type ReactNode } from "react";
+import { useEffect, useRef, type FC, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ClientButton } from "@/components/client/client-button";
 import { useNarrowViewport } from "@/lib/client/use-narrow-viewport";
+import { useStickyCtaHeight } from "@/components/apply/use-sticky-cta-height";
 import { cn } from "@/lib/utils";
 import { ensureApplyStickyCtaVisible, useApplyJumpAhead } from "./apply-jump-ahead";
 
@@ -107,6 +108,8 @@ export const ApplyReadyContinue: FC<IApplyReadyContinueProps> = ({
 }) => {
   const { pulseContinue, clearPulse } = useApplyJumpAhead();
   const compact = useNarrowViewport(APPLY_STICKY_CTA_MEDIA_QUERY);
+  const portalRef = useRef<HTMLDivElement>(null);
+  useStickyCtaHeight(portalRef, compact);
   const belowFullMinWidth = useNarrowViewport(APPLY_READY_CONTINUE_SHORT_MEDIA_QUERY);
   const compactVisibleLabel =
     compactShortLabel && compactContinueShowsShortLabel(compactAlwaysShort, belowFullMinWidth)
@@ -134,6 +137,7 @@ export const ApplyReadyContinue: FC<IApplyReadyContinueProps> = ({
     compact && typeof document !== "undefined"
       ? createPortal(
           <div
+            ref={portalRef}
             data-apply-sticky-cta=""
             data-apply-sticky-cta-portal=""
             className="border-border bg-background/95 border-t px-3 pt-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))] backdrop-blur-md"
@@ -164,7 +168,11 @@ export const ApplyReadyContinue: FC<IApplyReadyContinueProps> = ({
   return (
     <>
       {compact ? (
-        <div aria-hidden data-apply-sticky-cta-spacer="" style={{ height: "5.5rem" }} />
+        <div
+          aria-hidden
+          data-apply-sticky-cta-spacer=""
+          style={{ height: "var(--apply-sticky-cta-height, calc(5.5rem + env(safe-area-inset-bottom, 0px)))" }}
+        />
       ) : null}
       {inlineBar}
       {portalBar}

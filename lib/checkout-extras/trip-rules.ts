@@ -1,7 +1,6 @@
 import type { TProcessingSpeed, TProcessingSpeedSource } from "@/lib/db/schema/checkout-extra";
 import {
   daysUntilTravel,
-  recommendFastTrack,
   travelDateErrorMessage,
   travelDateReason,
   validateTravelDate,
@@ -14,8 +13,9 @@ export type TStoredSpeed = {
 };
 
 /**
- * System preselect fills an empty or system-owned speed.
- * A customer choice is left as they set it, including after the arrival date changes.
+ * A customer choice is stored as `customer`.
+ * The default is Standard with source `system`. A missing date does not pick Fast Track.
+ * An older system Fast Track row (the removed pre-select) falls back to Standard.
  */
 export const nextProcessingSpeed = (input: {
   stored: TStoredSpeed;
@@ -24,17 +24,38 @@ export const nextProcessingSpeed = (input: {
   fastTrackAvailable: boolean;
   customerChoice: TProcessingSpeed | null;
 }): TStoredSpeed => {
+  if (input.customerChoice === "fast_track" && !input.fastTrackAvailable) {
+    return { speed: "standard", source: "system" };
+  }
   if (input.customerChoice) {
     return { speed: input.customerChoice, source: "customer" };
   }
   if (input.stored.source === "customer" && input.stored.speed) {
     return { speed: input.stored.speed, source: "customer" };
   }
-  if (input.daysUntil === null) {
-    return { speed: input.stored.speed, source: input.stored.source };
-  }
-  const preselectFast = input.fastTrackAvailable && recommendFastTrack(input.daysUntil, input.thresholdDays);
-  return { speed: preselectFast ? "fast_track" : "standard", source: "system" };
+  return { speed: "standard", source: "system" };
+};
+
+/** Speed saved with a new application. Fast Track counts only when the customer chose it and it is priced. */
+export const resolveDraftProcessingSpeed = (input: {
+  requestedSpeed: TProcessingSpeed | null;
+  requestedSource: TProcessingSpeedSource | null;
+  fastTrackAvailable: boolean;
+}): { processingSpeed: TProcessingSpeed; processingSpeedSource: TProcessingSpeedSource } => {
+  const resolved = nextProcessingSpeed({
+    stored: { speed: null, source: null },
+    daysUntil: null,
+    thresholdDays: 4,
+    fastTrackAvailable: input.fastTrackAvailable,
+    customerChoice:
+      input.requestedSpeed === "fast_track" || input.requestedSource === "customer"
+        ? (input.requestedSpeed ?? "standard")
+        : null,
+  });
+  return {
+    processingSpeed: resolved.speed ?? "standard",
+    processingSpeedSource: resolved.source ?? "system",
+  };
 };
 
 const SETTLED_PAYMENT = new Set(["paid", "refund_pending", "refunded"]);
@@ -126,7 +147,7 @@ export const planTripUpdate = (input: {
   let travelDate = input.stored.travelDate;
   if (input.patch.travelDate !== undefined) {
     const validated = validateTravelDate(input.patch.travelDate, {
-      required: input.travelDateRequired,
+      required: false,
       todayUae: input.todayUae,
       maxTravelDate: input.maxTravelDate,
     });
@@ -196,9 +217,9 @@ export const planTripUpdate = (input: {
 };
 
 /**
- * A stored date is always re-checked.
- * A missing date blocks checkout only once an extra is enabled, so a dark deploy
- * (extras still off, no arrival date on existing drafts) keeps today's visa total.
+ * A provided date is re-checked. A missing date is allowed: the travel-date step
+ * is skippable, including when extras are on. The admin required flag may stay
+ * on, but it does not block checkout.
  */
 export const checkoutTravelDateError = (input: {
   travelDate: string | null;
@@ -207,10 +228,9 @@ export const checkoutTravelDateError = (input: {
   maxTravelDate: string;
   anyExtraEnabled: boolean;
 }): TTravelDateErrorCode | null => {
-  if (!input.travelDate) {
-    if (input.required && input.anyExtraEnabled) return "required";
-    return null;
-  }
+  void input.required;
+  void input.anyExtraEnabled;
+  if (!input.travelDate) return null;
   const validated = validateTravelDate(input.travelDate, {
     required: true,
     todayUae: input.todayUae,
