@@ -6,6 +6,7 @@ import {
   applicationParty,
   checkoutExtra,
   checkoutExtraPrice,
+  payment,
 } from "@/lib/db/schema";
 import type { TCheckoutExtraKey, TProcessingSpeed, TProcessingSpeedSource } from "@/lib/db/schema/checkout-extra";
 import { getTravelDateSettingsFromTx } from "@/lib/checkout-extras/travel-date-settings";
@@ -21,6 +22,7 @@ import {
   nextProcessingSpeed,
   planTripUpdate,
   tripEditsLocked,
+  type TOpenPaymentRow,
   type TTripPatch,
 } from "@/lib/checkout-extras/trip-rules";
 import { resolveCheckoutTotal } from "@/lib/pricing/resolve-customer-catalog-price";
@@ -91,6 +93,7 @@ export type TPartyTripState = {
   members: TPartyMemberRow[];
   insuranceSelectedByApplicationId: Record<string, boolean>;
   catalog: TCheckoutExtraCatalog[];
+  openPayments: TOpenPaymentRow[];
 };
 
 const asSpeed = (value: string | null | undefined): TProcessingSpeed | null =>
@@ -237,6 +240,16 @@ export const loadPartyTripState = async (
     insuranceSelectedByApplicationId[row.applicationId] = row.selected;
   }
 
+  const openPayments =
+    memberIds.length === 0
+      ? []
+      : await tx
+          .select({ status: payment.status })
+          .from(payment)
+          .where(
+            and(inArray(payment.applicationId, memberIds), eq(payment.status, "checkout_created")),
+          );
+
   return {
     partyId: requested.partyId,
     currency: party?.catalogCurrency ?? requested.catalogCurrency,
@@ -246,6 +259,7 @@ export const loadPartyTripState = async (
     members: memberRows,
     insuranceSelectedByApplicationId,
     catalog,
+    openPayments,
   };
 };
 
@@ -267,6 +281,7 @@ export const buildQuotePreview = (input: {
   insuranceSelectedByApplicationId: Readonly<Record<string, boolean>>;
   /** Quote currency. Extras are priced in this currency, which may match the party currency. */
   quoteCurrency?: string;
+  openPayments?: readonly TOpenPaymentRow[];
 }): TQuotePreview => {
   const currency = input.quoteCurrency ?? input.currency;
   const { todayUae, maxTravelDate } = travelDateWindow(input.now, input.maxDaysAhead);
@@ -339,7 +354,7 @@ export const buildQuotePreview = (input: {
     recommendFastTrack: recommendFastTrack(daysUntil, input.thresholdDays),
     processingSpeed: speed.speed,
     processingSpeedSource: speed.source,
-    locked: tripEditsLocked(input.members),
+    locked: tripEditsLocked(input.members, input.openPayments ?? []),
     travellerCount,
     visaLines: visaLines.map((line) => ({
       applicationId: line.applicationId,
@@ -562,7 +577,7 @@ export const savePartyTrip = async (
   const fastTrack = catalogByKey(state.catalog, "fast_track");
   const insurance = catalogByKey(state.catalog, "travel_insurance");
   const plan = planTripUpdate({
-    locked: tripEditsLocked(state.members),
+    locked: tripEditsLocked(state.members, state.openPayments),
     stored: {
       travelDate: state.travelDate,
       processingSpeed: state.processingSpeed,
@@ -650,6 +665,7 @@ export const savePartyTrip = async (
       visaAmounts,
       catalog: state.catalog,
       insuranceSelectedByApplicationId: plan.next.insuranceSelectedByApplicationId,
+      openPayments: state.openPayments,
     }),
   };
 };
@@ -696,6 +712,7 @@ export const previewPartyQuote = async (
       visaAmounts,
       catalog: state.catalog,
       insuranceSelectedByApplicationId: state.insuranceSelectedByApplicationId,
+      openPayments: state.openPayments,
     }),
   };
 };

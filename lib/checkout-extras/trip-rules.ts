@@ -37,16 +37,27 @@ export const nextProcessingSpeed = (input: {
   return { speed: preselectFast ? "fast_track" : "standard", source: "system" };
 };
 
-const SETTLED_OR_OPEN_PAYMENT = new Set(["checkout_created", "paid", "refund_pending", "refunded"]);
+const SETTLED_PAYMENT = new Set(["paid", "refund_pending", "refunded"]);
 
-/** Open payment attempt, or a settled payment whose quote must stay put. */
+export type TOpenPaymentRow = {
+  status: string;
+};
+
+/**
+ * An attempt is open only while a member row is still `pending` or a payment
+ * row is still `checkout_created`. Application `paymentStatus` stays
+ * `checkout_created` after a Ziina failure (that webhook only clears
+ * `checkoutState`), so it is not an open attempt. Settled payments stay locked.
+ */
 export const tripEditsLocked = (
   members: readonly { paymentStatus: string; checkoutState: string | null }[],
-): boolean =>
-  members.some(
-    (member) =>
-      member.checkoutState === "pending" || SETTLED_OR_OPEN_PAYMENT.has(member.paymentStatus),
+  openPayments: readonly TOpenPaymentRow[] = [],
+): boolean => {
+  if (openPayments.some((row) => row.status === "checkout_created")) return true;
+  return members.some(
+    (member) => member.checkoutState === "pending" || SETTLED_PAYMENT.has(member.paymentStatus),
   );
+};
 
 /**
  * Extras stay locked for the life of the open attempt.

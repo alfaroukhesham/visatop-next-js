@@ -68,6 +68,14 @@ describe("trip locking", () => {
     expect(tripEditsLocked([{ paymentStatus: "paid", checkoutState: "none" }])).toBe(true);
     expect(tripEditsLocked([{ paymentStatus: "unpaid", checkoutState: "none" }])).toBe(false);
     expect(tripEditsLocked([{ paymentStatus: "failed", checkoutState: "none" }])).toBe(false);
+    expect(
+      tripEditsLocked([{ paymentStatus: "checkout_created", checkoutState: "none" }], [{ status: "failed" }]),
+    ).toBe(false);
+    expect(
+      tripEditsLocked([{ paymentStatus: "checkout_created", checkoutState: "none" }], [
+        { status: "checkout_created" },
+      ]),
+    ).toBe(true);
 
     expect(planTripWrite(true)).toEqual({ allow: false, abandonCheckout: false, code: "EXTRAS_LOCKED" });
     expect(planTripWrite(false).abandonCheckout).toBe(false);
@@ -89,6 +97,51 @@ describe("trip locking", () => {
       code: "EXTRAS_LOCKED",
       reason: "extras_locked",
     });
+  });
+
+  it("lets a failed Ziina attempt change extras, including a past arrival date, and the next checkout uses that selection", () => {
+    const members = [{ paymentStatus: "checkout_created", checkoutState: "none" }];
+    const payments = [{ status: "failed" }];
+    expect(tripEditsLocked(members, payments)).toBe(false);
+
+    const planned = planTripUpdate({
+      ...basePlan,
+      locked: tripEditsLocked(members, payments),
+      memberIds: ["app-a"],
+      stored: {
+        travelDate: "2026-11-20",
+        processingSpeed: "standard",
+        processingSpeedSource: "system",
+        insuranceSelectedByApplicationId: {},
+      },
+      patch: { travelDate: "2026-12-02", processingSpeed: "fast_track", travelInsurance: true },
+    });
+    expect(planned.ok).toBe(true);
+    if (!planned.ok) return;
+
+    expect(planned.next.travelDate).toBe("2026-12-02");
+    expect(planned.next.processingSpeed).toBe("fast_track");
+    expect(planned.next.processingSpeedSource).toBe("customer");
+    expect(planned.abandonCheckout).toBe(false);
+
+    const extras = resolveCheckoutExtras({
+      currency: "AED",
+      members: [{ applicationId: "app-a" }],
+      catalog,
+      insuranceSelectedByApplicationId: planned.next.insuranceSelectedByApplicationId,
+      processingSpeed: planned.next.processingSpeed,
+    });
+    const charge = buildCheckoutCharge({
+      visaLines: [{ applicationId: "app-a", serviceId: "svc-1", amountMinor: BigInt(35000), currency: "AED" }],
+      extraLines: extras.lines,
+      currency: "AED",
+      fxSource: null,
+      travelDate: planned.next.travelDate,
+      processingSpeed: planned.next.processingSpeed,
+    });
+    expect(charge.totalMinor).toBe(BigInt(35000 + 7900 + 36725));
+    expect(charge.ziinaAmountMinor).toBe(charge.fincraAmountMinor);
+    expect(extras.lines.map((line) => line.key).sort()).toEqual(["fast_track", "travel_insurance"]);
   });
 });
 
