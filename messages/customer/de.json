@@ -732,7 +732,7 @@
       "n3": "Sie kommen {relative} an. Auch mit Express ist Ihr Visum vielleicht nicht rechtzeitig fertig. {whatsapp}, bevor Sie bezahlen, dann prüfen wir, was möglich ist.",
       "n4": "Sie kommen {relative} an. Standard dauert in der Regel 3 Werktage. {whatsapp}, bevor Sie bezahlen, damit wir Ihre Möglichkeiten prüfen.",
       "n5": "Für Ihr neues Datum ({relative}) haben wir wieder Standard gewählt.",
-      "soon": "Ihre Reise ist in weniger als 4 Tagen. Fast Track wird empfohlen. Standard bleibt ausgewählt."
+      "soon": "Ihre Reise ist in weniger als 4 Tagen. Express wird empfohlen. Standard bleibt ausgewählt."
     },
     "insurance": {
       "title": "Reiseversicherung",

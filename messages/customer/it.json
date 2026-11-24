@@ -732,7 +732,7 @@
       "n3": "Arrivate {relative}. Anche con il trattamento rapido, il visto potrebbe non essere pronto in tempo. {whatsapp} prima di pagare e controlleremo cosa è possibile.",
       "n4": "Arrivate {relative}. Lo standard richiede di solito 3 giorni lavorativi. {whatsapp} prima di pagare così verifichiamo le opzioni.",
       "n5": "Per la nuova data ({relative}), siamo tornati al trattamento standard.",
-      "soon": "Il viaggio è tra meno di 4 giorni. Il Fast Track è consigliato. Lo standard resta selezionato."
+      "soon": "Il viaggio è tra meno di 4 giorni. Il trattamento rapido è consigliato. Lo standard resta selezionato."
     },
     "insurance": {
       "title": "Assicurazione di viaggio",

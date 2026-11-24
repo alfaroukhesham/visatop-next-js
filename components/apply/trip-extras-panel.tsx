@@ -152,10 +152,8 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
   const ui = speedUi({ preview, fastTrackAvailable: Boolean(fastTrack), switchedBack });
   const [editing, setEditing] = useState(!preview.travelDate);
   const [draft, setDraft] = useState(preview.travelDate ?? "");
-  const [dateError, setDateError] = useState<string | null>(
-    preview.travelDateRequired && !preview.travelDate ? t("start.travelDate.errorEmpty") : null,
-  );
-  const [touched, setTouched] = useState(Boolean(preview.travelDateRequired && !preview.travelDate));
+  const [dateError, setDateError] = useState<string | null>(null);
+  const [touched, setTouched] = useState(false);
   const changeRef = useRef<HTMLButtonElement>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
   const pendingSpeedFocus = useRef<TProcessingSpeedChoice | null>(null);
@@ -183,11 +181,7 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
 
   const draftValue = draft.trim() || null;
   const dateBlocks =
-    showDate &&
-    !locked &&
-    (Boolean(dateError) ||
-      (preview.travelDateRequired && !preview.travelDate) ||
-      (editing && draftValue !== preview.travelDate));
+    showDate && !locked && (Boolean(dateError) || (editing && draftValue !== preview.travelDate));
 
   useEffect(() => {
     if (selectAllRef.current) selectAllRef.current.indeterminate = someInsured;
@@ -214,11 +208,6 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
   const saveDate = async () => {
     if (dateError) return;
     const next = draft.trim();
-    if (!next && preview.travelDateRequired) {
-      setDateError(t("start.travelDate.errorEmpty"));
-      setTouched(true);
-      return;
-    }
     const saved = await onSaveDate(next || null);
     if (!saved) return;
     setEditing(false);

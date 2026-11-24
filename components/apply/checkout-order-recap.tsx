@@ -193,29 +193,30 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
 
   const serverPreview = quoteState?.preview ?? null;
   const usingServerQuote = settled !== null || quoteState !== null;
-  const amountCurrency = settled?.currency ?? serverPreview?.currency ?? currency;
+  const amountCurrency = serverPreview?.currency ?? settled?.currency ?? currency;
   const resolvedTotalMinor = usingServerQuote
-    ? settled
-      ? BigInt(settled.totalAmountMinor)
-      : serverPreview
-        ? BigInt(serverPreview.totalAmountMinor)
+    ? serverPreview
+      ? BigInt(serverPreview.totalAmountMinor)
+      : settled
+        ? BigInt(settled.totalAmountMinor)
         : null
     : totalMinor;
-  const quoteFormat =
-    settled !== null
+  const quoteFormat = serverPreview
+    ? quoteUsesCodeFormat(serverPreview)
+      ? "code"
+      : "symbol"
+    : settled !== null
       ? settled.extraLines.length > 0
         ? "code"
         : "symbol"
-      : serverPreview && quoteUsesCodeFormat(serverPreview)
-        ? "code"
-        : "symbol";
+      : "symbol";
   const formatQuote = (minor: string): string =>
     usingServerQuote
       ? formatMinorAmount(minor, amountCurrency, locale, quoteFormat)
       : (formatDisplayMinor(minor, currency) ?? "");
   const visaAmountText = (applicationId: string, fallback: string | null): string | null => {
     if (!usingServerQuote) return fallback;
-    const lines = settled?.visaLines ?? serverPreview?.visaLines ?? null;
+    const lines = serverPreview?.visaLines ?? settled?.visaLines ?? null;
     if (!lines) return null;
     const minor = lines.find((line) => line.applicationId === applicationId)?.amountMinor ?? null;
     return minor ? formatQuote(minor) : fallback;
@@ -223,7 +224,7 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
   const extraLineLabel = (key: TCheckoutExtraKey): string =>
     key === "fast_track" ? t("extras.recap.fastTrack") : t("extras.recap.insurance");
   const extraRows = groupedExtraLines({
-    extraLines: settled?.extraLines ?? serverPreview?.extraLines ?? [],
+    extraLines: serverPreview?.extraLines ?? settled?.extraLines ?? [],
   });
 
   const totalText =

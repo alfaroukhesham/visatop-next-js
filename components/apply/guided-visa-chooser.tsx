@@ -13,6 +13,7 @@ import {
   Repeat2,
   UserRound,
 } from "lucide-react";
+import { ClientButton } from "@/components/client/client-button";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import {
   defaultEntryForStay,
@@ -458,9 +459,22 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
             }}
           />
         ) : view.phase === "date" ? (
-          <p className="text-muted-foreground text-sm" role="status">
-            {t("start.loading")}
-          </p>
+          <div className="space-y-3">
+            <p className="text-muted-foreground text-sm" role="status">
+              {t("start.loading")}
+            </p>
+            <ClientButton
+              type="button"
+              brand="white"
+              className="min-h-11"
+              onClick={() => {
+                onTravelDateChange?.("");
+                setPhase("results");
+              }}
+            >
+              {t("start.travelDate.notSure")}
+            </ClientButton>
+          </div>
         ) : null}
         {view.phase === "results" ? (
           matches.length === 0 ? (

@@ -286,6 +286,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     fastTrack: { unitAmountMinor: string; sumAmountMinor: string | null } | null;
   } | null>(null);
   const [travelWindow, setTravelWindow] = useState<TTravelWindow | null>(null);
+  const [travelWindowFailed, setTravelWindowFailed] = useState(false);
   const [displayCurrency, setDisplayCurrency] = useState<DisplayCurrency>(boot.displayCurrency ?? "");
   const [visibleCurrencies, setVisibleCurrencies] = useState<TVisibleCatalogCurrency[]>([]);
   const localPricedServiceIdsRef = useRef<string[]>([]);
@@ -525,7 +526,12 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       const res = await fetchApiEnvelope<TTravelWindow>(apiHref("/apply/travel-window"), {
         cache: "no-store",
       });
-      if (cancelled || !res.ok) return;
+      if (cancelled) return;
+      if (!res.ok) {
+        setTravelWindowFailed(true);
+        return;
+      }
+      setTravelWindowFailed(false);
       setTravelWindow(res.data);
     };
     void run();
@@ -850,7 +856,9 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
               initialStay={answers.stay}
               initialEntry={answers.entry}
               initialKind={answers.kind}
-              showDateStep={travelWindow ? travelWindow.showTravelDateStep : true}
+              showDateStep={
+                travelWindowFailed ? false : travelWindow ? travelWindow.showTravelDateStep : true
+              }
               travelDate={travelDate}
               onTravelDateChange={setTravelDate}
               todayUae={travelWindow?.todayUae}
