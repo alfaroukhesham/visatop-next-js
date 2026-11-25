@@ -25,11 +25,12 @@ interface IExtrasStepPanelProps {
   backHref: string;
   onInsurance: (selected: boolean) => void;
   onContinue: () => void;
+  onSkip: () => void;
   onRetry: () => void;
   onCancelCheckout: () => void;
 }
 
-const coverText = (value: string): string => (value.length > 140 ? value.slice(0, 140) : value);
+const coverText = (value: string): string => (value.length > 140 ? `${value.slice(0, 140)}…` : value);
 
 export const ExtrasStepPanel: FC<IExtrasStepPanelProps> = ({
   preview,
@@ -43,6 +44,7 @@ export const ExtrasStepPanel: FC<IExtrasStepPanelProps> = ({
   backHref,
   onInsurance,
   onContinue,
+  onSkip,
   onRetry,
   onCancelCheckout,
 }) => {
@@ -64,7 +66,7 @@ export const ExtrasStepPanel: FC<IExtrasStepPanelProps> = ({
   const cover = insurance
     ? coverText(localizedExtraCopy(insurance.descriptionI18n, locale, ""))
     : "";
-  const termsHref = insurance?.termsUrl?.trim() || "/terms-placeholder";
+  const termsHref = insurance?.termsUrl?.trim() ?? "";
   const totalText = preview ? money(preview.totalAmountMinor) : "";
 
   const toggle = (next: boolean) => {
@@ -111,22 +113,24 @@ export const ExtrasStepPanel: FC<IExtrasStepPanelProps> = ({
                   />
                 </span>
               ) : (
-                <span className="bg-muted mt-1 block h-4 w-48 max-w-full animate-pulse rounded" />
+                <span className="bg-muted mt-1 block h-4 w-48 max-w-full animate-pulse rounded motion-reduce:animate-none" />
               )}
               {cover ? <span className="text-muted-foreground block text-sm">{cover}</span> : null}
             </span>
           </label>
-          <a
-            href={termsHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-secondary relative inline-flex min-h-11 items-center underline"
-          >
-            {t("extras.insurance.terms")}
-            <span className="absolute size-px overflow-hidden whitespace-nowrap border-0 p-0 [clip:rect(0,0,0,0)]">
-              {t("common.opensNewTab")}
-            </span>
-          </a>
+          {termsHref ? (
+            <a
+              href={termsHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-secondary relative inline-flex min-h-11 items-center underline"
+            >
+              {t("extras.insurance.terms")}
+              <span className="absolute size-px overflow-hidden whitespace-nowrap border-0 p-0 [clip:rect(0,0,0,0)]">
+                {t("common.opensNewTab")}
+              </span>
+            </a>
+          ) : null}
           <div className="min-[1025px]:hidden">
             {preview ? (
               <ExtrasBreakdown
@@ -137,8 +141,8 @@ export const ExtrasStepPanel: FC<IExtrasStepPanelProps> = ({
               />
             ) : (
               <div className="space-y-3" aria-busy="true">
-                <div className="bg-muted h-6 animate-pulse rounded" />
-                <div className="bg-muted h-6 animate-pulse rounded" />
+                <div className="bg-muted h-6 animate-pulse rounded motion-reduce:animate-none" />
+                <div className="bg-muted h-6 animate-pulse rounded motion-reduce:animate-none" />
               </div>
             )}
           </div>
@@ -173,25 +177,45 @@ export const ExtrasStepPanel: FC<IExtrasStepPanelProps> = ({
           </ClientButton>
         </div>
       ) : null}
-      <div className="hidden min-[1025px]:block" data-testid="extras-inline-cta">
+      <div className="hidden min-[1025px]:flex min-[1025px]:flex-col min-[1025px]:items-start min-[1025px]:gap-1" data-testid="extras-inline-cta">
         <ExtrasContinueButton disabled={ctaDisabled} onClick={onContinue} />
+        <SkipExtras disabled={ctaDisabled} onClick={onSkip} />
       </div>
-      <div aria-hidden className="min-[1025px]:hidden h-[calc(5.5rem+env(safe-area-inset-bottom,0px))]" />
+      <div aria-hidden className="min-[1025px]:hidden h-[calc(9rem+env(safe-area-inset-bottom,0px))]" />
       <div
         data-extras-sticky=""
         data-testid="extras-sticky-bar"
         className="min-[1025px]:hidden"
       >
-        <div className="mx-auto flex w-full max-w-4xl items-center gap-2">
-          <div className="shrink-0">
-            <p className="text-muted-foreground text-xs">{t("extras.recap.total")}</p>
-            <p className="font-heading text-foreground font-bold tabular-nums">
-              <bdi>{totalText}</bdi>
-            </p>
+        <div className="mx-auto flex w-full max-w-4xl flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-muted-foreground text-xs">{t("extras.recap.total")}</p>
+              <p className="font-heading text-foreground truncate font-bold tabular-nums">
+                <bdi>{totalText}</bdi>
+              </p>
+            </div>
+            <ExtrasContinueButton compact disabled={ctaDisabled} onClick={onContinue} />
           </div>
-          <ExtrasContinueButton compact disabled={ctaDisabled} onClick={onContinue} />
+          <div className="flex justify-end">
+            <SkipExtras disabled={ctaDisabled} onClick={onSkip} />
+          </div>
         </div>
       </div>
     </div>
+  );
+};
+
+const SkipExtras: FC<{ disabled: boolean; onClick: () => void }> = ({ disabled, onClick }) => {
+  const t = useCustomerT();
+  return (
+    <button
+      type="button"
+      className="text-secondary inline-flex min-h-11 items-center text-sm underline disabled:cursor-not-allowed disabled:opacity-50"
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {t("extras.skip")}
+    </button>
   );
 };

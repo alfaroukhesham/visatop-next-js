@@ -119,6 +119,7 @@ export const ExtrasStepPreviewClient: FC<IExtrasStepPreviewClientProps> = ({ vie
           backHref="/apply/dev/extras-step-preview"
           onInsurance={() => undefined}
           onContinue={() => undefined}
+          onSkip={() => undefined}
           onRetry={() => undefined}
           onCancelCheckout={() => undefined}
         />

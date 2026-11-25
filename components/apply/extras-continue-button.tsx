@@ -12,10 +12,7 @@ interface IExtrasContinueButtonProps {
   className?: string;
 }
 
-/**
- * The only forward button on Extras.
- * Isolated so a later Skip button can replace this one component.
- */
+/** Gold forward button on Extras. The skip link sits beside it. */
 export const ExtrasContinueButton: FC<IExtrasContinueButtonProps> = ({
   onClick,
   disabled,
@@ -32,12 +29,12 @@ export const ExtrasContinueButton: FC<IExtrasContinueButtonProps> = ({
       className={cn(
         "inline-flex items-center justify-center gap-1",
         compact
-          ? "h-auto min-h-11 min-w-0 flex-1 whitespace-normal px-2 py-1.5 text-xs leading-tight tracking-normal"
+          ? "h-11 min-h-11 w-auto min-w-0 shrink-0 whitespace-nowrap px-3 text-sm leading-none tracking-normal"
           : "min-w-[240px] self-start",
         className,
       )}
     >
-      {t("extras.cta")}
+      {compact ? t("extras.ctaShort") : t("extras.cta")}
       <ChevronRight className="size-4 shrink-0 rtl:-scale-x-100" aria-hidden />
     </ClientButton>
   );

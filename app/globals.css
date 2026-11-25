@@ -494,12 +494,12 @@ html:has([data-travel-date-step]) a[data-whatsapp-fab] {
   }
 
   html:has([data-extras-sticky]) a[data-whatsapp-fab] {
-    bottom: calc(7rem + env(safe-area-inset-bottom, 0px)) !important;
+    display: none !important;
   }
 
   html:has([data-extras-sticky]) [data-wp-shell="footer"],
   html:has([data-extras-sticky]) footer {
-    margin-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+    margin-bottom: calc(9rem + env(safe-area-inset-bottom, 0px));
   }
 
   [data-apply-sticky-cta-portal] {

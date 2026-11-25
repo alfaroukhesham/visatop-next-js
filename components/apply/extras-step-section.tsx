@@ -5,6 +5,7 @@ import type { FC } from "react";
 import { ExtrasBreakdown } from "@/components/apply/extras-breakdown";
 import { ExtrasStepPanel } from "@/components/apply/extras-step-panel";
 import { useCheckoutQuoteOptional } from "@/components/apply/checkout-quote-provider";
+import { continueWithoutExtras, skipExtrasSave } from "@/lib/apply/continue-without-extras";
 
 interface IExtrasStepSectionProps {
   applicationId: string;
@@ -38,6 +39,12 @@ export const ExtrasStepSection: FC<IExtrasStepSectionProps> = ({
           void quote?.patchTrip({ insuranceForParty: selected });
         }}
         onContinue={() => router.push(paymentHref)}
+        onSkip={() => {
+          void continueWithoutExtras(
+            () => skipExtrasSave(quote?.patchTrip),
+            () => router.push(paymentHref),
+          );
+        }}
         onRetry={() => quote?.retry()}
         onCancelCheckout={() => quote?.cancelCheckout()}
       />

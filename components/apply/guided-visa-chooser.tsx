@@ -64,6 +64,8 @@ export interface IGuidedVisaChooserProps {
   todayUae?: string;
   maxTravelDate?: string;
   selectedVisaExtra?: ReactNode;
+  /** Edit mode: visa, date, and question answers stay as saved. Speed stays editable. */
+  choicesLocked?: boolean;
 }
 
 const EMPTY_SHORTLIST_KEY = "chooser.noMatches";
@@ -239,6 +241,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
   todayUae = "",
   maxTravelDate = "",
   selectedVisaExtra = null,
+  choicesLocked = false,
 }) => {
   const t = useCustomerT();
   const stayBuckets = useMemo(() => stayOptionsForChooser(services), [services]);
@@ -276,29 +279,37 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
   const afterQuestions = (phase: TChooserPhase): TChooserPhase =>
     phase === "results" && showDateStep ? "date" : phase;
 
+  const chooseService = (id: string) => {
+    if (choicesLocked) return;
+    onSelectService(id);
+  };
+
   const goStay = (next: TStayBucket) => {
+    if (choicesLocked) return;
     const nextEntry = defaultEntryForStay(services, next);
     const nextKind = defaultKindForStay(services, next, nextEntry);
     setStay(next);
     setEntry(nextEntry);
     setKind(nextKind);
-    onSelectService("");
+    chooseService("");
     setPhase(afterQuestions(nextPhaseAfterStay(services, next)));
   };
 
   const goEntry = (next: "single" | "multiple") => {
+    if (choicesLocked) return;
     const stayForEntry = view.stay ?? "1_14";
     const nextKind = defaultKindForStay(services, stayForEntry, next);
     setStay(stayForEntry);
     setEntry(next);
     setKind(nextKind);
-    onSelectService("");
+    chooseService("");
     setPhase(afterQuestions(nextPhaseAfterEntry(services, stayForEntry, next)));
   };
 
   const goKind = (next: TTravelerKind) => {
+    if (choicesLocked) return;
     setKind(next);
-    onSelectService("");
+    chooseService("");
     setPhase(showDateStep ? "date" : "results");
   };
 
@@ -312,7 +323,8 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
   };
 
   const goBack = () => {
-    onSelectService("");
+    if (choicesLocked) return;
+    chooseService("");
     if (view.phase === "results") {
       backFromList();
       return;
@@ -344,7 +356,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
 
   return (
     <div className="space-y-4 rounded-2xl border border-border/80 bg-muted/35 p-3 sm:p-5">
-      {showChooserBack ? (
+      {showChooserBack && !choicesLocked ? (
         <button
           type="button"
           onClick={goBack}
@@ -449,12 +461,16 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
         {view.phase === "date" && todayUae && maxTravelDate ? (
           <TravelDateStep
             value={travelDate}
-            onChange={(next) => onTravelDateChange?.(next)}
+            onChange={(next) => {
+              if (choicesLocked) return;
+              onTravelDateChange?.(next);
+            }}
             todayUae={todayUae}
             maxTravelDate={maxTravelDate}
+            readOnly={choicesLocked}
             onContinue={() => setPhase("results")}
             onSkip={() => {
-              onTravelDateChange?.("");
+              if (!choicesLocked) onTravelDateChange?.("");
               setPhase("results");
             }}
           />
@@ -468,7 +484,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
               brand="white"
               className="min-h-11"
               onClick={() => {
-                onTravelDateChange?.("");
+                if (!choicesLocked) onTravelDateChange?.("");
                 setPhase("results");
               }}
             >
@@ -501,7 +517,8 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                       <button
                         type="button"
                         data-testid={`chooser-visa-${s.id}`}
-                        onClick={() => onSelectService(s.id)}
+                        onClick={() => chooseService(s.id)}
+                        disabled={choicesLocked}
                         aria-pressed={selected}
                         className={cn(
                           "border-border bg-card relative flex w-full items-center gap-4 rounded-2xl border-2 px-4 py-5 text-left shadow-[0_10px_28px_rgba(1,32,49,0.05)] transition-all hover:-translate-y-0.5 hover:border-secondary",

@@ -39,12 +39,13 @@ const ApplyStartPage = async ({ searchParams }: IApplyStartPageProps) => {
 
   const nationalities = await withSystemDbActor((tx) => listPublicNationalities(tx));
   const nationalityName = nationalityDisplayName(initialNationalityCode, nationalities);
+  const includeExtras = sp.extras === "1" || (Array.isArray(sp.extras) && sp.extras.includes("1"));
 
   return (
     <div className="max-w-6xl pb-8">
       <ApplyTwoColumn
         currentStep={2}
-        includeExtras={sp.extras === "1" || (Array.isArray(sp.extras) && sp.extras.includes("1"))}
+        includeExtras={includeExtras}
         contentClassName="space-y-6"
       >
         <ClientSurface
@@ -55,6 +56,7 @@ const ApplyStartPage = async ({ searchParams }: IApplyStartPageProps) => {
             key={initialNationalityCode}
             initialNationalityCode={initialNationalityCode}
             nationalityName={nationalityName}
+            includeExtras={includeExtras}
           />
         </ClientSurface>
       </ApplyTwoColumn>

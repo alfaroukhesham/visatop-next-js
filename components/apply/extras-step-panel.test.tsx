@@ -106,11 +106,15 @@ const wrap = (ui: ReactElement) =>
     </div>,
   );
 
-const renderPanel = (travellers: number, selected = false) => {
+const renderPanel = (travellers: number, selected = false, termsUrl: string | null = null) => {
   const onInsurance = vi.fn();
+  const onSkip = vi.fn();
+  const preview = previewFor(selected, travellers);
+  const insurance = preview.availableExtras.find((extra) => extra.key === "travel_insurance");
+  if (insurance) insurance.termsUrl = termsUrl;
   wrap(
     <ExtrasStepPanel
-      preview={previewFor(selected, travellers)}
+      preview={preview}
       visaNames={["30-day tourist visa"]}
       loading={false}
       updating={false}
@@ -121,11 +125,12 @@ const renderPanel = (travellers: number, selected = false) => {
       backHref="/back"
       onInsurance={onInsurance}
       onContinue={vi.fn()}
+      onSkip={onSkip}
       onRetry={vi.fn()}
       onCancelCheckout={vi.fn()}
     />,
   );
-  return { onInsurance };
+  return { onInsurance, onSkip };
 };
 
 afterEach(() => {
@@ -136,28 +141,36 @@ describe("Extras step", () => {
   it("uses one party checkbox, a terms link outside the label, and one continue button", async () => {
     installMatchMedia(1280);
     const user = userEvent.setup();
-    const { onInsurance } = renderPanel(2);
+    const { onInsurance, onSkip } = renderPanel(2);
     const boxes = screen.getAllByRole("checkbox");
     expect(boxes).toHaveLength(1);
     expect(boxes[0]).not.toBeChecked();
     expect(screen.getByText("Add travel insurance for all travellers").closest("label")).toContainElement(
       boxes[0]!,
     );
-    const terms = screen.getByRole("link", { name: /read the policy terms/i });
-    expect(terms).toHaveAttribute("href", "/terms-placeholder");
-    expect(terms.closest("label")).toBeNull();
+    expect(screen.queryByRole("link", { name: /read the policy terms/i })).not.toBeInTheDocument();
     expect(
       screen.getByText("Add travel insurance for all travellers").parentElement?.textContent ?? "",
     ).toMatch(/AED\s*79\.00 per traveller ×\s*2\s*=\s*AED\s*158\.00/);
     expect(screen.getByText("Not added")).toBeInTheDocument();
     expect(screen.getByText("30-day tourist visa").closest("bdi")).toBeTruthy();
-    const continues = screen.getAllByRole("button", { name: /continue to payment/i });
-    expect(continues).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "Continue to payment" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Continue" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Continue without extras" })).toHaveLength(2);
     expect(screen.getByTestId("extras-inline-cta")).toHaveClass("hidden");
     expect(screen.getByTestId("extras-sticky-bar")).toHaveClass("min-[1025px]:hidden");
-    expect(screen.queryByRole("button", { name: /skip/i })).not.toBeInTheDocument();
     await user.click(boxes[0]!);
     expect(onInsurance).toHaveBeenCalledWith(true);
+    await user.click(screen.getAllByRole("button", { name: "Continue without extras" })[0]!);
+    expect(onSkip).toHaveBeenCalledOnce();
+  });
+
+  it("shows the terms link only when a URL is set", () => {
+    installMatchMedia(1280);
+    renderPanel(1, false, "https://example.com/terms");
+    const terms = screen.getByRole("link", { name: /read the policy terms/i });
+    expect(terms).toHaveAttribute("href", "https://example.com/terms");
+    expect(terms.closest("label")).toBeNull();
   });
 
   it("prices one traveller without a times-n line", () => {

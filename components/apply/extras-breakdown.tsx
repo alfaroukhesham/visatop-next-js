@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react";
-import type { FC } from "react";
+import type { FC, ReactNode } from "react";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
 import {
   extraByKey,
@@ -17,6 +17,10 @@ interface IExtrasBreakdownProps {
   showSpeed?: boolean;
   /** Pay shows insurance only when it was added. Extras always reserves the row. */
   insuranceMode?: "always" | "when-added";
+  /** Extras keeps an empty updating row so the total does not jump. Pay shows it only while saving. */
+  updatingMode?: "reserved" | "when-updating";
+  /** Pay puts "Change extras" on the insurance row. */
+  insuranceAction?: ReactNode;
   announcement?: string | null;
 }
 
@@ -38,6 +42,8 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
   updating,
   showSpeed = false,
   insuranceMode = "always",
+  updatingMode = "reserved",
+  insuranceAction = null,
   announcement = null,
 }) => {
   const t = useCustomerT();
@@ -93,13 +99,16 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
             {t("extras.recap.insurance")}
             <span className="text-muted-foreground"> × {insurance?.count ?? count}</span>
           </p>
-          {insurance ? (
-            <p className="text-foreground shrink-0 text-end font-medium tabular-nums">
-              <bdi>{money(insurance.amountMinor)}</bdi>
-            </p>
-          ) : (
-            <p className="text-muted-foreground shrink-0 text-end">{t("extras.recap.notAdded")}</p>
-          )}
+          <div className="flex shrink-0 flex-col items-end">
+            {insurance ? (
+              <p className="text-foreground text-end font-medium tabular-nums">
+                <bdi>{money(insurance.amountMinor)}</bdi>
+              </p>
+            ) : (
+              <p className="text-muted-foreground text-end">{t("extras.recap.notAdded")}</p>
+            )}
+            {insuranceAction}
+          </div>
         </div>
       ) : null}
       <div className="border-border flex min-h-6 items-baseline justify-between gap-3 border-t pt-3 text-sm">
@@ -108,29 +117,29 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
           <bdi>{money(preview.totalAmountMinor)}</bdi>
         </p>
       </div>
-      <p className="text-muted-foreground flex min-h-6 items-center gap-2 text-sm">
-        {updating ? (
-          <>
-            <Loader2 className="size-4 shrink-0 animate-spin motion-reduce:animate-none" aria-hidden />
-            <span>{t("extras.recap.updating")}</span>
-          </>
-        ) : null}
-      </p>
+      {updatingMode === "reserved" || updating ? (
+        <p className="text-muted-foreground flex min-h-6 items-center gap-2 text-sm">
+          {updating ? (
+            <>
+              <Loader2 className="size-4 shrink-0 animate-spin motion-reduce:animate-none" aria-hidden />
+              <span>{t("extras.recap.updating")}</span>
+            </>
+          ) : null}
+        </p>
+      ) : null}
       {showSpeed ? (
         <ProcessingSpeedLine
           speed={preview.processingSpeed}
           fastTrackPromise={fastPromise}
         />
       ) : null}
-      {announcement ? (
-        <p
-          className="absolute size-px overflow-hidden whitespace-nowrap border-0 p-0 [clip:rect(0,0,0,0)]"
-          role="status"
-          aria-live="polite"
-        >
-          {announcement}
-        </p>
-      ) : null}
+      <p
+        className="absolute size-px overflow-hidden whitespace-nowrap border-0 p-0 [clip:rect(0,0,0,0)]"
+        role="status"
+        aria-live="polite"
+      >
+        {announcement ?? ""}
+      </p>
     </div>
   );
 };

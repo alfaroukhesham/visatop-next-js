@@ -30,6 +30,7 @@ interface IInlineMonthCalendarProps {
   maxTravelDate: string;
   describedBy?: string;
   focusToken?: number;
+  readOnly?: boolean;
 }
 
 const monthForValue = (value: string, todayUae: string, maxTravelDate: string): TMonthParts => {
@@ -48,6 +49,7 @@ export const InlineMonthCalendar: FC<IInlineMonthCalendarProps> = ({
   maxTravelDate,
   describedBy,
   focusToken = 0,
+  readOnly = false,
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
@@ -128,6 +130,7 @@ export const InlineMonthCalendar: FC<IInlineMonthCalendarProps> = ({
   };
 
   const selectDay = (iso: string) => {
+    if (readOnly) return;
     const cell = cells.find((item) => item.iso === iso);
     if (!cell || cell.disabled) return;
     pendingFocus.current = iso;
@@ -252,7 +255,8 @@ export const InlineMonthCalendar: FC<IInlineMonthCalendarProps> = ({
                   type="button"
                   role="gridcell"
                   aria-selected={isSelected}
-                  aria-disabled={cell.disabled}
+                  aria-disabled={cell.disabled || readOnly}
+                  disabled={cell.disabled || readOnly}
                   aria-current={isToday ? "date" : undefined}
                   aria-label={
                     cell.disabled ? `${dayLabel}, ${t("start.travelDate.unavailable")}` : dayLabel

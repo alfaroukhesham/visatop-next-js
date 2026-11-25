@@ -15,6 +15,7 @@ interface ITravelDateStepProps {
   maxTravelDate: string;
   onContinue: () => void;
   onSkip: () => void;
+  readOnly?: boolean;
 }
 
 export const TravelDateStep: FC<ITravelDateStepProps> = ({
@@ -24,6 +25,7 @@ export const TravelDateStep: FC<ITravelDateStepProps> = ({
   maxTravelDate,
   onContinue,
   onSkip,
+  readOnly = false,
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
@@ -78,6 +80,7 @@ export const TravelDateStep: FC<ITravelDateStepProps> = ({
         onChange={pickDate}
         todayUae={todayUae}
         maxTravelDate={maxTravelDate}
+        readOnly={readOnly}
         describedBy={error ? errorId : undefined}
         focusToken={focusToken}
       />
