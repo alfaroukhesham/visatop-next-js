@@ -60,11 +60,15 @@ import {
   formatArrivalDate,
   formatMinorAmount,
   pluralMessage,
+  reasonFromErrorDetails,
   relativeArrivalLabel,
   speedUi,
   travelDateErrorKey,
+  tripFailureMessageKey,
+  type TClientQuotePreview,
   type TTravelWindow,
 } from "@/lib/apply/checkout-extras-ui";
+import { insuranceStepOffered } from "@/lib/checkout-extras/party-insurance";
 
 type Nationality = { code: string; name: string };
 type Service = IService;
@@ -278,8 +282,10 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   const [boot] = useState(() => bootChooserForm(initialNationalityCode));
   useEffect(() => {
     consumeChooserFreshStart();
-    const id = new URLSearchParams(window.location.search).get("application")?.trim() ?? "";
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("application")?.trim() ?? "";
     setEditingApplicationId(id || null);
+    setExtrasFromQuery(params.get("extras") === "1");
   }, []);
   const [nationalities, setNationalities] = useState<Nationality[]>([]);
   const [nationality, setNationality] = useState(boot.nationality);
@@ -289,6 +295,9 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   const [travelDate, setTravelDate] = useState(boot.travelDate);
   const [applyStep, setApplyStep] = useState<"visa" | "travellers" | "email">("visa");
   const [editingApplicationId, setEditingApplicationId] = useState<string | null>(null);
+  const [extrasFromQuery, setExtrasFromQuery] = useState(false);
+  const [savedQuote, setSavedQuote] = useState<TClientQuotePreview | null>(null);
+  const quoteEpoch = useRef(0);
   const [processingSpeed, setProcessingSpeed] = useState<"standard" | "fast_track">("standard");
   const [processingSpeedSource, setProcessingSpeedSource] = useState<"system" | "customer">("system");
   const [speedQuote, setSpeedQuote] = useState<{
@@ -585,15 +594,15 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
 
   useEffect(() => {
     if (!editingApplicationId) return;
+    const epochAtStart = quoteEpoch.current;
     let cancelled = false;
     const run = async () => {
-      const res = await fetchApiEnvelope<{
-        processingSpeed: "standard" | "fast_track" | null;
-        processingSpeedSource: "system" | "customer" | null;
-      }>(apiHref(`/applications/${encodeURIComponent(editingApplicationId)}/quote-preview`), {
-        cache: "no-store",
-      });
-      if (cancelled || !res.ok) return;
+      const res = await fetchApiEnvelope<TClientQuotePreview>(
+        apiHref(`/applications/${encodeURIComponent(editingApplicationId)}/quote-preview`),
+        { cache: "no-store" },
+      );
+      if (cancelled || quoteEpoch.current !== epochAtStart || !res.ok) return;
+      setSavedQuote(res.data);
       setProcessingSpeed(res.data.processingSpeed === "fast_track" ? "fast_track" : "standard");
       setProcessingSpeedSource(res.data.processingSpeedSource === "customer" ? "customer" : "system");
     };
@@ -604,9 +613,20 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   }, [editingApplicationId]);
 
   const fastTrackHidden = Boolean(speedQuote && !speedQuote.fastTrackAvailable);
-  const speedForSubmit = fastTrackHidden && processingSpeed === "fast_track" ? "standard" : processingSpeed;
-  const sourceForSubmit =
-    fastTrackHidden && processingSpeed === "fast_track" ? "system" : processingSpeedSource;
+  const speedForSubmit = savedQuote
+    ? savedQuote.processingSpeed === "fast_track"
+      ? "fast_track"
+      : "standard"
+    : fastTrackHidden && processingSpeed === "fast_track"
+      ? "standard"
+      : processingSpeed;
+  const sourceForSubmit = savedQuote
+    ? savedQuote.processingSpeedSource === "customer"
+      ? "customer"
+      : "system"
+    : fastTrackHidden && processingSpeed === "fast_track"
+      ? "system"
+      : processingSpeedSource;
   const chosenTravelDate = travelDate.trim();
   const travelDays =
     chosenTravelDate && travelWindow
@@ -836,8 +856,14 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     speedForSubmit === "fast_track" && !fastTrackSumMinor
       ? null
       : preApplicationCheckoutTotalMinor(totalMinor, speedForSubmit, fastTrackSumMinor);
-  const totalText =
-    checkoutMinor === null ? null : formatDisplayMinor(checkoutMinor.toString(), displayCurrency);
+  const totalText = savedQuote
+    ? formatMinorAmount(savedQuote.totalAmountMinor, savedQuote.currency, locale, "code")
+    : editingApplicationId
+      ? null
+      : checkoutMinor === null
+        ? null
+        : formatDisplayMinor(checkoutMinor.toString(), displayCurrency);
+  const extrasOffered = extrasFromQuery || insuranceStepOffered(savedQuote);
 
   if (loadingList) {
     return (
@@ -872,7 +898,13 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
         </p>
       ) : null}
 
-      {serviceId ? <ApplyStepsRail currentStep={2} /> : null}
+      {serviceId ? (
+        <ApplyStepsRail
+          currentStep={2}
+          includeExtras={extrasOffered}
+          applicationId={editingApplicationId ?? undefined}
+        />
+      ) : null}
 
       <div className={serviceId ? "lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start lg:gap-6" : undefined}>
         <div className={serviceId ? "order-2 min-w-0 lg:order-1" : undefined}>
@@ -963,17 +995,39 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                   }
                   sumText={speedQuote?.travellerCount && speedQuote.travellerCount > 1 ? fastTrackPartySum : null}
                   onSelect={(speed) => {
-                    setProcessingSpeed(speed);
-                    setProcessingSpeedSource("customer");
-                    if (!editingApplicationId) return;
-                    void fetchApiEnvelope(
-                      apiHref(`/applications/${encodeURIComponent(editingApplicationId)}/trip`),
-                      {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ processingSpeed: speed, speedContext: "visa-list" }),
-                      },
-                    );
+                    if (!editingApplicationId) {
+                      setProcessingSpeed(speed);
+                      setProcessingSpeedSource("customer");
+                      return;
+                    }
+                    if (speed === speedForSubmit) return;
+                    const epoch = ++quoteEpoch.current;
+                    void (async () => {
+                      const res = await fetchApiEnvelope<TClientQuotePreview>(
+                        apiHref(`/applications/${encodeURIComponent(editingApplicationId)}/trip`),
+                        {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ processingSpeed: speed, speedContext: "visa-list" }),
+                        },
+                      );
+                      if (quoteEpoch.current !== epoch) return;
+                      if (!res.ok) {
+                        const reason = reasonFromErrorDetails(res.error.details);
+                        setError(
+                          res.status === 409 || res.error.code === "CHECKOUT_FROZEN"
+                            ? t("extras.locked")
+                            : t(tripFailureMessageKey(reason)),
+                        );
+                        return;
+                      }
+                      setError(null);
+                      setSavedQuote(res.data);
+                      setProcessingSpeed(res.data.processingSpeed === "fast_track" ? "fast_track" : "standard");
+                      setProcessingSpeedSource(
+                        res.data.processingSpeedSource === "customer" ? "customer" : "system",
+                      );
+                    })();
                   }}
                 />
               }
