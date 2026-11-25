@@ -54,7 +54,7 @@
     "totalLabel": "Total",
     "atCheckout": "At checkout",
     "estimatedTotal": "Estimated total",
-    "priceIncludesNote": "Price includes the visa service. Travel insurance is separate if your destination requires it.",
+    "priceIncludesNote": "Price includes the visa service. You can add travel insurance before you pay.",
     "emailLabel": "Email *",
     "emailPlaceholder": "you@example.com",
     "emailHelper": "We'll send application updates and your receipt to this address.",
@@ -580,8 +580,10 @@
     "status": "Status",
     "stepBadge": "Step {step}/{total}",
     "hideProgressAria": "Hide progress summary",
-    "meta": "Step {n} of 5 · {label}",
-    "completedGoBack": "{label}, completed. Go back."
+    "meta": "Step {n} of {total} · {label}",
+    "completedGoBack": "{label}, completed. Go back.",
+    "extras": "Extras",
+    "extrasShort": "Extras"
   },
   "common": {
     "continue": "Continue",
@@ -745,24 +747,46 @@
       "add": "Add travel insurance · {price} per traveller",
       "selectAll": "Select all travellers",
       "forTraveller": "Traveller {number} · {price}",
-      "terms": "Read the policy terms"
+      "terms": "Read the policy terms",
+      "addAll": "Add travel insurance for all travellers",
+      "addOne": "Add travel insurance",
+      "priceMany": "{unit} per traveller × {n} = {sum}",
+      "priceOne": "{unit} for 1 traveller"
     },
     "recap": {
       "fastTrack": "Fast Track processing",
       "insurance": "Travel insurance",
       "updating": "Updating total",
-      "updated": "Total updated: {total}"
+      "updated": "Total updated: {total}",
+      "visa": "Visa",
+      "notAdded": "Not added",
+      "total": "Total"
     },
     "error": {
       "update": "We couldn't update your total. Check your connection and try again.",
       "retry": "Try again",
       "fastTrackUnavailable": "Fast Track isn't available in this currency.",
-      "insuranceUnavailable": "Travel insurance isn't available in this currency."
+      "insuranceUnavailable": "Travel insurance isn't available in this currency.",
+      "speedLocked": "Processing speed can only be changed on the visa list."
     },
     "priceChanged": "The price changed since you opened this page. Check the new total before you pay.",
     "locked": "To change your extras, cancel this payment first.",
     "bar": {
       "cta": "Continue to payment"
+    },
+    "title": "Optional extras",
+    "hint": "Optional. Leave it unticked to continue without insurance.",
+    "cta": "Continue to payment",
+    "back": "Back",
+    "changeExtras": "Change extras",
+    "noExtras": "No extras added",
+    "removed": "Travel insurance isn't available for this application, so we removed it."
+  },
+  "speed": {
+    "readonly": {
+      "standard": "Processing: Standard (3 working days)",
+      "fast": "Processing: Fast Track (within 24 hours)",
+      "fastCustom": "Processing: Fast Track ({promise})"
     }
   }
 }

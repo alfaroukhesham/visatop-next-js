@@ -12,6 +12,8 @@ import { toPublicApplicationWithCharge } from "@/lib/applications/load-applicati
 import { CUSTOMER_LOCALE_COOKIE, parseCustomerLocale } from "@/lib/i18n/customer-locale";
 import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 import { applyTripStepHref, lastTravellerApplicationId } from "@/lib/apply/apply-wizard";
+import { loadCheckoutExtraCatalog } from "@/lib/checkout-extras/party-checkout-quote";
+import { insuranceOfferedForCurrency } from "@/lib/checkout-extras/party-insurance";
 
 interface ISubmittedApplicationPageProps {
   params: Promise<{ id: string }>;
@@ -31,10 +33,16 @@ const SubmittedApplicationPage = async ({ params }: ISubmittedApplicationPagePro
   if (!row) {
     notFound();
   }
-  const { members, settled } = await withSystemDbActor(async (tx) => ({
-    members: await loadPartyMembers(tx, row),
-    settled: await loadChargedRecap(tx, id),
-  }));
+  const { members, settled, offered } = await withSystemDbActor(async (tx) => {
+    const members = await loadPartyMembers(tx, row);
+    const settled = await loadChargedRecap(tx, id);
+    const catalog = await loadCheckoutExtraCatalog(tx);
+    return {
+      members,
+      settled,
+      offered: insuranceOfferedForCurrency(catalog, row.catalogCurrency || "USD"),
+    };
+  });
   const cookieStore = await cookies();
   const t = createCustomerT(parseCustomerLocale(cookieStore.get(CUSTOMER_LOCALE_COOKIE)?.value));
   const publicApp = await toPublicApplicationWithCharge(row, t);
@@ -42,9 +50,10 @@ const SubmittedApplicationPage = async ({ params }: ISubmittedApplicationPagePro
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
       <ApplyTwoColumn
-        currentStep={5}
+        currentStep={offered ? 6 : 5}
+        includeExtras={offered}
         applicationId={id}
-        tripHref={applyTripStepHref(row.nationalityCode)}
+        tripHref={applyTripStepHref(row.nationalityCode, id)}
         detailsTravellerId={lastTravellerApplicationId(members)}
         hasSelectedVisa
         visaSummary={<CheckoutOrderRecap application={publicApp} members={members} settled={settled} />}

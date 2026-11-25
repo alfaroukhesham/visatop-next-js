@@ -54,7 +54,7 @@
     "totalLabel": "Total",
     "atCheckout": "Au paiement",
     "estimatedTotal": "Total estimé",
-    "priceIncludesNote": "Le prix inclut le service de visa. L'assurance voyage est facturée séparément si votre destination l'exige.",
+    "priceIncludesNote": "Le prix comprend le service de visa. Vous pourrez ajouter une assurance voyage avant de payer.",
     "emailLabel": "E-mail *",
     "emailPlaceholder": "vous@exemple.com",
     "emailHelper": "Nous enverrons les mises à jour de votre demande et votre reçu à cette adresse.",
@@ -558,8 +558,10 @@
     "detailsShort": "Infos",
     "payShort": "Payer",
     "finishShort": "Fin",
-    "meta": "Étape {n} sur 5 · {label}",
-    "completedGoBack": "{label}, terminée. Retour."
+    "meta": "Étape {n} sur {total} · {label}",
+    "completedGoBack": "{label}, terminée. Retour.",
+    "extras": "Options",
+    "extrasShort": "Options"
   },
   "common": {
     "continue": "Continuer",
@@ -745,24 +747,46 @@
       "add": "Ajouter l'assurance voyage · {price} par voyageur",
       "selectAll": "Sélectionner tous les voyageurs",
       "forTraveller": "Voyageur {number} · {price}",
-      "terms": "Lire les conditions de la police"
+      "terms": "Lire les conditions de la police",
+      "addAll": "Ajouter l'assurance voyage pour tous les voyageurs",
+      "addOne": "Ajouter l'assurance voyage",
+      "priceMany": "{unit} par voyageur × {n} = {sum}",
+      "priceOne": "{unit} pour 1 voyageur"
     },
     "recap": {
-      "fastTrack": "Traitement rapide",
+      "fastTrack": "Traitement Fast Track",
       "insurance": "Assurance voyage",
       "updating": "Mise à jour du total",
-      "updated": "Total mis à jour : {total}"
+      "updated": "Total mis à jour : {total}",
+      "visa": "Visa",
+      "notAdded": "Non ajoutée",
+      "total": "Total"
     },
     "error": {
       "update": "Nous n'avons pas pu mettre à jour votre total. Vérifiez votre connexion et réessayez.",
       "retry": "Réessayer",
       "fastTrackUnavailable": "Le traitement accéléré n'est pas disponible dans cette devise.",
-      "insuranceUnavailable": "L'assurance voyage n'est pas disponible dans cette devise."
+      "insuranceUnavailable": "L'assurance voyage n'est pas disponible dans cette devise.",
+      "speedLocked": "La vitesse de traitement ne peut être modifiée que dans la liste des visas."
     },
     "priceChanged": "Le prix a changé depuis l'ouverture de cette page. Vérifiez le nouveau total avant de payer.",
     "locked": "Pour modifier vos services supplémentaires, annulez d'abord ce paiement.",
     "bar": {
       "cta": "Continuer vers le paiement"
+    },
+    "title": "Options supplémentaires",
+    "hint": "Facultatif. Laissez la case vide pour continuer sans assurance.",
+    "cta": "Continuer vers le paiement",
+    "back": "Retour",
+    "changeExtras": "Modifier les options",
+    "noExtras": "Aucune option ajoutée",
+    "removed": "L'assurance voyage n'est pas disponible pour cette demande, nous l'avons donc retirée."
+  },
+  "speed": {
+    "readonly": {
+      "standard": "Traitement : Standard (3 jours ouvrés)",
+      "fast": "Traitement : Fast Track (sous 24 heures)",
+      "fastCustom": "Traitement : Fast Track ({promise})"
     }
   }
 }

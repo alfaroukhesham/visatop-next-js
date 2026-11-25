@@ -55,7 +55,7 @@ describe("getCustomerMessages", () => {
     expect(fr("steps.trip")).toBe("Voyage");
     expect(ar("steps.details")).toBe("البيانات");
     expect(fr("steps.details")).toBe("Infos");
-    expect(en("steps.meta", { n: 2, label: "Documents" })).toBe("Step 2 of 5 · Documents");
+    expect(en("steps.meta", { n: 2, total: 5, label: "Documents" })).toBe("Step 2 of 5 · Documents");
     expect(en("wizard.readyInstruction")).toMatch(/Tap a name for formats/);
     expect(ar("wizard.readyInstruction")).toMatch(/اضغط على الاسم/);
     expect(fr("wizard.readyInstruction")).toMatch(/Touchez un nom/);

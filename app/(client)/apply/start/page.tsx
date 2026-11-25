@@ -27,7 +27,7 @@ const normalizeNationalityParam = (value: string | string[] | undefined): string
 };
 
 interface IApplyStartPageProps {
-  searchParams?: Promise<{ nationality?: string | string[] }>;
+  searchParams?: Promise<{ nationality?: string | string[]; extras?: string | string[] }>;
 }
 
 const ApplyStartPage = async ({ searchParams }: IApplyStartPageProps) => {
@@ -42,7 +42,11 @@ const ApplyStartPage = async ({ searchParams }: IApplyStartPageProps) => {
 
   return (
     <div className="max-w-6xl pb-8">
-      <ApplyTwoColumn currentStep={2} contentClassName="space-y-6">
+      <ApplyTwoColumn
+        currentStep={2}
+        includeExtras={sp.extras === "1" || (Array.isArray(sp.extras) && sp.extras.includes("1"))}
+        contentClassName="space-y-6"
+      >
         <ClientSurface
           preset="highlight"
           className="border-secondary/40 bg-card/95 p-6 shadow-[0_18px_56px_rgba(1,32,49,0.12)] sm:p-8 md:p-10"

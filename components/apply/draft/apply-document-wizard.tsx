@@ -8,7 +8,9 @@ import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i1
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { tagClarityApplyScreen } from "@/lib/analytics/clarity-apply-screen";
 import { trackEventOnce } from "@/lib/analytics/gtag-client";
+import { useCheckoutQuoteOptional } from "@/components/apply/checkout-quote-provider";
 import {
+  applyExtrasHref,
   applyPreviousHref,
   applyWizardHref,
   nextApplyScreen,
@@ -18,6 +20,7 @@ import {
   type TApplyWizardMember,
   type TApplyWizardStep,
 } from "@/lib/apply/apply-wizard";
+import { insuranceStepOffered } from "@/lib/checkout-extras/party-insurance";
 import { ocrStatusForDraftUi, passportSlotOcrNotice } from "@/lib/apply/ocr-customer-copy";
 import { translateDocumentSlot } from "@/lib/apply/document-slot-i18n";
 import type { TDocumentSlot } from "@/lib/apply/document-requirements";
@@ -92,6 +95,8 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
   const t = useCustomerT();
   const locale = useCustomerLocale();
   const router = useRouter();
+  const quote = useCheckoutQuoteOptional();
+  const extrasOn = insuranceStepOffered(quote?.preview ?? null);
   const searchParams = useSearchParams();
   const compactCta = useNarrowViewport(APPLY_STICKY_CTA_MEDIA_QUERY);
   const ordered = useMemo(
@@ -112,7 +117,10 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
   const resolvedKey = `${resolved.screen}:${resolved.travellerId ?? ""}`;
   useEffect(() => {
     if (resolved.screen === "payment") {
-      router.replace(applyWizardHref(applicationId, resolved));
+      if (quote?.loading && !quote.preview) return;
+      router.replace(
+        extrasOn ? applyExtrasHref(applicationId) : applyWizardHref(applicationId, resolved),
+      );
       return;
     }
     const hereTraveller = searchParams.get("traveller");
@@ -123,7 +131,7 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
       return;
     }
     router.replace(applyWizardHref(applicationId, resolved));
-  }, [applicationId, resolved, resolvedKey, router, searchParams]);
+  }, [applicationId, extrasOn, quote?.loading, quote?.preview, resolved, resolvedKey, router, searchParams]);
 
   useEffect(() => {
     if (resolved.screen === "ready" || resolved.screen === "payment" || !resolved.travellerId) return;
@@ -156,6 +164,10 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
       method: "POST",
       body: JSON.stringify({ screen: current.screen, travellerId: current.travellerId }),
     });
+    if (next.screen === "payment" && extrasOn) {
+      router.push(applyExtrasHref(applicationId));
+      return;
+    }
     router.push(applyWizardHref(applicationId, next));
   };
 

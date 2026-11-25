@@ -54,7 +54,7 @@
     "totalLabel": "Jimla",
     "atCheckout": "A lokacin biya",
     "estimatedTotal": "Kiyasin jimla",
-    "priceIncludesNote": "Farashin ya haɗa da sabis na visa. Inshora ta tafiya ta bambanta idan wurin da kuke zuwa yana buƙata.",
+    "priceIncludesNote": "Farashin ya ƙunshi sabis na biza. Kuna iya ƙara inshorar tafiya kafin biyan kuɗi.",
     "emailLabel": "Imel *",
     "emailPlaceholder": "you@example.com",
     "emailHelper": "Za mu aiko sabuntawa game da nema da rasit ɗinku zuwa wannan adireshin.",
@@ -558,8 +558,10 @@
     "detailsShort": "Bay.",
     "payShort": "Biya",
     "finishShort": "Karshe",
-    "meta": "Step {n} of 5 · {label}",
-    "completedGoBack": "{label}, completed. Go back."
+    "meta": "Mataki {n} na {total} · {label}",
+    "completedGoBack": "{label}, completed. Go back.",
+    "extras": "Ƙarin zaɓi",
+    "extrasShort": "Ƙari"
   },
   "common": {
     "continue": "Ci gaba",
@@ -745,24 +747,46 @@
       "add": "Ƙara inshorar tafiya · {price} ga kowane matafiyi",
       "selectAll": "Zaɓi dukkan matafiya",
       "forTraveller": "Matafiyi {number} · {price}",
-      "terms": "Karanta sharuɗɗan takardar inshora"
+      "terms": "Karanta sharuɗɗan takardar inshora",
+      "addAll": "Ƙara inshorar tafiya ga duk matafiya",
+      "addOne": "Ƙara inshorar tafiya",
+      "priceMany": "{unit} ga kowane matafiyi × {n} = {sum}",
+      "priceOne": "{unit} ga matafiyi 1"
     },
     "recap": {
       "fastTrack": "Saurin aiki",
       "insurance": "Inshorar tafiya",
       "updating": "Ana sabunta jimla",
-      "updated": "An sabunta jimla: {total}"
+      "updated": "An sabunta jimla: {total}",
+      "visa": "Biza",
+      "notAdded": "Ba a ƙara ba",
+      "total": "Jimla"
     },
     "error": {
       "update": "Ba mu iya sabunta jimlar ku ba. Duba haɗin ku sai ku sake gwadawa.",
       "retry": "Sake gwadawa",
       "fastTrackUnavailable": "Saurin aiki ba ya samuwa a wannan kudin.",
-      "insuranceUnavailable": "Inshorar tafiya ba ta samuwa a wannan kudin."
+      "insuranceUnavailable": "Inshorar tafiya ba ta samuwa a wannan kudin.",
+      "speedLocked": "Ana iya canza saurin sarrafa ne kawai a jerin bizojin."
     },
     "priceChanged": "Farashin ya canza tun lokacin da kuka buɗe wannan shafi. Duba sabuwar jimla kafin biya.",
     "locked": "Don canza ƙarin ayyuka, fara soke wannan biyan kuɗi.",
     "bar": {
       "cta": "Ci gaba zuwa biya"
+    },
+    "title": "Ƙarin zaɓi na zaɓi",
+    "hint": "Na zaɓi. Bar shi ba a yi masa alama ba don ci gaba ba tare da inshora ba.",
+    "cta": "Ci gaba zuwa biyan kuɗi",
+    "back": "Baya",
+    "changeExtras": "Canja ƙarin zaɓi",
+    "noExtras": "Ba a ƙara ƙarin zaɓi ba",
+    "removed": "Inshorar tafiya ba ta samuwa ga wannan aikace-aikacen ba, don haka mun cire ta."
+  },
+  "speed": {
+    "readonly": {
+      "standard": "Sarrafa: Standard (kwanaki 3 na aiki)",
+      "fast": "Sarrafa: Fast Track (cikin awanni 24)",
+      "fastCustom": "Sarrafa: Fast Track ({promise})"
     }
   }
 }

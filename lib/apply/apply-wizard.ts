@@ -179,11 +179,20 @@ export const lastTravellerApplicationId = (
   return [...members].sort((a, b) => a.travelerIndex - b.travelerIndex).at(-1)!.applicationId;
 };
 
-export const applyTripStepHref = (nationalityCode?: string | null): string | null => {
+export const applyTripStepHref = (
+  nationalityCode?: string | null,
+  applicationId?: string | null,
+): string | null => {
   const code = nationalityCode?.trim().toUpperCase() ?? "";
   if (!/^[A-Z]{2}$/.test(code)) return null;
-  return `/apply/start?nationality=${encodeURIComponent(code)}&resume=1`;
+  const params = new URLSearchParams({ nationality: code, resume: "1" });
+  const id = applicationId?.trim();
+  if (id) params.set("application", id);
+  return `/apply/start?${params.toString()}`;
 };
+
+export const applyExtrasHref = (applicationId: string): string =>
+  `/apply/applications/${encodeURIComponent(applicationId)}/extras`;
 
 export const applyPreviousHref = (
   applicationId: string,

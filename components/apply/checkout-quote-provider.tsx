@@ -62,17 +62,20 @@ const isAbortError = (error: unknown): boolean =>
 
 interface ICheckoutQuoteProviderProps {
   applicationId: string;
+  /** Server quote so the first paint already has prices. */
+  initialPreview?: TClientQuotePreview | null;
   children: ReactNode;
 }
 
 export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
   applicationId,
+  initialPreview = null,
   children,
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
-  const [preview, setPreview] = useState<TClientQuotePreview | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [preview, setPreview] = useState<TClientQuotePreview | null>(initialPreview);
+  const [loading, setLoading] = useState(initialPreview === null);
   const [updating, setUpdating] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
@@ -84,8 +87,8 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
   const [termsResetKey, setTermsResetKey] = useState(0);
   const [dateBlocksPay, setDateBlocksPay] = useState(false);
   const [paying, setPaying] = useState(false);
-  const previewRef = useRef<TClientQuotePreview | null>(null);
-  const lastSavedRef = useRef<TClientQuotePreview | null>(null);
+  const previewRef = useRef<TClientQuotePreview | null>(initialPreview);
+  const lastSavedRef = useRef<TClientQuotePreview | null>(initialPreview);
   const seq = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const lastPatch = useRef<TTripPatchBody | null>(null);

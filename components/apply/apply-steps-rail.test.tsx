@@ -129,4 +129,19 @@ describe("ApplyStepsRail on documents (ready)", () => {
     wrap(<ApplyStepsRail currentStep={3} phase="documents" applicationId="app-1" />);
     expect(screen.queryByRole("button", { name: /trip, completed/i })).not.toBeInTheDocument();
   });
+
+  it("inserts Extras between Details and Pay when insurance is offered", () => {
+    wrap(
+      <ApplyStepsRail
+        currentStep={4}
+        phase="extras"
+        includeExtras
+        applicationId="app-1"
+        tripHref="/apply/start?nationality=IN&application=app-1&extras=1"
+      />,
+    );
+    expect(screen.getByText(/Step 4 of 6/)).toHaveTextContent("Extras");
+    expect(screen.getByRole("button", { name: /details, completed/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^pay$/i })).toHaveAttribute("aria-disabled", "true");
+  });
 });

@@ -48,6 +48,8 @@ export type TClientQuotePreview = {
   visaAmountMinor: string;
   extrasAmountMinor: string;
   totalAmountMinor: string;
+  /** Stored insurance was dropped because it is disabled or unpriced. */
+  insuranceRemoved?: boolean;
 };
 
 export type TTripInsuranceSelection = {
@@ -58,7 +60,11 @@ export type TTripInsuranceSelection = {
 export type TTripPatchBody = {
   travelDate?: string | null;
   processingSpeed?: TProcessingSpeedChoice;
+  /** Visa list only. The server rejects a speed change without this. */
+  speedContext?: "visa-list";
   travelInsurance?: readonly TTripInsuranceSelection[];
+  /** One insurance tickbox for the whole party. */
+  insuranceForParty?: boolean;
 };
 
 export type TSpeedNote = "n1" | "n2" | "n3" | "n4" | "n5" | "soon";
@@ -90,6 +96,8 @@ export const tripFailureMessageKey = (reason: string | undefined): string => {
       return "extras.error.fastTrackUnavailable";
     case "travel_insurance_unavailable":
       return "extras.error.insuranceUnavailable";
+    case "speed_locked":
+      return "extras.error.speedLocked";
     default:
       return "extras.error.update";
   }
@@ -293,6 +301,16 @@ export const optimisticPreview = (
     next.processingSpeedSource = "customer";
     next.availableExtras = next.availableExtras.map((extra) =>
       extra.key === "fast_track" ? { ...extra, selected: patch.processingSpeed === "fast_track" } : extra,
+    );
+  }
+  if (patch.insuranceForParty !== undefined) {
+    const memberIds = next.visaLines.map((line) => line.applicationId);
+    return applyInsuranceSelection(
+      next,
+      memberIds.map((applicationId) => ({
+        applicationId,
+        selected: patch.insuranceForParty === true,
+      })),
     );
   }
   if (patch.travelInsurance !== undefined) {

@@ -7,20 +7,30 @@ import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { cn } from "@/lib/utils";
 import { useApplyJumpAhead } from "./apply-jump-ahead";
 
-const STEPS = [
+const BASE_STEPS = [
   { id: "trip", labelKey: "steps.trip", shortKey: "steps.tripShort" },
   { id: "documents", labelKey: "steps.documents", shortKey: "steps.documentsShort" },
   { id: "details", labelKey: "steps.details", shortKey: "steps.detailsShort" },
+] as const;
+
+const EXTRAS_STEP = { id: "extras", labelKey: "steps.extras", shortKey: "steps.extrasShort" } as const;
+
+const TAIL_STEPS = [
   { id: "pay", labelKey: "steps.pay", shortKey: "steps.payShort" },
   { id: "finish", labelKey: "steps.finish", shortKey: "steps.finishShort" },
 ] as const;
 
-type TRailPhase = "trip" | "documents" | "details" | "pay" | "finish";
+const stepsFor = (includeExtras: boolean) =>
+  includeExtras ? [...BASE_STEPS, EXTRAS_STEP, ...TAIL_STEPS] : [...BASE_STEPS, ...TAIL_STEPS];
+
+type TRailPhase = "trip" | "documents" | "details" | "extras" | "pay" | "finish";
 
 interface IApplyStepsRailProps {
-  currentStep: 1 | 2 | 3 | 4 | 5;
-  /** Documents page only: details is its own bar segment. */
-  phase?: "documents" | "details";
+  currentStep: 1 | 2 | 3 | 4 | 5 | 6;
+  /** Documents page: details is its own bar segment. Extras is its own segment when offered. */
+  phase?: "documents" | "details" | "extras";
+  /** Insurance is priced, so Extras sits between Details and Pay. */
+  includeExtras?: boolean;
   applicationId?: string;
   /** Last trip-selection step inside the draft. Never marketing home. */
   tripHref?: string | null;
@@ -29,9 +39,18 @@ interface IApplyStepsRailProps {
   className?: string;
 }
 
-const activeIndexFor = (currentStep: number, phase: "documents" | "details" | undefined): number => {
+const activeIndexFor = (
+  currentStep: number,
+  phase: "documents" | "details" | "extras" | undefined,
+  includeExtras: boolean,
+): number => {
   if (currentStep <= 2) return 0;
   if (currentStep === 3) return phase === "details" ? 2 : 1;
+  if (includeExtras) {
+    if (phase === "extras" || currentStep === 4) return 3;
+    if (currentStep === 5) return 4;
+    return 5;
+  }
   if (currentStep === 4) return 3;
   return 4;
 };
@@ -52,6 +71,7 @@ const hrefForPhase = (
     if (traveller) params.set("traveller", traveller);
     return `/apply/applications/${id}?${params.toString()}`;
   }
+  if (phase === "extras") return `/apply/applications/${id}/extras`;
   if (phase === "pay") return `/apply/applications/${id}/payment`;
   return `/apply/applications/${id}/submitted`;
 };
@@ -59,6 +79,7 @@ const hrefForPhase = (
 export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
   currentStep,
   phase,
+  includeExtras = false,
   applicationId,
   tripHref = null,
   detailsTravellerId = null,
@@ -68,8 +89,9 @@ export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
   const router = useRouter();
   const jump = useApplyJumpAhead();
   const [hintVisible, setHintVisible] = useState(false);
-  const activeIndex = activeIndexFor(currentStep, phase);
-  const currentLabel = t(STEPS[activeIndex]!.labelKey);
+  const steps = stepsFor(includeExtras);
+  const activeIndex = activeIndexFor(currentStep, phase, includeExtras);
+  const currentLabel = t(steps[activeIndex]!.labelKey);
 
   const onUpcomingTap = () => {
     setHintVisible(true);
@@ -93,10 +115,10 @@ export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
       aria-label={t("steps.railAriaLabel")}
     >
       <p className="text-foreground mb-2 text-xs font-semibold">
-        {t("steps.meta", { n: activeIndex + 1, label: currentLabel })}
+        {t("steps.meta", { n: activeIndex + 1, total: steps.length, label: currentLabel })}
       </p>
       <ol className="flex items-start justify-between gap-1">
-        {STEPS.map((s, index) => {
+        {steps.map((s, index) => {
           const state = index < activeIndex ? "completed" : index === activeIndex ? "active" : "future";
           const href = hrefForPhase(s.id, applicationId, tripHref, detailsTravellerId);
           const fullLabel = t(s.labelKey);

@@ -52,6 +52,7 @@ import {
   writeChooserDraft,
 } from "@/lib/apply/chooser-draft-storage";
 import { cn } from "@/lib/utils";
+import { ProcessingSpeedLine } from "@/components/apply/processing-speed-line";
 import { VisaSpeedChoice } from "@/components/apply/visa-speed-choice";
 import { validateTravelDate } from "@/lib/checkout-extras/dubai-calendar";
 import {
@@ -277,6 +278,8 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   const [boot] = useState(() => bootChooserForm(initialNationalityCode));
   useEffect(() => {
     consumeChooserFreshStart();
+    const id = new URLSearchParams(window.location.search).get("application")?.trim() ?? "";
+    setEditingApplicationId(id || null);
   }, []);
   const [nationalities, setNationalities] = useState<Nationality[]>([]);
   const [nationality, setNationality] = useState(boot.nationality);
@@ -285,6 +288,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   const [email, setEmail] = useState(boot.email);
   const [travelDate, setTravelDate] = useState(boot.travelDate);
   const [applyStep, setApplyStep] = useState<"visa" | "travellers" | "email">("visa");
+  const [editingApplicationId, setEditingApplicationId] = useState<string | null>(null);
   const [processingSpeed, setProcessingSpeed] = useState<"standard" | "fast_track">("standard");
   const [processingSpeedSource, setProcessingSpeedSource] = useState<"system" | "customer">("system");
   const [speedQuote, setSpeedQuote] = useState<{
@@ -579,6 +583,26 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     };
   }, [serviceId, nationality, displayCurrency, additionalTravelers.length]);
 
+  useEffect(() => {
+    if (!editingApplicationId) return;
+    let cancelled = false;
+    const run = async () => {
+      const res = await fetchApiEnvelope<{
+        processingSpeed: "standard" | "fast_track" | null;
+        processingSpeedSource: "system" | "customer" | null;
+      }>(apiHref(`/applications/${encodeURIComponent(editingApplicationId)}/quote-preview`), {
+        cache: "no-store",
+      });
+      if (cancelled || !res.ok) return;
+      setProcessingSpeed(res.data.processingSpeed === "fast_track" ? "fast_track" : "standard");
+      setProcessingSpeedSource(res.data.processingSpeedSource === "customer" ? "customer" : "system");
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [editingApplicationId]);
+
   const fastTrackHidden = Boolean(speedQuote && !speedQuote.fastTrackAvailable);
   const speedForSubmit = fastTrackHidden && processingSpeed === "fast_track" ? "standard" : processingSpeed;
   const sourceForSubmit =
@@ -684,6 +708,10 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
       setError(t("start.enterValidEmailError"));
+      return;
+    }
+    if (editingApplicationId) {
+      router.push(`/apply/applications/${encodeURIComponent(editingApplicationId)}`);
       return;
     }
     setSubmitting(true);
@@ -804,7 +832,10 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     speedForSubmit === "fast_track"
       ? matchingFastTrackSumMinor(speedQuote, partySize, displayCurrency)
       : null;
-  const checkoutMinor = preApplicationCheckoutTotalMinor(totalMinor, speedForSubmit, fastTrackSumMinor);
+  const checkoutMinor =
+    speedForSubmit === "fast_track" && !fastTrackSumMinor
+      ? null
+      : preApplicationCheckoutTotalMinor(totalMinor, speedForSubmit, fastTrackSumMinor);
   const totalText =
     checkoutMinor === null ? null : formatDisplayMinor(checkoutMinor.toString(), displayCurrency);
 
@@ -934,6 +965,15 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                   onSelect={(speed) => {
                     setProcessingSpeed(speed);
                     setProcessingSpeedSource("customer");
+                    if (!editingApplicationId) return;
+                    void fetchApiEnvelope(
+                      apiHref(`/applications/${encodeURIComponent(editingApplicationId)}/trip`),
+                      {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ processingSpeed: speed, speedContext: "visa-list" }),
+                      },
+                    );
                   }}
                 />
               }
@@ -1136,10 +1176,17 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
         </section>
       ) : null}
 
-      {serviceId && totalText ? (
-        <div className="border-secondary/20 bg-secondary/5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 px-5 py-4">
-          <p className="text-foreground text-sm font-semibold">{t("start.checkoutTotal")}</p>
-          <p className="font-heading text-foreground text-xl font-bold tabular-nums">{totalText}</p>
+      {serviceId && (totalText || speedForSubmit) ? (
+        <div className="border-secondary/20 bg-secondary/5 space-y-2 rounded-2xl border-2 px-5 py-4">
+          <ProcessingSpeedLine speed={speedForSubmit} />
+          {totalText ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-foreground text-sm font-semibold">{t("start.checkoutTotal")}</p>
+              <p className="font-heading text-foreground text-xl font-bold tabular-nums">
+                <bdi>{totalText}</bdi>
+              </p>
+            </div>
+          ) : null}
         </div>
       ) : null}
         </div>

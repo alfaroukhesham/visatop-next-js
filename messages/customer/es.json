@@ -54,7 +54,7 @@
     "totalLabel": "Total",
     "atCheckout": "Al pagar",
     "estimatedTotal": "Total estimado",
-    "priceIncludesNote": "El precio incluye el servicio de visado. El seguro de viaje es aparte si su destino lo exige.",
+    "priceIncludesNote": "El precio incluye el servicio de visado. Puede añadir un seguro de viaje antes de pagar.",
     "emailLabel": "Correo electrónico *",
     "emailPlaceholder": "usted@ejemplo.com",
     "emailHelper": "Enviaremos actualizaciones de la solicitud y su recibo a esta dirección.",
@@ -558,8 +558,10 @@
     "detailsShort": "Datos",
     "payShort": "Pagar",
     "finishShort": "Fin",
-    "meta": "Step {n} of 5 · {label}",
-    "completedGoBack": "{label}, completed. Go back."
+    "meta": "Paso {n} de {total} · {label}",
+    "completedGoBack": "{label}, completed. Go back.",
+    "extras": "Extras",
+    "extrasShort": "Extras"
   },
   "common": {
     "continue": "Continuar",
@@ -745,24 +747,46 @@
       "add": "Añadir seguro de viaje · {price} por viajero",
       "selectAll": "Seleccionar todos los viajeros",
       "forTraveller": "Viajero {number} · {price}",
-      "terms": "Leer las condiciones de la póliza"
+      "terms": "Leer las condiciones de la póliza",
+      "addAll": "Añadir seguro de viaje para todos los viajeros",
+      "addOne": "Añadir seguro de viaje",
+      "priceMany": "{unit} por viajero × {n} = {sum}",
+      "priceOne": "{unit} para 1 viajero"
     },
     "recap": {
       "fastTrack": "Trámite rápido",
       "insurance": "Seguro de viaje",
       "updating": "Actualizando el total",
-      "updated": "Total actualizado: {total}"
+      "updated": "Total actualizado: {total}",
+      "visa": "Visado",
+      "notAdded": "No añadido",
+      "total": "Total"
     },
     "error": {
       "update": "No pudimos actualizar su total. Compruebe su conexión e inténtelo de nuevo.",
       "retry": "Intentar de nuevo",
       "fastTrackUnavailable": "El trámite rápido no está disponible en esta moneda.",
-      "insuranceUnavailable": "El seguro de viaje no está disponible en esta moneda."
+      "insuranceUnavailable": "El seguro de viaje no está disponible en esta moneda.",
+      "speedLocked": "La velocidad de tramitación solo se puede cambiar en la lista de visados."
     },
     "priceChanged": "El precio cambió desde que abrió esta página. Revise el nuevo total antes de pagar.",
     "locked": "Para cambiar sus extras, cancele primero este pago.",
     "bar": {
       "cta": "Continuar al pago"
+    },
+    "title": "Extras opcionales",
+    "hint": "Opcional. Déjelo sin marcar para continuar sin seguro.",
+    "cta": "Continuar al pago",
+    "back": "Atrás",
+    "changeExtras": "Cambiar extras",
+    "noExtras": "No se añadieron extras",
+    "removed": "El seguro de viaje no está disponible para esta solicitud, así que lo quitamos."
+  },
+  "speed": {
+    "readonly": {
+      "standard": "Tramitación: Standard (3 días laborables)",
+      "fast": "Tramitación: Fast Track (en 24 horas)",
+      "fastCustom": "Tramitación: Fast Track ({promise})"
     }
   }
 }

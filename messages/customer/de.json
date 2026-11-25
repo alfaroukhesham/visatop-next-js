@@ -54,7 +54,7 @@
     "totalLabel": "Gesamt",
     "atCheckout": "An der Kasse",
     "estimatedTotal": "Geschätzter Gesamtbetrag",
-    "priceIncludesNote": "Der Preis umfasst den Visum-Service. Reiseversicherung ist separat, falls Ihr Reiseziel sie vorschreibt.",
+    "priceIncludesNote": "Der Preis umfasst den Visum-Service. Sie können vor der Zahlung eine Reiseversicherung hinzufügen.",
     "emailLabel": "E-Mail *",
     "emailPlaceholder": "sie@beispiel.de",
     "emailHelper": "Wir senden Antragsupdates und Ihre Quittung an diese Adresse.",
@@ -558,8 +558,10 @@
     "detailsShort": "Infos",
     "payShort": "Zahlen",
     "finishShort": "Fertig",
-    "meta": "Step {n} of 5 · {label}",
-    "completedGoBack": "{label}, completed. Go back."
+    "meta": "Schritt {n} von {total} · {label}",
+    "completedGoBack": "{label}, completed. Go back.",
+    "extras": "Extras",
+    "extrasShort": "Extras"
   },
   "common": {
     "continue": "Weiter",
@@ -745,24 +747,46 @@
       "add": "Reiseversicherung hinzufügen · {price} pro Reisender",
       "selectAll": "Alle Reisenden auswählen",
       "forTraveller": "Reisende/r {number} · {price}",
-      "terms": "Versicherungsbedingungen lesen"
+      "terms": "Versicherungsbedingungen lesen",
+      "addAll": "Reiseversicherung für alle Reisenden hinzufügen",
+      "addOne": "Reiseversicherung hinzufügen",
+      "priceMany": "{unit} pro Reisende/r × {n} = {sum}",
+      "priceOne": "{unit} für 1 Reisende/n"
     },
     "recap": {
       "fastTrack": "Expressbearbeitung",
       "insurance": "Reiseversicherung",
       "updating": "Gesamtbetrag wird aktualisiert",
-      "updated": "Gesamtbetrag aktualisiert: {total}"
+      "updated": "Gesamtbetrag aktualisiert: {total}",
+      "visa": "Visum",
+      "notAdded": "Nicht hinzugefügt",
+      "total": "Gesamt"
     },
     "error": {
       "update": "Wir konnten Ihren Gesamtbetrag nicht aktualisieren. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
       "retry": "Erneut versuchen",
       "fastTrackUnavailable": "Express ist in dieser Währung nicht verfügbar.",
-      "insuranceUnavailable": "Die Reiseversicherung ist in dieser Währung nicht verfügbar."
+      "insuranceUnavailable": "Die Reiseversicherung ist in dieser Währung nicht verfügbar.",
+      "speedLocked": "Die Bearbeitungsgeschwindigkeit kann nur in der Visumliste geändert werden."
     },
     "priceChanged": "Der Preis hat sich geändert, seit Sie diese Seite geöffnet haben. Prüfen Sie den neuen Gesamtbetrag vor der Zahlung.",
     "locked": "Um Ihre Extras zu ändern, brechen Sie zuerst diese Zahlung ab.",
     "bar": {
       "cta": "Weiter zur Zahlung"
+    },
+    "title": "Optionale Extras",
+    "hint": "Optional. Lassen Sie das Kästchen leer, um ohne Versicherung fortzufahren.",
+    "cta": "Weiter zur Zahlung",
+    "back": "Zurück",
+    "changeExtras": "Extras ändern",
+    "noExtras": "Keine Extras hinzugefügt",
+    "removed": "Die Reiseversicherung ist für diesen Antrag nicht verfügbar, daher haben wir sie entfernt."
+  },
+  "speed": {
+    "readonly": {
+      "standard": "Bearbeitung: Standard (3 Werktage)",
+      "fast": "Bearbeitung: Fast Track (innerhalb von 24 Stunden)",
+      "fastCustom": "Bearbeitung: Fast Track ({promise})"
     }
   }
 }

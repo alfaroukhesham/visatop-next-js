@@ -54,7 +54,7 @@
     "totalLabel": "Kabuuan",
     "atCheckout": "Sa checkout",
     "estimatedTotal": "Tinatayang kabuuan",
-    "priceIncludesNote": "Kasama sa presyo ang visa service. Hiwa-hiwalay ang travel insurance kung kailangan ng destinasyon mo.",
+    "priceIncludesNote": "Kasama sa presyo ang serbisyo ng visa. Maaari kang magdagdag ng travel insurance bago magbayad.",
     "emailLabel": "Email *",
     "emailPlaceholder": "you@example.com",
     "emailHelper": "Dito namin ipapadala ang mga update sa application at resibo mo.",
@@ -558,8 +558,10 @@
     "detailsShort": "Impo",
     "payShort": "Bayad",
     "finishShort": "Tapos",
-    "meta": "Step {n} of 5 · {label}",
-    "completedGoBack": "{label}, completed. Go back."
+    "meta": "Hakbang {n} ng {total} · {label}",
+    "completedGoBack": "{label}, completed. Go back.",
+    "extras": "Mga extra",
+    "extrasShort": "Extra"
   },
   "common": {
     "continue": "Ituloy",
@@ -745,24 +747,46 @@
       "add": "Magdagdag ng seguro sa paglalakbay · {price} bawat manlalakbay",
       "selectAll": "Piliin ang lahat ng manlalakbay",
       "forTraveller": "Manlalakbay {number} · {price}",
-      "terms": "Basahin ang mga tuntunin ng polisiya"
+      "terms": "Basahin ang mga tuntunin ng polisiya",
+      "addAll": "Magdagdag ng travel insurance para sa lahat ng biyahero",
+      "addOne": "Magdagdag ng travel insurance",
+      "priceMany": "{unit} bawat biyahero × {n} = {sum}",
+      "priceOne": "{unit} para sa 1 biyahero"
     },
     "recap": {
       "fastTrack": "Mabilis na proseso",
       "insurance": "Seguro sa paglalakbay",
       "updating": "Ina-update ang kabuuan",
-      "updated": "Na-update ang kabuuan: {total}"
+      "updated": "Na-update ang kabuuan: {total}",
+      "visa": "Bisa",
+      "notAdded": "Hindi idinagdag",
+      "total": "Kabuuan"
     },
     "error": {
       "update": "Hindi namin na-update ang kabuuan. Tingnan ang koneksyon at subukan muli.",
       "retry": "Subukan muli",
       "fastTrackUnavailable": "Hindi available ang mabilis na proseso sa perang ito.",
-      "insuranceUnavailable": "Hindi available ang seguro sa paglalakbay sa perang ito."
+      "insuranceUnavailable": "Hindi available ang seguro sa paglalakbay sa perang ito.",
+      "speedLocked": "Ang bilis ng pagproseso ay mababago lamang sa listahan ng visa."
     },
     "priceChanged": "Nagbago ang presyo mula nang buksan ninyo ang pahinang ito. Tingnan ang bagong kabuuan bago magbayad.",
     "locked": "Para baguhin ang mga extra, kanselahin muna ang bayad na ito.",
     "bar": {
       "cta": "Magpatuloy sa pagbabayad"
+    },
+    "title": "Mga opsyonal na extra",
+    "hint": "Opsyonal. Iwanang walang tsek para magpatuloy nang walang insurance.",
+    "cta": "Magpatuloy sa pagbabayad",
+    "back": "Bumalik",
+    "changeExtras": "Baguhin ang mga extra",
+    "noExtras": "Walang extra na idinagdag",
+    "removed": "Hindi available ang travel insurance para sa application na ito, kaya inalis namin ito."
+  },
+  "speed": {
+    "readonly": {
+      "standard": "Pagproseso: Standard (3 araw ng trabaho)",
+      "fast": "Pagproseso: Fast Track (sa loob ng 24 oras)",
+      "fastCustom": "Pagproseso: Fast Track ({promise})"
     }
   }
 }

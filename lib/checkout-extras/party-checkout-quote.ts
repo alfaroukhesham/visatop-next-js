@@ -18,6 +18,10 @@ import {
   travelDateWindow,
 } from "@/lib/checkout-extras/dubai-calendar";
 import {
+  insuranceSelectionChanged,
+  normalizeInsuranceForQuote,
+} from "@/lib/checkout-extras/party-insurance";
+import {
   checkoutTravelDateError,
   nextProcessingSpeed,
   planTripUpdate,
@@ -75,6 +79,8 @@ export type TQuotePreview = {
   visaAmountMinor: string;
   extrasAmountMinor: string;
   totalAmountMinor: string;
+  /** Stored insurance was dropped because it is disabled or unpriced in this currency. */
+  insuranceRemoved?: boolean;
 };
 
 export type TPartyMemberRow = {
@@ -298,11 +304,21 @@ export const buildQuotePreview = (input: {
     fastTrackAvailable,
     customerChoice: null,
   });
+  const memberIds = input.members.map((member) => member.applicationId);
+  const insuranceCatalog = catalogByKey(input.catalog, "travel_insurance");
+  const insuranceAvailable = insuranceCatalog
+    ? availabilityForCurrency(insuranceCatalog, currency).available
+    : false;
+  const insurance = normalizeInsuranceForQuote({
+    memberIds,
+    stored: input.insuranceSelectedByApplicationId,
+    insuranceAvailable,
+  });
   const resolved = resolveCheckoutExtras({
     currency,
     members: input.members.map((member) => ({ applicationId: member.applicationId })),
     catalog: input.catalog,
-    insuranceSelectedByApplicationId: input.insuranceSelectedByApplicationId,
+    insuranceSelectedByApplicationId: insurance.map,
     processingSpeed: speed.speed,
   });
   const visaLines: TVisaChargeLine[] = input.members.map((member) => ({
@@ -326,8 +342,7 @@ export const buildQuotePreview = (input: {
     const selected =
       item.key === "fast_track"
         ? speed.speed === "fast_track"
-        : travellerCount > 0 &&
-          input.members.every((member) => input.insuranceSelectedByApplicationId[member.applicationId] === true);
+        : travellerCount > 0 && memberIds.every((id) => insurance.map[id] === true);
     return [
       {
         key: item.key,
@@ -371,6 +386,7 @@ export const buildQuotePreview = (input: {
     visaAmountMinor: charge.visaAmountMinor.toString(),
     extrasAmountMinor: charge.extrasAmountMinor.toString(),
     totalAmountMinor: charge.totalMinor.toString(),
+    insuranceRemoved: insurance.removed,
   };
 };
 
@@ -498,8 +514,30 @@ export const applyPartyExtrasToCheckout = async (
             ),
           )
       : [];
-  const insuranceSelectedByApplicationId: Record<string, boolean> = {};
-  for (const row of selectionRows) insuranceSelectedByApplicationId[row.applicationId] = row.selected;
+  const storedInsurance: Record<string, boolean> = {};
+  for (const row of selectionRows) storedInsurance[row.applicationId] = row.selected;
+  const insuranceAvailable = insurance
+    ? availabilityForCurrency(insurance, currency).available
+    : false;
+  const normalizedInsurance = normalizeInsuranceForQuote({
+    memberIds,
+    stored: storedInsurance,
+    insuranceAvailable,
+  });
+  if (
+    insurance &&
+    insuranceSelectionChanged(memberIds, storedInsurance, normalizedInsurance.map)
+  ) {
+    await writeExtraSelection(
+      tx,
+      memberIds.map((applicationId) => ({
+        applicationId,
+        selected: normalizedInsurance.map[applicationId] === true,
+      })),
+      insurance.id,
+    );
+  }
+  const insuranceSelectedByApplicationId = normalizedInsurance.map;
 
   const fastTrack = catalogByKey(catalog, "fast_track");
   const fastTrackAvailable = fastTrack ? availabilityForCurrency(fastTrack, currency).available : false;
@@ -584,6 +622,7 @@ export const savePartyTrip = async (
   applicationId: string,
   patch: TTripPatch,
   now: Date = new Date(),
+  options?: { speedChangeAllowed?: boolean },
 ): Promise<TSaveTripResult> => {
   const held = await lockApplicationsForTrip(tx, applicationId);
   if (!held) {
@@ -614,6 +653,7 @@ export const savePartyTrip = async (
     thresholdDays: settings.fastTrackThresholdDays,
     fastTrackAvailable: fastTrack ? availabilityForCurrency(fastTrack, currency).available : false,
     insuranceAvailable: insurance ? availabilityForCurrency(insurance, currency).available : false,
+    speedChangeAllowed: options?.speedChangeAllowed === true,
     now,
   });
   if (!plan.ok) {
@@ -673,7 +713,21 @@ export const savePartyTrip = async (
       fastTrack.id,
     );
   }
-  if (insurance && patch.travelInsurance !== undefined) {
+  const insuranceTouched =
+    patch.insuranceForParty !== undefined || patch.travelInsurance !== undefined;
+  const insuranceAvailable = insurance
+    ? availabilityForCurrency(insurance, currency).available
+    : false;
+  if (
+    insurance &&
+    insuranceAvailable &&
+    (insuranceTouched ||
+      insuranceSelectionChanged(
+        memberIds,
+        state.insuranceSelectedByApplicationId,
+        plan.next.insuranceSelectedByApplicationId,
+      ))
+  ) {
     await writeExtraSelection(
       tx,
       memberIds.map((applicationId) => ({
@@ -684,9 +738,7 @@ export const savePartyTrip = async (
     );
   }
 
-  return {
-    ok: true,
-    preview: buildQuotePreview({
+  const preview = buildQuotePreview({
       currency,
       now,
       travelDateRequired: settings.travelDateRequired,
@@ -700,8 +752,15 @@ export const savePartyTrip = async (
       catalog: state.catalog,
       insuranceSelectedByApplicationId: plan.next.insuranceSelectedByApplicationId,
       openPayments: state.openPayments,
-    }),
-  };
+    });
+  if (preview.insuranceRemoved && insurance) {
+    await writeExtraSelection(
+      tx,
+      memberIds.map((applicationId) => ({ applicationId, selected: false })),
+      insurance.id,
+    );
+  }
+  return { ok: true, preview };
 };
 
 export const previewPartyQuote = async (

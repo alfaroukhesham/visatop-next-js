@@ -18,6 +18,8 @@ const bodySchema = z
       .nullable()
       .optional(),
     processingSpeed: z.enum(["standard", "fast_track"]).optional(),
+    /** Required to change speed. Only the visa list sends this. */
+    speedContext: z.literal("visa-list").optional(),
     travelInsurance: z
       .array(
         z.object({
@@ -27,12 +29,14 @@ const bodySchema = z
       )
       .max(20)
       .optional(),
+    insuranceForParty: z.boolean().optional(),
   })
   .refine(
     (body) =>
       body.travelDate !== undefined ||
       body.processingSpeed !== undefined ||
-      body.travelInsurance !== undefined,
+      body.travelInsurance !== undefined ||
+      body.insuranceForParty !== undefined,
     { message: "Nothing to update." },
   );
 
@@ -46,7 +50,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (!row) return jsonError("NOT_FOUND", "Application not found", { status: 404, requestId });
 
   try {
-    const saved = await withSystemDbActor((tx) => savePartyTrip(tx, id, parsed.data));
+    const { speedContext, ...patch } = parsed.data;
+    const saved = await withSystemDbActor((tx) =>
+      savePartyTrip(tx, id, patch, new Date(), { speedChangeAllowed: speedContext === "visa-list" }),
+    );
     if (!saved.ok) {
       return jsonError(saved.code, saved.message, {
         status: saved.status,

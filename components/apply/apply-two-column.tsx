@@ -4,8 +4,11 @@ import { ApplyStepsRail } from "@/components/apply/apply-steps-rail";
 import { cn } from "@/lib/utils";
 
 interface IApplyTwoColumnProps {
-  currentStep: 1 | 2 | 3 | 4 | 5;
-  phase?: "documents" | "details";
+  currentStep: 1 | 2 | 3 | 4 | 5 | 6;
+  phase?: "documents" | "details" | "extras";
+  includeExtras?: boolean;
+  /** Extras: the aside total only shows from 1025px, so mobile has one total. */
+  summaryFrom?: "always" | "desktop";
   applicationId?: string;
   /** In-flow visa/duration step. Trip-done must not link to marketing home. */
   tripHref?: string | null;
@@ -22,6 +25,8 @@ interface IApplyTwoColumnProps {
 export const ApplyTwoColumn: FC<IApplyTwoColumnProps> = ({
   currentStep,
   phase,
+  includeExtras = false,
+  summaryFrom = "always",
   applicationId,
   tripHref = null,
   detailsTravellerId = null,
@@ -42,11 +47,19 @@ export const ApplyTwoColumn: FC<IApplyTwoColumnProps> = ({
         <ApplyStepsRail
           currentStep={currentStep}
           phase={phase}
+          includeExtras={includeExtras}
           applicationId={applicationId}
           tripHref={tripHref}
           detailsTravellerId={detailsTravellerId}
         />
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+        <div
+          className={cn(
+            "grid items-start gap-6",
+            summaryFrom === "desktop"
+              ? "min-[1025px]:grid-cols-[minmax(0,1fr)_280px]"
+              : "lg:grid-cols-[minmax(0,1fr)_280px]",
+          )}
+        >
           <div
             className={cn(
               contentFirstOnMobile ? "order-1" : "order-2 lg:order-1",
@@ -61,6 +74,7 @@ export const ApplyTwoColumn: FC<IApplyTwoColumnProps> = ({
               className={cn(
                 contentFirstOnMobile ? "order-2" : "order-1 lg:order-2",
                 "min-w-0 lg:sticky lg:top-24",
+                summaryFrom === "desktop" && "hidden min-[1025px]:sticky min-[1025px]:top-24 min-[1025px]:block",
               )}
             >
               {visaSummary}
