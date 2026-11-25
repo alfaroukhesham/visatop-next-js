@@ -15,6 +15,7 @@ import {
   insuredApplicationIds,
   localizedExtraCopy,
   pluralMessage,
+  visibleInsuranceTermsUrl,
   relativeArrivalLabel,
   speedUi,
   type TClientQuotePreview,
@@ -149,6 +150,7 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
   const locale = useCustomerLocale();
   const fastTrack = extraByKey(preview, "fast_track");
   const insurance = extraByKey(preview, "travel_insurance");
+  const insuranceTermsUrl = visibleInsuranceTermsUrl(insurance?.termsUrl);
   const ui = speedUi({ preview, fastTrackAvailable: Boolean(fastTrack), switchedBack });
   const [editing, setEditing] = useState(!preview.travelDate);
   const [draft, setDraft] = useState(preview.travelDate ?? "");
@@ -409,9 +411,9 @@ export const TripExtrasPanel: FC<ITripExtrasPanelProps> = ({
               </bdi>
             </p>
           ) : null}
-          {insurance.termsUrl ? (
+          {insuranceTermsUrl ? (
             <a
-              href={insurance.termsUrl}
+              href={insuranceTermsUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-secondary ms-8 inline-flex min-h-11 items-center underline"

@@ -10,6 +10,7 @@ import {
   extraByKey,
   formatMinorAmount,
   localizedExtraCopy,
+  visibleInsuranceTermsUrl,
   type TClientQuotePreview,
 } from "@/lib/apply/checkout-extras-ui";
 
@@ -66,7 +67,7 @@ export const ExtrasStepPanel: FC<IExtrasStepPanelProps> = ({
   const cover = insurance
     ? coverText(localizedExtraCopy(insurance.descriptionI18n, locale, ""))
     : "";
-  const termsHref = insurance?.termsUrl?.trim() ?? "";
+  const termsHref = visibleInsuranceTermsUrl(insurance?.termsUrl) ?? "";
   const totalText = preview ? money(preview.totalAmountMinor) : "";
 
   const toggle = (next: boolean) => {

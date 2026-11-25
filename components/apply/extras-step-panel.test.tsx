@@ -173,6 +173,17 @@ describe("Extras step", () => {
     expect(terms.closest("label")).toBeNull();
   });
 
+  it("hides the policy terms link when the URL is empty or a placeholder", () => {
+    installMatchMedia(1280);
+    for (const termsUrl of ["", "   ", "/terms-placeholder", "https://example.com/terms-placeholder"]) {
+      renderPanel(1, false, termsUrl);
+      expect(screen.queryByRole("link", { name: /read the policy terms/i })).not.toBeInTheDocument();
+      expect(screen.getByRole("checkbox", { name: /add travel insurance/i })).toBeInTheDocument();
+      expect(screen.getByText("Medical cover for the trip.")).toBeInTheDocument();
+      cleanup();
+    }
+  });
+
   it("prices one traveller without a times-n line", () => {
     installMatchMedia(1280);
     renderPanel(1);
