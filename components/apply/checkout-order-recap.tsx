@@ -57,6 +57,17 @@ const entriesLabel = (entries: string | null, t: TTranslate): string | null => {
 
 const compactFact = (value: string): string => value.toLowerCase().replace(/[\s\-–—·]/g, "");
 
+const NAME_SAYS_MULTI_ENTRY = /\bmulti(ple)?[\s-]*entry\b/i;
+const NAME_SAYS_SINGLE_ENTRY = /\bsingle[\s-]*entry\b/i;
+
+/** Catalog name already states the entry kind, in any locale's translation of the fact. */
+const catalogNameCoversEntry = (name: string, entries: string | null): boolean => {
+  const kind = (entries ?? "").toLowerCase();
+  if (kind.includes("multi")) return NAME_SAYS_MULTI_ENTRY.test(name);
+  if (kind.includes("single")) return NAME_SAYS_SINGLE_ENTRY.test(name);
+  return false;
+};
+
 /** Skip duration/entry already written in the catalog name ("14 Days - Single Entry"). */
 const visaTitleLead = (service: CatalogService, t: TTranslate): string => {
   const normalizedName = compactFact(service.name);
@@ -66,18 +77,10 @@ const visaTitleLead = (service: CatalogService, t: TTranslate): string => {
     if (!normalizedName.includes(compactFact(dayLabel))) parts.push(dayLabel);
   }
   const ent = entriesLabel(service.entries, t);
-  if (ent) {
+  if (ent && !catalogNameCoversEntry(service.name, service.entries)) {
     const entryFact = compactFact(ent);
     const entryStem = entryFact.replace(/entry$/, "");
-    const multiEntryInName =
-      entryFact.includes("multiple") &&
-      normalizedName.includes("multi") &&
-      normalizedName.includes("entry");
-    if (
-      !normalizedName.includes(entryFact) &&
-      !(entryStem && normalizedName.includes(entryStem)) &&
-      !multiEntryInName
-    ) {
+    if (!normalizedName.includes(entryFact) && !(entryStem && normalizedName.includes(entryStem))) {
       parts.push(ent);
     }
   }

@@ -3,6 +3,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { CatalogVisaTitle, PartyMemberLine } from "@/components/apply/checkout-order-recap";
+import { createCustomerT } from "@/lib/i18n/load-customer-catalog";
 
 const t = (key: string, vars?: Record<string, string | number>) => {
   if (key === "chooser.durationDays") return `${vars?.count} days`;
@@ -71,6 +72,37 @@ describe("payment recap catalog names", () => {
     );
     expect(screen.getByText("Tourist").closest("div")?.textContent).toBe(
       "14 days · Single entry · Tourist",
+    );
+  });
+
+  it("skips the entry fact from the catalog name for the Arabic translator", () => {
+    const ar = createCustomerT("ar");
+    const service = {
+      id: "svc",
+      durationDays: null,
+      displayPriceMinor: null,
+      currency: null,
+    };
+    render(
+      <CatalogVisaTitle
+        locale="ar"
+        service={{ ...service, name: "Tourist - Multi Entry", entries: "multiple" }}
+        t={ar}
+      />,
+    );
+    expect(screen.getByText("Tourist - Multi Entry").closest("div")?.textContent).toBe(
+      "Tourist - Multi Entry",
+    );
+    cleanup();
+    render(
+      <CatalogVisaTitle
+        locale="ar"
+        service={{ ...service, name: "Tourist - Single Entry", entries: "single" }}
+        t={ar}
+      />,
+    );
+    expect(screen.getByText("Tourist - Single Entry").closest("div")?.textContent).toBe(
+      "Tourist - Single Entry",
     );
   });
 
