@@ -1,7 +1,7 @@
 /** UAE support line; digits only for wa.me. */
-const SUPPORT_PHONE_E164_DIGITS = "971503156105";
+const SUPPORT_PHONE_E164_DIGITS = "971509053027";
 
-export const SUPPORT_PHONE_DISPLAY = "+971 50 3156 105";
+export const SUPPORT_PHONE_DISPLAY = "+971 50 905 3027";
 
 export const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_PHONE_E164_DIGITS}`;
 

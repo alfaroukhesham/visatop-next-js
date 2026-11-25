@@ -126,7 +126,7 @@ describe("ApplicationTrackLookupForm paid guest actions", () => {
     expect(support).toHaveAttribute("href", expectedHref);
     expect(support).toHaveAttribute("target", "_blank");
     expect(support).toHaveAttribute("rel", expect.stringContaining("noopener"));
-    expect(expectedHref).toContain("wa.me/971503156105");
+    expect(expectedHref).toContain("wa.me/971509053027");
     expect(expectedHref).toContain(encodeURIComponent("REF-1"));
 
     expect(screen.getByText("We're working on your application")).toBeInTheDocument();

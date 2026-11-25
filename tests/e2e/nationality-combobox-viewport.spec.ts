@@ -148,7 +148,7 @@ const installFixedFooter = async (page: Page) => {
 </style></head><body>
   <div class="wrap">
     <div class="links"><span>Privacy Policy</span><span>Term Of Use</span></div>
-    <div class="contact"><span>info@visatop.com</span><span>+971 503 156 105</span></div>
+    <div class="contact"><span>info@visatop.com</span><span>+971 50 905 3027</span></div>
     <div class="brand">Visa<span>Top</span>.com</div>
     <p class="blurb">We are proud to offer top-tier Visa Services in the UAE, setting ourselves apart as a leading choice in the industry</p>
     <p class="copy">Copyright ©2026 Visatop Travel Agency LLC - All rights reserved</p>
