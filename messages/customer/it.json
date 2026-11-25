@@ -60,6 +60,9 @@
     "emailHelper": "Le invieremo aggiornamenti sulla domanda e la ricevuta a questo indirizzo.",
     "checkoutTotal": "Totale al checkout",
     "editLocked": "Per cambiare il visto o i viaggiatori, iniziate una nuova domanda.",
+    "editSummaryTitle": "Il vostro viaggio",
+    "backToApplication": "Tornate alla vostra domanda",
+    "startNewApplication": "Iniziate una nuova domanda",
     "previousButton": "Indietro",
     "continueWithVisa": "Continua con questo visto",
     "loading": "Caricamento…",
@@ -762,6 +765,7 @@
       "updated": "Totale aggiornato: {total}",
       "visa": "Visto",
       "notAdded": "Non aggiunta",
+      "added": "Aggiunta",
       "total": "Totale"
     },
     "error": {

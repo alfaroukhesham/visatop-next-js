@@ -60,6 +60,9 @@
     "emailHelper": "Başvuru güncellemelerini ve makbuzunuzu bu adrese göndereceğiz.",
     "checkoutTotal": "Ödeme toplamı",
     "editLocked": "Vizeyi veya yolcuları değiştirmek için yeni bir başvuru başlatın.",
+    "editSummaryTitle": "Yolculuğunuz",
+    "backToApplication": "Başvurunuza dönün",
+    "startNewApplication": "Yeni bir başvuru başlatın",
     "previousButton": "Geri",
     "continueWithVisa": "Bu vizeyle devam et",
     "loading": "Yükleniyor…",
@@ -762,6 +765,7 @@
       "updated": "Toplam güncellendi: {total}",
       "visa": "Vize",
       "notAdded": "Eklenmedi",
+      "added": "Eklendi",
       "total": "Toplam"
     },
     "error": {

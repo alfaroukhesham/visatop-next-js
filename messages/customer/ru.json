@@ -60,6 +60,9 @@
     "emailHelper": "На этот адрес мы отправим обновления по заявке и квитанцию об оплате.",
     "checkoutTotal": "Сумма к оплате",
     "editLocked": "Чтобы изменить визу или путешественников, начните новую заявку.",
+    "editSummaryTitle": "Ваша поездка",
+    "backToApplication": "Вернуться к заявке",
+    "startNewApplication": "Начать новую заявку",
     "previousButton": "Назад",
     "continueWithVisa": "Продолжить с этой визой",
     "loading": "Загрузка…",
@@ -762,6 +765,7 @@
       "updated": "Итого обновлено: {total}",
       "visa": "Виза",
       "notAdded": "Не добавлено",
+      "added": "Добавлено",
       "total": "Итого"
     },
     "error": {

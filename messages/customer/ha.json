@@ -60,6 +60,9 @@
     "emailHelper": "Za mu aiko sabuntawa game da nema da rasit ɗinku zuwa wannan adireshin.",
     "checkoutTotal": "Jimlar biya",
     "editLocked": "Don canza visa ko matafiya, fara sabuwar aikace-aikace.",
+    "editSummaryTitle": "Tafiyarku",
+    "backToApplication": "Koma zuwa aikace-aikacenku",
+    "startNewApplication": "Fara sabuwar aikace-aikace",
     "previousButton": "Baya",
     "continueWithVisa": "Ci gaba da wannan visa",
     "loading": "Ana lodawa…",
@@ -762,6 +765,7 @@
       "updated": "An sabunta jimla: {total}",
       "visa": "Biza",
       "notAdded": "Ba a ƙara ba",
+      "added": "An ƙara",
       "total": "Jimla"
     },
     "error": {

@@ -60,6 +60,9 @@
     "emailHelper": "Dito namin ipapadala ang mga update sa application at resibo mo.",
     "checkoutTotal": "Kabuuan sa checkout",
     "editLocked": "Para baguhin ang visa o ang mga biyahero, magsimula ng bagong aplikasyon.",
+    "editSummaryTitle": "Ang iyong biyahe",
+    "backToApplication": "Bumalik sa iyong aplikasyon",
+    "startNewApplication": "Magsimula ng bagong aplikasyon",
     "previousButton": "Nakaraan",
     "continueWithVisa": "Ituloy gamit ang visa na ito",
     "loading": "Naglo-load…",
@@ -762,6 +765,7 @@
       "updated": "Na-update ang kabuuan: {total}",
       "visa": "Bisa",
       "notAdded": "Hindi idinagdag",
+      "added": "Idinagdag",
       "total": "Kabuuan"
     },
     "error": {
