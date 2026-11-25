@@ -4,8 +4,12 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { CatalogVisaTitle, PartyMemberLine } from "@/components/apply/checkout-order-recap";
 
-const t = (key: string, vars?: Record<string, string | number>) =>
-  key === "chooser.durationDays" ? `${vars?.count} days` : key;
+const t = (key: string, vars?: Record<string, string | number>) => {
+  if (key === "chooser.durationDays") return `${vars?.count} days`;
+  if (key === "chooser.entryLabels.single") return "Single entry";
+  if (key === "chooser.entryLabels.multiple") return "Multiple entry";
+  return key;
+};
 
 describe("payment recap catalog names", () => {
   afterEach(() => {
@@ -28,7 +32,27 @@ describe("payment recap catalog names", () => {
     );
     const name = screen.getByText("14 Days - Single Entry");
     expect(name.tagName).toBe("BDI");
-    expect(name.closest("div")?.textContent).toContain("14 days");
+    expect(name).toHaveAttribute("title", "14 Days - Single Entry");
+    expect(name.closest("div")?.textContent).toBe("14 Days - Single Entry");
+  });
+
+  it("keeps duration and entry when the catalog name does not already say them", () => {
+    render(
+      <CatalogVisaTitle
+        service={{
+          id: "svc",
+          name: "Tourist",
+          durationDays: 14,
+          entries: "single",
+          displayPriceMinor: null,
+          currency: null,
+        }}
+        t={t}
+      />,
+    );
+    expect(screen.getByText("Tourist").closest("div")?.textContent).toBe(
+      "14 days · Single entry · Tourist",
+    );
   });
 
   it("isolates the catalog visa name on a party-member line", () => {

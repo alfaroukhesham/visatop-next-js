@@ -73,6 +73,7 @@ const ApplyApplicationPaymentPage = async ({ params }: IApplyApplicationPaymentP
               members={members}
               trackCheckoutViewed
               showProcessingSpeed={false}
+              showTitle={false}
             />
           }
           contentClassName="theme-client-rise mx-auto w-full max-w-4xl space-y-8"

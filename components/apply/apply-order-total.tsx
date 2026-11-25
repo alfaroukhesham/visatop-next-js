@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FC } from "react";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
+import { cn } from "@/lib/utils";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
 import { useCheckoutQuoteOptional } from "@/components/apply/checkout-quote-provider";
@@ -22,6 +23,7 @@ interface IApplyOrderTotalProps {
   currency: string;
   serviceIds: string[];
   applicationId?: string;
+  className?: string;
 }
 
 export const ApplyOrderTotal: FC<IApplyOrderTotalProps> = ({
@@ -29,6 +31,7 @@ export const ApplyOrderTotal: FC<IApplyOrderTotalProps> = ({
   currency,
   serviceIds,
   applicationId,
+  className,
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
@@ -91,7 +94,7 @@ export const ApplyOrderTotal: FC<IApplyOrderTotalProps> = ({
   const total = quoteState ? liveTotal : fetchedTotal;
   if (!total) return null;
   return (
-    <p className="text-muted-foreground text-center text-sm">
+    <p className={cn("text-muted-foreground text-center text-sm", className)}>
       {t("wizard.orderTotal", { total })}
     </p>
   );

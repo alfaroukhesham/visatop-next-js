@@ -43,6 +43,8 @@ interface IApplyReadyContinueProps {
   onPrevious?: () => void;
   compactShortLabel?: string;
   compactAlwaysShort?: boolean;
+  /** Shown in the fixed bar, above Previous and Continue. Desktop keeps its own total. */
+  orderTotal?: ReactNode;
 }
 
 interface IApplyReadyPreviousButtonProps {
@@ -118,6 +120,7 @@ export const ApplyReadyContinue: FC<IApplyReadyContinueProps> = ({
   onPrevious,
   compactShortLabel,
   compactAlwaysShort = false,
+  orderTotal,
 }) => {
   const { pulseContinue, clearPulse } = useApplyJumpAhead();
   const compact = useNarrowViewport(APPLY_STICKY_CTA_MEDIA_QUERY);
@@ -172,21 +175,24 @@ export const ApplyReadyContinue: FC<IApplyReadyContinueProps> = ({
             className="border-border bg-background/95 border-t px-3 pt-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))] backdrop-blur-md"
             style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 30 }}
           >
-            <div className="mx-auto flex w-full max-w-4xl items-stretch gap-2">
-              {previousLabel && onPrevious ? (
-                <div className="min-w-0 flex-1 [&>*]:min-w-0">
-                  <ApplyReadyPreviousButton onClick={onPrevious}>{previousLabel}</ApplyReadyPreviousButton>
+            <div className="mx-auto flex w-full max-w-4xl flex-col gap-2">
+              {orderTotal ? <div className="min-w-0">{orderTotal}</div> : null}
+              <div className="flex w-full items-stretch gap-2">
+                {previousLabel && onPrevious ? (
+                  <div className="min-w-0 flex-1 [&>*]:min-w-0">
+                    <ApplyReadyPreviousButton onClick={onPrevious}>{previousLabel}</ApplyReadyPreviousButton>
+                  </div>
+                ) : null}
+                <div className="min-w-0 flex-[2] [&>*]:min-w-0">
+                  <ContinueButton
+                    accessibleLabel={children}
+                    onClick={onClick}
+                    pulseContinue={pulseContinue}
+                    clearPulse={clearPulse}
+                  >
+                    {compactVisibleLabel}
+                  </ContinueButton>
                 </div>
-              ) : null}
-              <div className="min-w-0 flex-[2] [&>*]:min-w-0">
-                <ContinueButton
-                  accessibleLabel={children}
-                  onClick={onClick}
-                  pulseContinue={pulseContinue}
-                  clearPulse={clearPulse}
-                >
-                  {compactVisibleLabel}
-                </ContinueButton>
               </div>
             </div>
           </div>,

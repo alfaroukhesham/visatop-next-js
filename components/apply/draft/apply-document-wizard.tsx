@@ -40,9 +40,11 @@ import type { DocType, ExtractResponse, PublicDocument, TUploadSlotError } from 
 import type { TPhoneNationalityOption } from "./phone-country-field";
 import { ApplyOrderTotal } from "@/components/apply/apply-order-total";
 import {
+  APPLY_STICKY_CTA_MEDIA_QUERY,
   ApplyReadyContinue,
   compactContinueAlwaysShort,
 } from "@/components/apply/apply-ready-continue";
+import { useNarrowViewport } from "@/lib/client/use-narrow-viewport";
 import { ReadyDocumentAccordion, type TReadyDocumentIcon } from "./ready-document-accordion";
 
 type TMemberView = {
@@ -97,6 +99,7 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
   const t = useCustomerT();
   const locale = useCustomerLocale();
   const router = useRouter();
+  const compactCta = useNarrowViewport(APPLY_STICKY_CTA_MEDIA_QUERY);
   const quote = useCheckoutQuoteOptional();
   const extrasOn = insuranceStepOffered(quote?.preview ?? null);
   const searchParams = useSearchParams();
@@ -221,13 +224,28 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
           <ShieldCheck className="size-4 shrink-0" aria-hidden />
           {t("wizard.encrypted")}
         </p>
-        <ApplyOrderTotal
-          applicationId={applicationId}
-          nationalityCode={primaryApp.nationalityCode}
-          currency={primaryApp.catalogCurrency}
-          serviceIds={ordered.map((member) => member.serviceId)}
-        />
+        {compactCta ? null : (
+          <div className="lg:hidden">
+            <ApplyOrderTotal
+              applicationId={applicationId}
+              nationalityCode={primaryApp.nationalityCode}
+              currency={primaryApp.catalogCurrency}
+              serviceIds={ordered.map((member) => member.serviceId)}
+            />
+          </div>
+        )}
         <ApplyReadyContinue
+          orderTotal={
+            compactCta ? (
+              <ApplyOrderTotal
+                className="text-start"
+                applicationId={applicationId}
+                nationalityCode={primaryApp.nationalityCode}
+                currency={primaryApp.catalogCurrency}
+                serviceIds={ordered.map((member) => member.serviceId)}
+              />
+            ) : null
+          }
           previousLabel={t("common.previous")}
           compactShortLabel={t("common.continue")}
           compactAlwaysShort={compactContinueAlwaysShort(locale)}

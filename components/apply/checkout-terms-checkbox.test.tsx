@@ -40,6 +40,7 @@ describe("CheckoutTermsCheckbox", () => {
     expect(link).toHaveAttribute("href", TERMS_OF_USE_URL);
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(link).toHaveClass("text-secondary", "underline");
   });
 
   it("toggles via the keyboard-accessible checkbox", async () => {

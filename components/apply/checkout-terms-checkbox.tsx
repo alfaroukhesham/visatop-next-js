@@ -43,7 +43,7 @@ export const CheckoutTermsCheckbox: FC<ICheckoutTermsCheckboxProps> = ({
             href={TERMS_OF_USE_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary underline underline-offset-2"
+            className="text-secondary underline underline-offset-2"
             onClick={(event) => event.stopPropagation()}
           >
             {t("payment.termsLink")}

@@ -59,7 +59,7 @@ export const DoubleDecision: FC<IDoubleDecisionProps> = ({
       data-slot="double-decision"
       className={cn(APPLY_PRIMARY_CTA_ROW_CLASS, className)}
     >
-      <button type="button" className={cn(dismissBox, APPLY_STEP_PREVIOUS_CLASS)} onClick={onDismiss}>
+      <button type="button" className={cn(dismissBox, APPLY_STEP_PREVIOUS_CLASS, "font-medium")} onClick={onDismiss}>
         {dismissLabel}
       </button>
       {hasConfirm && confirmHref ? (
