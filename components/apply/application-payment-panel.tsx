@@ -11,7 +11,8 @@ import { useCheckoutQuoteOptional } from "@/components/apply/checkout-quote-prov
 import { useRefreshQuoteWhenCheckoutEnds } from "@/components/apply/use-refresh-quote-when-checkout-ends";
 import { ClientButton } from "@/components/client/client-button";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
-import { applyPreviousHref, type TApplyWizardMember } from "@/lib/apply/apply-wizard";
+import { applyExtrasHref, applyPreviousHref, type TApplyWizardMember } from "@/lib/apply/apply-wizard";
+import { insuranceStepOffered } from "@/lib/checkout-extras/party-insurance";
 import { computeValidation, type Readiness } from "@/lib/documents/validation-readiness";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import { apiHref } from "@/lib/app-href";
@@ -54,7 +55,9 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
       applicationId: member.applicationId,
       hasPassport: Boolean(draft.memberStates[member.applicationId]?.docsByType.passport_copy),
     }));
-  const documentsPath = applyPreviousHref(applicationId, wizardMembers, {
+  const documentsPath = insuranceStepOffered(quote?.preview ?? null)
+    ? applyExtrasHref(applicationId)
+    : applyPreviousHref(applicationId, wizardMembers, {
     screen: "payment",
     travellerId: null,
   });

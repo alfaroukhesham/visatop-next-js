@@ -54,11 +54,12 @@
     "totalLabel": "कुल",
     "atCheckout": "चेकआउट पर",
     "estimatedTotal": "अनुमानित कुल",
-    "priceIncludesNote": "कीमत में वीज़ा सेवा शामिल है। यदि आपके गंतव्य के लिए आवश्यक हो तो यात्रा बीमा अलग है।",
+    "priceIncludesNote": "कीमत में वीज़ा सेवा शामिल है। भुगतान से पहले आप यात्रा बीमा जोड़ सकते हैं।",
     "emailLabel": "ईमेल *",
     "emailPlaceholder": "you@example.com",
     "emailHelper": "हम आवेदन अपडेट और आपकी रसीद इस पते पर भेजेंगे।",
     "checkoutTotal": "चेकआउट कुल",
+    "editLocked": "वीज़ा या यात्रियों को बदलने के लिए नया आवेदन शुरू करें।",
     "previousButton": "पिछला",
     "continueWithVisa": "इस वीज़ा के साथ जारी रखें",
     "loading": "लोड हो रहा है…",
@@ -558,8 +559,10 @@
     "detailsShort": "जानकारी",
     "payShort": "भुगतान",
     "finishShort": "पूर्ण",
-    "meta": "Step {n} of 5 · {label}",
-    "completedGoBack": "{label}, completed. Go back."
+    "meta": "चरण {n} / {total} · {label}",
+    "completedGoBack": "{label}, completed. Go back.",
+    "extras": "अतिरिक्त",
+    "extrasShort": "अतिरिक्त"
   },
   "common": {
     "continue": "जारी रखें",
@@ -708,6 +711,7 @@
   "extras": {
     "sectionTitle": "आपकी यात्रा और अतिरिक्त सेवाएँ",
     "arrivalLabel": "यूएई आगमन",
+    "notSet": "सेट नहीं",
     "change": "बदलें",
     "saveDate": "तारीख सहेजें",
     "cancel": "रद्द करें",
@@ -745,24 +749,48 @@
       "add": "यात्रा बीमा जोड़ें · {price} प्रति यात्री",
       "selectAll": "सभी यात्रियों को चुनें",
       "forTraveller": "यात्री {number} · {price}",
-      "terms": "पॉलिसी की शर्तें पढ़ें"
+      "terms": "पॉलिसी की शर्तें पढ़ें",
+      "addAll": "सभी यात्रियों के लिए यात्रा बीमा जोड़ें",
+      "addOne": "यात्रा बीमा जोड़ें",
+      "priceMany": "{unit} प्रति यात्री × {n} = {sum}",
+      "priceOne": "{unit} 1 यात्री के लिए"
     },
     "recap": {
       "fastTrack": "तेज़ प्रक्रिया",
       "insurance": "यात्रा बीमा",
       "updating": "कुल राशि अपडेट हो रही है",
-      "updated": "कुल राशि अपडेट हुई: {total}"
+      "updated": "कुल राशि अपडेट हुई: {total}",
+      "visa": "वीज़ा",
+      "notAdded": "नहीं जोड़ा गया",
+      "total": "कुल"
     },
     "error": {
       "update": "हम कुल राशि अपडेट नहीं कर सके। कनेक्शन जाँचें और फिर कोशिश करें।",
       "retry": "फिर कोशिश करें",
       "fastTrackUnavailable": "फ़ास्ट ट्रैक इस मुद्रा में उपलब्ध नहीं है।",
-      "insuranceUnavailable": "यात्रा बीमा इस मुद्रा में उपलब्ध नहीं है।"
+      "insuranceUnavailable": "यात्रा बीमा इस मुद्रा में उपलब्ध नहीं है।",
+      "speedLocked": "प्रोसेसिंग गति केवल वीज़ा सूची में बदली जा सकती है।"
     },
     "priceChanged": "यह पेज खोलने के बाद कीमत बदल गई है। भुगतान से पहले नया कुल देखें।",
     "locked": "अतिरिक्त सेवाएँ बदलने के लिए पहले यह भुगतान रद्द करें।",
     "bar": {
       "cta": "भुगतान पर जाएँ"
+    },
+    "title": "वैकल्पिक अतिरिक्त सेवाएँ",
+    "hint": "वैकल्पिक। बीमा के बिना जारी रखने के लिए इसे अनटिक छोड़ें।",
+    "cta": "भुगतान पर जारी रखें",
+    "skip": "अतिरिक्त के बिना जारी रखें",
+    "ctaShort": "जारी रखें",
+    "back": "वापस",
+    "changeExtras": "अतिरिक्त सेवाएँ बदलें",
+    "noExtras": "कोई अतिरिक्त सेवा नहीं जोड़ी गई",
+    "removed": "इस आवेदन के लिए यात्रा बीमा उपलब्ध नहीं है, इसलिए हमने इसे हटा दिया।"
+  },
+  "speed": {
+    "readonly": {
+      "standard": "प्रोसेसिंग: Standard (3 कार्य दिवस)",
+      "fast": "प्रोसेसिंग: Fast Track (24 घंटे के भीतर)",
+      "fastCustom": "प्रोसेसिंग: Fast Track ({promise})"
     }
   }
 }

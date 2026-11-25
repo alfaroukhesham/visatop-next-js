@@ -6,6 +6,7 @@ import {
   validateTravelDate,
   type TTravelDateErrorCode,
 } from "@/lib/checkout-extras/dubai-calendar";
+import { nextPartyInsurance } from "@/lib/checkout-extras/party-insurance";
 
 export type TStoredSpeed = {
   speed: TProcessingSpeed | null;
@@ -106,22 +107,27 @@ export type TTripInsuranceSelection = {
 export type TTripPatch = {
   travelDate?: string | null;
   processingSpeed?: TProcessingSpeed;
-  /** Per-traveller opt-in. Omitted keys keep their stored selection. */
+  /**
+   * Legacy per-traveller payload. A mixed list is applied to the whole party:
+   * any selected traveller turns insurance on for everyone.
+   */
   travelInsurance?: readonly TTripInsuranceSelection[];
+  /** One tickbox for the whole party. Wins over `travelInsurance` when both are sent. */
+  insuranceForParty?: boolean;
 };
 
 export type TTripPlan =
   | {
       ok: false;
       abandonCheckout: false;
-      code: "EXTRAS_LOCKED" | "TRAVEL_DATE" | "EXTRA_UNAVAILABLE";
+      code: "EXTRAS_LOCKED" | "TRAVEL_DATE" | "EXTRA_UNAVAILABLE" | "SPEED_LOCKED";
       reason: string;
       message: string;
     }
   | { ok: true; abandonCheckout: false; next: TTripSnapshot };
 
 const failure = (
-  code: "EXTRAS_LOCKED" | "TRAVEL_DATE" | "EXTRA_UNAVAILABLE",
+  code: "EXTRAS_LOCKED" | "TRAVEL_DATE" | "EXTRA_UNAVAILABLE" | "SPEED_LOCKED",
   reason: string,
   message: string,
 ): TTripPlan => ({ ok: false, abandonCheckout: false, code, reason, message });
@@ -137,11 +143,21 @@ export const planTripUpdate = (input: {
   thresholdDays: number;
   fastTrackAvailable: boolean;
   insuranceAvailable: boolean;
+  /** Speed changes are accepted only from the visa list. Later steps must omit this. */
+  speedChangeAllowed?: boolean;
   now: Date;
 }): TTripPlan => {
   const gate = planTripWrite(input.locked);
   if (!gate.allow) {
     return failure("EXTRAS_LOCKED", "extras_locked", "To change your extras, cancel this payment first.");
+  }
+
+  if (input.patch.processingSpeed && input.speedChangeAllowed !== true) {
+    return failure(
+      "SPEED_LOCKED",
+      "speed_locked",
+      "Processing speed can only be changed on the visa list.",
+    );
   }
 
   let travelDate = input.stored.travelDate;
@@ -169,7 +185,9 @@ export const planTripUpdate = (input: {
     );
   }
   const insurancePatch = input.patch.travelInsurance;
-  if (insurancePatch?.some((row) => row.selected) && !input.insuranceAvailable) {
+  const turningInsuranceOn =
+    input.patch.insuranceForParty === true || Boolean(insurancePatch?.some((row) => row.selected));
+  if (turningInsuranceOn && !input.insuranceAvailable) {
     return failure(
       "EXTRA_UNAVAILABLE",
       "travel_insurance_unavailable",
@@ -197,12 +215,12 @@ export const planTripUpdate = (input: {
     customerChoice: input.patch.processingSpeed ?? null,
   });
 
-  const insuranceSelectedByApplicationId = { ...input.stored.insuranceSelectedByApplicationId };
-  if (insurancePatch) {
-    for (const row of insurancePatch) {
-      insuranceSelectedByApplicationId[row.applicationId] = row.selected;
-    }
-  }
+  const insuranceSelectedByApplicationId = nextPartyInsurance({
+    memberIds: input.memberIds,
+    stored: input.stored.insuranceSelectedByApplicationId,
+    insuranceForParty: input.patch.insuranceForParty,
+    travelInsurance: insurancePatch,
+  });
 
   return {
     ok: true,

@@ -24,11 +24,14 @@ import { setMetaAdvancedMatchingPhone } from "@/lib/analytics/meta-pixel-advance
 import { useClientAuthStore } from "@/lib/stores/client-auth-store";
 import { formatIsoDateAsDdMmYyyy } from "@/lib/documents/validation-readiness";
 import {
+  extraByKey,
   formatMinorAmount,
   groupedExtraLines,
+  localizedExtraCopy,
   quoteUsesCodeFormat,
   type TCheckoutExtraKey,
 } from "@/lib/apply/checkout-extras-ui";
+import { ProcessingSpeedLine } from "@/components/apply/processing-speed-line";
 import type { TSettledRecap } from "@/lib/apply/charged-recap";
 import type { TCustomerMessageVars } from "@/lib/i18n/customer-messages";
 
@@ -95,6 +98,8 @@ interface ICheckoutOrderRecapProps {
   trackCheckoutViewed?: boolean;
   /** Server quote or the charged payment. When set, the total is not computed in the browser. */
   settled?: TSettledRecap | null;
+  /** Pay renders the speed line inside "Your order". Documents keeps it on this card. */
+  showProcessingSpeed?: boolean;
 }
 
 export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
@@ -102,6 +107,7 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
   members = [],
   trackCheckoutViewed = false,
   settled = null,
+  showProcessingSpeed = true,
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
@@ -481,6 +487,15 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
             {totalText ? <bdi>{totalText}</bdi> : null}
           </span>
         </div>
+      ) : null}
+      {showProcessingSpeed && serverPreview?.processingSpeed ? (
+        <ProcessingSpeedLine
+          speed={serverPreview.processingSpeed}
+          fastTrackPromise={
+            localizedExtraCopy(extraByKey(serverPreview, "fast_track")?.promiseI18n ?? null, locale, "") ||
+            null
+          }
+        />
       ) : null}
       {quoteState?.announcement ? (
         <p className="sr-only" role="status">

@@ -42,6 +42,12 @@ import { filterGuidedServices, filterPartyVisaOptions, stayOptionsForChooser, ne
 import type { TStayBucket, TTravelerKind } from "@/lib/catalog/guided-choice";
 import { AllInPriceBadges } from "@/components/apply/all-in-price-badges";
 import { ApplyStepsRail } from "@/components/apply/apply-steps-rail";
+import {
+  reloadQuoteAfterFailedSpeedPatch,
+  speedCommitFromPatch,
+  tripListCheckoutMinor,
+  tripSpeedErrorMessage,
+} from "@/lib/apply/trip-list-checkout";
 import { GuidedVisaChooser, type IService } from "@/components/apply/guided-visa-chooser";
 import {
   clearChooserDraft,
@@ -52,6 +58,7 @@ import {
   writeChooserDraft,
 } from "@/lib/apply/chooser-draft-storage";
 import { cn } from "@/lib/utils";
+import { ProcessingSpeedLine } from "@/components/apply/processing-speed-line";
 import { VisaSpeedChoice } from "@/components/apply/visa-speed-choice";
 import { validateTravelDate } from "@/lib/checkout-extras/dubai-calendar";
 import {
@@ -59,11 +66,15 @@ import {
   formatArrivalDate,
   formatMinorAmount,
   pluralMessage,
+  reasonFromErrorDetails,
   relativeArrivalLabel,
   speedUi,
   travelDateErrorKey,
+  tripFailureMessageKey,
+  type TClientQuotePreview,
   type TTravelWindow,
 } from "@/lib/apply/checkout-extras-ui";
+import { insuranceStepOffered } from "@/lib/checkout-extras/party-insurance";
 
 type Nationality = { code: string; name: string };
 type Service = IService;
@@ -208,6 +219,8 @@ interface IStartApplicationFormProps {
   /** Set on home; this page is only reachable as `/apply/start?nationality=XX`. */
   initialNationalityCode: string;
   nationalityName: string;
+  /** Trip was opened from a flow that offers Extras, so the rail has 6 steps. */
+  includeExtras?: boolean;
 }
 
 const EMPTY_ANSWERS = {
@@ -269,6 +282,7 @@ export const StartApplicationForm: FC<IStartApplicationFormProps> = (props) => {
 const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   initialNationalityCode,
   nationalityName,
+  includeExtras = false,
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
@@ -277,6 +291,10 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   const [boot] = useState(() => bootChooserForm(initialNationalityCode));
   useEffect(() => {
     consumeChooserFreshStart();
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("application")?.trim() ?? "";
+    setEditingApplicationId(id || null);
+    setExtrasFromQuery(params.get("extras") === "1");
   }, []);
   const [nationalities, setNationalities] = useState<Nationality[]>([]);
   const [nationality, setNationality] = useState(boot.nationality);
@@ -285,6 +303,15 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   const [email, setEmail] = useState(boot.email);
   const [travelDate, setTravelDate] = useState(boot.travelDate);
   const [applyStep, setApplyStep] = useState<"visa" | "travellers" | "email">("visa");
+  const [editingApplicationId, setEditingApplicationId] = useState<string | null>(() => {
+    const id = new URLSearchParams(window.location.search).get("application")?.trim() ?? "";
+    return id || null;
+  });
+  const [extrasFromQuery, setExtrasFromQuery] = useState(
+    () => new URLSearchParams(window.location.search).get("extras") === "1",
+  );
+  const [savedQuote, setSavedQuote] = useState<TClientQuotePreview | null>(null);
+  const quoteEpoch = useRef(0);
   const [processingSpeed, setProcessingSpeed] = useState<"standard" | "fast_track">("standard");
   const [processingSpeedSource, setProcessingSpeedSource] = useState<"system" | "customer">("system");
   const [speedQuote, setSpeedQuote] = useState<{
@@ -579,10 +606,41 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     };
   }, [serviceId, nationality, displayCurrency, additionalTravelers.length]);
 
+  useEffect(() => {
+    if (!editingApplicationId) return;
+    const epochAtStart = quoteEpoch.current;
+    let cancelled = false;
+    const run = async () => {
+      const res = await fetchApiEnvelope<TClientQuotePreview>(
+        apiHref(`/applications/${encodeURIComponent(editingApplicationId)}/quote-preview`),
+        { cache: "no-store" },
+      );
+      if (cancelled || quoteEpoch.current !== epochAtStart || !res.ok) return;
+      setSavedQuote(res.data);
+      setProcessingSpeed(res.data.processingSpeed === "fast_track" ? "fast_track" : "standard");
+      setProcessingSpeedSource(res.data.processingSpeedSource === "customer" ? "customer" : "system");
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [editingApplicationId]);
+
   const fastTrackHidden = Boolean(speedQuote && !speedQuote.fastTrackAvailable);
-  const speedForSubmit = fastTrackHidden && processingSpeed === "fast_track" ? "standard" : processingSpeed;
-  const sourceForSubmit =
-    fastTrackHidden && processingSpeed === "fast_track" ? "system" : processingSpeedSource;
+  const speedForSubmit = savedQuote
+    ? savedQuote.processingSpeed === "fast_track"
+      ? "fast_track"
+      : "standard"
+    : fastTrackHidden && processingSpeed === "fast_track"
+      ? "standard"
+      : processingSpeed;
+  const sourceForSubmit = savedQuote
+    ? savedQuote.processingSpeedSource === "customer"
+      ? "customer"
+      : "system"
+    : fastTrackHidden && processingSpeed === "fast_track"
+      ? "system"
+      : processingSpeedSource;
   const chosenTravelDate = travelDate.trim();
   const travelDays =
     chosenTravelDate && travelWindow
@@ -686,6 +744,10 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       setError(t("start.enterValidEmailError"));
       return;
     }
+    if (editingApplicationId) {
+      router.push(`/apply/applications/${encodeURIComponent(editingApplicationId)}`);
+      return;
+    }
     setSubmitting(true);
     const body: Record<string, unknown> = {
       nationalityCode: nationality,
@@ -725,6 +787,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   }
 
   const addTraveler = () => {
+    if (editingApplicationId) return;
     const kind: TTravelerKind = answers.stay
       ? (kindOptionsForStay(services, answers.stay)[0] ?? "adult")
       : "adult";
@@ -742,11 +805,13 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   }
 
   const removeTraveler = (key: string) => {
+    if (editingApplicationId) return;
     setAdditionalTravelers((prev) => prev.filter((t) => t.key !== key));
     setMissingVisaKeys((prev) => prev.filter((k) => k !== key));
   }
 
   const updateTraveler = (key: string, patch: Partial<TPartyTravelerDraft>) => {
+    if (editingApplicationId) return;
     setAdditionalTravelers((prev) => prev.map((t) => (t.key === key ? { ...t, ...patch } : t)));
     if (patch.serviceId) {
       setMissingVisaKeys((prev) => prev.filter((k) => k !== key));
@@ -766,7 +831,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   const showHomePrevious = !chooserHasBack;
 
   useEffect(() => {
-    if (!answers.stay) return;
+    if (!answers.stay || editingApplicationId) return;
     setAdditionalTravelers((prev) => {
       let changed = false;
       const next = prev.map((traveler) => {
@@ -783,7 +848,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       });
       return changed ? next : prev;
     });
-  }, [services, answers.stay]);
+  }, [services, answers.stay, editingApplicationId]);
 
   const primaryService = services.find((s) => s.id === serviceId) ?? null;
   const selectedServices = [
@@ -804,9 +869,21 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     speedForSubmit === "fast_track"
       ? matchingFastTrackSumMinor(speedQuote, partySize, displayCurrency)
       : null;
-  const checkoutMinor = preApplicationCheckoutTotalMinor(totalMinor, speedForSubmit, fastTrackSumMinor);
-  const totalText =
-    checkoutMinor === null ? null : formatDisplayMinor(checkoutMinor.toString(), displayCurrency);
+  const checkoutMinor =
+    speedForSubmit === "fast_track" && !fastTrackSumMinor
+      ? null
+      : preApplicationCheckoutTotalMinor(totalMinor, speedForSubmit, fastTrackSumMinor);
+  const quotedMinor = tripListCheckoutMinor({
+    hasApplication: Boolean(editingApplicationId),
+    quoteTotalAmountMinor: savedQuote?.totalAmountMinor ?? null,
+    localMinor: checkoutMinor,
+  });
+  const totalText = savedQuote
+    ? formatMinorAmount(savedQuote.totalAmountMinor, savedQuote.currency, locale, "code")
+    : quotedMinor === null
+      ? null
+      : formatDisplayMinor(quotedMinor, displayCurrency);
+  const extrasOffered = includeExtras || extrasFromQuery || insuranceStepOffered(savedQuote);
 
   if (loadingList) {
     return (
@@ -841,12 +918,23 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
         </p>
       ) : null}
 
-      {serviceId ? <ApplyStepsRail currentStep={2} /> : null}
+      {serviceId ? (
+        <ApplyStepsRail
+          currentStep={2}
+          includeExtras={extrasOffered}
+          applicationId={editingApplicationId ?? undefined}
+        />
+      ) : null}
 
       <div className={serviceId ? "lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start lg:gap-6" : undefined}>
         <div className={serviceId ? "order-2 min-w-0 lg:order-1" : undefined}>
-      {nationality ? (
+          {nationality ? (
         <section className="space-y-6">
+          {editingApplicationId ? (
+            <p className="text-muted-foreground text-sm" role="status">
+              {t("start.editLocked")}
+            </p>
+          ) : null}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <ChooserCardHeader nationalityName={nationalityName} />
             <div className="flex items-center gap-1 sm:pt-1" role="group" aria-label={t("start.showPricesIn")}>
@@ -889,6 +977,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
               formatPrice={(s) => formatPriceForDisplay(s, displayCurrency)}
               selectedServiceId={serviceId}
               onSelectService={(id) => {
+                if (editingApplicationId) return;
                 setServiceId(id);
                 setApplyStep("visa");
                 if (currencyTouchedRef.current) return;
@@ -900,7 +989,10 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                 if (next && next !== displayCurrency) setDisplayCurrency(next);
               }}
               partyEnabled={false}
-              onAnswersChange={setAnswers}
+              choicesLocked={Boolean(editingApplicationId)}
+              onAnswersChange={(next) => {
+                if (!editingApplicationId) setAnswers(next);
+              }}
               onPhaseChange={(next) => {
                 setChooserPhase(next);
                 if (next !== "results") setApplyStep("visa");
@@ -913,7 +1005,9 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                 travelWindowFailed ? false : travelWindow ? travelWindow.showTravelDateStep : true
               }
               travelDate={travelDate}
-              onTravelDateChange={setTravelDate}
+              onTravelDateChange={(value) => {
+                if (!editingApplicationId) setTravelDate(value);
+              }}
               todayUae={travelWindow?.todayUae}
               maxTravelDate={travelWindow?.maxTravelDate}
               selectedVisaExtra={
@@ -932,8 +1026,79 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                   }
                   sumText={speedQuote?.travellerCount && speedQuote.travellerCount > 1 ? fastTrackPartySum : null}
                   onSelect={(speed) => {
-                    setProcessingSpeed(speed);
-                    setProcessingSpeedSource("customer");
+                    if (!editingApplicationId) {
+                      setProcessingSpeed(speed);
+                      setProcessingSpeedSource("customer");
+                      return;
+                    }
+                    if (speed === speedForSubmit) return;
+                    const previous = speedForSubmit;
+                    const hadSavedQuote = savedQuote !== null;
+                    const epoch = ++quoteEpoch.current;
+                    const applyPreview = (preview: TClientQuotePreview) => {
+                      setSavedQuote(preview);
+                      setProcessingSpeed(preview.processingSpeed === "fast_track" ? "fast_track" : "standard");
+                      setProcessingSpeedSource(
+                        preview.processingSpeedSource === "customer" ? "customer" : "system",
+                      );
+                    };
+                    const restoreQuoteIfMissing = async () => {
+                      if (!reloadQuoteAfterFailedSpeedPatch(hadSavedQuote)) {
+                        setProcessingSpeed(speedCommitFromPatch({ previous, requested: speed, ok: false }));
+                        return;
+                      }
+                      try {
+                        const preview = await fetchApiEnvelope<TClientQuotePreview>(
+                          apiHref(`/applications/${encodeURIComponent(editingApplicationId)}/quote-preview`),
+                          { cache: "no-store" },
+                        );
+                        if (quoteEpoch.current !== epoch) return;
+                        if (!preview.ok) {
+                          setProcessingSpeed(speedCommitFromPatch({ previous, requested: speed, ok: false }));
+                          return;
+                        }
+                        applyPreview(preview.data);
+                      } catch {
+                        if (quoteEpoch.current !== epoch) return;
+                        setProcessingSpeed(speedCommitFromPatch({ previous, requested: speed, ok: false }));
+                      }
+                    };
+                    void (async () => {
+                      try {
+                        const res = await fetchApiEnvelope<TClientQuotePreview>(
+                          apiHref(`/applications/${encodeURIComponent(editingApplicationId)}/trip`),
+                          {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ processingSpeed: speed, speedContext: "visa-list" }),
+                          },
+                        );
+                        if (quoteEpoch.current !== epoch) return;
+                        if (!res.ok) {
+                          const reason = reasonFromErrorDetails(res.error.details);
+                          const locked = res.status === 409 || res.error.code === "CHECKOUT_FROZEN";
+                          setError(
+                            tripSpeedErrorMessage({
+                              status: res.status,
+                              code: res.error.code,
+                              message: locked ? t("extras.locked") : t(tripFailureMessageKey(reason)),
+                              lockedMessage: t("extras.locked"),
+                              genericMessage: t("extras.error.update"),
+                            }),
+                          );
+                          await restoreQuoteIfMissing();
+                          return;
+                        }
+                        setError(null);
+                        applyPreview(res.data);
+                        const savedSpeed = res.data.processingSpeed === "fast_track" ? "fast_track" : "standard";
+                        setProcessingSpeed(speedCommitFromPatch({ previous, requested: savedSpeed, ok: true }));
+                      } catch {
+                        if (quoteEpoch.current !== epoch) return;
+                        setError(t("extras.error.update"));
+                        await restoreQuoteIfMissing();
+                      }
+                    })();
                   }}
                 />
               }
@@ -968,7 +1133,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
               <button
                 type="button"
                 onClick={addTraveler}
-                disabled={!canAddTraveler(additionalTravelers.length + 1, partyMaxTravelers)}
+                disabled={Boolean(editingApplicationId) || !canAddTraveler(additionalTravelers.length + 1, partyMaxTravelers)}
                 className="border-secondary text-secondary hover:bg-secondary hover:text-white rounded-xl border-2 px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {t("chooser.addTraveller")}
@@ -1005,7 +1170,8 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                       <button
                         type="button"
                         onClick={() => removeTraveler(traveler.key)}
-                        className="text-muted-foreground hover:text-error text-xs font-semibold uppercase tracking-widest"
+                        disabled={Boolean(editingApplicationId)}
+                        className="text-muted-foreground hover:text-error text-xs font-semibold uppercase tracking-widest disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {t("start.party.remove")}
                       </button>
@@ -1018,6 +1184,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                         <button
                           key={k}
                           type="button"
+                          disabled={Boolean(editingApplicationId)}
                           onClick={() =>
                             updateTraveler(traveler.key, {
                               kind: k,
@@ -1033,7 +1200,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                             })
                           }
                           className={cn(
-                            "border-border bg-card text-foreground rounded-xl border-2 px-4 py-2 text-sm font-semibold transition-colors",
+                            "border-border bg-card text-foreground rounded-xl border-2 px-4 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
                             traveler.kind === k ? "border-primary bg-accent/25" : "hover:border-secondary",
                           )}
                         >
@@ -1064,6 +1231,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                         <select
                           id={visaFieldId}
                           value={traveler.serviceId}
+                          disabled={Boolean(editingApplicationId)}
                           aria-invalid={visaMissing || undefined}
                           aria-describedby={visaMissing ? `${visaFieldId}-error` : undefined}
                           onChange={(e) => updateTraveler(traveler.key, { serviceId: e.target.value })}
@@ -1136,10 +1304,17 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
         </section>
       ) : null}
 
-      {serviceId && totalText ? (
-        <div className="border-secondary/20 bg-secondary/5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 px-5 py-4">
-          <p className="text-foreground text-sm font-semibold">{t("start.checkoutTotal")}</p>
-          <p className="font-heading text-foreground text-xl font-bold tabular-nums">{totalText}</p>
+      {serviceId && (totalText || speedForSubmit) ? (
+        <div className="border-secondary/20 bg-secondary/5 space-y-2 rounded-2xl border-2 px-5 py-4">
+          <ProcessingSpeedLine speed={speedForSubmit} />
+          {totalText ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-foreground text-sm font-semibold">{t("start.checkoutTotal")}</p>
+              <p className="font-heading text-foreground text-xl font-bold tabular-nums">
+                <bdi>{totalText}</bdi>
+              </p>
+            </div>
+          ) : null}
         </div>
       ) : null}
         </div>

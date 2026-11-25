@@ -54,11 +54,12 @@
     "totalLabel": "Totale",
     "atCheckout": "Al checkout",
     "estimatedTotal": "Totale stimato",
-    "priceIncludesNote": "Il prezzo include il servizio visto. L'assicurazione di viaggio è separata se la destinazione lo richiede.",
+    "priceIncludesNote": "Il prezzo include il servizio visto. Puoi aggiungere un'assicurazione di viaggio prima di pagare.",
     "emailLabel": "E-mail *",
     "emailPlaceholder": "you@example.com",
     "emailHelper": "Le invieremo aggiornamenti sulla domanda e la ricevuta a questo indirizzo.",
     "checkoutTotal": "Totale al checkout",
+    "editLocked": "Per cambiare il visto o i viaggiatori, iniziate una nuova domanda.",
     "previousButton": "Indietro",
     "continueWithVisa": "Continua con questo visto",
     "loading": "Caricamento…",
@@ -558,8 +559,10 @@
     "detailsShort": "Dati",
     "payShort": "Paga",
     "finishShort": "Fine",
-    "meta": "Step {n} of 5 · {label}",
-    "completedGoBack": "{label}, completed. Go back."
+    "meta": "Passo {n} di {total} · {label}",
+    "completedGoBack": "{label}, completed. Go back.",
+    "extras": "Extra",
+    "extrasShort": "Extra"
   },
   "common": {
     "continue": "Continua",
@@ -708,6 +711,7 @@
   "extras": {
     "sectionTitle": "Il vostro viaggio e gli extra",
     "arrivalLabel": "Arrivo negli EAU",
+    "notSet": "Non impostata",
     "change": "Modifica",
     "saveDate": "Salva data",
     "cancel": "Annulla",
@@ -745,24 +749,48 @@
       "add": "Aggiungi l'assicurazione di viaggio · {price} a viaggiatore",
       "selectAll": "Seleziona tutti i viaggiatori",
       "forTraveller": "Viaggiatore {number} · {price}",
-      "terms": "Leggi le condizioni della polizza"
+      "terms": "Leggi le condizioni della polizza",
+      "addAll": "Aggiungi l'assicurazione di viaggio per tutti i viaggiatori",
+      "addOne": "Aggiungi l'assicurazione di viaggio",
+      "priceMany": "{unit} per viaggiatore × {n} = {sum}",
+      "priceOne": "{unit} per 1 viaggiatore"
     },
     "recap": {
       "fastTrack": "Trattamento rapido",
       "insurance": "Assicurazione di viaggio",
       "updating": "Aggiornamento del totale",
-      "updated": "Totale aggiornato: {total}"
+      "updated": "Totale aggiornato: {total}",
+      "visa": "Visto",
+      "notAdded": "Non aggiunta",
+      "total": "Totale"
     },
     "error": {
       "update": "Non siamo riusciti ad aggiornare il totale. Controllate la connessione e riprovate.",
       "retry": "Riprova",
       "fastTrackUnavailable": "Il percorso rapido non è disponibile in questa valuta.",
-      "insuranceUnavailable": "L'assicurazione di viaggio non è disponibile in questa valuta."
+      "insuranceUnavailable": "L'assicurazione di viaggio non è disponibile in questa valuta.",
+      "speedLocked": "La velocità di elaborazione si può cambiare solo nell'elenco dei visti."
     },
     "priceChanged": "Il prezzo è cambiato da quando avete aperto questa pagina. Controllate il nuovo totale prima di pagare.",
     "locked": "Per modificare gli extra, annullate prima questo pagamento.",
     "bar": {
       "cta": "Continua al pagamento"
+    },
+    "title": "Extra opzionali",
+    "hint": "Facoltativo. Lascialo deselezionato per continuare senza assicurazione.",
+    "cta": "Continua al pagamento",
+    "skip": "Continua senza extra",
+    "ctaShort": "Continua",
+    "back": "Indietro",
+    "changeExtras": "Modifica gli extra",
+    "noExtras": "Nessun extra aggiunto",
+    "removed": "L'assicurazione di viaggio non è disponibile per questa domanda, quindi l'abbiamo rimossa."
+  },
+  "speed": {
+    "readonly": {
+      "standard": "Elaborazione: Standard (3 giorni lavorativi)",
+      "fast": "Elaborazione: Fast Track (entro 24 ore)",
+      "fastCustom": "Elaborazione: Fast Track ({promise})"
     }
   }
 }
