@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { speedCommitFromPatch, tripListCheckoutMinor, tripSpeedErrorMessage } from "./trip-list-checkout";
+import {
+  reloadQuoteAfterFailedSpeedPatch,
+  speedCommitFromPatch,
+  tripListCheckoutMinor,
+  tripSpeedErrorMessage,
+} from "./trip-list-checkout";
 
 describe("trip list checkout total", () => {
   it("uses the server quote, including insurance times travellers, once an application exists", () => {
@@ -26,6 +31,8 @@ describe("visa list speed patch", () => {
   it("applies the speed only after success and reverts it on failure, including 409 extras locked", () => {
     expect(speedCommitFromPatch({ previous: "standard", requested: "fast_track", ok: true })).toBe("fast_track");
     expect(speedCommitFromPatch({ previous: "fast_track", requested: "standard", ok: false })).toBe("fast_track");
+    expect(reloadQuoteAfterFailedSpeedPatch(false)).toBe(true);
+    expect(reloadQuoteAfterFailedSpeedPatch(true)).toBe(false);
     expect(
       tripSpeedErrorMessage({
         status: 409,

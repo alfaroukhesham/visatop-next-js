@@ -13,6 +13,13 @@ export const tripListCheckoutMinor = (input: {
   return input.localMinor === null ? null : String(input.localMinor);
 };
 
+/**
+ * A speed click drops the in-flight first preview. Load it again only when that
+ * click had no stored quote, so a failed save cannot leave the list on Standard
+ * while checkout still charges Fast Track.
+ */
+export const reloadQuoteAfterFailedSpeedPatch = (hasSavedQuote: boolean): boolean => !hasSavedQuote;
+
 /** Keep the previous speed unless the visa-list PATCH succeeded. */
 export const speedCommitFromPatch = (input: {
   previous: TListProcessingSpeed;

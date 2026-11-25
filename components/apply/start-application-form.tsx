@@ -42,7 +42,12 @@ import { filterGuidedServices, filterPartyVisaOptions, stayOptionsForChooser, ne
 import type { TStayBucket, TTravelerKind } from "@/lib/catalog/guided-choice";
 import { AllInPriceBadges } from "@/components/apply/all-in-price-badges";
 import { ApplyStepsRail } from "@/components/apply/apply-steps-rail";
-import { speedCommitFromPatch, tripListCheckoutMinor, tripSpeedErrorMessage } from "@/lib/apply/trip-list-checkout";
+import {
+  reloadQuoteAfterFailedSpeedPatch,
+  speedCommitFromPatch,
+  tripListCheckoutMinor,
+  tripSpeedErrorMessage,
+} from "@/lib/apply/trip-list-checkout";
 import { GuidedVisaChooser, type IService } from "@/components/apply/guided-visa-chooser";
 import {
   clearChooserDraft,
@@ -1028,7 +1033,36 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                     }
                     if (speed === speedForSubmit) return;
                     const previous = speedForSubmit;
+                    const hadSavedQuote = savedQuote !== null;
                     const epoch = ++quoteEpoch.current;
+                    const applyPreview = (preview: TClientQuotePreview) => {
+                      setSavedQuote(preview);
+                      setProcessingSpeed(preview.processingSpeed === "fast_track" ? "fast_track" : "standard");
+                      setProcessingSpeedSource(
+                        preview.processingSpeedSource === "customer" ? "customer" : "system",
+                      );
+                    };
+                    const restoreQuoteIfMissing = async () => {
+                      if (!reloadQuoteAfterFailedSpeedPatch(hadSavedQuote)) {
+                        setProcessingSpeed(speedCommitFromPatch({ previous, requested: speed, ok: false }));
+                        return;
+                      }
+                      try {
+                        const preview = await fetchApiEnvelope<TClientQuotePreview>(
+                          apiHref(`/applications/${encodeURIComponent(editingApplicationId)}/quote-preview`),
+                          { cache: "no-store" },
+                        );
+                        if (quoteEpoch.current !== epoch) return;
+                        if (!preview.ok) {
+                          setProcessingSpeed(speedCommitFromPatch({ previous, requested: speed, ok: false }));
+                          return;
+                        }
+                        applyPreview(preview.data);
+                      } catch {
+                        if (quoteEpoch.current !== epoch) return;
+                        setProcessingSpeed(speedCommitFromPatch({ previous, requested: speed, ok: false }));
+                      }
+                    };
                     void (async () => {
                       try {
                         const res = await fetchApiEnvelope<TClientQuotePreview>(
@@ -1043,7 +1077,6 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                         if (!res.ok) {
                           const reason = reasonFromErrorDetails(res.error.details);
                           const locked = res.status === 409 || res.error.code === "CHECKOUT_FROZEN";
-                          setProcessingSpeed(speedCommitFromPatch({ previous, requested: speed, ok: false }));
                           setError(
                             tripSpeedErrorMessage({
                               status: res.status,
@@ -1053,19 +1086,17 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                               genericMessage: t("extras.error.update"),
                             }),
                           );
+                          await restoreQuoteIfMissing();
                           return;
                         }
                         setError(null);
-                        setSavedQuote(res.data);
+                        applyPreview(res.data);
                         const savedSpeed = res.data.processingSpeed === "fast_track" ? "fast_track" : "standard";
                         setProcessingSpeed(speedCommitFromPatch({ previous, requested: savedSpeed, ok: true }));
-                        setProcessingSpeedSource(
-                          res.data.processingSpeedSource === "customer" ? "customer" : "system",
-                        );
                       } catch {
                         if (quoteEpoch.current !== epoch) return;
-                        setProcessingSpeed(previous);
                         setError(t("extras.error.update"));
+                        await restoreQuoteIfMissing();
                       }
                     })();
                   }}
