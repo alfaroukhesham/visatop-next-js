@@ -1042,10 +1042,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                         if (quoteEpoch.current !== epoch) return;
                         if (!res.ok) {
                           const reason = reasonFromErrorDetails(res.error.details);
-                          const locked =
-                            res.status === 409 ||
-                            res.error.code === "CHECKOUT_FROZEN" ||
-                            res.error.code === "EXTRAS_LOCKED";
+                          const locked = res.status === 409 || res.error.code === "CHECKOUT_FROZEN";
                           setProcessingSpeed(speedCommitFromPatch({ previous, requested: speed, ok: false }));
                           setError(
                             tripSpeedErrorMessage({
