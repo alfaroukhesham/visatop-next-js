@@ -60,6 +60,9 @@
     "emailHelper": "سنرسل تحديثات الطلب وإيصالك إلى هذا العنوان.",
     "checkoutTotal": "إجمالي الدفع",
     "editLocked": "لتغيير التأشيرة أو المسافرين، ابدأ طلباً جديداً.",
+    "editSummaryTitle": "رحلتك",
+    "backToApplication": "العودة إلى طلبك",
+    "startNewApplication": "ابدأ طلباً جديداً",
     "previousButton": "السابق",
     "continueWithVisa": "المتابعة بهذه التأشيرة",
     "loading": "جارٍ التحميل…",
@@ -162,6 +165,7 @@
     "next": "التالي",
     "saving": "جارٍ الحفظ…",
     "continueToPayment": "المتابعة إلى الدفع",
+    "readyToContinue": "جاهز للمتابعة",
     "needsAttentionCheckout": "يتطلّب انتباهًا قبل الدفع",
     "uploadRemainingDocs": "ارفع المستندات المتبقية",
     "completeRequiredDetails": "أكمل التفاصيل المطلوبة",
@@ -257,9 +261,9 @@
     "captureTip3": "تجنّب الوهج والظلال والقص من الحواف.",
     "privacyNote": "تُشفَّر صورتك أثناء النقل وتُستخدم فقط لمعالجة هذا الطلب — وليس للتسويق.",
     "examplePassportAlt": "مثال توضيحي لصفحة بيانات جواز سفر مزيفة لإرشاد التصوير. ليست وثيقة سفر حقيقية.",
-    "photoTip1": "Plain background.",
-    "photoTip2": "No glasses.",
-    "photoTip3": "Face centred in the oval."
+    "photoTip1": "خلفية سادة.",
+    "photoTip2": "بدون نظارات.",
+    "photoTip3": "الوجه في منتصف الشكل البيضاوي."
   },
   "payment": {
     "pageTitle": "الدفع | Visatop",
@@ -729,7 +733,7 @@
       },
       "badge": "موصى به"
     },
-    "perTravellerSum": "{price} × {n} {travellersWord} = {sum}",
+    "perTravellerSum": "‏{price} × {n} {travellersWord} = ‏{sum}",
     "travellers_one": "مسافر",
     "travellers_two": "مسافرَين",
     "travellers_few": "مسافرين",
@@ -762,6 +766,7 @@
       "updated": "تم تحديث الإجمالي: {total}",
       "visa": "التأشيرة",
       "notAdded": "غير مضاف",
+      "added": "مضاف",
       "total": "الإجمالي"
     },
     "error": {

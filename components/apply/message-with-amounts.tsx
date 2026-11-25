@@ -7,11 +7,11 @@ interface IMessageWithAmountsProps {
 
 /** Keeps currency amounts in `<bdi>` so Arabic stays RTL around Western digits. */
 export const MessageWithAmounts: FC<IMessageWithAmountsProps> = ({ template, amounts }) => {
-  const parts = template.split(/(\{(?:unit|sum|n|total|promise)\})/g);
+  const parts = template.split(/(\{(?:unit|sum|price|n|total|promise)\})/g);
   return (
     <>
       {parts.map((part, index) => {
-        const match = /^\{(unit|sum|n|total|promise)\}$/.exec(part);
+        const match = /^\{(unit|sum|price|n|total|promise)\}$/.exec(part);
         if (!match) return <span key={index}>{part}</span>;
         const name = match[1] ?? "";
         const value = amounts[name] ?? "";

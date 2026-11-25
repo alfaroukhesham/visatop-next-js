@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FC, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FC, type ReactNode } from "react";
 import {
   Baby,
   CalendarClock,
@@ -14,7 +14,9 @@ import {
   UserRound,
 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
-import { useCustomerT } from "@/components/client/customer-i18n-provider";
+import { APPLY_PROGRAMMATIC_HEADING_CLASS } from "@/components/apply/apply-primary-cta";
+import { customerFacingServiceName } from "@/lib/apply/customer-service-name";
+import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
 import {
   defaultEntryForStay,
   defaultKindForStay,
@@ -244,6 +246,9 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
   choicesLocked = false,
 }) => {
   const t = useCustomerT();
+  const locale = useCustomerLocale();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const skipPhaseScroll = useRef(true);
   const stayBuckets = useMemo(() => stayOptionsForChooser(services), [services]);
   const [phase, setPhase] = useState<TChooserPhase>(initialPhase);
   const [stay, setStay] = useState<TStayBucket | null>(initialStay);
@@ -267,6 +272,20 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
   useEffect(() => {
     onPhaseChange?.(view.phase);
   }, [view.phase, onPhaseChange]);
+
+  useEffect(() => {
+    if (skipPhaseScroll.current) {
+      skipPhaseScroll.current = false;
+      return;
+    }
+    const root = rootRef.current;
+    if (!root) return;
+    root.scrollIntoView({ block: "start", behavior: "smooth" });
+    const heading = root.querySelector("h3");
+    if (heading instanceof HTMLElement) {
+      heading.focus({ preventScroll: true });
+    }
+  }, [view.phase]);
 
   const matches = useMemo(() => {
     if (!view.stay) return services.filter((s) => s.showInGuidedChooser);
@@ -355,7 +374,10 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
   const kindChoices = view.stay ? kindOptionsForStay(services, view.stay, view.entry) : [];
 
   return (
-    <div className="space-y-4 rounded-2xl border border-border/80 bg-muted/35 p-3 sm:p-5">
+    <div
+      ref={rootRef}
+      className="scroll-mt-[var(--wp-shell-header-height,130px)] space-y-4 rounded-2xl border border-border/80 bg-muted/35 p-3 sm:p-5"
+    >
       {showChooserBack && !choicesLocked ? (
         <button
           type="button"
@@ -369,7 +391,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
         {view.phase === "stay" ? (
           <div className="space-y-4">
             <div className="mx-auto max-w-2xl">
-              <h3 className="font-heading text-foreground text-center text-2xl font-semibold tracking-tight sm:text-3xl">
+              <h3 tabIndex={-1} className={`font-heading text-foreground text-center text-2xl font-semibold tracking-tight sm:text-3xl ${APPLY_PROGRAMMATIC_HEADING_CLASS}`}>
                 {t("chooser.howLongStay")}
               </h3>
             </div>
@@ -395,7 +417,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
         {view.phase === "entry" ? (
           <div className="space-y-4">
             <div className="mx-auto max-w-2xl">
-              <h3 className="font-heading text-foreground text-center text-2xl font-semibold tracking-tight sm:text-3xl">
+              <h3 tabIndex={-1} className={`font-heading text-foreground text-center text-2xl font-semibold tracking-tight sm:text-3xl ${APPLY_PROGRAMMATIC_HEADING_CLASS}`}>
                 {t("chooser.singleOrMultiple")}
               </h3>
             </div>
@@ -429,7 +451,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
         {view.phase === "kind" ? (
           <div className="space-y-4">
             <div className="mx-auto max-w-2xl">
-              <h3 className="font-heading text-foreground text-center text-2xl font-semibold tracking-tight sm:text-3xl">
+              <h3 tabIndex={-1} className={`font-heading text-foreground text-center text-2xl font-semibold tracking-tight sm:text-3xl ${APPLY_PROGRAMMATIC_HEADING_CLASS}`}>
                 {t("chooser.whoIsVisaFor")}
               </h3>
             </div>
@@ -499,13 +521,16 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
             </p>
           ) : (
             <div className="space-y-4">
-              <div className="rounded-2xl border border-secondary/20 bg-secondary/5 px-4 py-3 text-sm text-secondary">
+              <h3
+                tabIndex={-1}
+                className={`rounded-2xl border border-secondary/20 bg-secondary/5 px-4 py-3 text-sm text-secondary ${APPLY_PROGRAMMATIC_HEADING_CLASS}`}
+              >
                 {t("chooser.matchingVisasBanner", {
                   stay: view.stay ? t(`chooser.stayLabels.${view.stay}`) : "",
                   travellerKind:
                     view.kind === "child" ? t("chooser.travellerKindChild") : t("chooser.travellerKindAdult"),
                 })}
-              </div>
+              </h3>
               <ul className="space-y-3">
                 {matches.map((s) => {
                   const price = formatPrice(s);
@@ -541,7 +566,13 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                               selected && "text-secondary",
                             )}
                           >
-                            <bdi>{s.name}</bdi>
+                            <bdi>
+                              {customerFacingServiceName(s.name, locale, t, {
+                                durationDays: s.durationDays,
+                                entries: s.entries,
+                                travelerKind: s.travelerKind,
+                              })}
+                            </bdi>
                           </span>
                           {subtitle ? (
                             <span className="text-muted-foreground mt-1 block text-xs">{subtitle}</span>

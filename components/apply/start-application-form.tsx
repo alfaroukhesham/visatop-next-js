@@ -14,8 +14,17 @@ import {
   ClientServiceCardsSkeleton,
   ClientStartStepSkeleton,
 } from "@/components/client/client-loading";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
-import { ClientButton } from "@/components/client/client-button";
+import { ClientButton, ClientButtonLink } from "@/components/client/client-button";
+import {
+  APPLY_PRIMARY_CTA_CLASS,
+  APPLY_PRIMARY_CTA_ROW_CLASS,
+  APPLY_PROGRAMMATIC_HEADING_CLASS,
+  APPLY_STEP_PREVIOUS_CLASS,
+} from "@/components/apply/apply-primary-cta";
+import { customerFacingServiceName } from "@/lib/apply/customer-service-name";
+import { MessageWithAmounts } from "@/components/apply/message-with-amounts";
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
@@ -81,24 +90,22 @@ type Service = IService;
 
 type DisplayCurrency = string;
 
-const formatDisplayMinor = (minor: string | null, currency: string | null): string | null => {
+const formatDisplayMinor = (
+  minor: string | null,
+  currency: string | null,
+  locale: string,
+): string | null => {
   if (minor === null || currency === null) return null;
   const n = Number(minor);
   if (!Number.isFinite(n)) return null;
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 2,
-    }).format(n / 100);
-  } catch {
-    return `${(n / 100).toFixed(2)} ${currency}`;
-  }
-}
+  const text = formatMinorAmount(minor, currency, locale, "code");
+  return text || null;
+};
 
 const formatPriceForDisplay = (
   s: Service,
   tab: DisplayCurrency,
+  locale: string,
 ): { text: string; isEstimate: boolean } | null => {
   const minorStr = s.displayPriceMinor;
   const cur = s.currency;
@@ -107,7 +114,7 @@ const formatPriceForDisplay = (
   if (!Number.isFinite(n)) return null;
   const minor = BigInt(Math.trunc(n));
   if (cur === tab) {
-    const text = formatDisplayMinor(minorStr, cur);
+    const text = formatDisplayMinor(minorStr, cur, locale);
     return text ? { text, isEstimate: false } : null;
   }
   if (!isUsdAedCurrency(cur) || !isUsdAedCurrency(tab)) return null;
@@ -115,9 +122,9 @@ const formatPriceForDisplay = (
   if (!fx) return null;
   const converted = convertMinorBetweenUsdAed(minor, cur, tab, fx);
   if (!converted) return null;
-  const text = formatDisplayMinor(converted.toString(), tab);
+  const text = formatDisplayMinor(converted.toString(), tab, locale);
   return text ? { text, isEstimate: true } : null;
-}
+};
 
 const toDisplayMinor = (s: Service, tab: DisplayCurrency): number | null => {
   const minorStr = s.displayPriceMinor;
@@ -153,12 +160,19 @@ const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
   badges,
 }) => {
   const t = useCustomerT();
+  const locale = useCustomerLocale();
   return (
-    <aside className="border-secondary/25 bg-card h-fit space-y-4 rounded-2xl border p-4 shadow-[0_12px_30px_rgba(1,32,49,0.08)] lg:sticky lg:top-24">
+    <aside className="border-secondary/25 bg-card h-fit space-y-4 rounded-2xl border p-4 shadow-[0_12px_30px_rgba(1,32,49,0.08)] lg:sticky lg:top-[var(--wp-shell-header-height,1rem)]">
       <div>
         <p className="text-secondary text-[10px] font-bold uppercase tracking-[0.2em]">{t("start.yourVisaEyebrow")}</p>
         <h2 className="font-heading text-foreground mt-1 text-lg font-bold leading-snug">
-          <bdi>{service.name}</bdi>
+          <bdi>
+            {customerFacingServiceName(service.name, locale, t, {
+              durationDays: service.durationDays,
+              entries: service.entries,
+              travelerKind: service.travelerKind,
+            })}
+          </bdi>
         </h2>
       </div>
       <dl className="text-muted-foreground space-y-1.5 text-xs">
@@ -185,7 +199,7 @@ const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
           </div>
         ) : null}
       </dl>
-      <div className="border-border border-t pt-3">
+      <div className="border-border hidden border-t pt-3 lg:block">
         <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">{t("start.totalLabel")}</p>
         <p className="font-heading text-foreground mt-0.5 text-xl font-bold tabular-nums">
           {totalText ?? price?.text ?? t("start.atCheckout")}
@@ -212,6 +226,86 @@ const ChooserCardHeader: FC<IChooserCardHeaderProps> = ({ nationalityName }) => 
         {t("start.passportLabel")} <span className="text-foreground font-semibold">{nationalityName}</span>
       </p>
     </header>
+  );
+};
+
+interface IEditTripSummaryProps {
+  visaNames: string[];
+  fallbackName: string | null;
+  travellerCount: number;
+  travelDate: string;
+  speed: "standard" | "fast_track";
+  totalText: string | null;
+  returnHref: string;
+}
+
+const EditTripSummary: FC<IEditTripSummaryProps> = ({
+  visaNames,
+  fallbackName,
+  travellerCount,
+  travelDate,
+  speed,
+  totalText,
+  returnHref,
+}) => {
+  const t = useCustomerT();
+  const locale = useCustomerLocale();
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+  const names = visaNames.length > 0 ? visaNames : fallbackName ? [fallbackName] : [];
+  const dateLabel = travelDate.trim() ? formatArrivalDate(travelDate.trim(), locale) : t("extras.notSet");
+
+  return (
+    <section aria-labelledby="edit-trip-title" className="border-border bg-card space-y-4 rounded-2xl border p-4 sm:p-5">
+      <h2
+        id="edit-trip-title"
+        ref={headingRef}
+        tabIndex={-1}
+        className={`font-heading text-foreground text-xl font-semibold ${APPLY_PROGRAMMATIC_HEADING_CLASS}`}
+      >
+        {t("start.editSummaryTitle")}
+      </h2>
+      <p className="text-muted-foreground text-sm">{t("start.editLocked")}</p>
+      <dl className="space-y-2 text-sm">
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-muted-foreground">{t("extras.recap.visa")}</dt>
+          <dd className="text-foreground text-end font-semibold">
+            {names.length > 0
+              ? names.map((name) => <bdi key={name}>{customerFacingServiceName(name, locale, t)}</bdi>)
+              : t("start.loading")}
+          </dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-muted-foreground">{t("start.travelersLabel")}</dt>
+          <dd className="text-foreground font-semibold">{travellerCount}</dd>
+        </div>
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-muted-foreground">{t("extras.arrivalLabel")}</dt>
+          <dd className="text-foreground text-end font-semibold">
+            <bdi>{dateLabel}</bdi>
+          </dd>
+        </div>
+      </dl>
+      <ProcessingSpeedLine speed={speed} />
+      {totalText ? (
+        <div className="border-border flex items-baseline justify-between gap-3 border-t pt-3 lg:hidden">
+          <p className="text-foreground text-sm font-semibold">{t("start.checkoutTotal")}</p>
+          <p className="font-heading text-foreground text-xl font-bold tabular-nums">
+            <bdi>{totalText}</bdi>
+          </p>
+        </div>
+      ) : null}
+      <div className="flex flex-col items-stretch gap-2 sm:items-end">
+        <ClientButtonLink href={returnHref} brand="cta" className={APPLY_PRIMARY_CTA_CLASS}>
+          {t("start.backToApplication")}
+        </ClientButtonLink>
+        <Link href="/" className="text-secondary inline-flex min-h-11 items-center text-sm underline">
+          {t("start.startNewApplication")}
+        </Link>
+      </div>
+    </section>
   );
 };
 
@@ -619,6 +713,9 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       setSavedQuote(res.data);
       setProcessingSpeed(res.data.processingSpeed === "fast_track" ? "fast_track" : "standard");
       setProcessingSpeedSource(res.data.processingSpeedSource === "customer" ? "customer" : "system");
+      const savedServiceId = res.data.visaLines[0]?.serviceId;
+      if (savedServiceId) setServiceId(savedServiceId);
+      if (res.data.travelDate) setTravelDate(res.data.travelDate);
     };
     void run();
     return () => {
@@ -666,14 +763,22 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       }).note
     : null;
   const speedRelative = daysUntil !== null ? relativeArrivalLabel(locale, daysUntil, t) : "";
-  const fastTrackPartySum =
+  const fastTrackPartyTemplate =
     speedQuote?.fastTrack?.sumAmountMinor && speedQuote.travellerCount
       ? t("extras.perTravellerSum", {
-          price: formatMinorAmount(speedQuote.fastTrack.unitAmountMinor, speedQuote.currency, locale, "code"),
-          n: speedQuote.travellerCount,
+          price: "{price}",
+          n: "{n}",
           travellersWord: pluralMessage(t, "extras.travellers", locale, speedQuote.travellerCount),
-          sum: formatMinorAmount(speedQuote.fastTrack.sumAmountMinor, speedQuote.currency, locale, "code"),
+          sum: "{sum}",
         })
+      : null;
+  const fastTrackPartyAmounts =
+    speedQuote?.fastTrack?.sumAmountMinor && speedQuote.travellerCount
+      ? {
+          price: formatMinorAmount(speedQuote.fastTrack.unitAmountMinor, speedQuote.currency, locale, "code"),
+          n: String(speedQuote.travellerCount),
+          sum: formatMinorAmount(speedQuote.fastTrack.sumAmountMinor, speedQuote.currency, locale, "code"),
+        }
       : null;
 
   const onSubmit = async (e: FormEvent) => {
@@ -851,6 +956,14 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   }, [services, answers.stay, editingApplicationId]);
 
   const primaryService = services.find((s) => s.id === serviceId) ?? null;
+  useEffect(() => {
+    if (!editingApplicationId || !primaryService) return;
+    setAnswers({
+      stay: primaryService.stayBucket,
+      entry: primaryService.entryKind === "multiple" ? "multiple" : "single",
+      kind: primaryService.travelerKind === "child" ? "child" : "adult",
+    });
+  }, [editingApplicationId, primaryService]);
   const selectedServices = [
     primaryService,
     ...additionalTravelers.map((t) => services.find((s) => s.id === t.serviceId) ?? null),
@@ -882,8 +995,11 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     ? formatMinorAmount(savedQuote.totalAmountMinor, savedQuote.currency, locale, "code")
     : quotedMinor === null
       ? null
-      : formatDisplayMinor(quotedMinor, displayCurrency);
+      : formatDisplayMinor(quotedMinor, displayCurrency, locale);
   const extrasOffered = includeExtras || extrasFromQuery || insuranceStepOffered(savedQuote);
+  const showListContinue = applyStep === "visa" && chooserPhase === "results" && Boolean(serviceId);
+  const showTravellerContinue = applyStep === "travellers" && partyEnabled;
+  const showEmailContinue = applyStep === "email" && Boolean(serviceId);
 
   if (loadingList) {
     return (
@@ -900,7 +1016,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
         <ChooserCardHeader nationalityName={nationalityName} />
         <p className="text-muted-foreground text-sm leading-relaxed" role="alert">
           {t("start.nationalityUnavailable", {
-            nationality: nationalityDisplayName(nationalityCode, nationalities),
+            nationality: nationalityDisplayName(nationalityCode, nationalities, locale),
           })}
         </p>
         <ClientButton type="button" brand="cta" onClick={() => router.push("/")}>
@@ -927,17 +1043,12 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       ) : null}
 
       <div className={serviceId ? "lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start lg:gap-6" : undefined}>
-        <div className={serviceId ? "order-2 min-w-0 lg:order-1" : undefined}>
+        <div className={serviceId ? "order-2 min-w-0 space-y-6 lg:order-1" : undefined}>
           {nationality ? (
         <section className="space-y-6">
-          {editingApplicationId ? (
-            <p className="text-muted-foreground text-sm" role="status">
-              {t("start.editLocked")}
-            </p>
-          ) : null}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <ChooserCardHeader nationalityName={nationalityName} />
-            <div className="flex items-center gap-1 sm:pt-1" role="group" aria-label={t("start.showPricesIn")}>
+            <div className={cn("flex items-center gap-1 sm:pt-1", editingApplicationId && "hidden")} role="group" aria-label={t("start.showPricesIn")}>
               {visibleCurrencies.map((c) => {
                 const active = displayCurrency === c.code;
                 return (
@@ -949,7 +1060,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                       setDisplayCurrency(c.code);
                     }}
                     className={cn(
-                      "rounded-xl border-2 px-3 py-1.5 text-xs font-bold uppercase tracking-widest",
+                      "min-h-11 rounded-xl border-2 px-3 text-xs font-bold uppercase tracking-widest",
                       active ? "border-secondary bg-secondary text-white"
                         : "border-border bg-card text-foreground hover:border-secondary",
                     )}
@@ -961,20 +1072,30 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
             </div>
           </div>
 
-          {applyStep !== "visa" ? (
-            <button
-              type="button"
-              onClick={() => setApplyStep(applyStep === "email" && partyEnabled ? "travellers" : "visa")}
-              className="text-secondary hover:text-foreground inline-flex items-center gap-1 text-sm font-semibold"
-            >
-              {t("chooser.back")}
-            </button>
-          ) : !nationality ? null : loadingServices && services.length === 0 ? (
+          {editingApplicationId ? (
+            <EditTripSummary
+              visaNames={(savedQuote?.visaLines ?? [])
+                .map((line) => services.find((service) => service.id === line.serviceId)?.name)
+                .filter((name): name is string => Boolean(name))}
+              fallbackName={primaryService?.name ?? null}
+              travellerCount={savedQuote?.travellerCount ?? partySize}
+              travelDate={savedQuote?.travelDate ?? travelDate}
+              speed={speedForSubmit}
+              totalText={totalText}
+              returnHref={
+                savedQuote?.locked
+                  ? `/apply/applications/${encodeURIComponent(editingApplicationId)}/payment`
+                  : extrasOffered
+                    ? `/apply/applications/${encodeURIComponent(editingApplicationId)}/extras`
+                    : `/apply/applications/${encodeURIComponent(editingApplicationId)}`
+              }
+            />
+          ) : applyStep !== "visa" ? null : !nationality ? null : loadingServices && services.length === 0 ? (
             <ClientServiceCardsSkeleton />
           ) : (
             <GuidedVisaChooser
               services={services}
-              formatPrice={(s) => formatPriceForDisplay(s, displayCurrency)}
+              formatPrice={(s) => formatPriceForDisplay(s, displayCurrency, locale)}
               selectedServiceId={serviceId}
               onSelectService={(id) => {
                 if (editingApplicationId) return;
@@ -991,7 +1112,12 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
               partyEnabled={false}
               choicesLocked={Boolean(editingApplicationId)}
               onAnswersChange={(next) => {
-                if (!editingApplicationId) setAnswers(next);
+                if (editingApplicationId) return;
+                setAnswers((current) =>
+                  current.stay === next.stay && current.entry === next.entry && current.kind === next.kind
+                    ? current
+                    : next,
+                );
               }}
               onPhaseChange={(next) => {
                 setChooserPhase(next);
@@ -1024,7 +1150,14 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                         })
                       : null
                   }
-                  sumText={speedQuote?.travellerCount && speedQuote.travellerCount > 1 ? fastTrackPartySum : null}
+                  sumText={
+                    speedQuote?.travellerCount && speedQuote.travellerCount > 1 && fastTrackPartyAmounts
+                      ? t("extras.perTravellerSum", {
+                          ...fastTrackPartyAmounts,
+                          travellersWord: pluralMessage(t, "extras.travellers", locale, speedQuote.travellerCount),
+                        })
+                      : null
+                  }
                   onSelect={(speed) => {
                     if (!editingApplicationId) {
                       setProcessingSpeed(speed);
@@ -1105,24 +1238,11 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
             />
           )}
 
-          {applyStep === "visa" && chooserPhase === "results" && serviceId ? (
-            <div className="flex justify-end">
-              <ClientButton
-                type="button"
-                brand="cta"
-                className="w-full justify-center rounded-xl font-semibold sm:w-auto"
-                onClick={() => setApplyStep(partyEnabled ? "travellers" : "email")}
-              >
-                {t("start.continue")}
-              </ClientButton>
-            </div>
-          ) : null}
-
-          {applyStep === "travellers" && speedForSubmit === "fast_track" && fastTrackPartySum ? (
+          {applyStep === "travellers" && speedForSubmit === "fast_track" && fastTrackPartyTemplate && fastTrackPartyAmounts ? (
             <p className="text-foreground text-sm">
               {t("extras.speed.fast.title")}
               {" · "}
-              <bdi>{fastTrackPartySum}</bdi>
+              <MessageWithAmounts template={fastTrackPartyTemplate} amounts={fastTrackPartyAmounts} />
             </p>
           ) : null}
 
@@ -1211,9 +1331,13 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                     {shortlist.length === 1 ? (
                       <div className="space-y-1.5">
                         <p className="border-secondary/30 bg-card text-foreground rounded-xl border-2 px-3 py-3 text-sm font-semibold">
-                          {shortlist[0].name}
+                          {customerFacingServiceName(shortlist[0].name, locale, t, {
+                            durationDays: shortlist[0].durationDays,
+                            entries: shortlist[0].entries,
+                            travelerKind: shortlist[0].travelerKind,
+                          })}
                           {(() => {
-                            const price = formatPriceForDisplay(shortlist[0], displayCurrency);
+                            const price = formatPriceForDisplay(shortlist[0], displayCurrency, locale);
                             return price ? ` — ${price.text}` : "";
                           })()}
                         </p>
@@ -1242,10 +1366,14 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                         >
                           <option value="">{t("start.party.chooseVisaOption")}</option>
                           {shortlist.map((s) => {
-                            const price = formatPriceForDisplay(s, displayCurrency);
+                            const price = formatPriceForDisplay(s, displayCurrency, locale);
                             return (
                               <option key={s.id} value={s.id}>
-                                {s.name}
+                                {customerFacingServiceName(s.name, locale, t, {
+                                  durationDays: s.durationDays,
+                                  entries: s.entries,
+                                  travelerKind: s.travelerKind,
+                                })}
                                 {price ? ` — ${price.text}` : ""}
                               </option>
                             );
@@ -1268,15 +1396,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
             </div>
           ) : null}
 
-          {applyStep === "travellers" && partyEnabled ? (
-            <div className="flex justify-end">
-              <ClientButton type="button" brand="cta" onClick={() => setApplyStep("email")}>
-                {t("start.continue")}
-              </ClientButton>
-            </div>
-          ) : null}
-
-          {applyStep === "email" && serviceId ? (
+          {applyStep === "email" && serviceId && !editingApplicationId ? (
             <>
               <p className="text-muted-foreground text-xs leading-relaxed">
                 {t("start.priceIncludesNote")}
@@ -1304,11 +1424,11 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
         </section>
       ) : null}
 
-      {serviceId && (totalText || speedForSubmit) ? (
+      {!editingApplicationId && serviceId && (totalText || speedForSubmit) ? (
         <div className="border-secondary/20 bg-secondary/5 space-y-2 rounded-2xl border-2 px-5 py-4">
           <ProcessingSpeedLine speed={speedForSubmit} />
           {totalText ? (
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 lg:hidden">
               <p className="text-foreground text-sm font-semibold">{t("start.checkoutTotal")}</p>
               <p className="font-heading text-foreground text-xl font-bold tabular-nums">
                 <bdi>{totalText}</bdi>
@@ -1317,8 +1437,48 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
           ) : null}
         </div>
       ) : null}
+      {!editingApplicationId && serviceId && (showListContinue || showTravellerContinue || showEmailContinue) ? (
+        <div className={APPLY_PRIMARY_CTA_ROW_CLASS}>
+          {applyStep !== "visa" ? (
+            <ClientButton
+              type="button"
+              brand="white"
+              className={APPLY_STEP_PREVIOUS_CLASS}
+              onClick={() => setApplyStep(applyStep === "email" && partyEnabled ? "travellers" : "visa")}
+            >
+              {t("start.previousButton")}
+            </ClientButton>
+          ) : null}
+          {showEmailContinue ? (
+            <ClientButton
+              type="submit"
+              brand="cta"
+              disabled={submitting || loadingList}
+              className={APPLY_PRIMARY_CTA_CLASS}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="me-2 size-4 animate-spin" aria-hidden />
+                  {t("start.loading")}
+                </>
+              ) : (
+                t("start.continueWithVisa")
+              )}
+            </ClientButton>
+          ) : (
+            <ClientButton
+              type="button"
+              brand="cta"
+              className={APPLY_PRIMARY_CTA_CLASS}
+              onClick={() => setApplyStep(showListContinue && partyEnabled ? "travellers" : "email")}
+            >
+              {t("start.continue")}
+            </ClientButton>
+          )}
         </div>
-        {serviceId && primaryService ? <div className="order-1 lg:order-2"><SelectedVisaSummary service={primaryService} answers={answers} travelerCount={1 + additionalTravelers.length} totalText={totalText} price={formatPriceForDisplay(primaryService, displayCurrency)} badges={badges} /></div> : null}
+      ) : null}
+        </div>
+        {serviceId && primaryService ? <div className="lg:order-2"><SelectedVisaSummary service={primaryService} answers={answers} travelerCount={savedQuote?.travellerCount ?? 1 + additionalTravelers.length} totalText={totalText} price={formatPriceForDisplay(primaryService, displayCurrency, locale)} badges={badges} /></div> : null}
       </div>
 
       <div className="flex flex-col-reverse items-stretch gap-3 pt-1 sm:flex-row sm:items-center sm:justify-end">
@@ -1330,23 +1490,6 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
             className="w-full justify-center rounded-xl font-semibold sm:w-auto"
           >
             {t("start.previousButton")}
-          </ClientButton>
-        ) : null}
-        {applyStep === "email" && serviceId ? (
-          <ClientButton
-            type="submit"
-            brand="cta"
-            disabled={submitting || loadingList}
-            className="w-full justify-center rounded-xl font-semibold sm:w-auto"
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="me-2 size-4 animate-spin" aria-hidden />
-                {t("start.loading")}
-              </>
-            ) : (
-              t("start.continueWithVisa")
-            )}
           </ClientButton>
         ) : null}
         {/* <ClientNavLink href="/portal" className="text-muted-foreground hover:text-foreground text-sm pb-1">

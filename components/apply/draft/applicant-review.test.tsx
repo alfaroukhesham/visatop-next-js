@@ -2,6 +2,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
@@ -65,13 +66,19 @@ describe("ApplicantReview OCR highlight", () => {
     expect(container.querySelector("dl")).toHaveAttribute("data-clarity-mask", "true");
   });
 
-  it("highlights empty OCR-missing fields and describes them", () => {
+  it("highlights empty OCR-missing fields after blur, not on first open", async () => {
+    const user = userEvent.setup();
     renderReview(["dateOfBirth", "passportExpiryDate"]);
-    expect(screen.getByText(/Please fill these in/i)).toBeInTheDocument();
     const [dob, expiry] = screen.getAllByPlaceholderText("DD-MM-YYYY");
+    expect(screen.queryByText(/Please fill these in/i)).not.toBeInTheDocument();
+    expect(dob).not.toHaveAttribute("aria-invalid", "true");
+    expect(expiry).not.toHaveAttribute("aria-invalid", "true");
+    await user.click(dob);
+    await user.tab();
+    expect(screen.getByText(/Please fill these in/i)).toBeInTheDocument();
     expect(dob).toHaveAttribute("aria-invalid", "true");
-    expect(expiry).toHaveAttribute("aria-invalid", "true");
     expect(dob).toHaveAttribute("aria-describedby", "ocr-review-hint");
+    expect(expiry).not.toHaveAttribute("aria-invalid", "true");
     expect(screen.getByPlaceholderText("e.g. John Smith")).not.toHaveAttribute("aria-invalid", "true");
   });
 
@@ -106,7 +113,8 @@ describe("ApplicantReview OCR highlight", () => {
     expect(screen.getByDisplayValue("South African")).toBeInTheDocument();
   });
 
-  it("highlights reader-filled fields from persisted provenance after reload", () => {
+  it("highlights reader-filled fields from persisted provenance after the field is blurred", async () => {
+    const user = userEvent.setup();
     render(
       <CustomerI18nProvider locale="en" messages={en} fallback={en}>
         <ApplicantReview
@@ -134,7 +142,11 @@ describe("ApplicantReview OCR highlight", () => {
         />
       </CustomerI18nProvider>,
     );
+    const name = screen.getByPlaceholderText("e.g. John Smith");
+    expect(name).not.toHaveAttribute("aria-invalid", "true");
+    await user.click(name);
+    await user.tab();
     expect(screen.getByText(/Please fill these in/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("e.g. John Smith")).toHaveAttribute("aria-invalid", "true");
+    expect(name).toHaveAttribute("aria-invalid", "true");
   });
 });

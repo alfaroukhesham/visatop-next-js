@@ -60,6 +60,9 @@
     "emailHelper": "Za mu aiko sabuntawa game da nema da rasit ɗinku zuwa wannan adireshin.",
     "checkoutTotal": "Jimlar biya",
     "editLocked": "Don canza visa ko matafiya, fara sabuwar aikace-aikace.",
+    "editSummaryTitle": "Tafiyarku",
+    "backToApplication": "Koma zuwa aikace-aikacenku",
+    "startNewApplication": "Fara sabuwar aikace-aikace",
     "previousButton": "Baya",
     "continueWithVisa": "Ci gaba da wannan visa",
     "loading": "Ana lodawa…",
@@ -162,6 +165,7 @@
     "next": "Gaba",
     "saving": "Ana adanawa…",
     "continueToPayment": "Ci gaba zuwa biya",
+    "readyToContinue": "A shirye don ci gaba",
     "needsAttentionCheckout": "Ana buƙatar kulawa kafin biya",
     "uploadRemainingDocs": "Loda sauran takardun",
     "completeRequiredDetails": "Kammala cikakkun bayanan da ake buƙata",
@@ -257,9 +261,9 @@
     "captureTip3": "Ka guje wa haske, inuwa, da yanke gefuna.",
     "privacyNote": "Hotonku yana tafiya a ɓoye kuma ana amfani da shi kawai don wannan aikace-aikacen — ba don talla ba.",
     "examplePassportAlt": "Misalin shafin bayanan fasfo na karya don jagorar daukar hoto. Ba takardar tafiya ta gaskiya ba ce.",
-    "photoTip1": "Plain background.",
-    "photoTip2": "No glasses.",
-    "photoTip3": "Face centred in the oval."
+    "photoTip1": "Fage mai sauƙi.",
+    "photoTip2": "Babu gilashi.",
+    "photoTip3": "Fuska a tsakiyar zobe."
   },
   "payment": {
     "pageTitle": "Biya | Visatop",
@@ -762,6 +766,7 @@
       "updated": "An sabunta jimla: {total}",
       "visa": "Biza",
       "notAdded": "Ba a ƙara ba",
+      "added": "An ƙara",
       "total": "Jimla"
     },
     "error": {

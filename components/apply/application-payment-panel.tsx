@@ -9,7 +9,6 @@ import { DraftPaymentSection } from "@/components/apply/draft/draft-payment-sect
 import { useApplicationDraft } from "@/components/apply/draft/use-application-draft";
 import { useCheckoutQuoteOptional } from "@/components/apply/checkout-quote-provider";
 import { useRefreshQuoteWhenCheckoutEnds } from "@/components/apply/use-refresh-quote-when-checkout-ends";
-import { ClientButton } from "@/components/client/client-button";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { applyExtrasHref, applyPreviousHref, type TApplyWizardMember } from "@/lib/apply/apply-wizard";
 import { insuranceStepOffered } from "@/lib/checkout-extras/party-insurance";
@@ -340,18 +339,8 @@ export const ApplicationPaymentPanel: FC<IApplicationPaymentPanelProps> = ({ app
         confirming={confirming}
         sessionLoading={sessionLoading}
         showPaddleRetry={app.paymentStatus === "checkout_created" && showPaddleRetry}
+        onPrevious={() => router.push(documentsPath)}
       />
-
-      <div className="flex flex-wrap items-center gap-3">
-        <ClientButton
-          type="button"
-          variant="outline"
-          brand="white"
-          onClick={() => router.push(documentsPath)}
-        >
-          {t("payment.previous")}
-        </ClientButton>
-      </div>
 
       <p className="text-muted-foreground text-center text-xs">
         <Link href="/" className="text-link inline-flex min-h-11 items-center hover:underline">

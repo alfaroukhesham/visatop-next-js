@@ -5,6 +5,8 @@ import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
 import { StartApplicationForm } from "@/components/apply/start-application-form";
 import { ClientSurface } from "@/components/client/client-surface";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
+import { listCheckoutExtras } from "@/lib/checkout-extras/checkout-extra-admin";
+import { insuranceCatalogOffered } from "@/lib/checkout-extras/party-insurance";
 import { listPublicNationalities } from "@/lib/catalog/queries";
 import { withSystemDbActor } from "@/lib/db/actor-context";
 import { CUSTOMER_LOCALE_COOKIE, parseCustomerLocale } from "@/lib/i18n/customer-locale";
@@ -37,9 +39,18 @@ const ApplyStartPage = async ({ searchParams }: IApplyStartPageProps) => {
     redirect("/");
   }
 
-  const nationalities = await withSystemDbActor((tx) => listPublicNationalities(tx));
-  const nationalityName = nationalityDisplayName(initialNationalityCode, nationalities);
-  const includeExtras = sp.extras === "1" || (Array.isArray(sp.extras) && sp.extras.includes("1"));
+  const { nationalities, catalogOffersExtras } = await withSystemDbActor(async (tx) => {
+    const [nationalities, extras] = await Promise.all([
+      listPublicNationalities(tx),
+      listCheckoutExtras(tx),
+    ]);
+    return { nationalities, catalogOffersExtras: insuranceCatalogOffered(extras) };
+  });
+  const cookieStore = await cookies();
+  const locale = parseCustomerLocale(cookieStore.get(CUSTOMER_LOCALE_COOKIE)?.value);
+  const nationalityName = nationalityDisplayName(initialNationalityCode, nationalities, locale);
+  const extrasQuery = sp.extras === "1" || (Array.isArray(sp.extras) && sp.extras.includes("1"));
+  const includeExtras = catalogOffersExtras || extrasQuery;
 
   return (
     <div className="max-w-6xl pb-8">

@@ -60,6 +60,9 @@
     "emailHelper": "Dito namin ipapadala ang mga update sa application at resibo mo.",
     "checkoutTotal": "Kabuuan sa checkout",
     "editLocked": "Para baguhin ang visa o ang mga biyahero, magsimula ng bagong aplikasyon.",
+    "editSummaryTitle": "Ang iyong biyahe",
+    "backToApplication": "Bumalik sa iyong aplikasyon",
+    "startNewApplication": "Magsimula ng bagong aplikasyon",
     "previousButton": "Nakaraan",
     "continueWithVisa": "Ituloy gamit ang visa na ito",
     "loading": "Naglo-load…",
@@ -162,6 +165,7 @@
     "next": "Susunod",
     "saving": "Sine-save…",
     "continueToPayment": "Ituloy sa payment",
+    "readyToContinue": "Handa nang magpatuloy",
     "needsAttentionCheckout": "Kailangan ng pansin bago mag-checkout",
     "uploadRemainingDocs": "I-upload ang natitirang dokumento",
     "completeRequiredDetails": "Kumpletuhin ang required na detalye",
@@ -257,9 +261,9 @@
     "captureTip3": "Iwasan ang silaw, anino, at putol na gilid.",
     "privacyNote": "Naka-encrypt ang litrato habang ipinapadala at ginagamit lang para sa application na ito — hindi para sa marketing.",
     "examplePassportAlt": "Halimbawa ng pekeng passport bio page para sa gabay sa pagkuha ng litrato. Hindi ito tunay na travel document.",
-    "photoTip1": "Plain background.",
-    "photoTip2": "No glasses.",
-    "photoTip3": "Face centred in the oval."
+    "photoTip1": "Payak na background.",
+    "photoTip2": "Walang salamin.",
+    "photoTip3": "Nakagitna ang mukha sa oval."
   },
   "payment": {
     "pageTitle": "Payment | Visatop",
@@ -762,6 +766,7 @@
       "updated": "Na-update ang kabuuan: {total}",
       "visa": "Bisa",
       "notAdded": "Hindi idinagdag",
+      "added": "Idinagdag",
       "total": "Kabuuan"
     },
     "error": {

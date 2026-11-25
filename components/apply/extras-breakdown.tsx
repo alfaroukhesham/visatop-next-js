@@ -1,6 +1,7 @@
 import { Loader2 } from "lucide-react";
 import type { FC, ReactNode } from "react";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
+import { customerFacingServiceName } from "@/lib/apply/customer-service-name";
 import {
   extraByKey,
   formatMinorAmount,
@@ -22,6 +23,8 @@ interface IExtrasBreakdownProps {
   /** Pay puts "Change extras" on the insurance row. */
   insuranceAction?: ReactNode;
   announcement?: string | null;
+  /** Only the Extras step panel announces the total. Cards pass false. */
+  live?: boolean;
 }
 
 const uniqueNames = (names: readonly string[]): string[] => {
@@ -45,6 +48,7 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
   updatingMode = "reserved",
   insuranceAction = null,
   announcement = null,
+  live = true,
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
@@ -73,7 +77,7 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
           {names.map((name) => (
             <span key={name}>
               {" · "}
-              <bdi>{name}</bdi>
+              <bdi>{customerFacingServiceName(name, locale, t)}</bdi>
             </span>
           ))}
           <span className="text-muted-foreground"> × {count}</span>
@@ -133,13 +137,15 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
           fastTrackPromise={fastPromise}
         />
       ) : null}
-      <p
-        className="absolute size-px overflow-hidden whitespace-nowrap border-0 p-0 [clip:rect(0,0,0,0)]"
-        role="status"
-        aria-live="polite"
-      >
-        {announcement ?? ""}
-      </p>
+      {live ? (
+        <p
+          className="absolute size-px overflow-hidden whitespace-nowrap border-0 p-0 [clip:rect(0,0,0,0)]"
+          role="status"
+          aria-live="polite"
+        >
+          {announcement ?? ""}
+        </p>
+      ) : null}
     </div>
   );
 };

@@ -154,8 +154,8 @@ describe("Extras step", () => {
     ).toMatch(/AED\s*79\.00 per traveller ×\s*2\s*=\s*AED\s*158\.00/);
     expect(screen.getByText("Not added")).toBeInTheDocument();
     expect(screen.getByText("30-day tourist visa").closest("bdi")).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: "Continue to payment" })).toHaveLength(1);
-    expect(screen.getAllByRole("button", { name: "Continue" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Continue to payment" })).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: /^Continue$/ })).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Continue without extras" })).toHaveLength(2);
     expect(screen.getByTestId("extras-inline-cta")).toHaveClass("hidden");
     expect(screen.getByTestId("extras-sticky-bar")).toHaveClass("min-[1025px]:hidden");
@@ -171,6 +171,36 @@ describe("Extras step", () => {
     const terms = screen.getByRole("link", { name: /read the policy terms/i });
     expect(terms).toHaveAttribute("href", "https://example.com/terms");
     expect(terms.closest("label")).toBeNull();
+  });
+
+  it("hides the policy terms link when the URL is empty or a placeholder", () => {
+    installMatchMedia(1280);
+    const cases: Array<{ termsUrl: string; href: string | null }> = [
+      { termsUrl: "", href: null },
+      { termsUrl: "   ", href: null },
+      { termsUrl: "/terms-placeholder", href: null },
+      { termsUrl: "https://example.com/terms-placeholder", href: null },
+      { termsUrl: "/terms", href: null },
+      { termsUrl: "//evil.example/terms", href: null },
+      { termsUrl: "javascript:alert(1)", href: null },
+      { termsUrl: " JavaScript:alert(1)", href: null },
+      { termsUrl: "data:text/html,hi", href: null },
+      { termsUrl: "HTTPS://example.com/policy", href: "HTTPS://example.com/policy" },
+      { termsUrl: "  https://example.com/policy  ", href: "https://example.com/policy" },
+      { termsUrl: "http://example.com/policy", href: "http://example.com/policy" },
+    ];
+    for (const { termsUrl, href } of cases) {
+      renderPanel(1, false, termsUrl);
+      const terms = screen.queryByRole("link", { name: /read the policy terms/i });
+      if (href) {
+        expect(terms).toHaveAttribute("href", href);
+      } else {
+        expect(terms).not.toBeInTheDocument();
+      }
+      expect(screen.getByRole("checkbox", { name: /add travel insurance/i })).toBeInTheDocument();
+      expect(screen.getByText("Medical cover for the trip.")).toBeInTheDocument();
+      cleanup();
+    }
   });
 
   it("prices one traveller without a times-n line", () => {

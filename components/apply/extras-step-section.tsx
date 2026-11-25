@@ -67,7 +67,8 @@ export const ExtrasAside: FC<IExtrasAsideProps> = ({ visaNames }) => {
       visaNames={visaNames}
       updating={Boolean(quote?.updating)}
       showSpeed
-      announcement={quote?.announcement ?? null}
+      announcement={null}
+      live={false}
     />
   );
 };

@@ -28,12 +28,30 @@ const regionNameFromIntl = (code: string): string | null => {
   }
 };
 
+const regionNameForLocale = (code: string, locale: string): string | null => {
+  const iso = FLAG_ISO2_ALIASES[code] ?? code;
+  if (!ISO2_RE.test(iso)) return null;
+  try {
+    const name = new Intl.DisplayNames([locale], { type: "region" }).of(iso);
+    if (!name || name.toUpperCase() === iso) return null;
+    return name;
+  } catch {
+    return null;
+  }
+};
+
 export const nationalityDisplayName = (
   code: string,
   catalog: Array<{ code: string; name: string }>,
+  locale = "en",
 ): string => {
   const upper = code.trim().toUpperCase();
   const fromCatalog = catalog.find((n) => n.code.toUpperCase() === upper)?.name?.trim();
+  const language = locale.trim().toLowerCase();
+  if (language && !language.startsWith("en")) {
+    const localized = regionNameForLocale(upper, locale);
+    if (localized) return localized;
+  }
   if (fromCatalog) return fromCatalog;
   return regionNameFromIntl(upper) ?? UNKNOWN_NATIONALITY_LABEL;
 };

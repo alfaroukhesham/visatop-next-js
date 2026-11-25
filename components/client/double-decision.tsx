@@ -4,6 +4,11 @@ import Link from "next/link";
 import type { FC, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  APPLY_PRIMARY_CTA_CLASS,
+  APPLY_PRIMARY_CTA_ROW_CLASS,
+  APPLY_STEP_PREVIOUS_CLASS,
+} from "@/components/apply/apply-primary-cta";
 
 const box =
   "box-border inline-flex h-12 w-full items-center justify-center rounded-[5px] border px-4 text-base font-semibold leading-none no-underline shadow-none transition-colors duration-200 ease-linear focus-visible:!outline-2 focus-visible:!outline-offset-0 disabled:pointer-events-none disabled:opacity-50";
@@ -15,7 +20,7 @@ const dismissBox = cn(
 
 const confirmBox = cn(
   box,
-  "border-primary bg-primary text-primary-foreground uppercase tracking-wide hover:bg-[#FFE19F]",
+  "border-primary bg-primary text-primary-foreground normal-case tracking-normal hover:bg-[#FFE19F]",
 );
 
 interface IDoubleDecisionProps {
@@ -52,20 +57,20 @@ export const DoubleDecision: FC<IDoubleDecisionProps> = ({
   return (
     <div
       data-slot="double-decision"
-      className={cn("grid gap-3", hasConfirm ? "grid-cols-2" : "grid-cols-1", className)}
+      className={cn(APPLY_PRIMARY_CTA_ROW_CLASS, className)}
     >
-      <button type="button" className={dismissBox} onClick={onDismiss}>
+      <button type="button" className={cn(dismissBox, APPLY_STEP_PREVIOUS_CLASS)} onClick={onDismiss}>
         {dismissLabel}
       </button>
       {hasConfirm && confirmHref ? (
-        <Link href={confirmHref} className={confirmBox} aria-disabled={confirmDisabled}>
+        <Link href={confirmHref} className={cn(confirmBox, APPLY_PRIMARY_CTA_CLASS)} aria-disabled={confirmDisabled}>
           {confirmInner}
         </Link>
       ) : null}
       {hasConfirm && !confirmHref && onConfirm ? (
         <button
           type="button"
-          className={confirmBox}
+          className={cn(confirmBox, APPLY_PRIMARY_CTA_CLASS)}
           disabled={confirmDisabled || confirmPending}
           onClick={onConfirm}
         >

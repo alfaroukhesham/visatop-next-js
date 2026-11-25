@@ -60,6 +60,9 @@
     "emailHelper": "На этот адрес мы отправим обновления по заявке и квитанцию об оплате.",
     "checkoutTotal": "Сумма к оплате",
     "editLocked": "Чтобы изменить визу или путешественников, начните новую заявку.",
+    "editSummaryTitle": "Ваша поездка",
+    "backToApplication": "Вернуться к заявке",
+    "startNewApplication": "Начать новую заявку",
     "previousButton": "Назад",
     "continueWithVisa": "Продолжить с этой визой",
     "loading": "Загрузка…",
@@ -162,6 +165,7 @@
     "next": "Далее",
     "saving": "Сохранение…",
     "continueToPayment": "Перейти к оплате",
+    "readyToContinue": "Можно продолжить",
     "needsAttentionCheckout": "Требуется внимание перед оформлением",
     "uploadRemainingDocs": "Загрузите оставшиеся документы",
     "completeRequiredDetails": "Заполните обязательные данные",
@@ -257,9 +261,9 @@
     "captureTip3": "Избегайте бликов, теней и обрезанных краёв.",
     "privacyNote": "Фото шифруется при передаче и используется только для этой заявки — не для маркетинга.",
     "examplePassportAlt": "Пример вымышленной страницы паспорта для съёмки. Это не настоящий проездной документ.",
-    "photoTip1": "Plain background.",
-    "photoTip2": "No glasses.",
-    "photoTip3": "Face centred in the oval."
+    "photoTip1": "Однотонный фон.",
+    "photoTip2": "Без очков.",
+    "photoTip3": "Лицо по центру овала."
   },
   "payment": {
     "pageTitle": "Оплата | Visatop",
@@ -762,6 +766,7 @@
       "updated": "Итого обновлено: {total}",
       "visa": "Виза",
       "notAdded": "Не добавлено",
+      "added": "Добавлено",
       "total": "Итого"
     },
     "error": {

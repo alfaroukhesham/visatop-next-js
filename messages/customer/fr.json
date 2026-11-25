@@ -60,6 +60,9 @@
     "emailHelper": "Nous enverrons les mises à jour de votre demande et votre reçu à cette adresse.",
     "checkoutTotal": "Total au paiement",
     "editLocked": "Pour modifier le visa ou les voyageurs, commencez une nouvelle demande.",
+    "editSummaryTitle": "Votre voyage",
+    "backToApplication": "Retour à votre demande",
+    "startNewApplication": "Commencer une nouvelle demande",
     "previousButton": "Précédent",
     "continueWithVisa": "Continuer avec ce visa",
     "loading": "Chargement…",
@@ -162,6 +165,7 @@
     "next": "Suivant",
     "saving": "Enregistrement…",
     "continueToPayment": "Continuer vers le paiement",
+    "readyToContinue": "Prêt à continuer",
     "needsAttentionCheckout": "À compléter avant le paiement",
     "uploadRemainingDocs": "Téléverser les documents restants",
     "completeRequiredDetails": "Compléter les informations obligatoires",
@@ -257,9 +261,9 @@
     "captureTip3": "Évitez les reflets, les ombres et les bords coupés.",
     "privacyNote": "Votre photo est chiffrée en transit et utilisée uniquement pour traiter cette demande — jamais pour le marketing.",
     "examplePassportAlt": "Exemple d'une page d'identité de passeport fictive pour guider la photo. Ce n'est pas un vrai document de voyage.",
-    "photoTip1": "Plain background.",
-    "photoTip2": "No glasses.",
-    "photoTip3": "Face centred in the oval."
+    "photoTip1": "Fond uni.",
+    "photoTip2": "Sans lunettes.",
+    "photoTip3": "Visage centré dans l'ovale."
   },
   "payment": {
     "pageTitle": "Paiement | Visatop",
@@ -762,6 +766,7 @@
       "updated": "Total mis à jour : {total}",
       "visa": "Visa",
       "notAdded": "Non ajoutée",
+      "added": "Ajoutée",
       "total": "Total"
     },
     "error": {

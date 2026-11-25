@@ -385,3 +385,16 @@ export const extraPriceSignature = (preview: TClientQuotePreview): string =>
 
 export const quoteUsesCodeFormat = (preview: TClientQuotePreview): boolean =>
   extrasSectionVisible(preview) || preview.extraLines.length > 0;
+
+/** Customer link only. Empty and placeholder catalog values stay stored for a later real page. */
+export const visibleInsuranceTermsUrl = (raw: string | null | undefined): string | null => {
+  const url = raw?.trim() ?? "";
+  if (!url || url.toLowerCase().includes("placeholder")) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+  } catch {
+    return null;
+  }
+  return url;
+};

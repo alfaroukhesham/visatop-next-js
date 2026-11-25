@@ -60,6 +60,9 @@
     "emailHelper": "हम आवेदन अपडेट और आपकी रसीद इस पते पर भेजेंगे।",
     "checkoutTotal": "चेकआउट कुल",
     "editLocked": "वीज़ा या यात्रियों को बदलने के लिए नया आवेदन शुरू करें।",
+    "editSummaryTitle": "आपकी यात्रा",
+    "backToApplication": "अपने आवेदन पर वापस जाएँ",
+    "startNewApplication": "नया आवेदन शुरू करें",
     "previousButton": "पिछला",
     "continueWithVisa": "इस वीज़ा के साथ जारी रखें",
     "loading": "लोड हो रहा है…",
@@ -162,6 +165,7 @@
     "next": "आगे",
     "saving": "सहेजा जा रहा है…",
     "continueToPayment": "भुगतान पर जारी रखें",
+    "readyToContinue": "जारी रखने के लिए तैयार",
     "needsAttentionCheckout": "चेकआउट से पहले ध्यान देने योग्य",
     "uploadRemainingDocs": "शेष दस्तावेज़ अपलोड करें",
     "completeRequiredDetails": "आवश्यक विवरण पूरे करें",
@@ -257,9 +261,9 @@
     "captureTip3": "चमक, परछाई और कटे किनारे से बचें।",
     "privacyNote": "आपकी फोटो रास्ते में एन्क्रिप्ट रहती है और केवल इस आवेदन के लिए उपयोग होती है — मार्केटिंग के लिए नहीं।",
     "examplePassportAlt": "कैमरा मार्गदर्शन के लिए नकली पासपोर्ट बायो पेज का उदाहरण। यह वास्तविक यात्रा दस्तावेज़ नहीं है।",
-    "photoTip1": "Plain background.",
-    "photoTip2": "No glasses.",
-    "photoTip3": "Face centred in the oval."
+    "photoTip1": "सादी पृष्ठभूमि.",
+    "photoTip2": "बिना चश्मे के.",
+    "photoTip3": "चेहरा अंडाकार के बीच में."
   },
   "payment": {
     "pageTitle": "भुगतान | Visatop",
@@ -762,6 +766,7 @@
       "updated": "कुल राशि अपडेट हुई: {total}",
       "visa": "वीज़ा",
       "notAdded": "नहीं जोड़ा गया",
+      "added": "जोड़ा गया",
       "total": "कुल"
     },
     "error": {

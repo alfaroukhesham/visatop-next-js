@@ -68,3 +68,11 @@ export const insuranceOfferedForCurrency = (
 export const insuranceStepOffered = (
   preview: { availableExtras: readonly { key: string }[] } | null | undefined,
 ): boolean => Boolean(preview?.availableExtras.some((extra) => extra.key === "travel_insurance"));
+
+/** Trip rail, before a quote exists: Extras is offered when the catalog has a priced, enabled row. */
+export const insuranceCatalogOffered = (
+  catalog: readonly { key: string; enabled: boolean; prices: readonly unknown[] }[],
+): boolean => {
+  const insurance = catalog.find((extra) => extra.key === "travel_insurance");
+  return Boolean(insurance?.enabled && insurance.prices.length > 0);
+};

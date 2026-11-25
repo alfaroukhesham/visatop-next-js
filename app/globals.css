@@ -161,11 +161,11 @@
   --accent-foreground: #224d64;
   --border: #e7e7e7;
   --input: #e1e1e1;
-  --ring: #92c0d7;
-  --link: #ce8e00;
+  --ring: #224d64;
+  --link: #224d64;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --error: #ff6262;
+  --error: #c9190b;
   --success: #3e8635;
   --success-foreground: #ffffff;
   --radius: 5px;
@@ -429,9 +429,15 @@
   color: var(--foreground);
 }
 
-.theme-client :where(a, button, input, select, textarea, summary):focus-visible {
+.theme-client :where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 3px;
+}
+
+/* Fixed WP header. scrollIntoView and focus use this so targets clear the header. */
+html:has(.theme-client-wp-header) {
+  --wp-shell-header-height: 130px;
+  scroll-padding-top: var(--wp-shell-header-height);
 }
 
 html:has([data-apply-sticky-cta]) {
@@ -582,6 +588,9 @@ html:has([data-travel-date-step]) a[data-whatsapp-fab] {
 }
 
 @media (max-width: 414px) {
+  html:has(.theme-client-wp-header) {
+    --wp-shell-header-height: 118px;
+  }
   .theme-client-wp-header {
     --wp-shell-header-height: 118px;
   }

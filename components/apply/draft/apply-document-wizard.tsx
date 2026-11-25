@@ -4,6 +4,11 @@ import { useEffect, useMemo, type FC } from "react";
 import { ShieldCheck } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ClientButton } from "@/components/client/client-button";
+import {
+  APPLY_PRIMARY_CTA_CLASS,
+  APPLY_PRIMARY_CTA_ROW_CLASS,
+  APPLY_STEP_PREVIOUS_CLASS,
+} from "@/components/apply/apply-primary-cta";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { tagClarityApplyScreen } from "@/lib/analytics/clarity-apply-screen";
@@ -35,12 +40,9 @@ import type { DocType, ExtractResponse, PublicDocument, TUploadSlotError } from 
 import type { TPhoneNationalityOption } from "./phone-country-field";
 import { ApplyOrderTotal } from "@/components/apply/apply-order-total";
 import {
-  APPLY_STICKY_CTA_MEDIA_QUERY,
   ApplyReadyContinue,
-  ApplyReadyPreviousButton,
   compactContinueAlwaysShort,
 } from "@/components/apply/apply-ready-continue";
-import { useNarrowViewport } from "@/lib/client/use-narrow-viewport";
 import { ReadyDocumentAccordion, type TReadyDocumentIcon } from "./ready-document-accordion";
 
 type TMemberView = {
@@ -98,7 +100,6 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
   const quote = useCheckoutQuoteOptional();
   const extrasOn = insuranceStepOffered(quote?.preview ?? null);
   const searchParams = useSearchParams();
-  const compactCta = useNarrowViewport(APPLY_STICKY_CTA_MEDIA_QUERY);
   const ordered = useMemo(
     () => members.slice().sort((a, b) => a.travelerIndex - b.travelerIndex),
     [members],
@@ -226,9 +227,6 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
           currency={primaryApp.catalogCurrency}
           serviceIds={ordered.map((member) => member.serviceId)}
         />
-        <ApplyReadyPreviousButton inline hidden={compactCta} onClick={() => router.push(tripHref)}>
-          {t("common.previous")}
-        </ApplyReadyPreviousButton>
         <ApplyReadyContinue
           previousLabel={t("common.previous")}
           compactShortLabel={t("common.continue")}
@@ -282,25 +280,36 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
               view.extracting,
               t,
             )}
+            ocrNoticeTone={view.extracting ? "status" : "alert"}
           />
-          <ClientButton
-            brand="cta"
-            className="h-12 w-full"
-            type="button"
-            disabled={!passportDoc || view.uploading === "passport_copy"}
-            onClick={() => void confirmAndGo({ screen: "passport", travellerId })}
-          >
-            {t("common.continue")}
-          </ClientButton>
-          <ClientButton
-            variant="outline"
-            brand="white"
-            className="h-12 w-full"
-            type="button"
-            onClick={() => router.push(applyPreviousHref(applicationId, wizardMembers, resolved))}
-          >
-            {t("common.previous")}
-          </ClientButton>
+          <div className="lg:hidden">
+            <ApplyOrderTotal
+              applicationId={applicationId}
+              nationalityCode={view.app.nationalityCode}
+              currency={view.app.catalogCurrency}
+              serviceIds={ordered.map((member) => member.serviceId)}
+            />
+          </div>
+          <div className={APPLY_PRIMARY_CTA_ROW_CLASS}>
+            <ClientButton
+              variant="outline"
+              brand="white"
+              className={APPLY_STEP_PREVIOUS_CLASS}
+              type="button"
+              onClick={() => router.push(applyPreviousHref(applicationId, wizardMembers, resolved))}
+            >
+              {t("common.previous")}
+            </ClientButton>
+            <ClientButton
+              brand="cta"
+              className={APPLY_PRIMARY_CTA_CLASS}
+              type="button"
+              disabled={!passportDoc || view.uploading === "passport_copy"}
+              onClick={() => void confirmAndGo({ screen: "passport", travellerId })}
+            >
+              {t("common.continue")}
+            </ClientButton>
+          </div>
         </>
       ) : null}
       {resolved.screen === "other" ? (
@@ -331,30 +340,40 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
             );
           })}
           <p className="text-muted-foreground text-center text-xs">{t("wizard.addAfterPayment")}</p>
-          <ClientButton
-            brand="cta"
-            className="h-12 w-full"
-            type="button"
-            disabled={view.uploading !== null}
-            onClick={() => {
-              const eventName = otherDocsUploaded
-                ? APPLY_FUNNEL_EVENTS.otherDocsUploaded
-                : APPLY_FUNNEL_EVENTS.otherDocsSkipped;
-              trackEventOnce(eventName, { application_id: travellerId }, `${eventName}:${travellerId}`);
-              void confirmAndGo({ screen: "other", travellerId });
-            }}
-          >
-            {otherDocsUploaded ? t("common.continue") : t("wizard.skipForNow")}
-          </ClientButton>
-          <ClientButton
-            variant="outline"
-            brand="white"
-            className="h-12 w-full"
-            type="button"
-            onClick={() => router.push(applyPreviousHref(applicationId, wizardMembers, resolved))}
-          >
-            {t("common.previous")}
-          </ClientButton>
+          <div className="lg:hidden">
+            <ApplyOrderTotal
+              applicationId={applicationId}
+              nationalityCode={view.app.nationalityCode}
+              currency={view.app.catalogCurrency}
+              serviceIds={ordered.map((member) => member.serviceId)}
+            />
+          </div>
+          <div className={APPLY_PRIMARY_CTA_ROW_CLASS}>
+            <ClientButton
+              variant="outline"
+              brand="white"
+              className={APPLY_STEP_PREVIOUS_CLASS}
+              type="button"
+              onClick={() => router.push(applyPreviousHref(applicationId, wizardMembers, resolved))}
+            >
+              {t("common.previous")}
+            </ClientButton>
+            <ClientButton
+              brand="cta"
+              className={APPLY_PRIMARY_CTA_CLASS}
+              type="button"
+              disabled={view.uploading !== null}
+              onClick={() => {
+                const eventName = otherDocsUploaded
+                  ? APPLY_FUNNEL_EVENTS.otherDocsUploaded
+                  : APPLY_FUNNEL_EVENTS.otherDocsSkipped;
+                trackEventOnce(eventName, { application_id: travellerId }, `${eventName}:${travellerId}`);
+                void confirmAndGo({ screen: "other", travellerId });
+              }}
+            >
+              {otherDocsUploaded ? t("common.continue") : t("wizard.skipForNow")}
+            </ClientButton>
+          </div>
         </>
       ) : null}
       {resolved.screen === "details" ? (
@@ -403,7 +422,7 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
           waitForPassportExtract={waitForPassportExtract}
           locked={view.app.checkoutState === "pending" || view.app.paymentStatus === "paid"}
           onSaved={onSaved}
-          destination={isLast ? "payment" : "next"}
+          destination={isLast ? (extrasOn ? "extras" : "payment") : "next"}
           onFinished={() => void confirmAndGo({ screen: "details", travellerId })}
           onReplacePassport={() =>
             router.push(applyWizardHref(applicationId, { screen: "passport", travellerId }))
@@ -412,6 +431,16 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
             router.push(applyPreviousHref(applicationId, wizardMembers, resolved))
           }
           fieldMeta={view.app.applicantFieldMeta}
+          orderTotal={
+            <div className="lg:hidden">
+              <ApplyOrderTotal
+                applicationId={applicationId}
+                nationalityCode={view.app.nationalityCode}
+                currency={view.app.catalogCurrency}
+                serviceIds={ordered.map((member) => member.serviceId)}
+              />
+            </div>
+          }
         />
       ) : null}
     </section>

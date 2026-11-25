@@ -66,6 +66,7 @@ export const PayOrderSummary: FC<IPayOrderSummaryProps> = ({
             insuranceMode="when-added"
             insuranceAction={hasInsurance ? changeExtras : null}
             announcement={null}
+            live={false}
           />
           {offered && !hasInsurance ? (
             <div className="flex min-h-11 items-center justify-between gap-3 text-sm">
@@ -74,7 +75,23 @@ export const PayOrderSummary: FC<IPayOrderSummaryProps> = ({
             </div>
           ) : null}
         </div>
-        {offered ? <div className="hidden min-[1025px]:flex min-[1025px]:justify-end">{changeExtras}</div> : null}
+        {offered ? (
+          <div className="hidden items-start justify-between gap-3 text-sm min-[1025px]:flex">
+            <p className="text-foreground flex min-h-11 items-center">{t("extras.recap.insurance")}</p>
+            <div className="flex shrink-0 flex-col items-end">
+              <p
+                className={
+                  hasInsurance
+                    ? "text-foreground flex min-h-11 items-center font-medium"
+                    : "text-muted-foreground flex min-h-11 items-center"
+                }
+              >
+                {hasInsurance ? t("extras.recap.added") : t("extras.recap.notAdded")}
+              </p>
+              {changeExtras}
+            </div>
+          </div>
+        ) : null}
         <div className="space-y-2">
           <ProcessingSpeedLine speed={preview.processingSpeed} fastTrackPromise={fastPromise || null} />
           <p className="text-sm">
