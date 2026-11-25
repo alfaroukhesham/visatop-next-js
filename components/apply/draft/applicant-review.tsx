@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FC } from "react";
+import { useEffect, useState, type FC, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle } from "lucide-react";
 import { DoubleDecision } from "@/components/client/double-decision";
@@ -98,6 +98,7 @@ const buildReadinessLabel = (
   paymentReadiness: Readiness,
   t: (key: string) => string,
   passportUploaded: boolean,
+  destination: "payment" | "next" | "extras",
 ) => {
   if (paymentReadiness !== "ready") {
     return {
@@ -105,12 +106,14 @@ const buildReadinessLabel = (
       tone: "warn" as const,
     };
   }
+  const readyText =
+    destination === "payment" ? t("draft.continueToPayment") : t("draft.readyToContinue");
   if (APPLY_STEP3_VALIDATION_DISABLED) {
-    return { text: t("draft.continueToPayment"), tone: "neutral" as const };
+    return { text: readyText, tone: "neutral" as const };
   }
   switch (readiness) {
     case "ready":
-      return { text: t("draft.continueToPayment"), tone: "neutral" as const };
+      return { text: readyText, tone: "neutral" as const };
     case "blocked_validation":
       return { text: t("draft.needsAttentionCheckout"), tone: "warn" as const };
     case "blocked_missing_docs":
@@ -145,6 +148,8 @@ export interface IApplicantReviewProps {
   onReplacePassport?: () => void;
   onPrevious?: () => void;
   fieldMeta?: TApplicantFieldMeta | null;
+  /** Compact order total, rendered immediately before the step actions. */
+  orderTotal?: ReactNode;
 }
 
 export const ApplicantReview: FC<IApplicantReviewProps> = ({
@@ -170,6 +175,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
   onReplacePassport,
   onPrevious,
   fieldMeta = null,
+  orderTotal = null,
 }) => {
   const t = useCustomerT();
   const router = useRouter();
@@ -335,7 +341,13 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- persistPatch is recreated each render
   }, [dirty, locked, values, applicationId]);
 
-  const readinessLabel = buildReadinessLabel(readiness, paymentReadiness, t, passportUploaded);
+  const readinessLabel = buildReadinessLabel(
+    readiness,
+    paymentReadiness,
+    t,
+    passportUploaded,
+    destination,
+  );
   const showWarn = submitAttempted || blurredKeys.size > 0;
   const markBlurred = (key: string) => {
     setBlurredKeys((prev) => {
@@ -540,6 +552,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
       </dl>
 
       <div className="space-y-2 pt-2">
+        {orderTotal}
         <DoubleDecision
           dismissLabel={t("draft.previous")}
           onDismiss={() => (onPrevious ? onPrevious() : router.back())}

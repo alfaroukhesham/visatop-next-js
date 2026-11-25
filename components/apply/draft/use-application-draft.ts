@@ -11,7 +11,7 @@ import {
   resolveDocumentRequirements,
   type TDocumentSlot,
 } from "@/lib/apply/document-requirements";
-import { useCustomerT } from "@/components/client/customer-i18n-provider";
+import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
 import { nationalityDisplayName } from "@/lib/apply/display-names";
 import { oversizedUploadMessage } from "@/lib/apply/customer-upload-copy";
 import {
@@ -80,6 +80,7 @@ const emptyMemberState = (): TMemberState => ({
 
 export function useApplicationDraft(applicationId: string) {
   const t = useCustomerT();
+  const locale = useCustomerLocale();
   const tRef = useRef(t);
   useEffect(() => {
     tRef.current = t;
@@ -150,11 +151,12 @@ export function useApplicationDraft(applicationId: string) {
         nationalityName: nationalityDisplayName(
           memberApp.nationalityCode ?? "",
           nationalitiesRef.current,
+          locale,
         ),
         docsLoading: false,
       });
     },
-    [updateMemberState],
+    [locale, updateMemberState],
   );
 
   const load = useCallback(

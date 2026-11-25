@@ -10,11 +10,16 @@ import type { Readiness } from "@/lib/documents/validation-readiness";
 import { CheckoutErrorAlert } from "../checkout-error-alert";
 import { CheckoutTermsCheckbox } from "../checkout-terms-checkbox";
 import { PaddleCheckoutButton } from "../paddle-checkout-button";
+import {
+  APPLY_PRIMARY_CTA_ROW_CLASS,
+  APPLY_STEP_PREVIOUS_CLASS,
+} from "@/components/apply/apply-primary-cta";
 import { FincraInlineCheckout } from "../fincra-inline-checkout";
 import { ZiinaEmbeddedCheckout } from "../ziina-embedded-checkout";
 import { PaymentWhatsAppHelp } from "../payment-whatsapp-help";
 import type { TFincraInlineCheckoutData } from "@/lib/payments/fincra-inline";
 import { formatLocalCheckoutCurrencyName } from "@/lib/payments/local-checkout-config";
+import { cn } from "@/lib/utils";
 
 type CheckoutHandlers = {
   onZiinaEmbedded: (embeddedUrl: string) => void;
@@ -55,6 +60,7 @@ interface IDraftPaymentSectionProps {
   onTermsError: (message: string | null) => void;
   onPayingChange?: (paying: boolean) => void;
   onCheckoutStarted?: () => void;
+  onPrevious?: () => void;
 }
 
 export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
@@ -81,6 +87,7 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
   onTermsError,
   onPayingChange,
   onCheckoutStarted,
+  onPrevious,
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
@@ -102,6 +109,17 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
   const localCurrencyName = fincraLocalCheckout
     ? formatLocalCheckoutCurrencyName(app.checkoutOffer?.currency ?? "", locale)
     : "";
+  const previousButton = onPrevious ? (
+    <ClientButton
+      type="button"
+      variant="outline"
+      brand="white"
+      className={APPLY_STEP_PREVIOUS_CLASS}
+      onClick={onPrevious}
+    >
+      {t("payment.previous")}
+    </ClientButton>
+  ) : null;
   const payButton = (
     <div className="space-y-4">
       <CheckoutTermsCheckbox
@@ -117,6 +135,8 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
           {t("payment.payInLocalCurrencyHint", { currencyName: localCurrencyName })}
         </p>
       ) : null}
+      <div className={APPLY_PRIMARY_CTA_ROW_CLASS}>
+        {previousButton}
       <PaddleCheckoutButton
         applicationId={applicationId}
         termsAccepted={termsAccepted}
@@ -142,6 +162,7 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
         onCancel={checkout.onStartCheckoutTimer}
         onError={checkout.onError}
       />
+      </div>
       {fincraLocalCheckout ? <PaymentWhatsAppHelp /> : null}
     </div>
   );
@@ -230,6 +251,10 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
           </ClientButton>
         </div>
       )}
+
+      {onPrevious && !showUnpaidPay && !showPaddleRetry ? (
+        <div className={cn(APPLY_PRIMARY_CTA_ROW_CLASS, "sm:justify-start")}>{previousButton}</div>
+      ) : null}
 
       {app.paymentStatus === "paid" && (
         <div className="bg-success/10 border border-success/30 p-5 flex items-center gap-3">

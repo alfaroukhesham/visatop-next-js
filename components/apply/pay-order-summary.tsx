@@ -76,10 +76,16 @@ export const PayOrderSummary: FC<IPayOrderSummaryProps> = ({
           ) : null}
         </div>
         {offered ? (
-          <div className="hidden min-h-11 items-center justify-between gap-3 text-sm min-[1025px]:flex">
-            <p className="text-foreground">{t("extras.recap.insurance")}</p>
+          <div className="hidden items-start justify-between gap-3 text-sm min-[1025px]:flex">
+            <p className="text-foreground flex min-h-11 items-center">{t("extras.recap.insurance")}</p>
             <div className="flex shrink-0 flex-col items-end">
-              <p className={hasInsurance ? "text-foreground font-medium" : "text-muted-foreground"}>
+              <p
+                className={
+                  hasInsurance
+                    ? "text-foreground flex min-h-11 items-center font-medium"
+                    : "text-muted-foreground flex min-h-11 items-center"
+                }
+              >
                 {hasInsurance ? t("extras.recap.added") : t("extras.recap.notAdded")}
               </p>
               {changeExtras}

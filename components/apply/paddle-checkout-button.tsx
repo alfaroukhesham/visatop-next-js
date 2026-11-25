@@ -279,7 +279,6 @@ export function PaddleCheckoutButton({
   };
 
   return (
-    <div className="flex sm:justify-end">
     <ClientButton
       brand="cta"
       onClick={handleCheckout}
@@ -297,6 +296,5 @@ export function PaddleCheckoutButton({
         t("payment.payAndSubmit")
       )}
     </ClientButton>
-    </div>
   );
 }

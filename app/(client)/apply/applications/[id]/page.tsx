@@ -73,7 +73,7 @@ const ApplyApplicationPage = async ({ params, searchParams }: Props) => {
         tripHref={trip && offered ? `${trip}&extras=1` : trip}
         detailsTravellerId={lastTravellerApplicationId(members)}
         hasSelectedVisa
-        contentFirstOnMobile
+        summaryFrom="lg"
         visaSummary={
           <CheckoutOrderRecap
             application={toPublicApplication(row, undefined, t)}

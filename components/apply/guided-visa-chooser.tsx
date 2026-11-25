@@ -14,7 +14,9 @@ import {
   UserRound,
 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
-import { useCustomerT } from "@/components/client/customer-i18n-provider";
+import { APPLY_PROGRAMMATIC_HEADING_CLASS } from "@/components/apply/apply-primary-cta";
+import { customerFacingServiceName } from "@/lib/apply/customer-service-name";
+import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
 import {
   defaultEntryForStay,
   defaultKindForStay,
@@ -244,6 +246,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
   choicesLocked = false,
 }) => {
   const t = useCustomerT();
+  const locale = useCustomerLocale();
   const rootRef = useRef<HTMLDivElement>(null);
   const skipPhaseScroll = useRef(true);
   const stayBuckets = useMemo(() => stayOptionsForChooser(services), [services]);
@@ -388,7 +391,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
         {view.phase === "stay" ? (
           <div className="space-y-4">
             <div className="mx-auto max-w-2xl">
-              <h3 tabIndex={-1} className="font-heading text-foreground focus:outline-secondary text-center text-2xl font-semibold tracking-tight focus:outline-2 focus:outline-offset-2 sm:text-3xl">
+              <h3 tabIndex={-1} className={`font-heading text-foreground text-center text-2xl font-semibold tracking-tight sm:text-3xl ${APPLY_PROGRAMMATIC_HEADING_CLASS}`}>
                 {t("chooser.howLongStay")}
               </h3>
             </div>
@@ -414,7 +417,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
         {view.phase === "entry" ? (
           <div className="space-y-4">
             <div className="mx-auto max-w-2xl">
-              <h3 tabIndex={-1} className="font-heading text-foreground focus:outline-secondary text-center text-2xl font-semibold tracking-tight focus:outline-2 focus:outline-offset-2 sm:text-3xl">
+              <h3 tabIndex={-1} className={`font-heading text-foreground text-center text-2xl font-semibold tracking-tight sm:text-3xl ${APPLY_PROGRAMMATIC_HEADING_CLASS}`}>
                 {t("chooser.singleOrMultiple")}
               </h3>
             </div>
@@ -448,7 +451,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
         {view.phase === "kind" ? (
           <div className="space-y-4">
             <div className="mx-auto max-w-2xl">
-              <h3 tabIndex={-1} className="font-heading text-foreground focus:outline-secondary text-center text-2xl font-semibold tracking-tight focus:outline-2 focus:outline-offset-2 sm:text-3xl">
+              <h3 tabIndex={-1} className={`font-heading text-foreground text-center text-2xl font-semibold tracking-tight sm:text-3xl ${APPLY_PROGRAMMATIC_HEADING_CLASS}`}>
                 {t("chooser.whoIsVisaFor")}
               </h3>
             </div>
@@ -520,7 +523,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
             <div className="space-y-4">
               <h3
                 tabIndex={-1}
-                className="focus:outline-secondary rounded-2xl border border-secondary/20 bg-secondary/5 px-4 py-3 text-sm text-secondary focus:outline-2 focus:outline-offset-2"
+                className={`rounded-2xl border border-secondary/20 bg-secondary/5 px-4 py-3 text-sm text-secondary ${APPLY_PROGRAMMATIC_HEADING_CLASS}`}
               >
                 {t("chooser.matchingVisasBanner", {
                   stay: view.stay ? t(`chooser.stayLabels.${view.stay}`) : "",
@@ -563,7 +566,13 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                               selected && "text-secondary",
                             )}
                           >
-                            <bdi>{s.name}</bdi>
+                            <bdi>
+                              {customerFacingServiceName(s.name, locale, t, {
+                                durationDays: s.durationDays,
+                                entries: s.entries,
+                                travelerKind: s.travelerKind,
+                              })}
+                            </bdi>
                           </span>
                           {subtitle ? (
                             <span className="text-muted-foreground mt-1 block text-xs">{subtitle}</span>

@@ -3,6 +3,12 @@
 import { useId, useState, type FC } from "react";
 import { AlertCircle } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
+import {
+  APPLY_PRIMARY_CTA_CLASS,
+  APPLY_PRIMARY_CTA_ROW_CLASS,
+  APPLY_PROGRAMMATIC_HEADING_CLASS,
+  APPLY_STEP_PREVIOUS_CLASS,
+} from "@/components/apply/apply-primary-cta";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
 import { InlineMonthCalendar } from "@/components/apply/inline-month-calendar";
 import { validateTravelDate } from "@/lib/checkout-extras/dubai-calendar";
@@ -71,7 +77,7 @@ export const TravelDateStep: FC<ITravelDateStepProps> = ({
   return (
     <div className="space-y-4" data-travel-date-step="">
       <div className="mx-auto max-w-2xl">
-        <h3 tabIndex={-1} className="font-heading text-foreground focus:outline-secondary text-center text-2xl font-semibold tracking-tight focus:outline-2 focus:outline-offset-2 sm:text-3xl">
+        <h3 tabIndex={-1} className={`font-heading text-foreground text-center text-2xl font-semibold tracking-tight sm:text-3xl ${APPLY_PROGRAMMATIC_HEADING_CLASS}`}>
           {t("start.travelDate.label")}
         </h3>
       </div>
@@ -90,11 +96,11 @@ export const TravelDateStep: FC<ITravelDateStepProps> = ({
           <span>{error}</span>
         </p>
       ) : null}
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
-        <ClientButton type="button" brand="white" className="min-h-11" onClick={onSkip}>
+      <div className={APPLY_PRIMARY_CTA_ROW_CLASS}>
+        <ClientButton type="button" brand="white" className={APPLY_STEP_PREVIOUS_CLASS} onClick={onSkip}>
           {t("start.travelDate.notSure")}
         </ClientButton>
-        <ClientButton type="button" brand="cta" className="min-h-11" onClick={continueWithDate}>
+        <ClientButton type="button" brand="cta" className={APPLY_PRIMARY_CTA_CLASS} onClick={continueWithDate}>
           {t("start.travelDate.seeVisas")}
         </ClientButton>
       </div>

@@ -83,7 +83,7 @@ export const ExtrasStepPanel: FC<IExtrasStepPanelProps> = ({
         className="text-secondary inline-flex min-h-11 items-center gap-1 text-sm font-semibold min-[1025px]:hidden"
       >
         <ChevronLeft className="size-4 rtl:-scale-x-100" aria-hidden />
-        {t("extras.back")}
+        {t("common.previous")}
       </Link>
       <h1 className="font-heading text-foreground text-[22px] font-semibold leading-snug md:text-[28px]">
         {t("extras.title")}
@@ -221,7 +221,7 @@ const BackToDetails: FC<{ href: string }> = ({ href }) => {
   const t = useCustomerT();
   return (
     <ClientButtonLink href={href} brand="white" className={APPLY_STEP_PREVIOUS_CLASS}>
-      {t("extras.back")}
+      {t("common.previous")}
     </ClientButtonLink>
   );
 };

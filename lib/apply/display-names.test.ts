@@ -36,6 +36,11 @@ describe("nationalityDisplayName", () => {
   it("never falls back to a raw ISO code for unknown regions", () => {
     expect(nationalityDisplayName("ZZ", [])).not.toMatch(/^[A-Z]{2}$/);
   });
+
+  it("uses the active locale for the country name", () => {
+    expect(nationalityDisplayName("IN", [{ code: "IN", name: "India" }], "ar")).toBe("الهند");
+    expect(nationalityDisplayName("IN", [{ code: "IN", name: "India" }], "en")).toBe("India");
+  });
 });
 
 describe("nationalityLabelWithFlag", () => {

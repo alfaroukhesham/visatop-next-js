@@ -26,6 +26,8 @@ export interface IDocumentUploadSlotProps {
   showPhotoGuidance?: boolean;
   stackActions?: boolean;
   ocrNotice?: string | null;
+  /** Reading a passport is status, not a failure. */
+  ocrNoticeTone?: "status" | "alert";
   onUpload: (file: File, source: TDocumentUploadSource) => void;
   onCancelUpload: () => void;
 }
@@ -44,6 +46,7 @@ export const DocumentUploadSlot: FC<IDocumentUploadSlotProps> = ({
   showPhotoGuidance = false,
   stackActions = false,
   ocrNotice = null,
+  ocrNoticeTone = "alert",
   onUpload,
   onCancelUpload,
 }) => {
@@ -143,13 +146,23 @@ export const DocumentUploadSlot: FC<IDocumentUploadSlotProps> = ({
       ) : null}
 
       {ocrNotice && !errorMessage ? (
-        <div
-          className="text-destructive flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm"
-          role="status"
-        >
-          <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
-          <span className="font-medium">{ocrNotice}</span>
-        </div>
+        ocrNoticeTone === "status" ? (
+          <div
+            className="text-foreground flex items-start gap-2 rounded-xl border border-border bg-muted/40 p-3 text-sm"
+            role="status"
+          >
+            <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin" aria-hidden />
+            <span className="font-medium">{ocrNotice}</span>
+          </div>
+        ) : (
+          <div
+            className="text-destructive flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm"
+            role="status"
+          >
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span className="font-medium">{ocrNotice}</span>
+          </div>
+        )
       ) : null}
 
       {currentDoc ? (

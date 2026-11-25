@@ -165,6 +165,7 @@
     "next": "Gaba",
     "saving": "Ana adanawa…",
     "continueToPayment": "Ci gaba zuwa biya",
+    "readyToContinue": "A shirye don ci gaba",
     "needsAttentionCheckout": "Ana buƙatar kulawa kafin biya",
     "uploadRemainingDocs": "Loda sauran takardun",
     "completeRequiredDetails": "Kammala cikakkun bayanan da ake buƙata",
@@ -260,9 +261,9 @@
     "captureTip3": "Ka guje wa haske, inuwa, da yanke gefuna.",
     "privacyNote": "Hotonku yana tafiya a ɓoye kuma ana amfani da shi kawai don wannan aikace-aikacen — ba don talla ba.",
     "examplePassportAlt": "Misalin shafin bayanan fasfo na karya don jagorar daukar hoto. Ba takardar tafiya ta gaskiya ba ce.",
-    "photoTip1": "Plain background.",
-    "photoTip2": "No glasses.",
-    "photoTip3": "Face centred in the oval."
+    "photoTip1": "Fage mai sauƙi.",
+    "photoTip2": "Babu gilashi.",
+    "photoTip3": "Fuska a tsakiyar zobe."
   },
   "payment": {
     "pageTitle": "Biya | Visatop",

@@ -165,6 +165,7 @@
     "next": "İleri",
     "saving": "Kaydediliyor…",
     "continueToPayment": "Ödemeye devam et",
+    "readyToContinue": "Devam etmeye hazır",
     "needsAttentionCheckout": "Ödeme öncesi dikkat gerekiyor",
     "uploadRemainingDocs": "Kalan belgeleri yükleyin",
     "completeRequiredDetails": "Zorunlu bilgileri tamamlayın",
@@ -260,9 +261,9 @@
     "captureTip3": "Parlama, gölge ve kesik kenarlardan kaçının.",
     "privacyNote": "Fotoğrafınız aktarımda şifrelenir ve yalnızca bu başvuru için kullanılır — pazarlama için değil.",
     "examplePassportAlt": "Çekim rehberi için sahte bir pasaport kimlik sayfası örneği. Gerçek bir seyahat belgesi değildir.",
-    "photoTip1": "Plain background.",
-    "photoTip2": "No glasses.",
-    "photoTip3": "Face centred in the oval."
+    "photoTip1": "Düz arka plan.",
+    "photoTip2": "Gözlüksüz.",
+    "photoTip3": "Yüz ovalin ortasında."
   },
   "payment": {
     "pageTitle": "Ödeme | Visatop",

@@ -3,6 +3,11 @@
 import { useEffect, useRef, type FC, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ClientButton } from "@/components/client/client-button";
+import {
+  APPLY_PRIMARY_CTA_CLASS,
+  APPLY_PRIMARY_CTA_ROW_CLASS,
+  APPLY_STEP_PREVIOUS_CLASS,
+} from "@/components/apply/apply-primary-cta";
 import { useNarrowViewport } from "@/lib/client/use-narrow-viewport";
 import { useStickyCtaHeight } from "@/components/apply/use-sticky-cta-height";
 import { cn } from "@/lib/utils";
@@ -45,6 +50,7 @@ interface IApplyReadyPreviousButtonProps {
   onClick: () => void;
   hidden?: boolean;
   inline?: boolean;
+  className?: string;
 }
 
 interface IContinueButtonProps {
@@ -53,6 +59,7 @@ interface IContinueButtonProps {
   pulseContinue: boolean;
   clearPulse: () => void;
   accessibleLabel?: string;
+  className?: string;
 }
 
 /** Same outline Previous as the inline ready-step button on main. */
@@ -61,11 +68,12 @@ export const ApplyReadyPreviousButton: FC<IApplyReadyPreviousButtonProps> = ({
   onClick,
   hidden,
   inline,
+  className,
 }) => (
   <ClientButton
     variant="outline"
     brand="white"
-    className={APPLY_READY_PREVIOUS_CLASS}
+    className={cn(inline ? APPLY_STEP_PREVIOUS_CLASS : APPLY_READY_PREVIOUS_CLASS, className)}
     type="button"
     hidden={hidden}
     data-apply-ready-inline-previous={inline ? "" : undefined}
@@ -81,10 +89,15 @@ const ContinueButton: FC<IContinueButtonProps> = ({
   pulseContinue,
   clearPulse,
   accessibleLabel,
+  className,
 }) => (
   <ClientButton
     brand="cta"
-    className={cn("h-12 min-h-12 w-full normal-case tracking-normal", pulseContinue && "apply-continue-pulse")}
+    className={cn(
+      "h-12 min-h-12 w-full normal-case tracking-normal",
+      className,
+      pulseContinue && "apply-continue-pulse",
+    )}
     type="button"
     aria-label={accessibleLabel}
     onClick={onClick}
@@ -127,9 +140,25 @@ export const ApplyReadyContinue: FC<IApplyReadyContinueProps> = ({
       data-apply-sticky-cta={compact ? undefined : ""}
       className={APPLY_READY_CONTINUE_INLINE_CLASS}
     >
-      <ContinueButton onClick={onClick} pulseContinue={pulseContinue} clearPulse={clearPulse}>
-        {children}
-      </ContinueButton>
+      {previousLabel && onPrevious ? (
+        <div className={APPLY_PRIMARY_CTA_ROW_CLASS}>
+          <ApplyReadyPreviousButton inline onClick={onPrevious}>
+            {previousLabel}
+          </ApplyReadyPreviousButton>
+          <ContinueButton
+            className={APPLY_PRIMARY_CTA_CLASS}
+            onClick={onClick}
+            pulseContinue={pulseContinue}
+            clearPulse={clearPulse}
+          >
+            {children}
+          </ContinueButton>
+        </div>
+      ) : (
+        <ContinueButton onClick={onClick} pulseContinue={pulseContinue} clearPulse={clearPulse}>
+          {children}
+        </ContinueButton>
+      )}
     </div>
   );
 

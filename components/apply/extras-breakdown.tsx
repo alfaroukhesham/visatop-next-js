@@ -1,6 +1,7 @@
 import { Loader2 } from "lucide-react";
 import type { FC, ReactNode } from "react";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
+import { customerFacingServiceName } from "@/lib/apply/customer-service-name";
 import {
   extraByKey,
   formatMinorAmount,
@@ -76,7 +77,7 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
           {names.map((name) => (
             <span key={name}>
               {" · "}
-              <bdi>{name}</bdi>
+              <bdi>{customerFacingServiceName(name, locale, t)}</bdi>
             </span>
           ))}
           <span className="text-muted-foreground"> × {count}</span>

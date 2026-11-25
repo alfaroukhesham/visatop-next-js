@@ -34,6 +34,7 @@ import {
 import { ProcessingSpeedLine } from "@/components/apply/processing-speed-line";
 import type { TSettledRecap } from "@/lib/apply/charged-recap";
 import type { TCustomerMessageVars } from "@/lib/i18n/customer-messages";
+import { customerFacingServiceName } from "@/lib/apply/customer-service-name";
 
 type CatalogService = {
   id: string;
@@ -54,7 +55,18 @@ const entriesLabel = (entries: string | null, t: TTranslate): string | null => {
   return entries;
 };
 
-export const CatalogVisaTitle: FC<{ service: CatalogService; t: TTranslate }> = ({ service, t }) => {
+export const CatalogVisaTitle: FC<{ service: CatalogService; t: TTranslate; locale?: string }> = ({
+  service,
+  t,
+  locale = "en",
+}) => {
+  const localized = customerFacingServiceName(service.name, locale, t, {
+    durationDays: service.durationDays,
+    entries: service.entries,
+  });
+  if (localized !== service.name) {
+    return <bdi>{localized}</bdi>;
+  }
   const parts: string[] = [];
   if (service.durationDays != null) parts.push(t("chooser.durationDays", { count: service.durationDays }));
   const ent = entriesLabel(service.entries, t);
@@ -351,12 +363,15 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
                           number: line.member.travelerIndex + 1,
                           service: "\u0000",
                         })}
-                        serviceName={line.member.serviceName}
+                        serviceName={customerFacingServiceName(line.member.serviceName, locale, t, {
+                          durationDays: line.service?.durationDays,
+                          entries: line.service?.entries,
+                        })}
                       />
                     </p>
                     {line.service ? (
                       <p className="text-muted-foreground mt-0.5 text-xs">
-                        <CatalogVisaTitle service={line.service} t={t} />
+                        <CatalogVisaTitle service={line.service} t={t} locale={locale} />
                       </p>
                     ) : null}
                   </div>
@@ -381,7 +396,7 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
           ) : service ? (
             <>
               <p className="font-heading text-foreground text-base font-bold leading-snug">
-                <CatalogVisaTitle service={service} t={t} />
+                <CatalogVisaTitle service={service} t={t} locale={locale} />
               </p>
               <dl className="text-muted-foreground mt-3 space-y-1.5 text-sm" data-clarity-mask="true">
                 <div className="flex flex-wrap gap-x-2 gap-y-0.5">

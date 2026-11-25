@@ -46,7 +46,9 @@ const ApplyStartPage = async ({ searchParams }: IApplyStartPageProps) => {
     ]);
     return { nationalities, catalogOffersExtras: insuranceCatalogOffered(extras) };
   });
-  const nationalityName = nationalityDisplayName(initialNationalityCode, nationalities);
+  const cookieStore = await cookies();
+  const locale = parseCustomerLocale(cookieStore.get(CUSTOMER_LOCALE_COOKIE)?.value);
+  const nationalityName = nationalityDisplayName(initialNationalityCode, nationalities, locale);
   const extrasQuery = sp.extras === "1" || (Array.isArray(sp.extras) && sp.extras.includes("1"));
   const includeExtras = catalogOffersExtras || extrasQuery;
 

@@ -7,8 +7,8 @@ interface IApplyTwoColumnProps {
   currentStep: 1 | 2 | 3 | 4 | 5 | 6;
   phase?: "documents" | "details" | "extras";
   includeExtras?: boolean;
-  /** Extras: the aside total only shows from 1025px, so mobile has one total. */
-  summaryFrom?: "always" | "desktop";
+  /** Extras: the aside total only shows from 1025px, so mobile has one total. `lg` hides it below 1024px. */
+  summaryFrom?: "always" | "desktop" | "lg";
   applicationId?: string;
   /** In-flow visa/duration step. Trip-done must not link to marketing home. */
   tripHref?: string | null;
@@ -73,8 +73,10 @@ export const ApplyTwoColumn: FC<IApplyTwoColumnProps> = ({
             <aside
               className={cn(
                 contentFirstOnMobile ? "order-2" : "order-1 lg:order-2",
-                "min-w-0 lg:sticky lg:top-24",
-                summaryFrom === "desktop" && "hidden min-[1025px]:sticky min-[1025px]:top-24 min-[1025px]:block",
+                "min-w-0 self-start lg:sticky lg:top-[var(--wp-shell-header-height,1rem)]",
+                summaryFrom === "desktop" &&
+                  "hidden min-[1025px]:sticky min-[1025px]:top-[var(--wp-shell-header-height,1rem)] min-[1025px]:block",
+                summaryFrom === "lg" && "max-lg:hidden",
               )}
             >
               {visaSummary}

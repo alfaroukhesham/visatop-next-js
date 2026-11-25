@@ -20,8 +20,10 @@ import { ClientButton, ClientButtonLink } from "@/components/client/client-butto
 import {
   APPLY_PRIMARY_CTA_CLASS,
   APPLY_PRIMARY_CTA_ROW_CLASS,
+  APPLY_PROGRAMMATIC_HEADING_CLASS,
   APPLY_STEP_PREVIOUS_CLASS,
 } from "@/components/apply/apply-primary-cta";
+import { customerFacingServiceName } from "@/lib/apply/customer-service-name";
 import { MessageWithAmounts } from "@/components/apply/message-with-amounts";
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
@@ -88,24 +90,22 @@ type Service = IService;
 
 type DisplayCurrency = string;
 
-const formatDisplayMinor = (minor: string | null, currency: string | null): string | null => {
+const formatDisplayMinor = (
+  minor: string | null,
+  currency: string | null,
+  locale: string,
+): string | null => {
   if (minor === null || currency === null) return null;
   const n = Number(minor);
   if (!Number.isFinite(n)) return null;
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 2,
-    }).format(n / 100);
-  } catch {
-    return `${(n / 100).toFixed(2)} ${currency}`;
-  }
-}
+  const text = formatMinorAmount(minor, currency, locale, "code");
+  return text || null;
+};
 
 const formatPriceForDisplay = (
   s: Service,
   tab: DisplayCurrency,
+  locale: string,
 ): { text: string; isEstimate: boolean } | null => {
   const minorStr = s.displayPriceMinor;
   const cur = s.currency;
@@ -114,7 +114,7 @@ const formatPriceForDisplay = (
   if (!Number.isFinite(n)) return null;
   const minor = BigInt(Math.trunc(n));
   if (cur === tab) {
-    const text = formatDisplayMinor(minorStr, cur);
+    const text = formatDisplayMinor(minorStr, cur, locale);
     return text ? { text, isEstimate: false } : null;
   }
   if (!isUsdAedCurrency(cur) || !isUsdAedCurrency(tab)) return null;
@@ -122,9 +122,9 @@ const formatPriceForDisplay = (
   if (!fx) return null;
   const converted = convertMinorBetweenUsdAed(minor, cur, tab, fx);
   if (!converted) return null;
-  const text = formatDisplayMinor(converted.toString(), tab);
+  const text = formatDisplayMinor(converted.toString(), tab, locale);
   return text ? { text, isEstimate: true } : null;
-}
+};
 
 const toDisplayMinor = (s: Service, tab: DisplayCurrency): number | null => {
   const minorStr = s.displayPriceMinor;
@@ -160,12 +160,19 @@ const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
   badges,
 }) => {
   const t = useCustomerT();
+  const locale = useCustomerLocale();
   return (
-    <aside className="border-secondary/25 bg-card h-fit space-y-4 rounded-2xl border p-4 shadow-[0_12px_30px_rgba(1,32,49,0.08)] lg:sticky lg:top-24">
+    <aside className="border-secondary/25 bg-card h-fit space-y-4 rounded-2xl border p-4 shadow-[0_12px_30px_rgba(1,32,49,0.08)] lg:sticky lg:top-[var(--wp-shell-header-height,1rem)]">
       <div>
         <p className="text-secondary text-[10px] font-bold uppercase tracking-[0.2em]">{t("start.yourVisaEyebrow")}</p>
         <h2 className="font-heading text-foreground mt-1 text-lg font-bold leading-snug">
-          <bdi>{service.name}</bdi>
+          <bdi>
+            {customerFacingServiceName(service.name, locale, t, {
+              durationDays: service.durationDays,
+              entries: service.entries,
+              travelerKind: service.travelerKind,
+            })}
+          </bdi>
         </h2>
       </div>
       <dl className="text-muted-foreground space-y-1.5 text-xs">
@@ -192,7 +199,7 @@ const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
           </div>
         ) : null}
       </dl>
-      <div className="border-border border-t pt-3">
+      <div className="border-border hidden border-t pt-3 lg:block">
         <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">{t("start.totalLabel")}</p>
         <p className="font-heading text-foreground mt-0.5 text-xl font-bold tabular-nums">
           {totalText ?? price?.text ?? t("start.atCheckout")}
@@ -256,7 +263,7 @@ const EditTripSummary: FC<IEditTripSummaryProps> = ({
         id="edit-trip-title"
         ref={headingRef}
         tabIndex={-1}
-        className="font-heading text-foreground focus:outline-secondary text-xl font-semibold focus:outline-2 focus:outline-offset-2"
+        className={`font-heading text-foreground text-xl font-semibold ${APPLY_PROGRAMMATIC_HEADING_CLASS}`}
       >
         {t("start.editSummaryTitle")}
       </h2>
@@ -265,7 +272,9 @@ const EditTripSummary: FC<IEditTripSummaryProps> = ({
         <div className="flex items-baseline justify-between gap-3">
           <dt className="text-muted-foreground">{t("extras.recap.visa")}</dt>
           <dd className="text-foreground text-end font-semibold">
-            {names.length > 0 ? names.map((name) => <bdi key={name}>{name}</bdi>) : t("start.loading")}
+            {names.length > 0
+              ? names.map((name) => <bdi key={name}>{customerFacingServiceName(name, locale, t)}</bdi>)
+              : t("start.loading")}
           </dd>
         </div>
         <div className="flex items-baseline justify-between gap-3">
@@ -986,7 +995,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     ? formatMinorAmount(savedQuote.totalAmountMinor, savedQuote.currency, locale, "code")
     : quotedMinor === null
       ? null
-      : formatDisplayMinor(quotedMinor, displayCurrency);
+      : formatDisplayMinor(quotedMinor, displayCurrency, locale);
   const extrasOffered = includeExtras || extrasFromQuery || insuranceStepOffered(savedQuote);
   const showListContinue = applyStep === "visa" && chooserPhase === "results" && Boolean(serviceId);
   const showTravellerContinue = applyStep === "travellers" && partyEnabled;
@@ -1007,7 +1016,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
         <ChooserCardHeader nationalityName={nationalityName} />
         <p className="text-muted-foreground text-sm leading-relaxed" role="alert">
           {t("start.nationalityUnavailable", {
-            nationality: nationalityDisplayName(nationalityCode, nationalities),
+            nationality: nationalityDisplayName(nationalityCode, nationalities, locale),
           })}
         </p>
         <ClientButton type="button" brand="cta" onClick={() => router.push("/")}>
@@ -1034,7 +1043,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       ) : null}
 
       <div className={serviceId ? "lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start lg:gap-6" : undefined}>
-        <div className={serviceId ? "order-2 min-w-0 lg:order-1" : undefined}>
+        <div className={serviceId ? "order-2 min-w-0 space-y-6 lg:order-1" : undefined}>
           {nationality ? (
         <section className="space-y-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -1086,7 +1095,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
           ) : (
             <GuidedVisaChooser
               services={services}
-              formatPrice={(s) => formatPriceForDisplay(s, displayCurrency)}
+              formatPrice={(s) => formatPriceForDisplay(s, displayCurrency, locale)}
               selectedServiceId={serviceId}
               onSelectService={(id) => {
                 if (editingApplicationId) return;
@@ -1322,9 +1331,13 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                     {shortlist.length === 1 ? (
                       <div className="space-y-1.5">
                         <p className="border-secondary/30 bg-card text-foreground rounded-xl border-2 px-3 py-3 text-sm font-semibold">
-                          {shortlist[0].name}
+                          {customerFacingServiceName(shortlist[0].name, locale, t, {
+                            durationDays: shortlist[0].durationDays,
+                            entries: shortlist[0].entries,
+                            travelerKind: shortlist[0].travelerKind,
+                          })}
                           {(() => {
-                            const price = formatPriceForDisplay(shortlist[0], displayCurrency);
+                            const price = formatPriceForDisplay(shortlist[0], displayCurrency, locale);
                             return price ? ` — ${price.text}` : "";
                           })()}
                         </p>
@@ -1353,10 +1366,14 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                         >
                           <option value="">{t("start.party.chooseVisaOption")}</option>
                           {shortlist.map((s) => {
-                            const price = formatPriceForDisplay(s, displayCurrency);
+                            const price = formatPriceForDisplay(s, displayCurrency, locale);
                             return (
                               <option key={s.id} value={s.id}>
-                                {s.name}
+                                {customerFacingServiceName(s.name, locale, t, {
+                                  durationDays: s.durationDays,
+                                  entries: s.entries,
+                                  travelerKind: s.travelerKind,
+                                })}
                                 {price ? ` — ${price.text}` : ""}
                               </option>
                             );
@@ -1461,7 +1478,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
         </div>
       ) : null}
         </div>
-        {serviceId && primaryService ? <div className="order-1 lg:order-2"><SelectedVisaSummary service={primaryService} answers={answers} travelerCount={savedQuote?.travellerCount ?? 1 + additionalTravelers.length} totalText={totalText} price={formatPriceForDisplay(primaryService, displayCurrency)} badges={badges} /></div> : null}
+        {serviceId && primaryService ? <div className="lg:order-2"><SelectedVisaSummary service={primaryService} answers={answers} travelerCount={savedQuote?.travellerCount ?? 1 + additionalTravelers.length} totalText={totalText} price={formatPriceForDisplay(primaryService, displayCurrency, locale)} badges={badges} /></div> : null}
       </div>
 
       <div className="flex flex-col-reverse items-stretch gap-3 pt-1 sm:flex-row sm:items-center sm:justify-end">

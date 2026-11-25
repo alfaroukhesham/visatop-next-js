@@ -4,6 +4,11 @@ import Link from "next/link";
 import type { FC, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  APPLY_PRIMARY_CTA_CLASS,
+  APPLY_PRIMARY_CTA_ROW_CLASS,
+  APPLY_STEP_PREVIOUS_CLASS,
+} from "@/components/apply/apply-primary-cta";
 
 const box =
   "box-border inline-flex h-12 w-full items-center justify-center rounded-[5px] border px-4 text-base font-semibold leading-none no-underline shadow-none transition-colors duration-200 ease-linear focus-visible:!outline-2 focus-visible:!outline-offset-0 disabled:pointer-events-none disabled:opacity-50";
@@ -52,20 +57,20 @@ export const DoubleDecision: FC<IDoubleDecisionProps> = ({
   return (
     <div
       data-slot="double-decision"
-      className={cn("flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end", className)}
+      className={cn(APPLY_PRIMARY_CTA_ROW_CLASS, className)}
     >
-      <button type="button" className={cn(dismissBox, "order-2 sm:order-1 sm:w-auto")} onClick={onDismiss}>
+      <button type="button" className={cn(dismissBox, APPLY_STEP_PREVIOUS_CLASS)} onClick={onDismiss}>
         {dismissLabel}
       </button>
       {hasConfirm && confirmHref ? (
-        <Link href={confirmHref} className={cn(confirmBox, "order-1 whitespace-nowrap tracking-normal sm:order-2 sm:w-auto")} aria-disabled={confirmDisabled}>
+        <Link href={confirmHref} className={cn(confirmBox, APPLY_PRIMARY_CTA_CLASS)} aria-disabled={confirmDisabled}>
           {confirmInner}
         </Link>
       ) : null}
       {hasConfirm && !confirmHref && onConfirm ? (
         <button
           type="button"
-          className={cn(confirmBox, "order-1 whitespace-nowrap tracking-normal sm:order-2 sm:w-auto")}
+          className={cn(confirmBox, APPLY_PRIMARY_CTA_CLASS)}
           disabled={confirmDisabled || confirmPending}
           onClick={onConfirm}
         >

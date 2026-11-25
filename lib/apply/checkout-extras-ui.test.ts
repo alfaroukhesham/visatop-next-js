@@ -232,6 +232,7 @@ describe("customer copy", () => {
       "start.party.visaForTraveller",
       "extras.travellers_other",
       "common.opensNewTab",
+      "draft.readyToContinue",
     ];
     for (const slug of FALLBACK_CUSTOMER_LOCALE_SLUGS) {
       const messages = JSON.parse(

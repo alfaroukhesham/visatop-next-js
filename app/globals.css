@@ -429,7 +429,7 @@
   color: var(--foreground);
 }
 
-.theme-client :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+.theme-client :where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 3px;
 }

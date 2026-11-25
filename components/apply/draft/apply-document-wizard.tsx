@@ -40,12 +40,9 @@ import type { DocType, ExtractResponse, PublicDocument, TUploadSlotError } from 
 import type { TPhoneNationalityOption } from "./phone-country-field";
 import { ApplyOrderTotal } from "@/components/apply/apply-order-total";
 import {
-  APPLY_STICKY_CTA_MEDIA_QUERY,
   ApplyReadyContinue,
-  ApplyReadyPreviousButton,
   compactContinueAlwaysShort,
 } from "@/components/apply/apply-ready-continue";
-import { useNarrowViewport } from "@/lib/client/use-narrow-viewport";
 import { ReadyDocumentAccordion, type TReadyDocumentIcon } from "./ready-document-accordion";
 
 type TMemberView = {
@@ -103,7 +100,6 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
   const quote = useCheckoutQuoteOptional();
   const extrasOn = insuranceStepOffered(quote?.preview ?? null);
   const searchParams = useSearchParams();
-  const compactCta = useNarrowViewport(APPLY_STICKY_CTA_MEDIA_QUERY);
   const ordered = useMemo(
     () => members.slice().sort((a, b) => a.travelerIndex - b.travelerIndex),
     [members],
@@ -231,9 +227,6 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
           currency={primaryApp.catalogCurrency}
           serviceIds={ordered.map((member) => member.serviceId)}
         />
-        <ApplyReadyPreviousButton inline hidden={compactCta} onClick={() => router.push(tripHref)}>
-          {t("common.previous")}
-        </ApplyReadyPreviousButton>
         <ApplyReadyContinue
           previousLabel={t("common.previous")}
           compactShortLabel={t("common.continue")}
@@ -287,7 +280,16 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
               view.extracting,
               t,
             )}
+            ocrNoticeTone={view.extracting ? "status" : "alert"}
           />
+          <div className="lg:hidden">
+            <ApplyOrderTotal
+              applicationId={applicationId}
+              nationalityCode={view.app.nationalityCode}
+              currency={view.app.catalogCurrency}
+              serviceIds={ordered.map((member) => member.serviceId)}
+            />
+          </div>
           <div className={APPLY_PRIMARY_CTA_ROW_CLASS}>
             <ClientButton
               variant="outline"
@@ -338,6 +340,14 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
             );
           })}
           <p className="text-muted-foreground text-center text-xs">{t("wizard.addAfterPayment")}</p>
+          <div className="lg:hidden">
+            <ApplyOrderTotal
+              applicationId={applicationId}
+              nationalityCode={view.app.nationalityCode}
+              currency={view.app.catalogCurrency}
+              serviceIds={ordered.map((member) => member.serviceId)}
+            />
+          </div>
           <div className={APPLY_PRIMARY_CTA_ROW_CLASS}>
             <ClientButton
               variant="outline"
@@ -421,6 +431,16 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
             router.push(applyPreviousHref(applicationId, wizardMembers, resolved))
           }
           fieldMeta={view.app.applicantFieldMeta}
+          orderTotal={
+            <div className="lg:hidden">
+              <ApplyOrderTotal
+                applicationId={applicationId}
+                nationalityCode={view.app.nationalityCode}
+                currency={view.app.catalogCurrency}
+                serviceIds={ordered.map((member) => member.serviceId)}
+              />
+            </div>
+          }
         />
       ) : null}
     </section>

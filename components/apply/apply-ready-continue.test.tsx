@@ -235,8 +235,8 @@ describe("sticky Continue CSS contracts", () => {
     expect(wizard).toMatch(/wizard\.continueWithDocuments/);
     expect(wizard).toMatch(/compactShortLabel/);
     expect(wizard).toMatch(/common\.continue/);
-    expect(wizard).toMatch(/ApplyReadyPreviousButton/);
     expect(wizard).toMatch(/previousLabel/);
+    expect(wizard).not.toMatch(/ApplyReadyPreviousButton/);
     expect(wizard).toMatch(/data-apply-ready-section/);
     expect(css).toMatch(/\[data-apply-sticky-cta-portal\]/);
     expect(css).toMatch(/\[data-apply-ready-inline-previous\]/);
@@ -245,6 +245,7 @@ describe("sticky Continue CSS contracts", () => {
       "utf8",
     );
     expect(continueSrc).toMatch(/data-apply-ready-inline-previous=\{inline \? "" : undefined\}/);
+    expect(continueSrc).toMatch(/APPLY_PRIMARY_CTA_ROW_CLASS/);
     expect(continueSrc).toMatch(/brand="white"/);
     expect(continueSrc).toMatch(/variant="outline"/);
     expect(continueSrc).toMatch(/items-stretch gap-2/);

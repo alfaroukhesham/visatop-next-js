@@ -165,6 +165,7 @@
     "next": "Siguiente",
     "saving": "Guardando…",
     "continueToPayment": "Continuar al pago",
+    "readyToContinue": "Listo para continuar",
     "needsAttentionCheckout": "Requiere atención antes del pago",
     "uploadRemainingDocs": "Subir documentos pendientes",
     "completeRequiredDetails": "Completar datos obligatorios",
@@ -260,9 +261,9 @@
     "captureTip3": "Evite brillos, sombras y bordes recortados.",
     "privacyNote": "Su foto viaja cifrada y solo se usa para tramitar esta solicitud, nunca para marketing.",
     "examplePassportAlt": "Ejemplo de una página de pasaporte ficticia para orientar la foto. No es un documento de viaje real.",
-    "photoTip1": "Plain background.",
-    "photoTip2": "No glasses.",
-    "photoTip3": "Face centred in the oval."
+    "photoTip1": "Fondo liso.",
+    "photoTip2": "Sin gafas.",
+    "photoTip3": "Rostro centrado en el óvalo."
   },
   "payment": {
     "pageTitle": "Pago | Visatop",
