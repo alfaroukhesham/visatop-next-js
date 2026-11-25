@@ -63,6 +63,7 @@ const ApplyApplicationPaymentPage = async ({ params }: IApplyApplicationPaymentP
         <ApplyTwoColumn
           currentStep={offered ? 5 : 4}
           includeExtras={offered}
+          summaryFrom="lg"
           applicationId={id}
           tripHref={trip && offered ? `${trip}&extras=1` : trip}
           detailsTravellerId={lastTravellerApplicationId(members)}

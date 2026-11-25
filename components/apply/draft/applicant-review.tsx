@@ -505,6 +505,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
               <dd className="mt-1">
                 <ClientInput
                   type="text"
+                  dir={r.apiKey === "address" ? "auto" : undefined}
                   inputMode={DATE_API_KEYS.has(r.apiKey) ? "numeric" : undefined}
                   maxLength={DATE_API_KEYS.has(r.apiKey) ? 10 : undefined}
                   readOnly={locked}
@@ -554,6 +555,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
       <div className="space-y-2 pt-2">
         {orderTotal}
         <DoubleDecision
+          dismissClassName="text-[15px]"
           dismissLabel={t("draft.previous")}
           onDismiss={() => (onPrevious ? onPrevious() : router.back())}
           confirmLabel={

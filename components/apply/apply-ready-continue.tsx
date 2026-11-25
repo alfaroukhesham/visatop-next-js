@@ -17,6 +17,10 @@ import { ensureApplyStickyCtaVisible, useApplyJumpAhead } from "./apply-jump-ahe
 export const APPLY_STICKY_CTA_MAX_WIDTH_PX = 1024;
 export const APPLY_STICKY_CTA_MEDIA_QUERY = `(max-width: ${APPLY_STICKY_CTA_MAX_WIDTH_PX}px)`;
 
+/** Side rail starts at lg (1024px). The bar total stops one pixel earlier so 1024px has one total. */
+export const APPLY_BAR_TOTAL_MAX_WIDTH_PX = 1023;
+export const APPLY_BAR_TOTAL_MEDIA_QUERY = `(max-width: ${APPLY_BAR_TOTAL_MAX_WIDTH_PX}px)`;
+
 /** Exact desktop/inline classes from main (PR #70). Do not restyle this string. */
 export const APPLY_READY_CONTINUE_INLINE_CLASS =
   "border-border bg-background/95 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-30 max-md:border-t max-md:px-3 max-md:pt-2.5 max-md:pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))] max-md:backdrop-blur-md md:static md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none";
@@ -124,6 +128,7 @@ export const ApplyReadyContinue: FC<IApplyReadyContinueProps> = ({
 }) => {
   const { pulseContinue, clearPulse } = useApplyJumpAhead();
   const compact = useNarrowViewport(APPLY_STICKY_CTA_MEDIA_QUERY);
+  const showBarTotal = useNarrowViewport(APPLY_BAR_TOTAL_MEDIA_QUERY);
   const portalRef = useRef<HTMLDivElement>(null);
   useStickyCtaHeight(portalRef, compact);
   const belowFullMinWidth = useNarrowViewport(APPLY_READY_CONTINUE_SHORT_MEDIA_QUERY);
@@ -176,7 +181,7 @@ export const ApplyReadyContinue: FC<IApplyReadyContinueProps> = ({
             style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 30 }}
           >
             <div className="mx-auto flex w-full max-w-4xl flex-col gap-2">
-              {orderTotal ? <div className="min-w-0">{orderTotal}</div> : null}
+              {orderTotal && showBarTotal ? <div className="min-w-0">{orderTotal}</div> : null}
               <div className="flex w-full items-stretch gap-2">
                 {previousLabel && onPrevious ? (
                   <div className="min-w-0 flex-1 [&>*]:min-w-0">

@@ -69,7 +69,15 @@ const visaTitleLead = (service: CatalogService, t: TTranslate): string => {
   if (ent) {
     const entryFact = compactFact(ent);
     const entryStem = entryFact.replace(/entry$/, "");
-    if (!normalizedName.includes(entryFact) && !(entryStem && normalizedName.includes(entryStem))) {
+    const multiEntryInName =
+      entryFact.includes("multiple") &&
+      normalizedName.includes("multi") &&
+      normalizedName.includes("entry");
+    if (
+      !normalizedName.includes(entryFact) &&
+      !(entryStem && normalizedName.includes(entryStem)) &&
+      !multiEntryInName
+    ) {
       parts.push(ent);
     }
   }

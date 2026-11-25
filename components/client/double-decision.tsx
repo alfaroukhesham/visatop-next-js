@@ -33,6 +33,8 @@ interface IDoubleDecisionProps {
   confirmDisabled?: boolean;
   confirmPending?: boolean;
   className?: string;
+  /** Details Previous is 15px. Resume-modal dismiss leaves this unset and stays 16px. */
+  dismissClassName?: string;
 }
 
 export const DoubleDecision: FC<IDoubleDecisionProps> = ({
@@ -44,6 +46,7 @@ export const DoubleDecision: FC<IDoubleDecisionProps> = ({
   confirmDisabled = false,
   confirmPending = false,
   className,
+  dismissClassName,
 }) => {
   const hasConfirm = Boolean(confirmLabel && (confirmHref || onConfirm));
 
@@ -59,7 +62,11 @@ export const DoubleDecision: FC<IDoubleDecisionProps> = ({
       data-slot="double-decision"
       className={cn(APPLY_PRIMARY_CTA_ROW_CLASS, className)}
     >
-      <button type="button" className={cn(dismissBox, APPLY_STEP_PREVIOUS_CLASS, "font-medium")} onClick={onDismiss}>
+      <button
+        type="button"
+        className={cn(dismissBox, APPLY_STEP_PREVIOUS_CLASS, "font-medium", dismissClassName)}
+        onClick={onDismiss}
+      >
         {dismissLabel}
       </button>
       {hasConfirm && confirmHref ? (

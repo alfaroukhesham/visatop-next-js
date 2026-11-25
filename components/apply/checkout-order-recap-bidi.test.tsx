@@ -36,6 +36,25 @@ describe("payment recap catalog names", () => {
     expect(name.closest("div")?.textContent).toBe("14 Days - Single Entry");
   });
 
+  it("does not repeat multiple entry when the catalog name says Multi Entry", () => {
+    render(
+      <CatalogVisaTitle
+        service={{
+          id: "svc",
+          name: "14 Days - Multi Entry",
+          durationDays: 14,
+          entries: "multiple",
+          displayPriceMinor: null,
+          currency: null,
+        }}
+        t={t}
+      />,
+    );
+    const name = screen.getByText("14 Days - Multi Entry");
+    expect(name).toHaveAttribute("title", "14 Days - Multi Entry");
+    expect(name.closest("div")?.textContent).toBe("14 Days - Multi Entry");
+  });
+
   it("keeps duration and entry when the catalog name does not already say them", () => {
     render(
       <CatalogVisaTitle
@@ -52,6 +71,25 @@ describe("payment recap catalog names", () => {
     );
     expect(screen.getByText("Tourist").closest("div")?.textContent).toBe(
       "14 days · Single entry · Tourist",
+    );
+  });
+
+  it("keeps multiple entry when the catalog name does not say multi", () => {
+    render(
+      <CatalogVisaTitle
+        service={{
+          id: "svc",
+          name: "Tourist",
+          durationDays: 30,
+          entries: "multiple",
+          displayPriceMinor: null,
+          currency: null,
+        }}
+        t={t}
+      />,
+    );
+    expect(screen.getByText("Tourist").closest("div")?.textContent).toBe(
+      "30 days · Multiple entry · Tourist",
     );
   });
 
