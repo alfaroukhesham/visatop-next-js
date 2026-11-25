@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   expandPartyInsurance,
+  insuranceCatalogOffered,
   insuranceStepOffered,
   nextPartyInsurance,
   normalizeInsuranceForQuote,
@@ -41,5 +42,21 @@ describe("party insurance", () => {
     expect(insuranceStepOffered({ availableExtras: [{ key: "travel_insurance" }] })).toBe(true);
     expect(insuranceStepOffered({ availableExtras: [{ key: "fast_track" }] })).toBe(false);
     expect(insuranceStepOffered(null)).toBe(false);
+  });
+
+  it("offers Extras on the trip rail when the catalog row is enabled and priced", () => {
+    expect(
+      insuranceCatalogOffered([
+        { key: "travel_insurance", enabled: true, prices: [{ currency: "AED" }] },
+      ]),
+    ).toBe(true);
+    expect(
+      insuranceCatalogOffered([{ key: "travel_insurance", enabled: true, prices: [] }]),
+    ).toBe(false);
+    expect(
+      insuranceCatalogOffered([
+        { key: "travel_insurance", enabled: false, prices: [{ currency: "AED" }] },
+      ]),
+    ).toBe(false);
   });
 });

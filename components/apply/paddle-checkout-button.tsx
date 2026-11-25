@@ -9,6 +9,7 @@ import {
   type PaddleEventData,
 } from "@paddle/paddle-js";
 import { ClientButton } from "@/components/client/client-button";
+import { APPLY_PRIMARY_CTA_CLASS } from "@/components/apply/apply-primary-cta";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { Loader2 } from "lucide-react";
 import { apiHref } from "@/lib/app-href";
@@ -278,12 +279,14 @@ export function PaddleCheckoutButton({
   };
 
   return (
+    <div className="flex sm:justify-end">
     <ClientButton
+      brand="cta"
       onClick={handleCheckout}
       disabled={disabled || isInitializing || !termsAccepted}
       aria-disabled={disabled || isInitializing || !termsAccepted}
       aria-describedby={describedBy ?? undefined}
-      className="h-12 w-full text-lg font-bold shadow-lg transition-all hover:shadow-xl"
+      className={APPLY_PRIMARY_CTA_CLASS}
     >
       {isInitializing ? (
         <>
@@ -294,5 +297,6 @@ export function PaddleCheckoutButton({
         t("payment.payAndSubmit")
       )}
     </ClientButton>
+    </div>
   );
 }

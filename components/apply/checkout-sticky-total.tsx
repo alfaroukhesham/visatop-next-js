@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { ClientButton } from "@/components/client/client-button";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import { useNarrowViewport } from "@/lib/client/use-narrow-viewport";
+import { APPLY_PRIMARY_CTA_CLASS } from "@/components/apply/apply-primary-cta";
 import { APPLY_STICKY_CTA_MEDIA_QUERY } from "@/components/apply/apply-ready-continue";
 import { useStickyCtaHeight } from "@/components/apply/use-sticky-cta-height";
 
@@ -67,7 +68,7 @@ export const CheckoutStickyTotal: FC<ICheckoutStickyTotalProps> = ({ totalText, 
             <ClientButton
               type="button"
               brand="cta"
-              className="h-auto min-h-[46px] w-full min-w-0 whitespace-normal py-2"
+              className={APPLY_PRIMARY_CTA_CLASS}
               onClick={goToPayment}
             >
               {t("extras.bar.cta")}

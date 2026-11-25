@@ -15,7 +15,7 @@ const dismissBox = cn(
 
 const confirmBox = cn(
   box,
-  "border-primary bg-primary text-primary-foreground uppercase tracking-wide hover:bg-[#FFE19F]",
+  "border-primary bg-primary text-primary-foreground normal-case tracking-normal hover:bg-[#FFE19F]",
 );
 
 interface IDoubleDecisionProps {
@@ -52,20 +52,20 @@ export const DoubleDecision: FC<IDoubleDecisionProps> = ({
   return (
     <div
       data-slot="double-decision"
-      className={cn("grid gap-3", hasConfirm ? "grid-cols-2" : "grid-cols-1", className)}
+      className={cn("flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end", className)}
     >
-      <button type="button" className={dismissBox} onClick={onDismiss}>
+      <button type="button" className={cn(dismissBox, "order-2 sm:order-1 sm:w-auto")} onClick={onDismiss}>
         {dismissLabel}
       </button>
       {hasConfirm && confirmHref ? (
-        <Link href={confirmHref} className={confirmBox} aria-disabled={confirmDisabled}>
+        <Link href={confirmHref} className={cn(confirmBox, "order-1 whitespace-nowrap tracking-normal sm:order-2 sm:w-auto")} aria-disabled={confirmDisabled}>
           {confirmInner}
         </Link>
       ) : null}
       {hasConfirm && !confirmHref && onConfirm ? (
         <button
           type="button"
-          className={confirmBox}
+          className={cn(confirmBox, "order-1 whitespace-nowrap tracking-normal sm:order-2 sm:w-auto")}
           disabled={confirmDisabled || confirmPending}
           onClick={onConfirm}
         >

@@ -97,9 +97,13 @@ const buildReadinessLabel = (
   readiness: string | null,
   paymentReadiness: Readiness,
   t: (key: string) => string,
+  passportUploaded: boolean,
 ) => {
   if (paymentReadiness !== "ready") {
-    return { text: t("pay.blockedMissingDocs"), tone: "warn" as const };
+    return {
+      text: passportUploaded ? t("draft.actionMessages.ocrFailed") : t("pay.blockedMissingDocs"),
+      tone: "warn" as const,
+    };
   }
   if (APPLY_STEP3_VALIDATION_DISABLED) {
     return { text: t("draft.continueToPayment"), tone: "neutral" as const };
@@ -136,7 +140,7 @@ export interface IApplicantReviewProps {
   waitForPassportExtract: () => Promise<void>;
   locked: boolean;
   onSaved: () => void;
-  destination?: "payment" | "next";
+  destination?: "payment" | "next" | "extras";
   onFinished?: () => void;
   onReplacePassport?: () => void;
   onPrevious?: () => void;
@@ -183,6 +187,8 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [blurredKeys, setBlurredKeys] = useState<Set<string>>(() => new Set());
 
   const dirty = APPLICANT_ROWS.some((r) => (values[r.apiKey] ?? "") !== (initial[r.apiKey] ?? ""));
   const ocrHighlightFields = reviewHighlightFields({
@@ -310,7 +316,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
   const handleSave = async () => {
     const ok = await persistPatch(values, { navigate: true });
     if (!ok) return;
-    if (destination === "next") {
+    if (destination === "next" || destination === "extras") {
       onFinished?.();
       return;
     }
@@ -329,13 +335,23 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- persistPatch is recreated each render
   }, [dirty, locked, values, applicationId]);
 
-  const readinessLabel = buildReadinessLabel(readiness, paymentReadiness, t);
+  const readinessLabel = buildReadinessLabel(readiness, paymentReadiness, t, passportUploaded);
+  const showWarn = submitAttempted || blurredKeys.size > 0;
+  const markBlurred = (key: string) => {
+    setBlurredKeys((prev) => {
+      if (prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
+  };
   const isSecondary = !documentsReady;
 
   const onNext = async () => {
     if (locked) return;
+    setSubmitAttempted(true);
     setSaveError(null);
-    if (destination === "next") {
+    if (destination === "next" || destination === "extras") {
       if (!passportUploaded) {
         setSaveError(t("draft.passportRequiredToPay"));
         return;
@@ -399,7 +415,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
           ) : null}
         </div>
         <div className="flex items-center gap-2">
-          {readinessLabel ? (
+          {readinessLabel && (readinessLabel.tone !== "warn" || showWarn) ? (
             <span
               className={cn(
                 "inline-flex items-center gap-1 text-xs font-medium",
@@ -416,7 +432,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
       </div>
 
       <div className="space-y-4 pt-2">
-      {!APPLY_STEP3_VALIDATION_DISABLED && missing.length > 0 && (
+      {!APPLY_STEP3_VALIDATION_DISABLED && showWarn && missing.length > 0 && (
         <div className="border-error bg-error/5 border-b-2 px-3 py-2 text-sm">
           <p className="text-error font-semibold">{t("draft.requiredFieldsMissing")}</p>
           <p className="text-error/90 mt-1 text-xs">
@@ -430,7 +446,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
         </div>
       )}
 
-      {showOcrHighlightHint ? (
+      {showWarn && showOcrHighlightHint ? (
         <p id="ocr-review-hint" className="text-error text-sm font-semibold">
           {t("wizard.pleaseFill")}
         </p>
@@ -458,8 +474,10 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
             r.key === "nationality" &&
             isOcrHighlight &&
             !isApplicantNationalityValidForReview(values.applicantNationality, nationalityCode, nationalityName);
+          const revealed = submitAttempted || blurredKeys.has(r.key);
           const fieldInvalid =
-            (isMissing && !values[r.apiKey]) || (r.key === "nationality" ? nationalityHighlight : isOcrHighlight);
+            revealed &&
+            ((isMissing && !values[r.apiKey]) || (r.key === "nationality" ? nationalityHighlight : isOcrHighlight));
           return (
             <div key={r.key}>
               <dt className="text-foreground flex flex-col gap-0.5 text-[11px] font-bold uppercase tracking-wide">
@@ -488,6 +506,7 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
                     setEditedKeys((prev) => new Set(prev).add(r.key));
                   }}
                   onBlur={() => {
+                    markBlurred(r.key);
                     if (!locked && dirty) void persistPatch(values, { navigate: false });
                   }}
                   invalid={fieldInvalid}
@@ -508,7 +527,12 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
               applicationNationalityCode={nationalityCode}
               storedPhone={values.phone ?? ""}
               disabled={locked}
-              invalid={!APPLY_STEP3_VALIDATION_DISABLED && missing.includes("phone") && !values.phone}
+              invalid={
+                (submitAttempted || blurredKeys.has("phone")) &&
+                !APPLY_STEP3_VALIDATION_DISABLED &&
+                missing.includes("phone") &&
+                !values.phone
+              }
               onChange={(e164) => setValues((prev) => ({ ...prev, phone: e164 }))}
             />
           </dd>
@@ -517,7 +541,6 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
 
       <div className="space-y-2 pt-2">
         <DoubleDecision
-          className="max-w-md"
           dismissLabel={t("draft.previous")}
           onDismiss={() => (onPrevious ? onPrevious() : router.back())}
           confirmLabel={
@@ -527,9 +550,9 @@ export const ApplicantReview: FC<IApplicantReviewProps> = ({
                 ? t("draft.saving")
                 : extractPending
                   ? t("documents.readingPassport")
-                  : destination === "next"
-                    ? t("common.continue")
-                    : t("wizard.continueToPayment")
+                  : destination === "payment"
+                    ? t("draft.continueToPayment")
+                    : t("common.continue")
           }
           onConfirm={locked ? undefined : () => void onNext()}
           confirmDisabled={

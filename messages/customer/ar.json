@@ -60,6 +60,9 @@
     "emailHelper": "سنرسل تحديثات الطلب وإيصالك إلى هذا العنوان.",
     "checkoutTotal": "إجمالي الدفع",
     "editLocked": "لتغيير التأشيرة أو المسافرين، ابدأ طلباً جديداً.",
+    "editSummaryTitle": "رحلتك",
+    "backToApplication": "العودة إلى طلبك",
+    "startNewApplication": "ابدأ طلباً جديداً",
     "previousButton": "السابق",
     "continueWithVisa": "المتابعة بهذه التأشيرة",
     "loading": "جارٍ التحميل…",
@@ -729,7 +732,7 @@
       },
       "badge": "موصى به"
     },
-    "perTravellerSum": "{price} × {n} {travellersWord} = {sum}",
+    "perTravellerSum": "‏{price} × {n} {travellersWord} = ‏{sum}",
     "travellers_one": "مسافر",
     "travellers_two": "مسافرَين",
     "travellers_few": "مسافرين",
@@ -762,6 +765,7 @@
       "updated": "تم تحديث الإجمالي: {total}",
       "visa": "التأشيرة",
       "notAdded": "غير مضاف",
+      "added": "مضاف",
       "total": "الإجمالي"
     },
     "error": {

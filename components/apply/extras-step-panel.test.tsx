@@ -154,8 +154,8 @@ describe("Extras step", () => {
     ).toMatch(/AED\s*79\.00 per traveller ×\s*2\s*=\s*AED\s*158\.00/);
     expect(screen.getByText("Not added")).toBeInTheDocument();
     expect(screen.getByText("30-day tourist visa").closest("bdi")).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: "Continue to payment" })).toHaveLength(1);
-    expect(screen.getAllByRole("button", { name: "Continue" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Continue to payment" })).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: /^Continue$/ })).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Continue without extras" })).toHaveLength(2);
     expect(screen.getByTestId("extras-inline-cta")).toHaveClass("hidden");
     expect(screen.getByTestId("extras-sticky-bar")).toHaveClass("min-[1025px]:hidden");

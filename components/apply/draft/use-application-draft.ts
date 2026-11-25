@@ -107,18 +107,35 @@ export function useApplicationDraft(applicationId: string) {
   }, []);
 
   const loadMemberData = useCallback(
-    async (memberId: string) => {
-      const [appRes, docsRes] = await Promise.all([
-        fetchApiEnvelope<{
-          application: PublicApplication;
-          members: TPublicPartyMember[];
-        }>(apiHref(`/applications/${memberId}`)),
-        fetchApiEnvelope<{ documents: PublicDocument[] }>(apiHref(`/applications/${memberId}/documents`)),
-      ]);
-      if (!appRes.ok) return;
-      const memberApp = appRes.data.application;
-      const docs = docsRes.ok ? docsRes.data.documents : [];
-      const slots = slotsForPartyMember(appRes.data.members ?? [], memberId);
+    async (
+      memberId: string,
+      preload?: {
+        application: PublicApplication;
+        members: TPublicPartyMember[];
+        documents: PublicDocument[];
+      },
+    ) => {
+      let memberApp: PublicApplication;
+      let partyMembers: TPublicPartyMember[];
+      let docs: PublicDocument[];
+      if (preload) {
+        memberApp = preload.application;
+        partyMembers = preload.members;
+        docs = preload.documents;
+      } else {
+        const [appRes, docsRes] = await Promise.all([
+          fetchApiEnvelope<{
+            application: PublicApplication;
+            members: TPublicPartyMember[];
+          }>(apiHref(`/applications/${memberId}`)),
+          fetchApiEnvelope<{ documents: PublicDocument[] }>(apiHref(`/applications/${memberId}/documents`)),
+        ]);
+        if (!appRes.ok) return;
+        memberApp = appRes.data.application;
+        partyMembers = appRes.data.members ?? [];
+        docs = docsRes.ok ? docsRes.data.documents : [];
+      }
+      const slots = slotsForPartyMember(partyMembers, memberId);
       const docsByType: Partial<Record<DocType, PublicDocument | null>> = {};
       for (const slot of slots) {
         docsByType[slot.key as DocType] = latestByType(docs, slot.key as DocType);
@@ -148,11 +165,21 @@ export function useApplicationDraft(applicationId: string) {
       const silent = opts?.silent === true;
       if (!silent) setLoading(true);
       if (!silent) setError(null);
-      const appRes = await fetchApiEnvelope<{
-        application: PublicApplication;
-        members: TPublicPartyMember[];
-        wizardCursor: TApplyWizardCursor | null;
-      }>(apiHref(`/applications/${applicationId}`));
+      const natPromise =
+        nationalitiesRef.current.length === 0
+          ? fetchApiEnvelope<{ nationalities: CatalogNationality[] }>(apiHref("/catalog/nationalities"))
+          : Promise.resolve(null);
+      const [appRes, natRes, primaryDocsRes] = await Promise.all([
+        fetchApiEnvelope<{
+          application: PublicApplication;
+          members: TPublicPartyMember[];
+          wizardCursor: TApplyWizardCursor | null;
+        }>(apiHref(`/applications/${applicationId}`)),
+        natPromise,
+        fetchApiEnvelope<{ documents: PublicDocument[] }>(
+          apiHref(`/applications/${applicationId}/documents`),
+        ),
+      ]);
       if (!appRes.ok) {
         const lostCheckout =
           appRes.error.code === "NOT_FOUND" && appRef.current?.paymentStatus === "checkout_created";
@@ -181,16 +208,21 @@ export function useApplicationDraft(applicationId: string) {
       setSelectedMemberId((prev) =>
         nextMembers.some((m) => m.applicationId === prev) ? prev : nextApp.id,
       );
-      if (nationalitiesRef.current.length === 0) {
-        const natRes = await fetchApiEnvelope<{ nationalities: CatalogNationality[] }>(
-          apiHref("/catalog/nationalities"),
-        );
-        if (natRes.ok) {
-          nationalitiesRef.current = natRes.data.nationalities;
-          setNationalities(natRes.data.nationalities);
-        }
+      if (natRes?.ok) {
+        nationalitiesRef.current = natRes.data.nationalities;
+        setNationalities(natRes.data.nationalities);
       }
-      await Promise.all(nextMembers.map((m) => loadMemberData(m.applicationId)));
+      const primaryDocs = primaryDocsRes.ok ? primaryDocsRes.data.documents : [];
+      await Promise.all(
+        nextMembers.map((member) =>
+          loadMemberData(
+            member.applicationId,
+            member.applicationId === applicationId
+              ? { application: nextApp, members: nextMembers, documents: primaryDocs }
+              : undefined,
+          ),
+        ),
+      );
       if (!silent) setLoading(false);
       return {
         application: nextApp,

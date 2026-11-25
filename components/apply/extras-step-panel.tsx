@@ -1,9 +1,10 @@
 import { AlertTriangle, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import type { FC } from "react";
-import { ClientButton } from "@/components/client/client-button";
+import { ClientButton, ClientButtonLink } from "@/components/client/client-button";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
 import { ExtrasBreakdown } from "@/components/apply/extras-breakdown";
+import { APPLY_STEP_PREVIOUS_CLASS } from "@/components/apply/apply-primary-cta";
 import { ExtrasContinueButton } from "@/components/apply/extras-continue-button";
 import { MessageWithAmounts } from "@/components/apply/message-with-amounts";
 import {
@@ -79,7 +80,7 @@ export const ExtrasStepPanel: FC<IExtrasStepPanelProps> = ({
     <div className="space-y-6">
       <Link
         href={backHref}
-        className="text-secondary inline-flex min-h-11 items-center gap-1 text-sm font-semibold"
+        className="text-secondary inline-flex min-h-11 items-center gap-1 text-sm font-semibold min-[1025px]:hidden"
       >
         <ChevronLeft className="size-4 rtl:-scale-x-100" aria-hidden />
         {t("extras.back")}
@@ -138,7 +139,8 @@ export const ExtrasStepPanel: FC<IExtrasStepPanelProps> = ({
                 preview={preview}
                 visaNames={visaNames}
                 updating={updating}
-                announcement={announcement}
+                announcement={null}
+                live={false}
               />
             ) : (
               <div className="space-y-3" aria-busy="true">
@@ -149,7 +151,6 @@ export const ExtrasStepPanel: FC<IExtrasStepPanelProps> = ({
           </div>
         </div>
       </section>
-      <p className="text-muted-foreground text-sm">{t("extras.hint")}</p>
       {priceChanged ? (
         <p
           className="border-primary bg-primary/15 text-foreground flex items-start gap-2 rounded-[12px] border p-3 text-sm"
@@ -178,8 +179,17 @@ export const ExtrasStepPanel: FC<IExtrasStepPanelProps> = ({
           </ClientButton>
         </div>
       ) : null}
-      <div className="hidden min-[1025px]:flex min-[1025px]:flex-col min-[1025px]:items-start min-[1025px]:gap-1" data-testid="extras-inline-cta">
+      <p className="sr-only" role="status" aria-live="polite">
+        {announcement ?? ""}
+      </p>
+      <div
+        className="hidden min-[1025px]:flex min-[1025px]:flex-row min-[1025px]:items-center min-[1025px]:justify-end min-[1025px]:gap-3"
+        data-testid="extras-inline-cta"
+      >
+        <BackToDetails href={backHref} />
         <ExtrasContinueButton disabled={ctaDisabled} onClick={onContinue} />
+      </div>
+      <div className="hidden min-[1025px]:flex min-[1025px]:justify-end">
         <SkipExtras disabled={ctaDisabled} onClick={onSkip} />
       </div>
       <div aria-hidden className="min-[1025px]:hidden h-[calc(9rem+env(safe-area-inset-bottom,0px))]" />
@@ -189,7 +199,7 @@ export const ExtrasStepPanel: FC<IExtrasStepPanelProps> = ({
         className="min-[1025px]:hidden"
       >
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
             <div className="min-w-0 flex-1">
               <p className="text-muted-foreground text-xs">{t("extras.recap.total")}</p>
               <p className="font-heading text-foreground truncate font-bold tabular-nums">
@@ -204,6 +214,15 @@ export const ExtrasStepPanel: FC<IExtrasStepPanelProps> = ({
         </div>
       </div>
     </div>
+  );
+};
+
+const BackToDetails: FC<{ href: string }> = ({ href }) => {
+  const t = useCustomerT();
+  return (
+    <ClientButtonLink href={href} brand="white" className={APPLY_STEP_PREVIOUS_CLASS}>
+      {t("extras.back")}
+    </ClientButtonLink>
   );
 };
 

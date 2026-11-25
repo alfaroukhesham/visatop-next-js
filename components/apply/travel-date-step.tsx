@@ -71,7 +71,7 @@ export const TravelDateStep: FC<ITravelDateStepProps> = ({
   return (
     <div className="space-y-4" data-travel-date-step="">
       <div className="mx-auto max-w-2xl">
-        <h3 className="font-heading text-foreground text-center text-2xl font-semibold tracking-tight sm:text-3xl">
+        <h3 tabIndex={-1} className="font-heading text-foreground focus:outline-secondary text-center text-2xl font-semibold tracking-tight focus:outline-2 focus:outline-offset-2 sm:text-3xl">
           {t("start.travelDate.label")}
         </h3>
       </div>

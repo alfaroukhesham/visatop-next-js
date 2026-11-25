@@ -4,6 +4,11 @@ import { useEffect, useMemo, type FC } from "react";
 import { ShieldCheck } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ClientButton } from "@/components/client/client-button";
+import {
+  APPLY_PRIMARY_CTA_CLASS,
+  APPLY_PRIMARY_CTA_ROW_CLASS,
+  APPLY_STEP_PREVIOUS_CLASS,
+} from "@/components/apply/apply-primary-cta";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
 import { APPLY_FUNNEL_EVENTS } from "@/lib/analytics/apply-funnel";
 import { tagClarityApplyScreen } from "@/lib/analytics/clarity-apply-screen";
@@ -283,24 +288,26 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
               t,
             )}
           />
-          <ClientButton
-            brand="cta"
-            className="h-12 w-full"
-            type="button"
-            disabled={!passportDoc || view.uploading === "passport_copy"}
-            onClick={() => void confirmAndGo({ screen: "passport", travellerId })}
-          >
-            {t("common.continue")}
-          </ClientButton>
-          <ClientButton
-            variant="outline"
-            brand="white"
-            className="h-12 w-full"
-            type="button"
-            onClick={() => router.push(applyPreviousHref(applicationId, wizardMembers, resolved))}
-          >
-            {t("common.previous")}
-          </ClientButton>
+          <div className={APPLY_PRIMARY_CTA_ROW_CLASS}>
+            <ClientButton
+              variant="outline"
+              brand="white"
+              className={APPLY_STEP_PREVIOUS_CLASS}
+              type="button"
+              onClick={() => router.push(applyPreviousHref(applicationId, wizardMembers, resolved))}
+            >
+              {t("common.previous")}
+            </ClientButton>
+            <ClientButton
+              brand="cta"
+              className={APPLY_PRIMARY_CTA_CLASS}
+              type="button"
+              disabled={!passportDoc || view.uploading === "passport_copy"}
+              onClick={() => void confirmAndGo({ screen: "passport", travellerId })}
+            >
+              {t("common.continue")}
+            </ClientButton>
+          </div>
         </>
       ) : null}
       {resolved.screen === "other" ? (
@@ -331,30 +338,32 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
             );
           })}
           <p className="text-muted-foreground text-center text-xs">{t("wizard.addAfterPayment")}</p>
-          <ClientButton
-            brand="cta"
-            className="h-12 w-full"
-            type="button"
-            disabled={view.uploading !== null}
-            onClick={() => {
-              const eventName = otherDocsUploaded
-                ? APPLY_FUNNEL_EVENTS.otherDocsUploaded
-                : APPLY_FUNNEL_EVENTS.otherDocsSkipped;
-              trackEventOnce(eventName, { application_id: travellerId }, `${eventName}:${travellerId}`);
-              void confirmAndGo({ screen: "other", travellerId });
-            }}
-          >
-            {otherDocsUploaded ? t("common.continue") : t("wizard.skipForNow")}
-          </ClientButton>
-          <ClientButton
-            variant="outline"
-            brand="white"
-            className="h-12 w-full"
-            type="button"
-            onClick={() => router.push(applyPreviousHref(applicationId, wizardMembers, resolved))}
-          >
-            {t("common.previous")}
-          </ClientButton>
+          <div className={APPLY_PRIMARY_CTA_ROW_CLASS}>
+            <ClientButton
+              variant="outline"
+              brand="white"
+              className={APPLY_STEP_PREVIOUS_CLASS}
+              type="button"
+              onClick={() => router.push(applyPreviousHref(applicationId, wizardMembers, resolved))}
+            >
+              {t("common.previous")}
+            </ClientButton>
+            <ClientButton
+              brand="cta"
+              className={APPLY_PRIMARY_CTA_CLASS}
+              type="button"
+              disabled={view.uploading !== null}
+              onClick={() => {
+                const eventName = otherDocsUploaded
+                  ? APPLY_FUNNEL_EVENTS.otherDocsUploaded
+                  : APPLY_FUNNEL_EVENTS.otherDocsSkipped;
+                trackEventOnce(eventName, { application_id: travellerId }, `${eventName}:${travellerId}`);
+                void confirmAndGo({ screen: "other", travellerId });
+              }}
+            >
+              {otherDocsUploaded ? t("common.continue") : t("wizard.skipForNow")}
+            </ClientButton>
+          </div>
         </>
       ) : null}
       {resolved.screen === "details" ? (
@@ -403,7 +412,7 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
           waitForPassportExtract={waitForPassportExtract}
           locked={view.app.checkoutState === "pending" || view.app.paymentStatus === "paid"}
           onSaved={onSaved}
-          destination={isLast ? "payment" : "next"}
+          destination={isLast ? (extrasOn ? "extras" : "payment") : "next"}
           onFinished={() => void confirmAndGo({ screen: "details", travellerId })}
           onReplacePassport={() =>
             router.push(applyWizardHref(applicationId, { screen: "passport", travellerId }))

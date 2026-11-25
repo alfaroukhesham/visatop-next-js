@@ -22,6 +22,8 @@ interface IExtrasBreakdownProps {
   /** Pay puts "Change extras" on the insurance row. */
   insuranceAction?: ReactNode;
   announcement?: string | null;
+  /** Only the Extras step panel announces the total. Cards pass false. */
+  live?: boolean;
 }
 
 const uniqueNames = (names: readonly string[]): string[] => {
@@ -45,6 +47,7 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
   updatingMode = "reserved",
   insuranceAction = null,
   announcement = null,
+  live = true,
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
@@ -133,13 +136,15 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
           fastTrackPromise={fastPromise}
         />
       ) : null}
-      <p
-        className="absolute size-px overflow-hidden whitespace-nowrap border-0 p-0 [clip:rect(0,0,0,0)]"
-        role="status"
-        aria-live="polite"
-      >
-        {announcement ?? ""}
-      </p>
+      {live ? (
+        <p
+          className="absolute size-px overflow-hidden whitespace-nowrap border-0 p-0 [clip:rect(0,0,0,0)]"
+          role="status"
+          aria-live="polite"
+        >
+          {announcement ?? ""}
+        </p>
+      ) : null}
     </div>
   );
 };

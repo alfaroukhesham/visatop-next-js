@@ -60,6 +60,9 @@
     "emailHelper": "We'll send application updates and your receipt to this address.",
     "checkoutTotal": "Checkout total",
     "editLocked": "To change your visa or travellers, start a new application.",
+    "editSummaryTitle": "Your trip",
+    "backToApplication": "Back to your application",
+    "startNewApplication": "Start a new application",
     "previousButton": "Previous",
     "continueWithVisa": "Continue with this visa",
     "loading": "Loading…",
@@ -762,6 +765,7 @@
       "updated": "Total updated: {total}",
       "visa": "Visa",
       "notAdded": "Not added",
+      "added": "Added",
       "total": "Total"
     },
     "error": {
