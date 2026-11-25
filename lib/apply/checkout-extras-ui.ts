@@ -390,5 +390,11 @@ export const quoteUsesCodeFormat = (preview: TClientQuotePreview): boolean =>
 export const visibleInsuranceTermsUrl = (raw: string | null | undefined): string | null => {
   const url = raw?.trim() ?? "";
   if (!url || url.toLowerCase().includes("placeholder")) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null;
+  } catch {
+    return null;
+  }
   return url;
 };
