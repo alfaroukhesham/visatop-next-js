@@ -53,7 +53,12 @@ const ExtrasPage = async ({ params }: IExtrasPageProps) => {
     ? `/apply/applications/${encodeURIComponent(id)}?screen=details&traveller=${encodeURIComponent(detailsId)}`
     : `/apply/applications/${encodeURIComponent(id)}?screen=details`;
   const trip = applyTripStepHref(row.nationalityCode, id);
-  const visaNames = members.map((member) => member.serviceName);
+  const visaNames = members.map((member) => ({
+    name: member.serviceName,
+    durationDays: member.durationDays,
+    entries: member.entries,
+    travelerKind: member.travelerKind,
+  }));
 
   return (
     <CheckoutQuoteProvider applicationId={id} initialPreview={preview.preview as TClientQuotePreview}>

@@ -88,7 +88,7 @@ describe("PayOrderSummary", () => {
     expect(lines.className).toMatch(/lg:hidden/);
     const card = document.querySelector("[data-testid='pay-order'] .grid");
     expect(card).toBeTruthy();
-    expect(card?.className).toMatch(/grid-cols-\[minmax\(0,1fr\)_auto\]/);
+    expect(card?.className).toMatch(/grid-cols-\[auto_minmax\(0,1fr\)\]/);
     expect(card?.className).toMatch(/lg:max-w-md/);
     expect(card?.className).toMatch(/lg:grid-cols-\[auto_1fr\]/);
     expect(screen.getByText("Your order").className).toMatch(/lg:hidden/);
@@ -108,6 +108,11 @@ describe("PayOrderSummary", () => {
     const change = screen.getByRole("link", { name: "Change extras" });
     expect(change.className).toMatch(/inline-flex/);
     expect(change.className).toMatch(/min-h-11/);
+    expect(change.className).toMatch(/lg:min-h-0/);
+    expect(change.className).toMatch(/lg:py-3/);
+    expect(change.className).toMatch(/lg:-my-3/);
+    const extrasRow = change.closest("[data-testid='pay-order-extras']")?.querySelector("div");
+    expect(extrasRow?.className).toMatch(/lg:min-h-0/);
     expect(lines.contains(change)).toBe(false);
     expect(change.parentElement?.textContent).not.toMatch(/NGN/);
     const extras = screen.getByTestId("pay-order-extras");
@@ -127,5 +132,64 @@ describe("PayOrderSummary", () => {
     const arrival = screen.getByText("Arrival in the UAE:");
     expect(lines.contains(arrival)).toBe(false);
     expect(arrival.parentElement).toBe(card);
+    expect(arrival.className).toMatch(/whitespace-nowrap/);
+    expect(arrival.nextElementSibling?.className).toMatch(/text-end/);
+  });
+
+  it("puts no extras and change extras on one row", () => {
+    const quote = preview();
+    quote.extraLines = [];
+    render(<PayOrderSummary applicationId="app-1" visaNames={["14 Days - Single Entry"]} previewOverride={quote} />);
+    const noExtras = screen.getByText("No extras added");
+    const row = noExtras.parentElement;
+    expect(row?.className).toMatch(/flex/);
+    expect(row?.className).toMatch(/flex-nowrap/);
+    expect(row?.className).not.toMatch(/flex-col/);
+    expect(row?.contains(screen.getByRole("link", { name: "Change extras" }))).toBe(true);
+  });
+
+  it("lists each distinct visa when travellers differ and keeps one line when they match", () => {
+    const mixed = preview();
+    mixed.travellerCount = 2;
+    mixed.visaLines = [
+      { applicationId: "app-1", serviceId: "svc-multi", amountMinor: "81400" },
+      { applicationId: "app-2", serviceId: "svc-single", amountMinor: "70000" },
+    ];
+    mixed.visaAmountMinor = "151400";
+    mixed.totalAmountMinor = "181090";
+    const view = render(
+      <PayOrderSummary
+        applicationId="app-1"
+        visaNames={["30 Days - Multiple Entry", "30 Days - Single Entry"]}
+        previewOverride={mixed}
+      />,
+    );
+    const lines = screen.getAllByTestId("mixed-visa-line");
+    expect(lines).toHaveLength(2);
+    expect(lines[0]?.textContent).toContain("30 Days - Multiple Entry\u00a0×\u00a01");
+    expect(lines[1]?.textContent).toContain("30 Days - Single Entry\u00a0×\u00a01");
+    expect(lines[0]?.textContent).toMatch(/814\.00/);
+    expect(lines[1]?.textContent).toMatch(/700\.00/);
+    expect(screen.getByTestId("pay-order-total").textContent).toMatch(/1,810\.90/);
+    view.unmount();
+
+    const same = preview();
+    same.travellerCount = 2;
+    same.visaLines = [
+      { applicationId: "app-1", serviceId: "svc-multi", amountMinor: "81400" },
+      { applicationId: "app-2", serviceId: "svc-multi", amountMinor: "81400" },
+    ];
+    same.visaAmountMinor = "162800";
+    same.totalAmountMinor = "192490";
+    render(
+      <PayOrderSummary
+        applicationId="app-1"
+        visaNames={["30 Days - Multiple Entry", "30 Days - Multiple Entry"]}
+        previewOverride={same}
+      />,
+    );
+    expect(screen.queryByTestId("mixed-visa-line")).toBeNull();
+    expect(screen.getByTestId("pay-order-lines").textContent).toContain("30 Days - Multiple Entry\u00a0×\u00a02");
+    expect(screen.getByTestId("pay-order-total").textContent).toMatch(/1,924\.90/);
   });
 });

@@ -24,6 +24,7 @@ import {
   APPLY_STEP_PREVIOUS_CLASS,
 } from "@/components/apply/apply-primary-cta";
 import { customerFacingServiceName } from "@/lib/apply/customer-service-name";
+import { mixedVisaGroups, parseVisaAmountMinor, type TVisaRecapItem } from "@/lib/apply/visa-recap-lines";
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
@@ -150,9 +151,14 @@ interface ISummaryPriceLine {
   amount: string;
 }
 
-const SummaryPriceLines: FC<{ lines: readonly ISummaryPriceLine[]; className?: string }> = ({
+const SummaryPriceLines: FC<{
+  lines: readonly ISummaryPriceLine[];
+  className?: string;
+  testId?: string;
+}> = ({
   lines,
   className,
+  testId,
 }) => {
   if (lines.length === 0) return null;
   return (
@@ -161,6 +167,7 @@ const SummaryPriceLines: FC<{ lines: readonly ISummaryPriceLine[]; className?: s
         "grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-1.5 text-sm font-normal",
         className,
       )}
+      data-testid={testId}
     >
       {lines.map((line) => (
         <div key={line.key} className="contents">
@@ -188,9 +195,10 @@ interface ISelectedVisaSummaryProps {
   price: { text: string; isEstimate: boolean } | null;
   badges: TApplyPriceBadges;
   priceLines?: ISummaryPriceLine[];
+  mixedVisaLines?: readonly ISummaryPriceLine[];
 }
 
-const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
+export const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
   service,
   answers,
   travelerCount,
@@ -198,9 +206,11 @@ const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
   price,
   badges,
   priceLines = [],
+  mixedVisaLines = [],
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
+  const visasDiffer = mixedVisaLines.length > 1;
   const visaName = customerFacingServiceName(service.name, locale, t, {
     durationDays: service.durationDays,
     entries: service.entries,
@@ -210,14 +220,18 @@ const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
     <aside className="border-secondary/25 bg-card h-fit min-w-0 space-y-4 rounded-2xl border p-4 shadow-[0_12px_30px_rgba(1,32,49,0.08)]">
       <div className="min-w-0">
         <p className="text-secondary text-[10px] font-bold uppercase tracking-[0.2em]">{t("start.yourVisaEyebrow")}</p>
-        <h2 className="font-heading text-foreground mt-1 min-w-0 break-words text-pretty text-lg font-bold leading-snug">
-          <bdi className="break-words" title={visaName}>
-            {visaName}
-          </bdi>
-        </h2>
+        {visasDiffer ? (
+          <SummaryPriceLines lines={mixedVisaLines} className="mt-1" testId="mixed-visa-line" />
+        ) : (
+          <h2 className="font-heading text-foreground mt-1 min-w-0 break-words text-pretty text-lg font-bold leading-snug">
+            <bdi className="break-words" title={visaName}>
+              {visaName}
+            </bdi>
+          </h2>
+        )}
       </div>
       <dl className="text-muted-foreground space-y-1.5 text-xs">
-        {service.durationDays != null ? (
+        {!visasDiffer && service.durationDays != null ? (
           <div className="flex justify-between gap-3">
             <dt>{t("start.stayLabel")}</dt>
             <dd className="text-foreground font-semibold">{t("start.stayDays", { count: service.durationDays })}</dd>
@@ -227,13 +241,15 @@ const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
           <dt>{t("start.travelersLabel")}</dt>
           <dd className="text-foreground font-semibold">{travelerCount}</dd>
         </div>
-        <div className="flex justify-between gap-3">
-          <dt>{t("start.entryLabel")}</dt>
-          <dd className="text-foreground font-semibold">
-            {answers.entry === "multiple" ? t("start.entryMultiple") : t("start.entrySingle")}
-          </dd>
-        </div>
-        {answers.kind === "child" ? (
+        {!visasDiffer ? (
+          <div className="flex justify-between gap-3">
+            <dt>{t("start.entryLabel")}</dt>
+            <dd className="text-foreground font-semibold">
+              {answers.entry === "multiple" ? t("start.entryMultiple") : t("start.entrySingle")}
+            </dd>
+          </div>
+        ) : null}
+        {!visasDiffer && answers.kind === "child" ? (
           <div className="flex justify-between gap-3">
             <dt>{t("start.travellerLabel")}</dt>
             <dd className="text-foreground font-semibold">{t("start.travellerChild")}</dd>
@@ -284,6 +300,7 @@ interface IEditTripSummaryProps {
   speed: "standard" | "fast_track";
   totalText: string | null;
   priceLines?: readonly ISummaryPriceLine[];
+  mixedVisaLines?: readonly ISummaryPriceLine[];
   returnHref: string;
   previousHref: string | null;
 }
@@ -296,6 +313,7 @@ const EditTripSummary: FC<IEditTripSummaryProps> = ({
   speed,
   totalText,
   priceLines = [],
+  mixedVisaLines = [],
   returnHref,
   previousHref,
 }) => {
@@ -325,18 +343,22 @@ const EditTripSummary: FC<IEditTripSummaryProps> = ({
       </h2>
       <p className="text-muted-foreground text-sm">{t("start.editLocked")}</p>
       <dl className="space-y-2 text-sm">
-        <div className="flex items-baseline justify-between gap-3">
-          <dt className="text-muted-foreground">{t("extras.recap.visa")}</dt>
-          <dd className="text-foreground min-w-0 break-words text-pretty text-end font-semibold">
-            {visaLabel ? (
-              <bdi className="break-words" title={visaLabel}>
-                {visaLabel}
-              </bdi>
-            ) : (
-              t("start.loading")
-            )}
-          </dd>
-        </div>
+        {mixedVisaLines.length > 1 ? (
+          <SummaryPriceLines lines={mixedVisaLines} />
+        ) : (
+          <div className="flex items-baseline justify-between gap-3">
+            <dt className="text-muted-foreground">{t("extras.recap.visa")}</dt>
+            <dd className="text-foreground min-w-0 break-words text-pretty text-end font-semibold">
+              {visaLabel ? (
+                <bdi className="break-words" title={visaLabel}>
+                  {visaLabel}
+                </bdi>
+              ) : (
+                t("start.loading")
+              )}
+            </dd>
+          </div>
+        )}
         <div className="flex items-baseline justify-between gap-3">
           <dt className="text-muted-foreground">{t("start.travelersLabel")}</dt>
           <dd className="text-foreground font-semibold">{travellerCount}</dd>
@@ -352,7 +374,7 @@ const EditTripSummary: FC<IEditTripSummaryProps> = ({
       <SummaryPriceLines lines={priceLines} className="lg:hidden" />
       {totalText ? (
         <div className="border-border flex items-baseline justify-between gap-3 border-t pt-3 lg:hidden">
-          <p className="text-foreground text-sm font-semibold">{t("start.checkoutTotal")}</p>
+          <p className="text-foreground text-sm font-semibold">{t("start.totalLabel")}</p>
           <p className="font-heading text-foreground text-xl font-bold tabular-nums">
             <bdi>{totalText}</bdi>
           </p>
@@ -1084,6 +1106,49 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     if (from === "details") return 1;
     return undefined;
   })();
+  const visaLabelFor = (service: Service): string =>
+    customerFacingServiceName(service.name, locale, t, {
+      durationDays: service.durationDays,
+      entries: service.entries,
+      travelerKind: service.travelerKind,
+    });
+  const quoteVisaItems: TVisaRecapItem[] =
+    savedQuote === null
+      ? []
+      : savedQuote.visaLines.flatMap((line) => {
+          const matched = services.find((row) => row.id === line.serviceId);
+          if (!matched) return [];
+          return [
+            {
+              key: matched.id,
+              label: visaLabelFor(matched),
+              amountMinor: parseVisaAmountMinor(line.amountMinor),
+            },
+          ];
+        });
+  const liveVisaItems: TVisaRecapItem[] = selectedServices.map((service) => {
+    const minor = toDisplayMinor(service, displayCurrency);
+    return {
+      key: service.id,
+      label: visaLabelFor(service),
+      amountMinor: minor === null ? null : BigInt(Math.trunc(minor)),
+    };
+  });
+  const useQuoteVisas =
+    savedQuote !== null && quoteVisaItems.length > 0 && quoteVisaItems.length === savedQuote.visaLines.length;
+  const mixedVisaGroupsForParty = mixedVisaGroups(useQuoteVisas ? quoteVisaItems : liveVisaItems);
+  const formatVisaGroupAmount = (amountMinor: bigint): string => {
+    if (useQuoteVisas && savedQuote) {
+      return formatMinorAmount(amountMinor.toString(), savedQuote.currency, locale, "code");
+    }
+    return formatDisplayMinor(amountMinor.toString(), displayCurrency, locale) ?? "";
+  };
+  const mixedVisaLines: ISummaryPriceLine[] = mixedVisaGroupsForParty.map((group) => ({
+    key: `${group.key}:${group.amountMinor === null ? "" : group.amountMinor.toString()}`,
+    label: group.label,
+    count: group.count,
+    amount: group.amountMinor === null ? "" : formatVisaGroupAmount(group.amountMinor),
+  }));
   const summaryPriceLines: ISummaryPriceLine[] = savedQuote
     ? groupedExtraLines(savedQuote).map((row) => ({
         key: row.key,
@@ -1206,6 +1271,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
               speed={speedForSubmit}
               totalText={totalText}
               priceLines={summaryPriceLines}
+              mixedVisaLines={mixedVisaLines}
               returnHref={editReturn?.backHref ?? `/apply/applications/${encodeURIComponent(editingApplicationId)}`}
               previousHref={editReturn?.previousHref ?? null}
             />
@@ -1545,10 +1611,13 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       {!editingApplicationId && serviceId && (totalText || speedForSubmit) ? (
         <div className="border-secondary/20 bg-secondary/5 space-y-2 rounded-2xl border-2 px-5 py-4">
           <ProcessingSpeedLine speed={speedForSubmit} />
+          {mixedVisaLines.length > 1 ? (
+            <SummaryPriceLines lines={mixedVisaLines} className="lg:hidden" testId="mixed-visa-line" />
+          ) : null}
           <SummaryPriceLines lines={summaryPriceLines} className="lg:hidden" />
           {totalText ? (
             <div className="flex flex-wrap items-baseline justify-between gap-3 text-sm lg:hidden">
-              <p className="text-foreground font-bold">{t("start.checkoutTotal")}</p>
+              <p className="text-foreground font-bold">{t("start.totalLabel")}</p>
               <p className="text-foreground text-end text-base font-bold tabular-nums">
                 <bdi>{totalText}</bdi>
               </p>
@@ -1598,7 +1667,12 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       ) : null}
         </div>
         {serviceId && primaryService ? (
-          <div className="mt-6 self-start lg:sticky lg:top-[calc(var(--wp-shell-header-height,1rem)+1rem)] lg:order-2 lg:mt-0">
+          <div
+            className={cn(
+              "mt-6 self-start lg:sticky lg:top-[calc(var(--wp-shell-header-height,1rem)+1rem)] lg:order-2 lg:mt-0",
+              applyStep === "visa" && !editingApplicationId && "max-lg:hidden",
+            )}
+          >
             <SelectedVisaSummary
               service={primaryService}
               answers={answers}
@@ -1607,6 +1681,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
               price={formatPriceForDisplay(primaryService, displayCurrency, locale)}
               badges={badges}
               priceLines={summaryPriceLines}
+              mixedVisaLines={mixedVisaLines}
             />
           </div>
         ) : null}

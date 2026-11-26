@@ -17,6 +17,8 @@ export type TPublicPartyMember = {
   travelerIndex: number;
   serviceId: string;
   serviceName: string;
+  durationDays?: number | null;
+  entries?: string | null;
   slots: TDocumentSlot[];
 };
 
@@ -93,7 +95,11 @@ export async function loadPartyMembers(
   app: ApplicationRow,
 ): Promise<TPublicPartyMember[]> {
   const [service] = await tx
-    .select({ name: visaService.name })
+    .select({
+      name: visaService.name,
+      durationDays: visaService.durationDays,
+      entries: visaService.entries,
+    })
     .from(visaService)
     .where(eq(visaService.id, app.serviceId))
     .limit(1);
@@ -108,6 +114,8 @@ export async function loadPartyMembers(
           travelerIndex: application.travelerIndex,
           serviceId: application.serviceId,
           serviceName: visaService.name,
+          durationDays: visaService.durationDays,
+          entries: visaService.entries,
         })
         .from(application)
         .innerJoin(visaService, eq(visaService.id, application.serviceId))
@@ -115,7 +123,27 @@ export async function loadPartyMembers(
         .orderBy(asc(application.travelerIndex))
     : [];
 
-  const baseMembers = buildPublicPartyMembers(app, appServiceName, partyRows);
+  const factsByServiceId = new Map<string, { durationDays: number | null; entries: string | null }>();
+  if (service) {
+    factsByServiceId.set(app.serviceId, {
+      durationDays: service.durationDays,
+      entries: service.entries,
+    });
+  }
+  for (const row of partyRows) {
+    factsByServiceId.set(row.serviceId, {
+      durationDays: row.durationDays,
+      entries: row.entries,
+    });
+  }
+  const baseMembers = buildPublicPartyMembers(app, appServiceName, partyRows).map((member) => {
+    const facts = factsByServiceId.get(member.serviceId);
+    return {
+      ...member,
+      durationDays: facts?.durationDays ?? null,
+      entries: facts?.entries ?? null,
+    };
+  });
   const slotsByApplicationId: Record<string, TDocumentSlot[]> = {};
   await Promise.all(
     baseMembers.map(async (m) => {

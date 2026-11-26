@@ -35,6 +35,7 @@ import { ProcessingSpeedLine } from "@/components/apply/processing-speed-line";
 import type { TSettledRecap } from "@/lib/apply/charged-recap";
 import type { TCustomerMessageVars } from "@/lib/i18n/customer-messages";
 import { customerFacingServiceName } from "@/lib/apply/customer-service-name";
+import { mixedVisaGroups, parseVisaAmountMinor } from "@/lib/apply/visa-recap-lines";
 
 type CatalogService = {
   id: string;
@@ -300,6 +301,23 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
   const extraRows = groupedExtraLines({
     extraLines: serverPreview?.extraLines ?? settled?.extraLines ?? [],
   });
+  const quoteVisaMinor = (applicationId: string): bigint | null => {
+    const lines = serverPreview?.visaLines ?? settled?.visaLines ?? null;
+    return parseVisaAmountMinor(lines?.find((line) => line.applicationId === applicationId)?.amountMinor);
+  };
+  const mixedMemberGroups = mixedVisaGroups(
+    memberLines.map((line) => ({
+      key: line.member.serviceId,
+      label: customerFacingServiceName(line.member.serviceName, locale, t, {
+        durationDays: line.service?.durationDays,
+        entries: line.service?.entries,
+        travelerKind: line.member.travelerKind,
+      }),
+      amountMinor:
+        quoteVisaMinor(line.member.applicationId) ??
+        (line.service ? priceMinorForDisplay(line.service, currency) : null),
+    })),
+  );
 
   const totalText =
     resolvedTotalMinor === null ? null : formatQuote(resolvedTotalMinor.toString());
@@ -390,7 +408,31 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
           <p className="text-error text-sm">{loadError}</p>
         ) : members.length > 1 ? (
           <div className="space-y-4">
-            {memberLines.map((line) => {
+            {mixedMemberGroups.length > 0
+              ? mixedMemberGroups.map((group) => (
+                  <div
+                    key={`${group.key}:${group.amountMinor === null ? "" : group.amountMinor.toString()}`}
+                    className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4"
+                    data-recap-line=""
+                    data-testid="mixed-visa-line"
+                  >
+                    <p className="text-foreground min-w-0 break-words text-pretty text-sm font-normal leading-snug">
+                      <bdi className="break-words" title={group.label}>
+                        {group.label}
+                      </bdi>
+                      {"\u00a0"}
+                      <span className="text-muted-foreground whitespace-nowrap">{"\u00d7\u00a0"}{group.count}</span>
+                    </p>
+                    {group.amountMinor !== null ? (
+                      <p className="text-foreground text-end text-sm font-normal tabular-nums">
+                        <bdi>{formatQuote(group.amountMinor.toString())}</bdi>
+                      </p>
+                    ) : (
+                      <p className="text-muted-foreground text-end text-sm">{t("payment.totalAtCheckout")}</p>
+                    )}
+                  </div>
+                ))
+              : memberLines.map((line) => {
               const amount = visaAmountText(line.member.applicationId, line.price?.text ?? null);
               return (
                 <div
