@@ -72,15 +72,20 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
       data-testid="extras-breakdown"
     >
       <div className="flex min-h-6 items-baseline justify-between gap-3 text-sm">
-        <p className="text-foreground min-w-0">
+        <p className="text-foreground min-w-0 break-words text-pretty">
           {t("extras.recap.visa")}
-          {names.map((name) => (
-            <span key={name}>
-              {" · "}
-              <bdi>{customerFacingServiceName(name, locale, t)}</bdi>
-            </span>
-          ))}
-          <span className="text-muted-foreground"> × {count}</span>
+          {names.map((name) => {
+            const label = customerFacingServiceName(name, locale, t);
+            return (
+              <span key={name}>
+                {" · "}
+                <bdi className="break-words" title={label}>
+                  {label}
+                </bdi>
+              </span>
+            );
+          })}
+          <span className="text-muted-foreground whitespace-nowrap"> × {count}</span>
         </p>
         <p className="text-foreground shrink-0 text-end font-medium tabular-nums">
           <bdi>{money(preview.visaAmountMinor)}</bdi>

@@ -63,6 +63,7 @@ const ApplyApplicationPaymentPage = async ({ params }: IApplyApplicationPaymentP
         <ApplyTwoColumn
           currentStep={offered ? 5 : 4}
           includeExtras={offered}
+          summaryFrom="lg"
           applicationId={id}
           tripHref={trip && offered ? `${trip}&extras=1` : trip}
           detailsTravellerId={lastTravellerApplicationId(members)}
@@ -73,6 +74,7 @@ const ApplyApplicationPaymentPage = async ({ params }: IApplyApplicationPaymentP
               members={members}
               trackCheckoutViewed
               showProcessingSpeed={false}
+              showTitle={false}
             />
           }
           contentClassName="theme-client-rise mx-auto w-full max-w-4xl space-y-8"

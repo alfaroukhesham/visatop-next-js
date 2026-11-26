@@ -536,6 +536,11 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                   const price = formatPrice(s);
                   const entryText = entriesLabel(s.entries, t);
                   const subtitle = serviceResultSubtitle(s.name, s.durationDays, entryText, t);
+                  const visaName = customerFacingServiceName(s.name, locale, t, {
+                    durationDays: s.durationDays,
+                    entries: s.entries,
+                    travelerKind: s.travelerKind,
+                  });
                   const selected = selectedServiceId === s.id;
                   return (
                     <li key={s.id}>
@@ -546,7 +551,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                         disabled={choicesLocked}
                         aria-pressed={selected}
                         className={cn(
-                          "border-border bg-card relative flex w-full items-center gap-4 rounded-2xl border-2 px-4 py-5 text-left shadow-[0_10px_28px_rgba(1,32,49,0.05)] transition-all hover:-translate-y-0.5 hover:border-secondary",
+                          "border-border bg-card relative flex w-full flex-wrap items-start gap-x-3 gap-y-2 rounded-2xl border-2 px-4 py-5 text-left shadow-[0_10px_28px_rgba(1,32,49,0.05)] transition-all hover:-translate-y-0.5 hover:border-secondary",
                           selected ? "border-secondary bg-accent/70 ring-2 ring-secondary/10" : "",
                         )}
                       >
@@ -559,26 +564,22 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                         >
                           {selected ? <Check className="size-5" strokeWidth={3} /> : <Plane className="size-5" />}
                         </span>
-                        <span className="min-w-0 flex-1">
+                        <span className="min-w-0 flex-1 basis-[12rem]">
                           <span
                             className={cn(
-                              "text-foreground block text-base font-semibold leading-snug",
+                              "text-foreground block min-w-0 break-words text-pretty text-base font-semibold leading-snug",
                               selected && "text-secondary",
                             )}
                           >
-                            <bdi>
-                              {customerFacingServiceName(s.name, locale, t, {
-                                durationDays: s.durationDays,
-                                entries: s.entries,
-                                travelerKind: s.travelerKind,
-                              })}
+                            <bdi className="break-words" title={visaName}>
+                              {visaName}
                             </bdi>
                           </span>
                           {subtitle ? (
                             <span className="text-muted-foreground mt-1 block text-xs">{subtitle}</span>
                           ) : null}
                         </span>
-                        <span className="shrink-0 text-right">
+                        <span className="ms-auto shrink-0 text-right">
                           {price ? (
                             <>
                               <span className="font-heading text-foreground block text-lg font-bold tabular-nums">

@@ -161,17 +161,18 @@ const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
+  const visaName = customerFacingServiceName(service.name, locale, t, {
+    durationDays: service.durationDays,
+    entries: service.entries,
+    travelerKind: service.travelerKind,
+  });
   return (
-    <aside className="border-secondary/25 bg-card h-fit space-y-4 rounded-2xl border p-4 shadow-[0_12px_30px_rgba(1,32,49,0.08)] lg:sticky lg:top-[var(--wp-shell-header-height,1rem)]">
-      <div>
+    <aside className="border-secondary/25 bg-card h-fit min-w-0 space-y-4 rounded-2xl border p-4 shadow-[0_12px_30px_rgba(1,32,49,0.08)]">
+      <div className="min-w-0">
         <p className="text-secondary text-[10px] font-bold uppercase tracking-[0.2em]">{t("start.yourVisaEyebrow")}</p>
-        <h2 className="font-heading text-foreground mt-1 text-lg font-bold leading-snug">
-          <bdi>
-            {customerFacingServiceName(service.name, locale, t, {
-              durationDays: service.durationDays,
-              entries: service.entries,
-              travelerKind: service.travelerKind,
-            })}
+        <h2 className="font-heading text-foreground mt-1 min-w-0 break-words text-pretty text-lg font-bold leading-snug">
+          <bdi className="break-words" title={visaName}>
+            {visaName}
           </bdi>
         </h2>
       </div>
@@ -219,7 +220,10 @@ const ChooserCardHeader: FC<IChooserCardHeaderProps> = ({ nationalityName }) => 
   const t = useCustomerT();
   return (
     <header className="min-w-0 space-y-1">
-      <h1 className="font-heading text-foreground text-xl! font-semibold leading-snug tracking-tight md:text-[1.75rem]!">
+      <h1
+        tabIndex={-1}
+        className={`font-heading text-foreground text-xl! font-semibold leading-snug tracking-tight md:text-[1.75rem]! ${APPLY_PROGRAMMATIC_HEADING_CLASS}`}
+      >
         {t("start.chooseVisaTitle")}
       </h1>
       <p className="text-muted-foreground text-sm leading-relaxed">
@@ -255,7 +259,12 @@ const EditTripSummary: FC<IEditTripSummaryProps> = ({
     headingRef.current?.focus();
   }, []);
   const names = visaNames.length > 0 ? visaNames : fallbackName ? [fallbackName] : [];
+  const visaLabels = [
+    ...new Set(names.map((name) => customerFacingServiceName(name, locale, t)).filter(Boolean)),
+  ];
+  const visaLabel = visaLabels.join(", ");
   const dateLabel = travelDate.trim() ? formatArrivalDate(travelDate.trim(), locale) : t("extras.notSet");
+  const router = useRouter();
 
   return (
     <section aria-labelledby="edit-trip-title" className="border-border bg-card space-y-4 rounded-2xl border p-4 sm:p-5">
@@ -271,10 +280,14 @@ const EditTripSummary: FC<IEditTripSummaryProps> = ({
       <dl className="space-y-2 text-sm">
         <div className="flex items-baseline justify-between gap-3">
           <dt className="text-muted-foreground">{t("extras.recap.visa")}</dt>
-          <dd className="text-foreground text-end font-semibold">
-            {names.length > 0
-              ? names.map((name) => <bdi key={name}>{customerFacingServiceName(name, locale, t)}</bdi>)
-              : t("start.loading")}
+          <dd className="text-foreground min-w-0 break-words text-pretty text-end font-semibold">
+            {visaLabel ? (
+              <bdi className="break-words" title={visaLabel}>
+                {visaLabel}
+              </bdi>
+            ) : (
+              t("start.loading")
+            )}
           </dd>
         </div>
         <div className="flex items-baseline justify-between gap-3">
@@ -297,13 +310,25 @@ const EditTripSummary: FC<IEditTripSummaryProps> = ({
           </p>
         </div>
       ) : null}
-      <div className="flex flex-col items-stretch gap-2 sm:items-end">
-        <ClientButtonLink href={returnHref} brand="cta" className={APPLY_PRIMARY_CTA_CLASS}>
-          {t("start.backToApplication")}
-        </ClientButtonLink>
-        <Link href="/" className="text-secondary inline-flex min-h-11 items-center text-sm underline">
-          {t("start.startNewApplication")}
-        </Link>
+      <div className="space-y-2">
+        <div className={APPLY_PRIMARY_CTA_ROW_CLASS}>
+          <ClientButton
+            type="button"
+            brand="white"
+            className={APPLY_STEP_PREVIOUS_CLASS}
+            onClick={() => router.push(returnHref)}
+          >
+            {t("start.previousButton")}
+          </ClientButton>
+          <ClientButtonLink href={returnHref} brand="cta" className={APPLY_PRIMARY_CTA_CLASS}>
+            {t("start.backToApplication")}
+          </ClientButtonLink>
+        </div>
+        <div className="flex sm:justify-end">
+          <Link href="/" className="text-secondary inline-flex min-h-11 items-center text-sm underline">
+            {t("start.startNewApplication")}
+          </Link>
+        </div>
       </div>
     </section>
   );
@@ -1000,6 +1025,20 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   const showListContinue = applyStep === "visa" && chooserPhase === "results" && Boolean(serviceId);
   const showTravellerContinue = applyStep === "travellers" && partyEnabled;
   const showEmailContinue = applyStep === "email" && Boolean(serviceId);
+  const stepCardRef = useRef<HTMLElement>(null);
+  const skipApplyStepScroll = useRef(true);
+  useEffect(() => {
+    if (skipApplyStepScroll.current) {
+      skipApplyStepScroll.current = false;
+      return;
+    }
+    const root = stepCardRef.current;
+    if (!root) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    root.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+    const heading = root.querySelector("h1, h2, h3");
+    if (heading instanceof HTMLElement) heading.focus({ preventScroll: true });
+  }, [applyStep]);
 
   if (loadingList) {
     return (
@@ -1045,7 +1084,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       <div className={serviceId ? "lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start lg:gap-6" : undefined}>
         <div className={serviceId ? "order-2 min-w-0 space-y-6 lg:order-1" : undefined}>
           {nationality ? (
-        <section className="space-y-6">
+        <section ref={stepCardRef} className="scroll-mt-[var(--wp-shell-header-height,130px)] space-y-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <ChooserCardHeader nationalityName={nationalityName} />
             <div className={cn("flex items-center gap-1 sm:pt-1", editingApplicationId && "hidden")} role="group" aria-label={t("start.showPricesIn")}>
@@ -1272,6 +1311,14 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                   : [];
                 const visaMissing = missingVisaKeys.includes(traveler.key);
                 const visaFieldId = `party-traveler-visa-${traveler.key}`;
+                const onlyVisa = shortlist.length === 1 ? shortlist[0] : null;
+                const onlyVisaName = onlyVisa
+                  ? customerFacingServiceName(onlyVisa.name, locale, t, {
+                      durationDays: onlyVisa.durationDays,
+                      entries: onlyVisa.entries,
+                      travelerKind: onlyVisa.travelerKind,
+                    })
+                  : "";
                 return (
                   <div
                     id={`party-traveler-${traveler.key}`}
@@ -1328,16 +1375,14 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                         </button>
                       ))}
                     </div>
-                    {shortlist.length === 1 ? (
-                      <div className="space-y-1.5">
-                        <p className="border-secondary/30 bg-card text-foreground rounded-xl border-2 px-3 py-3 text-sm font-semibold">
-                          {customerFacingServiceName(shortlist[0].name, locale, t, {
-                            durationDays: shortlist[0].durationDays,
-                            entries: shortlist[0].entries,
-                            travelerKind: shortlist[0].travelerKind,
-                          })}
+                    {onlyVisa ? (
+                      <div className="min-w-0 space-y-1.5">
+                        <p className="border-secondary/30 bg-card text-foreground min-w-0 break-words text-pretty rounded-xl border-2 px-3 py-3 text-sm font-semibold">
+                          <bdi className="break-words" title={onlyVisaName}>
+                            {onlyVisaName}
+                          </bdi>
                           {(() => {
-                            const price = formatPriceForDisplay(shortlist[0], displayCurrency, locale);
+                            const price = formatPriceForDisplay(onlyVisa, displayCurrency, locale);
                             return price ? ` — ${price.text}` : "";
                           })()}
                         </p>
@@ -1360,21 +1405,22 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
                           aria-describedby={visaMissing ? `${visaFieldId}-error` : undefined}
                           onChange={(e) => updateTraveler(traveler.key, { serviceId: e.target.value })}
                           className={cn(
-                            "bg-card text-foreground w-full rounded-xl border-2 px-3 py-3 text-sm",
+                            "bg-card text-foreground w-full min-w-0 break-words text-pretty rounded-xl border-2 px-3 py-3 text-sm",
                             visaMissing ? "border-error" : "border-border",
                           )}
                         >
                           <option value="">{t("start.party.chooseVisaOption")}</option>
                           {shortlist.map((s) => {
                             const price = formatPriceForDisplay(s, displayCurrency, locale);
+                            const visaName = customerFacingServiceName(s.name, locale, t, {
+                              durationDays: s.durationDays,
+                              entries: s.entries,
+                              travelerKind: s.travelerKind,
+                            });
+                            const optionLabel = price ? `${visaName} — ${price.text}` : visaName;
                             return (
-                              <option key={s.id} value={s.id}>
-                                {customerFacingServiceName(s.name, locale, t, {
-                                  durationDays: s.durationDays,
-                                  entries: s.entries,
-                                  travelerKind: s.travelerKind,
-                                })}
-                                {price ? ` — ${price.text}` : ""}
+                              <option key={s.id} value={s.id} title={optionLabel}>
+                                {optionLabel}
                               </option>
                             );
                           })}
@@ -1478,16 +1524,27 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
         </div>
       ) : null}
         </div>
-        {serviceId && primaryService ? <div className="lg:order-2"><SelectedVisaSummary service={primaryService} answers={answers} travelerCount={savedQuote?.travellerCount ?? 1 + additionalTravelers.length} totalText={totalText} price={formatPriceForDisplay(primaryService, displayCurrency, locale)} badges={badges} /></div> : null}
+        {serviceId && primaryService ? (
+          <div className="mt-6 self-start lg:sticky lg:top-[var(--wp-shell-header-height,1rem)] lg:order-2 lg:mt-0">
+            <SelectedVisaSummary
+              service={primaryService}
+              answers={answers}
+              travelerCount={savedQuote?.travellerCount ?? 1 + additionalTravelers.length}
+              totalText={totalText}
+              price={formatPriceForDisplay(primaryService, displayCurrency, locale)}
+              badges={badges}
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className="flex flex-col-reverse items-stretch gap-3 pt-1 sm:flex-row sm:items-center sm:justify-end">
-        {showHomePrevious ? (
+        {showHomePrevious && !editingApplicationId ? (
           <ClientButton
             type="button"
             brand="white"
+            className={APPLY_STEP_PREVIOUS_CLASS}
             onClick={() => router.push("/")}
-            className="w-full justify-center rounded-xl font-semibold sm:w-auto"
           >
             {t("start.previousButton")}
           </ClientButton>

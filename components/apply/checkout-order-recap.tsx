@@ -55,6 +55,38 @@ const entriesLabel = (entries: string | null, t: TTranslate): string | null => {
   return entries;
 };
 
+const compactFact = (value: string): string => value.toLowerCase().replace(/[\s\-–—·]/g, "");
+
+const NAME_SAYS_MULTI_ENTRY = /\bmulti(ple)?[\s-]*entry\b/i;
+const NAME_SAYS_SINGLE_ENTRY = /\bsingle[\s-]*entry\b/i;
+
+/** Catalog name already states the entry kind, in any locale's translation of the fact. */
+const catalogNameCoversEntry = (name: string, entries: string | null): boolean => {
+  const kind = (entries ?? "").toLowerCase();
+  if (kind.includes("multi")) return NAME_SAYS_MULTI_ENTRY.test(name);
+  if (kind.includes("single")) return NAME_SAYS_SINGLE_ENTRY.test(name);
+  return false;
+};
+
+/** Skip duration/entry already written in the catalog name ("14 Days - Single Entry"). */
+const visaTitleLead = (service: CatalogService, t: TTranslate): string => {
+  const normalizedName = compactFact(service.name);
+  const parts: string[] = [];
+  if (service.durationDays != null) {
+    const dayLabel = t("chooser.durationDays", { count: service.durationDays });
+    if (!normalizedName.includes(compactFact(dayLabel))) parts.push(dayLabel);
+  }
+  const ent = entriesLabel(service.entries, t);
+  if (ent && !catalogNameCoversEntry(service.name, service.entries)) {
+    const entryFact = compactFact(ent);
+    const entryStem = entryFact.replace(/entry$/, "");
+    if (!normalizedName.includes(entryFact) && !(entryStem && normalizedName.includes(entryStem))) {
+      parts.push(ent);
+    }
+  }
+  return parts.join(" · ");
+};
+
 export const CatalogVisaTitle: FC<{ service: CatalogService; t: TTranslate; locale?: string }> = ({
   service,
   t,
@@ -65,17 +97,19 @@ export const CatalogVisaTitle: FC<{ service: CatalogService; t: TTranslate; loca
     entries: service.entries,
   });
   if (localized !== service.name) {
-    return <bdi>{localized}</bdi>;
+    return (
+      <bdi className="break-words" title={localized}>
+        {localized}
+      </bdi>
+    );
   }
-  const parts: string[] = [];
-  if (service.durationDays != null) parts.push(t("chooser.durationDays", { count: service.durationDays }));
-  const ent = entriesLabel(service.entries, t);
-  if (ent) parts.push(ent);
-  const lead = parts.join(" · ");
+  const lead = visaTitleLead(service, t);
   return (
     <>
       {lead ? <>{lead} · </> : null}
-      <bdi>{service.name}</bdi>
+      <bdi className="break-words" title={service.name}>
+        {service.name}
+      </bdi>
     </>
   );
 };
@@ -112,6 +146,8 @@ interface ICheckoutOrderRecapProps {
   settled?: TSettledRecap | null;
   /** Pay renders the speed line inside "Your order". Documents keeps it on this card. */
   showProcessingSpeed?: boolean;
+  /** Pay already titles the in-flow order card. Hide this copy of the same heading. */
+  showTitle?: boolean;
 }
 
 export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
@@ -120,6 +156,7 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
   trackCheckoutViewed = false,
   settled = null,
   showProcessingSpeed = true,
+  showTitle = true,
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
@@ -337,9 +374,11 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
 
   return (
     <div className="space-y-4" data-clarity-mask="true">
-      <div className="flex items-end justify-between gap-4">
-        <h3 className="font-heading text-foreground text-lg font-bold tracking-tight">{t("payment.orderTitle")}</h3>
-      </div>
+      {showTitle ? (
+        <div className="flex items-end justify-between gap-4">
+          <h3 className="font-heading text-foreground text-lg font-bold tracking-tight">{t("payment.orderTitle")}</h3>
+        </div>
+      ) : null}
 
       <AllInPriceBadges badges={displayBadges} />
 
@@ -356,8 +395,8 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
             <div className="space-y-4">
               {memberLines.map((line) => (
                 <div key={line.member.applicationId} className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="font-heading text-foreground text-sm font-bold leading-snug">
+                  <div className="min-w-0">
+                    <p className="font-heading text-foreground min-w-0 break-words text-pretty text-sm font-bold leading-snug">
                       <PartyMemberLine
                         template={t("payment.travellerLine", {
                           number: line.member.travelerIndex + 1,
@@ -370,7 +409,7 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
                       />
                     </p>
                     {line.service ? (
-                      <p className="text-muted-foreground mt-0.5 text-xs">
+                      <p className="text-muted-foreground mt-0.5 min-w-0 break-words text-pretty text-xs">
                         <CatalogVisaTitle service={line.service} t={t} locale={locale} />
                       </p>
                     ) : null}
@@ -395,7 +434,7 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
             <p className="text-error text-sm">{loadError}</p>
           ) : service ? (
             <>
-              <p className="font-heading text-foreground text-base font-bold leading-snug">
+              <p className="font-heading text-foreground min-w-0 break-words text-pretty text-base font-bold leading-snug">
                 <CatalogVisaTitle service={service} t={t} locale={locale} />
               </p>
               <dl className="text-muted-foreground mt-3 space-y-1.5 text-sm" data-clarity-mask="true">

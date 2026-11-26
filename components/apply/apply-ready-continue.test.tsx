@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApplyJumpAheadProvider, useApplyJumpAhead } from "./apply-jump-ahead";
 import {
+  APPLY_BAR_TOTAL_MEDIA_QUERY,
   APPLY_READY_CONTINUE_INLINE_CLASS,
   APPLY_READY_CONTINUE_SHORT_MEDIA_QUERY,
   APPLY_READY_PREVIOUS_CLASS,
@@ -147,8 +148,66 @@ describe("ApplyReadyContinue compact (<=1024px)", () => {
     expect(continueBtn.parentElement?.className).toMatch(/flex-\[2\]/);
   });
 
+  it("puts the order total in the fixed bar above Previous and Continue", () => {
+    installMatchMedia(320);
+    wrap(
+      <ApplyReadyContinue
+        orderTotal={<p>Order total USD 110.00</p>}
+        previousLabel="Previous"
+        onPrevious={() => undefined}
+        onClick={() => undefined}
+      >
+        Continue
+      </ApplyReadyContinue>,
+    );
+    const bar = document.querySelector("[data-apply-sticky-cta-portal]") as HTMLElement | null;
+    expect(bar).toBeTruthy();
+    expect(bar?.textContent).toContain("Order total USD 110.00");
+    const total = screen.getByText("Order total USD 110.00");
+    const previous = screen.getByRole("button", { name: "Previous" });
+    const continueBtn = screen.getByRole("button", { name: /^continue$/i });
+    expect(bar?.contains(total)).toBe(true);
+    expect(total.compareDocumentPosition(previous) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(previous.compareDocumentPosition(continueBtn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(previous.parentElement?.className).toMatch(/flex-1/);
+    expect(continueBtn.parentElement?.className).toMatch(/flex-\[2\]/);
+  });
+
+  it("keeps the bar total off at 1024px, where the lg rail is already visible", () => {
+    installMatchMedia(1024);
+    wrap(
+      <ApplyReadyContinue
+        orderTotal={<p>Order total USD 110.00</p>}
+        previousLabel="Previous"
+        onPrevious={() => undefined}
+        onClick={() => undefined}
+      >
+        Continue
+      </ApplyReadyContinue>,
+    );
+    const bar = document.querySelector("[data-apply-sticky-cta-portal]");
+    expect(bar).toBeTruthy();
+    expect(bar?.textContent).not.toContain("Order total USD 110.00");
+    expect(screen.queryByText("Order total USD 110.00")).toBeNull();
+  });
+
+  it("shows the bar total through 1023px", () => {
+    installMatchMedia(1023);
+    wrap(
+      <ApplyReadyContinue
+        orderTotal={<p>Order total USD 110.00</p>}
+        onClick={() => undefined}
+      >
+        Continue
+      </ApplyReadyContinue>,
+    );
+    const bar = document.querySelector("[data-apply-sticky-cta-portal]");
+    expect(bar?.textContent).toContain("Order total USD 110.00");
+  });
+
   it("uses the compact media query inclusive of 1024px", () => {
     expect(APPLY_STICKY_CTA_MEDIA_QUERY).toBe("(max-width: 1024px)");
+    expect(APPLY_BAR_TOTAL_MEDIA_QUERY).toBe("(max-width: 1023px)");
     expect(APPLY_READY_CONTINUE_SHORT_MEDIA_QUERY).toBe("(max-width: 359px)");
     expect(compactContinueAlwaysShort("fr")).toBe(true);
     expect(compactContinueAlwaysShort("en")).toBe(false);
@@ -236,6 +295,8 @@ describe("sticky Continue CSS contracts", () => {
     expect(wizard).toMatch(/compactShortLabel/);
     expect(wizard).toMatch(/common\.continue/);
     expect(wizard).toMatch(/previousLabel/);
+    expect(wizard).toMatch(/lg:hidden/);
+    expect(wizard).toMatch(/orderTotal=/);
     expect(wizard).not.toMatch(/ApplyReadyPreviousButton/);
     expect(wizard).toMatch(/data-apply-ready-section/);
     expect(css).toMatch(/\[data-apply-sticky-cta-portal\]/);
