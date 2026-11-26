@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { FC } from "react";
 import { ClientButton, ClientButtonLink } from "@/components/client/client-button";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
-import { ExtrasBreakdown } from "@/components/apply/extras-breakdown";
+import { ExtrasBreakdown, type TExtrasVisaNameInput } from "@/components/apply/extras-breakdown";
 import { APPLY_STEP_PREVIOUS_CLASS } from "@/components/apply/apply-primary-cta";
 import { ExtrasContinueButton } from "@/components/apply/extras-continue-button";
 import { MessageWithAmounts } from "@/components/apply/message-with-amounts";
@@ -17,7 +17,7 @@ import {
 
 interface IExtrasStepPanelProps {
   preview: TClientQuotePreview | null;
-  visaNames: readonly string[];
+  visaNames: readonly TExtrasVisaNameInput[];
   loading: boolean;
   updating: boolean;
   updateError: string | null;

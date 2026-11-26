@@ -16,14 +16,17 @@ export const parseVisaAmountMinor = (value: string | null | undefined): bigint |
   return BigInt(value);
 };
 
-/** One row per distinct customer-facing visa name, in first-seen order. */
+const recapBucket = (item: TVisaRecapItem): string =>
+  `${item.key}\u0000${item.amountMinor === null ? "" : item.amountMinor.toString()}`;
+
+/** One row per service and unit amount, in first-seen order. The label is display only. */
 export const groupVisaRecapLines = (items: readonly TVisaRecapItem[]): TVisaRecapGroup[] => {
   const groups: TVisaRecapGroup[] = [];
-  const byLabel = new Map<string, TVisaRecapGroup>();
+  const byServiceAmount = new Map<string, TVisaRecapGroup>();
   for (const item of items) {
     const label = item.label.trim();
     if (!label) continue;
-    const existing = byLabel.get(label);
+    const existing = byServiceAmount.get(recapBucket(item));
     if (!existing) {
       const group: TVisaRecapGroup = {
         key: item.key,
@@ -31,7 +34,7 @@ export const groupVisaRecapLines = (items: readonly TVisaRecapItem[]): TVisaReca
         count: 1,
         amountMinor: item.amountMinor,
       };
-      byLabel.set(label, group);
+      byServiceAmount.set(recapBucket(item), group);
       groups.push(group);
       continue;
     }

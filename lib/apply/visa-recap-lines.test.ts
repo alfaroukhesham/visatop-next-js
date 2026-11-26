@@ -27,4 +27,27 @@ describe("visa recap lines", () => {
       { key: "single", label: "30 Days - Single Entry", count: 1, amountMinor: BigInt(70000) },
     ]);
   });
+
+  it("keeps separate rows when the label matches but the service does not", () => {
+    const items = [
+      { key: "svc-a", label: "30 Days - Single Entry", amountMinor: BigInt(70000) },
+      { key: "svc-b", label: "30 Days - Single Entry", amountMinor: BigInt(70000) },
+    ];
+    expect(groupVisaRecapLines(items)).toEqual([
+      { key: "svc-a", label: "30 Days - Single Entry", count: 1, amountMinor: BigInt(70000) },
+      { key: "svc-b", label: "30 Days - Single Entry", count: 1, amountMinor: BigInt(70000) },
+    ]);
+    expect(mixedVisaGroups(items)).toHaveLength(2);
+  });
+
+  it("splits one service when the adult and child amounts differ", () => {
+    const items = [
+      { key: "svc-a", label: "30 Days - Single Entry", amountMinor: BigInt(81400) },
+      { key: "svc-a", label: "30 Days - Single Entry", amountMinor: BigInt(50000) },
+    ];
+    expect(mixedVisaGroups(items)).toEqual([
+      { key: "svc-a", label: "30 Days - Single Entry", count: 1, amountMinor: BigInt(81400) },
+      { key: "svc-a", label: "30 Days - Single Entry", count: 1, amountMinor: BigInt(50000) },
+    ]);
+  });
 });

@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import type { FC } from "react";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
-import { ExtrasBreakdown } from "@/components/apply/extras-breakdown";
+import { ExtrasBreakdown, type TExtrasVisaNameInput } from "@/components/apply/extras-breakdown";
 import { ProcessingSpeedLine } from "@/components/apply/processing-speed-line";
 import { useCheckoutQuoteOptional } from "@/components/apply/checkout-quote-provider";
 import {
@@ -18,7 +18,7 @@ import { insuranceStepOffered } from "@/lib/checkout-extras/party-insurance";
 
 interface IPayOrderSummaryProps {
   applicationId: string;
-  visaNames: readonly string[];
+  visaNames: readonly TExtrasVisaNameInput[];
   /** Screenshot fixture. The payment page leaves this unset and uses the live quote. */
   previewOverride?: TClientQuotePreview | null;
 }
@@ -76,7 +76,7 @@ export const PayOrderSummary: FC<IPayOrderSummaryProps> = ({
           {offered ? (
             <div className="col-span-2 lg:contents" data-testid="pay-order-extras">
               <span className="text-muted-foreground hidden lg:block">{t("extras.recap.insurance")}</span>
-              <div className="flex min-h-11 flex-nowrap items-center justify-between gap-3 lg:block">
+              <div className="flex min-h-11 flex-nowrap items-center justify-between gap-3 lg:block lg:min-h-0">
                 <span className="text-foreground hidden lg:inline">
                   {hasInsurance ? t("extras.recap.added") : t("extras.recap.notAdded")}
                   {" · "}
@@ -122,13 +122,13 @@ const ChangeExtras: FC<{ href: string; locked: boolean }> = ({ href, locked }) =
   const t = useCustomerT();
   if (locked) {
     return (
-      <span className="text-muted-foreground inline-flex min-h-11 items-center text-sm" aria-disabled="true">
+      <span className="text-muted-foreground inline-flex min-h-11 items-center text-sm lg:min-h-0 lg:py-3 lg:-my-3" aria-disabled="true">
         {t("extras.changeExtras")}
       </span>
     );
   }
   return (
-    <Link href={href} className="text-secondary inline-flex min-h-11 items-center whitespace-nowrap text-sm underline">
+    <Link href={href} className="text-secondary inline-flex min-h-11 items-center whitespace-nowrap text-sm underline lg:min-h-0 lg:py-3 lg:-my-3">
       {t("extras.changeExtras")}
     </Link>
   );

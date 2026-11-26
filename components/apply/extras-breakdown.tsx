@@ -11,9 +11,30 @@ import {
 } from "@/lib/apply/checkout-extras-ui";
 import { ProcessingSpeedLine } from "@/components/apply/processing-speed-line";
 
+export type TExtrasVisaName = {
+  name: string;
+  durationDays?: number | null;
+  entries?: string | null;
+  travelerKind?: string | null;
+};
+
+export type TExtrasVisaNameInput = string | TExtrasVisaName;
+
+const visaNameText = (value: TExtrasVisaNameInput): string =>
+  typeof value === "string" ? value : value.name;
+
+const visaNameHints = (value: TExtrasVisaNameInput) =>
+  typeof value === "string"
+    ? {}
+    : {
+        durationDays: value.durationDays,
+        entries: value.entries,
+        travelerKind: value.travelerKind,
+      };
+
 interface IExtrasBreakdownProps {
   preview: TClientQuotePreview;
-  visaNames: readonly string[];
+  visaNames: readonly TExtrasVisaNameInput[];
   updating: boolean;
   /** Desktop aside includes the read-only speed line. The mobile card does not. */
   showSpeed?: boolean;
@@ -30,14 +51,14 @@ interface IExtrasBreakdownProps {
   omitTotal?: boolean;
 }
 
-const uniqueNames = (names: readonly string[]): string[] => {
+const uniqueNames = (names: readonly TExtrasVisaNameInput[]): TExtrasVisaNameInput[] => {
   const seen = new Set<string>();
-  const out: string[] = [];
+  const out: TExtrasVisaNameInput[] = [];
   for (const name of names) {
-    const trimmed = name.trim();
+    const trimmed = visaNameText(name).trim();
     if (!trimmed || seen.has(trimmed)) continue;
     seen.add(trimmed);
-    out.push(trimmed);
+    out.push(name);
   }
   return out;
 };
@@ -66,7 +87,7 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
   const mixedVisas = mixedVisaGroups(
     visaNames.map((name, index) => ({
       key: preview.visaLines[index]?.serviceId || String(index),
-      label: customerFacingServiceName(name, locale, t),
+      label: customerFacingServiceName(visaNameText(name), locale, t, visaNameHints(name)),
       amountMinor: parseVisaAmountMinor(preview.visaLines[index]?.amountMinor),
     })),
   );
@@ -85,7 +106,7 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
       {mixedVisas.length > 0 ? (
         mixedVisas.map((group) => (
           <div
-            key={group.label}
+            key={`${group.key}:${group.amountMinor === null ? "" : group.amountMinor.toString()}`}
             className="flex min-h-6 items-baseline justify-between gap-3 text-sm"
             data-testid="mixed-visa-line"
           >
@@ -108,9 +129,9 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
           <p className="text-foreground min-w-0 break-words text-pretty">
             {t("extras.recap.visa")}
             {names.map((name) => {
-              const label = customerFacingServiceName(name, locale, t);
+              const label = customerFacingServiceName(visaNameText(name), locale, t, visaNameHints(name));
               return (
-                <span key={name}>
+                <span key={visaNameText(name)}>
                   {" · "}
                   <bdi className="break-words" title={label}>
                     {label}

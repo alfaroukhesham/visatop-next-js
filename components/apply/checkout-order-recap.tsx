@@ -411,7 +411,7 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
             {mixedMemberGroups.length > 0
               ? mixedMemberGroups.map((group) => (
                   <div
-                    key={group.label}
+                    key={`${group.key}:${group.amountMinor === null ? "" : group.amountMinor.toString()}`}
                     className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4"
                     data-recap-line=""
                     data-testid="mixed-visa-line"

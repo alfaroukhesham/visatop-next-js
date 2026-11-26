@@ -374,7 +374,7 @@ const EditTripSummary: FC<IEditTripSummaryProps> = ({
       <SummaryPriceLines lines={priceLines} className="lg:hidden" />
       {totalText ? (
         <div className="border-border flex items-baseline justify-between gap-3 border-t pt-3 lg:hidden">
-          <p className="text-foreground text-sm font-semibold">{t("start.checkoutTotal")}</p>
+          <p className="text-foreground text-sm font-semibold">{t("start.totalLabel")}</p>
           <p className="font-heading text-foreground text-xl font-bold tabular-nums">
             <bdi>{totalText}</bdi>
           </p>
@@ -1144,7 +1144,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     return formatDisplayMinor(amountMinor.toString(), displayCurrency, locale) ?? "";
   };
   const mixedVisaLines: ISummaryPriceLine[] = mixedVisaGroupsForParty.map((group) => ({
-    key: group.label,
+    key: `${group.key}:${group.amountMinor === null ? "" : group.amountMinor.toString()}`,
     label: group.label,
     count: group.count,
     amount: group.amountMinor === null ? "" : formatVisaGroupAmount(group.amountMinor),
@@ -1617,7 +1617,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
           <SummaryPriceLines lines={summaryPriceLines} className="lg:hidden" />
           {totalText ? (
             <div className="flex flex-wrap items-baseline justify-between gap-3 text-sm lg:hidden">
-              <p className="text-foreground font-bold">{t("start.checkoutTotal")}</p>
+              <p className="text-foreground font-bold">{t("start.totalLabel")}</p>
               <p className="text-foreground text-end text-base font-bold tabular-nums">
                 <bdi>{totalText}</bdi>
               </p>
@@ -1667,7 +1667,12 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       ) : null}
         </div>
         {serviceId && primaryService ? (
-          <div className="mt-6 self-start lg:sticky lg:top-[calc(var(--wp-shell-header-height,1rem)+1rem)] lg:order-2 lg:mt-0">
+          <div
+            className={cn(
+              "mt-6 self-start lg:sticky lg:top-[calc(var(--wp-shell-header-height,1rem)+1rem)] lg:order-2 lg:mt-0",
+              applyStep === "visa" && !editingApplicationId && "max-lg:hidden",
+            )}
+          >
             <SelectedVisaSummary
               service={primaryService}
               answers={answers}

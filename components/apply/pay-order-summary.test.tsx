@@ -108,6 +108,11 @@ describe("PayOrderSummary", () => {
     const change = screen.getByRole("link", { name: "Change extras" });
     expect(change.className).toMatch(/inline-flex/);
     expect(change.className).toMatch(/min-h-11/);
+    expect(change.className).toMatch(/lg:min-h-0/);
+    expect(change.className).toMatch(/lg:py-3/);
+    expect(change.className).toMatch(/lg:-my-3/);
+    const extrasRow = change.closest("[data-testid='pay-order-extras']")?.querySelector("div");
+    expect(extrasRow?.className).toMatch(/lg:min-h-0/);
     expect(lines.contains(change)).toBe(false);
     expect(change.parentElement?.textContent).not.toMatch(/NGN/);
     const extras = screen.getByTestId("pay-order-extras");

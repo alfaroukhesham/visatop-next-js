@@ -2,14 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import type { FC } from "react";
-import { ExtrasBreakdown } from "@/components/apply/extras-breakdown";
+import { ExtrasBreakdown, type TExtrasVisaNameInput } from "@/components/apply/extras-breakdown";
 import { ExtrasStepPanel } from "@/components/apply/extras-step-panel";
 import { useCheckoutQuoteOptional } from "@/components/apply/checkout-quote-provider";
 import { continueWithoutExtras, skipExtrasSave } from "@/lib/apply/continue-without-extras";
 
 interface IExtrasStepSectionProps {
   applicationId: string;
-  visaNames: readonly string[];
+  visaNames: readonly TExtrasVisaNameInput[];
   backHref: string;
 }
 
@@ -53,7 +53,7 @@ export const ExtrasStepSection: FC<IExtrasStepSectionProps> = ({
 };
 
 interface IExtrasAsideProps {
-  visaNames: readonly string[];
+  visaNames: readonly TExtrasVisaNameInput[];
 }
 
 /** Desktop order card. Hidden below 1025px by the page layout. */

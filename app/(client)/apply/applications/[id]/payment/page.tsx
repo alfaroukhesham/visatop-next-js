@@ -52,7 +52,12 @@ const ApplyApplicationPaymentPage = async ({ params }: IApplyApplicationPaymentP
   }
   const offered = quotePreview.ok && insuranceStepOffered(quotePreview.preview);
   const trip = applyTripStepHref(row.nationalityCode, id);
-  const visaNames = members.map((member) => member.serviceName);
+  const visaNames = members.map((member) => ({
+    name: member.serviceName,
+    durationDays: member.durationDays,
+    entries: member.entries,
+    travelerKind: member.travelerKind,
+  }));
 
   return (
     <CheckoutQuoteProvider
@@ -69,13 +74,18 @@ const ApplyApplicationPaymentPage = async ({ params }: IApplyApplicationPaymentP
           detailsTravellerId={lastTravellerApplicationId(members)}
           hasSelectedVisa
           visaSummary={
-            <CheckoutOrderRecap
-              application={publicApp}
-              members={members}
-              trackCheckoutViewed
-              showProcessingSpeed={false}
-              showTitle={false}
-            />
+            <div className="space-y-4">
+              <p className="text-secondary text-[10px] font-bold uppercase tracking-[0.2em]">
+                {t("start.yourVisaEyebrow")}
+              </p>
+              <CheckoutOrderRecap
+                application={publicApp}
+                members={members}
+                trackCheckoutViewed
+                showProcessingSpeed={false}
+                showTitle={false}
+              />
+            </div>
           }
           contentClassName="theme-client-rise mx-auto w-full max-w-4xl space-y-8"
         >
