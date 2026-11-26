@@ -281,7 +281,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
     const root = rootRef.current;
     if (!root) return;
     root.scrollIntoView({ block: "start", behavior: "smooth" });
-    const heading = root.querySelector("h3");
+    const heading = root.querySelector("h3:not(.sr-only)");
     if (heading instanceof HTMLElement) {
       heading.focus({ preventScroll: true });
     }
@@ -521,10 +521,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
             </p>
           ) : (
             <div className="space-y-4">
-              <h3
-                tabIndex={-1}
-                className={`sr-only ${APPLY_PROGRAMMATIC_HEADING_CLASS}`}
-              >
+              <h3 className="sr-only">
                 {t("chooser.matchingVisasBanner", {
                   stay: view.stay ? t(`chooser.stayLabels.${view.stay}`) : "",
                   travellerKind:

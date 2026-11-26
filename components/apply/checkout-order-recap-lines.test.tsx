@@ -209,9 +209,13 @@ describe("apply funnel feedback markup", () => {
   it("keeps the visa-list summary for screen readers only and drops the left Fast Track equation", () => {
     const chooser = readFileSync(join(process.cwd(), "components/apply/guided-visa-chooser.tsx"), "utf8");
     expect(chooser).toMatch(/matchingVisasBanner/);
-    expect(chooser).toMatch(/className=\{`sr-only \$\{APPLY_PROGRAMMATIC_HEADING_CLASS\}`\}/);
+    expect(chooser).toMatch(/<h3 className="sr-only">/);
+    const banner = chooser.slice(chooser.indexOf("matchingVisasBanner") - 180, chooser.indexOf("matchingVisasBanner"));
+    expect(banner).not.toMatch(/tabIndex/);
     const start = readFileSync(join(process.cwd(), "components/apply/start-application-form.tsx"), "utf8");
     expect(start).not.toMatch(/MessageWithAmounts/);
     expect(start).toMatch(/priceLines=/);
+    expect(start).toMatch(/\\u00d7\\u00a0/);
+    expect(start).toMatch(/SummaryPriceLines lines=\{summaryPriceLines\} className="lg:hidden"/);
   });
 });

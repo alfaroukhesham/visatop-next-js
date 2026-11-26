@@ -77,23 +77,39 @@ describe("PayOrderSummary", () => {
     cleanup();
   });
 
-  it("keeps insurance, processing, and arrival on one label/value grid", () => {
+  it("hides only the duplicate lines at lg and keeps processing, arrival, and change extras", () => {
     render(
       <PayOrderSummary applicationId="app-1" visaNames={["14 Days - Single Entry"]} previewOverride={preview()} />,
     );
-    expect(screen.getByTestId("pay-order").className).toMatch(/lg:hidden/);
+    const section = screen.getByTestId("pay-order");
+    expect(section.className).not.toMatch(/lg:hidden/);
+    const lines = screen.getByTestId("pay-order-lines");
+    expect(lines.className).toMatch(/lg:hidden/);
     const card = document.querySelector("[data-testid='pay-order'] .grid");
     expect(card).toBeTruthy();
     expect(card?.className).toMatch(/grid-cols-\[minmax\(0,1fr\)_auto\]/);
-    expect(screen.getByText("Total")).toBeTruthy();
-    const change = screen.getByText("Change extras");
-    expect(change.parentElement?.className).toMatch(/flex/);
-    expect(change.parentElement?.className).not.toMatch(/flex-col/);
-    expect(change.parentElement?.textContent).toMatch(/NGN/);
+    const total = screen.getByText("Total");
+    expect(lines.contains(total)).toBe(true);
+    expect(total.className).toMatch(/font-bold/);
+    expect(total.className).not.toMatch(/font-semibold|font-heading/);
+    const totalAmount = total.nextElementSibling;
+    expect(totalAmount?.className).toMatch(/font-bold/);
+    expect(totalAmount?.className).not.toMatch(/font-heading/);
+    const change = screen.getByRole("link", { name: "Change extras" });
+    expect(change.className).toMatch(/inline-flex/);
+    expect(change.className).toMatch(/min-h-11/);
+    expect(lines.contains(change)).toBe(false);
+    expect(change.parentElement?.textContent).not.toMatch(/NGN/);
+    const insurance = screen.getByText(/Travel insurance/);
+    expect(insurance.closest("div")?.textContent).toMatch(/NGN/);
+    expect(insurance.closest("div")?.textContent).not.toMatch(/Change extras/);
     const speed = screen.getByTestId("processing-speed-line");
+    expect(lines.contains(speed)).toBe(false);
     expect(speed.parentElement).toBe(card);
     expect(speed.textContent).toBe("Processing:");
     expect(speed.nextElementSibling?.textContent).toBe("Standard (3 working days)");
-    expect(screen.getByText("Arrival in the UAE:").parentElement).toBe(card);
+    const arrival = screen.getByText("Arrival in the UAE:");
+    expect(lines.contains(arrival)).toBe(false);
+    expect(arrival.parentElement).toBe(card);
   });
 });

@@ -150,6 +150,36 @@ interface ISummaryPriceLine {
   amount: string;
 }
 
+const SummaryPriceLines: FC<{ lines: readonly ISummaryPriceLine[]; className?: string }> = ({
+  lines,
+  className,
+}) => {
+  if (lines.length === 0) return null;
+  return (
+    <div
+      className={cn(
+        "grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-1.5 text-sm font-normal",
+        className,
+      )}
+    >
+      {lines.map((line) => (
+        <div key={line.key} className="contents">
+          <p className="text-foreground min-w-0">
+            {line.label}
+            <span className="text-muted-foreground whitespace-nowrap">
+              {"\u00d7\u00a0"}
+              {line.count}
+            </span>
+          </p>
+          <p className="text-foreground text-end tabular-nums">
+            <bdi>{line.amount}</bdi>
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 interface ISelectedVisaSummaryProps {
   service: Service;
   answers: { stay: TStayBucket | null; entry: "single" | "multiple"; kind: TTravelerKind };
@@ -210,21 +240,7 @@ const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
           </div>
         ) : null}
       </dl>
-      {priceLines.length > 0 ? (
-        <div className="border-border grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-1.5 border-t pt-3 text-sm font-normal">
-          {priceLines.map((line) => (
-            <div key={line.key} className="contents">
-              <p className="text-foreground min-w-0">
-                {line.label}
-                <span className="text-muted-foreground"> × {line.count}</span>
-              </p>
-              <p className="text-foreground text-end tabular-nums">
-                <bdi>{line.amount}</bdi>
-              </p>
-            </div>
-          ))}
-        </div>
-      ) : null}
+      <SummaryPriceLines lines={priceLines} className="border-border hidden border-t pt-3 lg:grid" />
       <div className="border-border hidden border-t pt-3 lg:block">
         <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">{t("start.totalLabel")}</p>
         <p className="font-heading text-foreground mt-0.5 text-xl font-bold tabular-nums">
@@ -265,6 +281,7 @@ interface IEditTripSummaryProps {
   travelDate: string;
   speed: "standard" | "fast_track";
   totalText: string | null;
+  priceLines?: readonly ISummaryPriceLine[];
   returnHref: string;
   previousHref: string | null;
 }
@@ -276,6 +293,7 @@ const EditTripSummary: FC<IEditTripSummaryProps> = ({
   travelDate,
   speed,
   totalText,
+  priceLines = [],
   returnHref,
   previousHref,
 }) => {
@@ -329,6 +347,7 @@ const EditTripSummary: FC<IEditTripSummaryProps> = ({
         </div>
       </dl>
       <ProcessingSpeedLine speed={speed} />
+      <SummaryPriceLines lines={priceLines} className="lg:hidden" />
       {totalText ? (
         <div className="border-border flex items-baseline justify-between gap-3 border-t pt-3 lg:hidden">
           <p className="text-foreground text-sm font-semibold">{t("start.checkoutTotal")}</p>
@@ -443,7 +462,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     const id = params.get("application")?.trim() ?? "";
     setEditingApplicationId(id || null);
     setExtrasFromQuery(params.get("extras") === "1");
-    setCameFromPayment(params.get("from") === "payment");
+    setTripFrom(params.get("from") ?? "");
   }, []);
   const [nationalities, setNationalities] = useState<Nationality[]>([]);
   const [nationality, setNationality] = useState(boot.nationality);
@@ -459,9 +478,10 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   const [extrasFromQuery, setExtrasFromQuery] = useState(
     () => new URLSearchParams(window.location.search).get("extras") === "1",
   );
-  const [cameFromPayment, setCameFromPayment] = useState(
-    () => new URLSearchParams(window.location.search).get("from") === "payment",
+  const [tripFrom, setTripFrom] = useState(() =>
+    typeof window === "undefined" ? "" : (new URLSearchParams(window.location.search).get("from") ?? ""),
   );
+  const cameFromPayment = tripFrom === "payment";
   const [savedQuote, setSavedQuote] = useState<TClientQuotePreview | null>(null);
   const quoteEpoch = useRef(0);
   const [processingSpeed, setProcessingSpeed] = useState<"standard" | "fast_track">("standard");
@@ -1054,6 +1074,31 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
         extrasOffered,
       })
     : null;
+  const editCompletedThrough = ((): number | undefined => {
+    if (!editingApplicationId) return undefined;
+    const from = savedQuote?.locked ? "payment" : tripFrom;
+    if (from === "payment") return extrasOffered ? 3 : 2;
+    if (from === "extras") return 2;
+    if (from === "details") return 1;
+    return undefined;
+  })();
+  const summaryPriceLines: ISummaryPriceLine[] = savedQuote
+    ? groupedExtraLines(savedQuote).map((row) => ({
+        key: row.key,
+        label: row.key === "fast_track" ? t("extras.recap.fastTrack") : t("extras.recap.insurance"),
+        count: row.count,
+        amount: formatMinorAmount(row.amountMinor, savedQuote.currency, locale, "code"),
+      }))
+    : speedForSubmit === "fast_track" && fastTrackPartyAmounts && speedQuote?.travellerCount
+      ? [
+          {
+            key: "fast_track",
+            label: t("extras.recap.fastTrack"),
+            count: speedQuote.travellerCount,
+            amount: fastTrackPartyAmounts.sum,
+          },
+        ]
+      : [];
   const showListContinue = applyStep === "visa" && chooserPhase === "results" && Boolean(serviceId);
   const showTravellerContinue = applyStep === "travellers" && partyEnabled;
   const showEmailContinue = applyStep === "email" && Boolean(serviceId);
@@ -1113,6 +1158,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
             currentStep={2}
             includeExtras={extrasOffered}
             applicationId={editingApplicationId ?? undefined}
+            completedThrough={editCompletedThrough}
           />
         </div>
       ) : null}
@@ -1157,6 +1203,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
               travelDate={savedQuote?.travelDate ?? travelDate}
               speed={speedForSubmit}
               totalText={totalText}
+              priceLines={summaryPriceLines}
               returnHref={editReturn?.backHref ?? `/apply/applications/${encodeURIComponent(editingApplicationId)}`}
               previousHref={editReturn?.previousHref ?? null}
             />
@@ -1496,6 +1543,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       {!editingApplicationId && serviceId && (totalText || speedForSubmit) ? (
         <div className="border-secondary/20 bg-secondary/5 space-y-2 rounded-2xl border-2 px-5 py-4">
           <ProcessingSpeedLine speed={speedForSubmit} />
+          <SummaryPriceLines lines={summaryPriceLines} className="lg:hidden" />
           {totalText ? (
             <div className="flex flex-wrap items-center justify-between gap-3 lg:hidden">
               <p className="text-foreground text-sm font-semibold">{t("start.checkoutTotal")}</p>
@@ -1556,30 +1604,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
               totalText={totalText}
               price={formatPriceForDisplay(primaryService, displayCurrency, locale)}
               badges={badges}
-              priceLines={
-                savedQuote
-                  ? groupedExtraLines(savedQuote).map((row) => ({
-                      key: row.key,
-                      label:
-                        row.key === "fast_track"
-                          ? t("extras.recap.fastTrack")
-                          : t("extras.recap.insurance"),
-                      count: row.count,
-                      amount: formatMinorAmount(row.amountMinor, savedQuote.currency, locale, "code"),
-                    }))
-                  : speedForSubmit === "fast_track" &&
-                      fastTrackPartyAmounts &&
-                      speedQuote?.travellerCount
-                    ? [
-                        {
-                          key: "fast_track",
-                          label: t("extras.recap.fastTrack"),
-                          count: speedQuote.travellerCount,
-                          amount: fastTrackPartyAmounts.sum,
-                        },
-                      ]
-                    : []
-              }
+              priceLines={summaryPriceLines}
             />
           </div>
         ) : null}

@@ -20,7 +20,7 @@ interface IExtrasBreakdownProps {
   insuranceMode?: "always" | "when-added";
   /** Extras keeps an empty updating row so the total does not jump. Pay shows it only while saving. */
   updatingMode?: "reserved" | "when-updating";
-  /** Pay puts "Change extras" on the insurance row. */
+  /** Optional action under the insurance line, on its own row so the amount stays in column. */
   insuranceAction?: ReactNode;
   announcement?: string | null;
   /** Only the Extras step panel announces the total. Cards pass false. */
@@ -103,26 +103,26 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
         </div>
       ) : null}
       {showInsurance ? (
-        <div className="flex min-h-6 items-baseline justify-between gap-3 text-sm">
-          <p className="text-foreground min-w-0">
-            {t("extras.recap.insurance")}
-            <span className="text-muted-foreground"> × {insurance?.count ?? count}</span>
-          </p>
-          <div className="flex shrink-0 items-baseline justify-end gap-3">
+        <div className="space-y-1 text-sm">
+          <div className="flex min-h-6 items-baseline justify-between gap-3">
+            <p className="text-foreground min-w-0">
+              {t("extras.recap.insurance")}
+              <span className="text-muted-foreground"> × {insurance?.count ?? count}</span>
+            </p>
             {insurance ? (
-              <p className="text-foreground text-end font-normal tabular-nums">
+              <p className="text-foreground shrink-0 text-end font-normal tabular-nums">
                 <bdi>{money(insurance.amountMinor)}</bdi>
               </p>
             ) : (
-              <p className="text-muted-foreground text-end">{t("extras.recap.notAdded")}</p>
+              <p className="text-muted-foreground shrink-0 text-end">{t("extras.recap.notAdded")}</p>
             )}
-            {insuranceAction}
           </div>
+          {insuranceAction ? <div className="flex justify-end">{insuranceAction}</div> : null}
         </div>
       ) : null}
       <div className="border-border flex min-h-6 items-baseline justify-between gap-3 border-t pt-3 text-sm">
-        <p className="text-foreground font-semibold">{t("extras.recap.total")}</p>
-        <p className="text-foreground font-heading shrink-0 text-end text-base font-bold tabular-nums">
+        <p className="text-foreground font-bold">{t("extras.recap.total")}</p>
+        <p className="text-foreground shrink-0 text-end text-base font-bold tabular-nums">
           <bdi>{money(preview.totalAmountMinor)}</bdi>
         </p>
       </div>

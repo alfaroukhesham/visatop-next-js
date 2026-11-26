@@ -130,6 +130,24 @@ describe("ApplyStepsRail on documents (ready)", () => {
     expect(screen.queryByRole("button", { name: /trip, completed/i })).not.toBeInTheDocument();
   });
 
+  it("keeps ticks on steps already finished while Trip is the step being edited", () => {
+    wrap(
+      <ApplyStepsRail
+        currentStep={2}
+        includeExtras
+        applicationId="app-1"
+        completedThrough={3}
+        tripHref="/apply/start?nationality=IN&application=app-1"
+      />,
+    );
+    expect(screen.getByText(/Step 1 of 6/)).toHaveTextContent("Trip");
+    expect(screen.getByText("1").closest("[aria-current='step']")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /documents, completed/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /details, completed/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /extras, completed/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^pay$/i })).toHaveAttribute("aria-disabled", "true");
+  });
+
   it("inserts Extras between Details and Pay when insurance is offered", () => {
     wrap(
       <ApplyStepsRail

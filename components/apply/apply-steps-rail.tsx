@@ -36,6 +36,11 @@ interface IApplyStepsRailProps {
   tripHref?: string | null;
   /** Party member for completed Details back-nav (last traveller on Pay). */
   detailsTravellerId?: string | null;
+  /**
+   * Edit mode keeps ticks on steps already finished, even though Trip is the active step.
+   * Index in the rendered rail (documents is 1, details is 2, extras is 3 when offered).
+   */
+  completedThrough?: number;
   className?: string;
 }
 
@@ -83,6 +88,7 @@ export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
   applicationId,
   tripHref = null,
   detailsTravellerId = null,
+  completedThrough,
   className,
 }) => {
   const t = useCustomerT();
@@ -119,7 +125,12 @@ export const ApplyStepsRail: FC<IApplyStepsRailProps> = ({
       </p>
       <ol className="flex items-start justify-between gap-1">
         {steps.map((s, index) => {
-          const state = index < activeIndex ? "completed" : index === activeIndex ? "active" : "future";
+          const state =
+            index === activeIndex
+              ? "active"
+              : index < activeIndex || (completedThrough != null && index <= completedThrough)
+                ? "completed"
+                : "future";
           const href = hrefForPhase(s.id, applicationId, tripHref, detailsTravellerId);
           const fullLabel = t(s.labelKey);
           const shortLabel = t(s.shortKey);

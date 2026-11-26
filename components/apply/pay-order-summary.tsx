@@ -47,7 +47,7 @@ export const PayOrderSummary: FC<IPayOrderSummaryProps> = ({
   const changeExtras = offered ? <ChangeExtras href={extrasHref} locked={locked} /> : null;
 
   return (
-    <section aria-labelledby="pay-order-title" className="space-y-4 lg:hidden" data-testid="pay-order">
+    <section aria-labelledby="pay-order-title" className="space-y-4" data-testid="pay-order">
       <h2 id="pay-order-title" className="font-heading text-foreground text-base font-semibold md:text-lg">
         {t("payment.orderTitle")}
       </h2>
@@ -58,24 +58,21 @@ export const PayOrderSummary: FC<IPayOrderSummaryProps> = ({
       ) : null}
       <div className="border-border bg-card rounded-[12px] border p-4 shadow-[0_4px_20px_rgba(0,0,0,0.06)] sm:p-5">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-2 text-sm">
-          <div className="col-span-2">
+          <div className="col-span-2 lg:hidden" data-testid="pay-order-lines">
             <ExtrasBreakdown
               preview={preview}
               visaNames={visaNames}
               updating={Boolean(quote?.updating)}
               updatingMode="when-updating"
               insuranceMode="when-added"
-              insuranceAction={hasInsurance ? changeExtras : null}
               announcement={null}
               live={false}
             />
-            {offered && !hasInsurance ? (
-              <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4">
-                <p className="text-muted-foreground">{t("extras.noExtras")}</p>
-                <div className="text-end">{changeExtras}</div>
-              </div>
-            ) : null}
           </div>
+          {offered && !hasInsurance ? (
+            <p className="text-muted-foreground col-span-2">{t("extras.noExtras")}</p>
+          ) : null}
+          {changeExtras ? <div className="col-span-2 flex justify-end">{changeExtras}</div> : null}
           <ProcessingSpeedLine
             speed={preview.processingSpeed}
             fastTrackPromise={fastPromise || null}
@@ -96,13 +93,13 @@ const ChangeExtras: FC<{ href: string; locked: boolean }> = ({ href, locked }) =
   const t = useCustomerT();
   if (locked) {
     return (
-      <span className="text-muted-foreground text-sm" aria-disabled="true">
+      <span className="text-muted-foreground inline-flex min-h-11 items-center text-sm" aria-disabled="true">
         {t("extras.changeExtras")}
       </span>
     );
   }
   return (
-    <Link href={href} className="text-secondary text-sm underline">
+    <Link href={href} className="text-secondary inline-flex min-h-11 items-center text-sm underline">
       {t("extras.changeExtras")}
     </Link>
   );
