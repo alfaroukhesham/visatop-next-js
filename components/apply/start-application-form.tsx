@@ -165,7 +165,7 @@ const SummaryPriceLines: FC<{ lines: readonly ISummaryPriceLine[]; className?: s
       {lines.map((line) => (
         <div key={line.key} className="contents">
           <p className="text-foreground min-w-0">
-            {line.label}{" "}
+            {line.label}{"\u00a0"}
             <span className="text-muted-foreground whitespace-nowrap">
               {"\u00d7\u00a0"}
               {line.count}

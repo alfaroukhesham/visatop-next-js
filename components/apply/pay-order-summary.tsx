@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import type { FC } from "react";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
@@ -9,6 +10,7 @@ import { useCheckoutQuoteOptional } from "@/components/apply/checkout-quote-prov
 import {
   extraByKey,
   formatArrivalDate,
+  formatMinorAmount,
   localizedExtraCopy,
   type TClientQuotePreview,
 } from "@/lib/apply/checkout-extras-ui";
@@ -68,19 +70,20 @@ export const PayOrderSummary: FC<IPayOrderSummaryProps> = ({
               insuranceMode="when-added"
               announcement={null}
               live={false}
+              omitTotal
             />
           </div>
           {offered ? (
-            <div
-              className="col-span-2 space-y-2 lg:grid lg:grid-cols-[auto_auto_auto] lg:items-center lg:justify-start lg:gap-x-3 lg:space-y-0"
-              data-testid="pay-order-extras"
-            >
+            <div className="col-span-2 space-y-2 lg:contents" data-testid="pay-order-extras">
               <span className="text-muted-foreground hidden lg:block">{t("extras.recap.insurance")}</span>
-              <span className="text-foreground hidden lg:block">
-                {hasInsurance ? t("extras.recap.added") : t("extras.recap.notAdded")}
-              </span>
-              {!hasInsurance ? <p className="text-muted-foreground lg:hidden">{t("extras.noExtras")}</p> : null}
-              {changeExtras ? <div className="flex justify-end lg:justify-start">{changeExtras}</div> : null}
+              <div className="space-y-2 lg:space-y-0">
+                <span className="text-foreground hidden lg:inline">
+                  {hasInsurance ? t("extras.recap.added") : t("extras.recap.notAdded")}
+                  {" · "}
+                </span>
+                {!hasInsurance ? <p className="text-muted-foreground lg:hidden">{t("extras.noExtras")}</p> : null}
+                {changeExtras ? <div className="flex justify-end lg:inline">{changeExtras}</div> : null}
+              </div>
             </div>
           ) : null}
           <ProcessingSpeedLine
@@ -92,6 +95,20 @@ export const PayOrderSummary: FC<IPayOrderSummaryProps> = ({
           <span className="text-foreground text-end lg:text-start">
             <bdi>{dateLabel}</bdi>
           </span>
+          <div className="col-span-2 space-y-2 lg:hidden" data-testid="pay-order-total">
+            <div className="border-border flex min-h-6 items-baseline justify-between gap-3 border-t pt-3 text-sm">
+              <p className="text-foreground font-bold">{t("extras.recap.total")}</p>
+              <p className="text-foreground shrink-0 text-end text-base font-bold tabular-nums">
+                <bdi>{formatMinorAmount(preview.totalAmountMinor, preview.currency, locale, "code")}</bdi>
+              </p>
+            </div>
+            {quote?.updating ? (
+              <p className="text-muted-foreground flex min-h-6 items-center gap-2 text-sm">
+                <Loader2 className="size-4 shrink-0 animate-spin motion-reduce:animate-none" aria-hidden />
+                <span>{t("extras.recap.updating")}</span>
+              </p>
+            ) : null}
+          </div>
         </div>
         {locked ? <p className="text-muted-foreground mt-2 text-sm">{t("extras.locked")}</p> : null}
       </div>

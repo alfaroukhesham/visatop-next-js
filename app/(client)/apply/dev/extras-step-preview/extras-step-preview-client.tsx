@@ -1,10 +1,13 @@
 "use client";
 
 import type { FC } from "react";
+import { APPLY_PRIMARY_CTA_CLASS, APPLY_PRIMARY_CTA_ROW_CLASS } from "@/components/apply/apply-primary-cta";
 import { ApplyTwoColumn } from "@/components/apply/apply-two-column";
 import { ExtrasBreakdown } from "@/components/apply/extras-breakdown";
 import { ExtrasStepPanel } from "@/components/apply/extras-step-panel";
 import { PayOrderSummary } from "@/components/apply/pay-order-summary";
+import { ClientButton } from "@/components/client/client-button";
+import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import type { TClientQuotePreview } from "@/lib/apply/checkout-extras-ui";
 
 interface IExtrasStepPreviewClientProps {
@@ -81,13 +84,14 @@ const previewFor = (selected: boolean): TClientQuotePreview => {
 const visaNames = ["30-day tourist visa", "30-day tourist visa"];
 
 export const ExtrasStepPreviewClient: FC<IExtrasStepPreviewClientProps> = ({ view, selected }) => {
+  const t = useCustomerT();
   const preview = previewFor(selected);
   return (
     <ApplyTwoColumn
       currentStep={view === "pay" ? 5 : 4}
       phase={view === "pay" ? undefined : "extras"}
       includeExtras
-      summaryFrom="desktop"
+      summaryFrom={view === "pay" ? "lg" : "desktop"}
       applicationId="extras-fixture"
       tripHref="/apply/start?nationality=IN&application=extras-fixture&extras=1"
       hasSelectedVisa
@@ -105,7 +109,14 @@ export const ExtrasStepPreviewClient: FC<IExtrasStepPreviewClientProps> = ({ vie
       contentClassName="mx-auto w-full max-w-4xl space-y-8"
     >
       {view === "pay" ? (
-        <PayOrderSummary applicationId="extras-fixture" visaNames={visaNames} previewOverride={preview} />
+        <>
+          <PayOrderSummary applicationId="extras-fixture" visaNames={visaNames} previewOverride={preview} />
+          <div className={APPLY_PRIMARY_CTA_ROW_CLASS}>
+            <ClientButton type="button" brand="cta" className={APPLY_PRIMARY_CTA_CLASS}>
+              {t("payment.payAndSubmit")}
+            </ClientButton>
+          </div>
+        </>
       ) : (
         <ExtrasStepPanel
           preview={preview}

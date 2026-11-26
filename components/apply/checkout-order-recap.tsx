@@ -409,7 +409,8 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
                           durationDays: line.service?.durationDays,
                           entries: line.service?.entries,
                         })}
-                      />{" "}
+                      />
+                      {"\u00a0"}
                       <bdi className="text-muted-foreground whitespace-nowrap">{t("payment.quantityOne")}</bdi>
                     </p>
                     {line.service ? (
@@ -433,7 +434,8 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
           <>
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4" data-recap-line="">
               <p className="text-foreground min-w-0 break-words text-pretty text-sm font-normal leading-snug">
-                <CatalogVisaTitle service={service} t={t} locale={locale} />{" "}
+                <CatalogVisaTitle service={service} t={t} locale={locale} />
+                {"\u00a0"}
                 <bdi className="text-muted-foreground whitespace-nowrap">{t("payment.quantityOne")}</bdi>
               </p>
               {visaAmountText(application.id, subtotalText) ? (
@@ -444,38 +446,26 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
                 <p className="text-muted-foreground text-end text-sm">{t("payment.totalAtCheckout")}</p>
               )}
             </div>
-            <dl className="text-muted-foreground space-y-1.5 text-sm" data-clarity-mask="true">
-              <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                <dt className="sr-only">{t("payment.nameLabel")}</dt>
-                <dd>
-                  <span className="font-medium text-foreground/80">{t("payment.nameLabel")}</span> {recapValue(fullName)}
-                </dd>
-              </div>
-              <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                <dt className="sr-only">{t("payment.emailLabel")}</dt>
-                <dd>
-                  <span className="font-medium text-foreground/80">{t("payment.emailLabel")}</span> {contactEmailContent()}
-                </dd>
-              </div>
-              <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                <dt className="sr-only">{t("payment.dateOfBirthLabel")}</dt>
-                <dd>
-                  <span className="font-medium text-foreground/80">{t("payment.dateOfBirthLabel")}</span> {recapValue(dob)}
-                </dd>
-              </div>
-              <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                <dt className="sr-only">{t("payment.passportLabel")}</dt>
-                <dd>
-                  <span className="font-medium text-foreground/80">{t("payment.passportLabel")}</span>{" "}
-                  {passportNo ? (
-                    <span className="font-mono tabular-nums">{passportNo}</span>
-                  ) : recapFieldsPending ? (
-                    recapPending
-                  ) : (
-                    notAddedYet
-                  )}
-                </dd>
-              </div>
+            <dl
+              className="text-muted-foreground grid grid-cols-[auto_1fr] items-baseline gap-x-2 gap-y-1.5 text-sm"
+              data-clarity-mask="true"
+            >
+              <dt className="font-medium text-foreground/80">{t("payment.nameLabel")}</dt>
+              <dd className="min-w-0 break-words">{recapValue(fullName)}</dd>
+              <dt className="font-medium text-foreground/80">{t("payment.emailLabel")}</dt>
+              <dd className="min-w-0 break-words">{contactEmailContent()}</dd>
+              <dt className="font-medium text-foreground/80">{t("payment.dateOfBirthLabel")}</dt>
+              <dd className="min-w-0 break-words">{recapValue(dob)}</dd>
+              <dt className="font-medium text-foreground/80">{t("payment.passportLabel")}</dt>
+              <dd className="min-w-0 break-words">
+                {passportNo ? (
+                  <span className="font-mono tabular-nums">{passportNo}</span>
+                ) : recapFieldsPending ? (
+                  recapPending
+                ) : (
+                  notAddedYet
+                )}
+              </dd>
             </dl>
             {price?.isEstimate && quoteFormat === "symbol" ? (
               <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
@@ -498,8 +488,9 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
                 data-recap-line=""
               >
                 <p className="text-foreground min-w-0">
-                  {extraLineLabel(row.key)}{" "}
-                  <bdi className="text-muted-foreground whitespace-nowrap">× {row.count}</bdi>
+                  {extraLineLabel(row.key)}
+                  {"\u00a0"}
+                  <bdi className="text-muted-foreground whitespace-nowrap">{"\u00d7\u00a0"}{row.count}</bdi>
                 </p>
                 <p className="text-foreground text-end font-normal tabular-nums">
                   <bdi>{formatQuote(row.amountMinor)}</bdi>

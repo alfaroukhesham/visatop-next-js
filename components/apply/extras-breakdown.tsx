@@ -25,6 +25,8 @@ interface IExtrasBreakdownProps {
   announcement?: string | null;
   /** Only the Extras step panel announces the total. Cards pass false. */
   live?: boolean;
+  /** Pay places the total after the extras row so it stays the last order row. */
+  omitTotal?: boolean;
 }
 
 const uniqueNames = (names: readonly string[]): string[] => {
@@ -49,6 +51,7 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
   insuranceAction = null,
   announcement = null,
   live = true,
+  omitTotal = false,
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
@@ -85,7 +88,8 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
               </span>
             );
           })}
-          <span className="text-muted-foreground whitespace-nowrap"> × {count}</span>
+          {"\u00a0"}
+          <span className="text-muted-foreground whitespace-nowrap">{"\u00d7\u00a0"}{count}</span>
         </p>
         <p className="text-foreground shrink-0 text-end font-normal tabular-nums">
           <bdi>{money(preview.visaAmountMinor)}</bdi>
@@ -95,7 +99,8 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
         <div className="flex min-h-6 items-baseline justify-between gap-3 text-sm">
           <p className="text-foreground min-w-0">
             {t("extras.recap.fastTrack")}
-            <span className="text-muted-foreground"> × {fastTrack.count}</span>
+            {"\u00a0"}
+            <span className="text-muted-foreground whitespace-nowrap">{"\u00d7\u00a0"}{fastTrack.count}</span>
           </p>
           <p className="text-foreground shrink-0 text-end font-normal tabular-nums">
             <bdi>{money(fastTrack.amountMinor)}</bdi>
@@ -107,7 +112,8 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
           <div className="flex min-h-6 items-baseline justify-between gap-3">
             <p className="text-foreground min-w-0">
               {t("extras.recap.insurance")}
-              <span className="text-muted-foreground"> × {insurance?.count ?? count}</span>
+              {"\u00a0"}
+              <span className="text-muted-foreground whitespace-nowrap">{"\u00d7\u00a0"}{insurance?.count ?? count}</span>
             </p>
             {insurance ? (
               <p className="text-foreground shrink-0 text-end font-normal tabular-nums">
@@ -120,22 +126,26 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
           {insuranceAction ? <div className="flex justify-end">{insuranceAction}</div> : null}
         </div>
       ) : null}
-      <div className="border-border flex min-h-6 items-baseline justify-between gap-3 border-t pt-3 text-sm">
-        <p className="text-foreground font-bold">{t("extras.recap.total")}</p>
-        <p className="text-foreground shrink-0 text-end text-base font-bold tabular-nums">
-          <bdi>{money(preview.totalAmountMinor)}</bdi>
-        </p>
-      </div>
-      {updatingMode === "reserved" || updating ? (
-        <p className="text-muted-foreground flex min-h-6 items-center gap-2 text-sm">
-          {updating ? (
-            <>
-              <Loader2 className="size-4 shrink-0 animate-spin motion-reduce:animate-none" aria-hidden />
-              <span>{t("extras.recap.updating")}</span>
-            </>
+      {omitTotal ? null : (
+        <>
+          <div className="border-border flex min-h-6 items-baseline justify-between gap-3 border-t pt-3 text-sm">
+            <p className="text-foreground font-bold">{t("extras.recap.total")}</p>
+            <p className="text-foreground shrink-0 text-end text-base font-bold tabular-nums">
+              <bdi>{money(preview.totalAmountMinor)}</bdi>
+            </p>
+          </div>
+          {updatingMode === "reserved" || updating ? (
+            <p className="text-muted-foreground flex min-h-6 items-center gap-2 text-sm">
+              {updating ? (
+                <>
+                  <Loader2 className="size-4 shrink-0 animate-spin motion-reduce:animate-none" aria-hidden />
+                  <span>{t("extras.recap.updating")}</span>
+                </>
+              ) : null}
+            </p>
           ) : null}
-        </p>
-      ) : null}
+        </>
+      )}
       {showSpeed ? (
         <ProcessingSpeedLine
           speed={preview.processingSpeed}

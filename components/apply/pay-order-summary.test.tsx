@@ -95,7 +95,11 @@ describe("PayOrderSummary", () => {
     expect(screen.getByText("Trip details").className).toMatch(/hidden/);
     expect(screen.getByText("Trip details").className).toMatch(/lg:inline/);
     const total = screen.getByText("Total");
-    expect(lines.contains(total)).toBe(true);
+    const totalRow = screen.getByTestId("pay-order-total");
+    expect(lines.contains(total)).toBe(false);
+    expect(totalRow.contains(total)).toBe(true);
+    expect(totalRow.className).toMatch(/lg:hidden/);
+    expect(totalRow.parentElement?.lastElementChild).toBe(totalRow);
     expect(total.className).toMatch(/font-bold/);
     expect(total.className).not.toMatch(/font-semibold|font-heading/);
     const totalAmount = total.nextElementSibling;
@@ -108,7 +112,8 @@ describe("PayOrderSummary", () => {
     expect(change.parentElement?.textContent).not.toMatch(/NGN/);
     const extras = screen.getByTestId("pay-order-extras");
     expect(extras.contains(change)).toBe(true);
-    expect(extras.className).toMatch(/lg:grid-cols-\[auto_auto_auto\]/);
+    expect(extras.compareDocumentPosition(totalRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(extras.className).toMatch(/lg:contents/);
     expect(extras.textContent).toMatch(/Added/);
     expect(extras.textContent).not.toMatch(/NGN/);
     const insurance = within(lines).getByText(/Travel insurance/);

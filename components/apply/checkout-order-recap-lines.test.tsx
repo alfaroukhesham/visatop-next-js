@@ -187,7 +187,10 @@ describe("CheckoutOrderRecap lines", () => {
     expect(screen.queryByText("Product")).toBeNull();
     expect(screen.queryByText("Subtotal")).toBeNull();
     const fast = screen.getByText(/Fast Track processing/);
-    expect(fast.textContent).toMatch(/× 1/);
+    expect(fast.textContent).toMatch(/×\u00a01/);
+    const facts = card.querySelector("dl");
+    expect(facts?.className).toMatch(/grid-cols-\[auto_1fr\]/);
+    expect(facts?.querySelector("dt")?.textContent).toBe("Name");
     expect(fast.className).not.toMatch(/font-bold/);
     expect(fast.closest("[data-order-recap-card]")).toBe(card);
     const total = screen.getByText("Total");
@@ -216,7 +219,7 @@ describe("apply funnel feedback markup", () => {
     const start = readFileSync(join(process.cwd(), "components/apply/start-application-form.tsx"), "utf8");
     expect(start).not.toMatch(/MessageWithAmounts/);
     expect(start).toMatch(/priceLines=/);
-    expect(start).toMatch(/\{line\.label\}\{" "\}/);
+    expect(start).toMatch(/\{line\.label\}\{"\\u00a0"\}/);
     expect(start).toMatch(/\\u00d7\\u00a0/);
     expect(start).toMatch(/SummaryPriceLines lines=\{summaryPriceLines\} className="lg:hidden"/);
   });
