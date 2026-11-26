@@ -165,7 +165,7 @@ const SummaryPriceLines: FC<{ lines: readonly ISummaryPriceLine[]; className?: s
       {lines.map((line) => (
         <div key={line.key} className="contents">
           <p className="text-foreground min-w-0">
-            {line.label}
+            {line.label}{" "}
             <span className="text-muted-foreground whitespace-nowrap">
               {"\u00d7\u00a0"}
               {line.count}
@@ -241,12 +241,14 @@ const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
         ) : null}
       </dl>
       <SummaryPriceLines lines={priceLines} className="border-border hidden border-t pt-3 lg:grid" />
-      <div className="border-border hidden border-t pt-3 lg:block">
-        <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">{t("start.totalLabel")}</p>
-        <p className="font-heading text-foreground mt-0.5 text-xl font-bold tabular-nums">
+      <div className="border-border hidden grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 border-t pt-3 text-sm lg:grid">
+        <p className="text-foreground font-bold">{t("start.totalLabel")}</p>
+        <p className="text-foreground text-end text-base font-bold tabular-nums">
           {totalText ?? price?.text ?? t("start.atCheckout")}
         </p>
-        {price?.isEstimate ? <p className="text-muted-foreground mt-1 text-[10px]">{t("start.estimatedTotal")}</p> : null}
+        {price?.isEstimate ? (
+          <p className="text-muted-foreground col-span-2 text-[10px]">{t("start.estimatedTotal")}</p>
+        ) : null}
       </div>
       <AllInPriceBadges badges={badges} />
     </aside>
@@ -1545,9 +1547,9 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
           <ProcessingSpeedLine speed={speedForSubmit} />
           <SummaryPriceLines lines={summaryPriceLines} className="lg:hidden" />
           {totalText ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 lg:hidden">
-              <p className="text-foreground text-sm font-semibold">{t("start.checkoutTotal")}</p>
-              <p className="font-heading text-foreground text-xl font-bold tabular-nums">
+            <div className="flex flex-wrap items-baseline justify-between gap-3 text-sm lg:hidden">
+              <p className="text-foreground font-bold">{t("start.checkoutTotal")}</p>
+              <p className="text-foreground text-end text-base font-bold tabular-nums">
                 <bdi>{totalText}</bdi>
               </p>
             </div>

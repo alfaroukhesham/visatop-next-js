@@ -281,7 +281,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
     const root = rootRef.current;
     if (!root) return;
     root.scrollIntoView({ block: "start", behavior: "smooth" });
-    const heading = root.querySelector("h3:not(.sr-only)");
+    const heading = root.querySelector("h3");
     if (heading instanceof HTMLElement) {
       heading.focus({ preventScroll: true });
     }
@@ -521,7 +521,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
             </p>
           ) : (
             <div className="space-y-4">
-              <h3 className="sr-only">
+              <h3 tabIndex={-1} className="sr-only">
                 {t("chooser.matchingVisasBanner", {
                   stay: view.stay ? t(`chooser.stayLabels.${view.stay}`) : "",
                   travellerKind:
@@ -532,12 +532,13 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                 {matches.map((s) => {
                   const price = formatPrice(s);
                   const entryText = entriesLabel(s.entries, t);
-                  const subtitle = serviceResultSubtitle(s.name, s.durationDays, entryText, t);
                   const visaName = customerFacingServiceName(s.name, locale, t, {
                     durationDays: s.durationDays,
                     entries: s.entries,
                     travelerKind: s.travelerKind,
                   });
+                  const subtitle =
+                    visaName === s.name ? serviceResultSubtitle(s.name, s.durationDays, entryText, t) : null;
                   const selected = selectedServiceId === s.id;
                   return (
                     <li key={s.id}>

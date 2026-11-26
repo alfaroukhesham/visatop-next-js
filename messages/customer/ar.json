@@ -287,6 +287,7 @@
     "preparingCheckout": "جارٍ تجهيز الدفع الآمن…",
     "previous": "السابق",
     "orderTitle": "طلبك",
+    "tripDetailsTitle": "تفاصيل الرحلة",
     "productColumn": "المنتج",
     "subtotalColumn": "المجموع الفرعي",
     "travellerLine": "مسافر {number} — {service}",

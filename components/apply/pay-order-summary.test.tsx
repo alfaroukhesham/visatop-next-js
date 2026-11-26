@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import type { ReactNode } from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TClientQuotePreview } from "@/lib/apply/checkout-extras-ui";
 
@@ -17,6 +17,7 @@ vi.mock("@/components/client/customer-i18n-provider", () => ({
   useCustomerT: () => (key: string) => {
     const copy: Record<string, string> = {
       "payment.orderTitle": "Your order",
+      "payment.tripDetailsTitle": "Trip details",
       "extras.recap.insurance": "Travel insurance",
       "extras.recap.added": "Added",
       "extras.recap.notAdded": "Not added",
@@ -88,6 +89,11 @@ describe("PayOrderSummary", () => {
     const card = document.querySelector("[data-testid='pay-order'] .grid");
     expect(card).toBeTruthy();
     expect(card?.className).toMatch(/grid-cols-\[minmax\(0,1fr\)_auto\]/);
+    expect(card?.className).toMatch(/lg:max-w-md/);
+    expect(card?.className).toMatch(/lg:grid-cols-\[auto_1fr\]/);
+    expect(screen.getByText("Your order").className).toMatch(/lg:hidden/);
+    expect(screen.getByText("Trip details").className).toMatch(/hidden/);
+    expect(screen.getByText("Trip details").className).toMatch(/lg:inline/);
     const total = screen.getByText("Total");
     expect(lines.contains(total)).toBe(true);
     expect(total.className).toMatch(/font-bold/);
@@ -100,7 +106,12 @@ describe("PayOrderSummary", () => {
     expect(change.className).toMatch(/min-h-11/);
     expect(lines.contains(change)).toBe(false);
     expect(change.parentElement?.textContent).not.toMatch(/NGN/);
-    const insurance = screen.getByText(/Travel insurance/);
+    const extras = screen.getByTestId("pay-order-extras");
+    expect(extras.contains(change)).toBe(true);
+    expect(extras.className).toMatch(/lg:grid-cols-\[auto_auto_auto\]/);
+    expect(extras.textContent).toMatch(/Added/);
+    expect(extras.textContent).not.toMatch(/NGN/);
+    const insurance = within(lines).getByText(/Travel insurance/);
     expect(insurance.closest("div")?.textContent).toMatch(/NGN/);
     expect(insurance.closest("div")?.textContent).not.toMatch(/Change extras/);
     const speed = screen.getByTestId("processing-speed-line");

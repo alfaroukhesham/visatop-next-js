@@ -201,8 +201,8 @@ export const ExtrasStepPanel: FC<IExtrasStepPanelProps> = ({
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-1">
           <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
             <div className="min-w-0 flex-1">
-              <p className="text-muted-foreground text-xs">{t("extras.recap.total")}</p>
-              <p className="font-heading text-foreground truncate font-bold tabular-nums">
+              <p className="text-foreground text-sm font-bold">{t("extras.recap.total")}</p>
+              <p className="text-foreground truncate text-base font-bold tabular-nums">
                 <bdi>{totalText}</bdi>
               </p>
             </div>

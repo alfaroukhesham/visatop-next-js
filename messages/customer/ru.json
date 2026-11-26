@@ -287,6 +287,7 @@
     "preparingCheckout": "Подготовка безопасного оформления…",
     "previous": "Назад",
     "orderTitle": "Ваш заказ",
+    "tripDetailsTitle": "Детали поездки",
     "productColumn": "Услуга",
     "subtotalColumn": "Промежуточный итог",
     "travellerLine": "Путешественник {number} — {service}",

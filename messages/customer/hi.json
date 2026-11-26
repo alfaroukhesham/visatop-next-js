@@ -287,6 +287,7 @@
     "preparingCheckout": "सुरक्षित चेकआउट तैयार हो रहा है…",
     "previous": "पिछला",
     "orderTitle": "आपका ऑर्डर",
+    "tripDetailsTitle": "यात्रा विवरण",
     "productColumn": "उत्पाद",
     "subtotalColumn": "उप-कुल",
     "travellerLine": "यात्री {number} — {service}",

@@ -34,7 +34,7 @@ export const ProcessingSpeedLine: FC<IProcessingSpeedLineProps> = ({
         <span className="text-muted-foreground" data-testid="processing-speed-line">
           {label}
         </span>
-        <span className="text-foreground text-end">{value}</span>
+        <span className="text-foreground text-end lg:text-start">{value}</span>
       </>
     );
   }
