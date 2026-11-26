@@ -2,6 +2,7 @@ import { Loader2 } from "lucide-react";
 import type { FC, ReactNode } from "react";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
 import { customerFacingServiceName } from "@/lib/apply/customer-service-name";
+import { mixedVisaGroups, parseVisaAmountMinor } from "@/lib/apply/visa-recap-lines";
 import {
   extraByKey,
   formatMinorAmount,
@@ -62,6 +63,13 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
   const insurance = groups.find((row) => row.key === "travel_insurance") ?? null;
   const showInsurance = insuranceMode === "always" || Boolean(insurance);
   const names = uniqueNames(visaNames);
+  const mixedVisas = mixedVisaGroups(
+    visaNames.map((name, index) => ({
+      key: preview.visaLines[index]?.serviceId || String(index),
+      label: customerFacingServiceName(name, locale, t),
+      amountMinor: parseVisaAmountMinor(preview.visaLines[index]?.amountMinor),
+    })),
+  );
   const fastTrackExtra = extraByKey(preview, "fast_track");
   const fastPromise =
     fastTrackExtra?.promiseI18n?.[locale]?.trim() ||
@@ -74,27 +82,50 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
       aria-busy={updating || undefined}
       data-testid="extras-breakdown"
     >
-      <div className="flex min-h-6 items-baseline justify-between gap-3 text-sm">
-        <p className="text-foreground min-w-0 break-words text-pretty">
-          {t("extras.recap.visa")}
-          {names.map((name) => {
-            const label = customerFacingServiceName(name, locale, t);
-            return (
-              <span key={name}>
-                {" · "}
-                <bdi className="break-words" title={label}>
-                  {label}
-                </bdi>
-              </span>
-            );
-          })}
-          {"\u00a0"}
-          <span className="text-muted-foreground whitespace-nowrap">{"\u00d7\u00a0"}{count}</span>
-        </p>
-        <p className="text-foreground shrink-0 text-end font-normal tabular-nums">
-          <bdi>{money(preview.visaAmountMinor)}</bdi>
-        </p>
-      </div>
+      {mixedVisas.length > 0 ? (
+        mixedVisas.map((group) => (
+          <div
+            key={group.label}
+            className="flex min-h-6 items-baseline justify-between gap-3 text-sm"
+            data-testid="mixed-visa-line"
+          >
+            <p className="text-foreground min-w-0 break-words text-pretty">
+              <bdi className="break-words" title={group.label}>
+                {group.label}
+              </bdi>
+              {"\u00a0"}
+              <span className="text-muted-foreground whitespace-nowrap">{"\u00d7\u00a0"}{group.count}</span>
+            </p>
+            {group.amountMinor !== null ? (
+              <p className="text-foreground shrink-0 text-end font-normal tabular-nums">
+                <bdi>{money(group.amountMinor.toString())}</bdi>
+              </p>
+            ) : null}
+          </div>
+        ))
+      ) : (
+        <div className="flex min-h-6 items-baseline justify-between gap-3 text-sm">
+          <p className="text-foreground min-w-0 break-words text-pretty">
+            {t("extras.recap.visa")}
+            {names.map((name) => {
+              const label = customerFacingServiceName(name, locale, t);
+              return (
+                <span key={name}>
+                  {" · "}
+                  <bdi className="break-words" title={label}>
+                    {label}
+                  </bdi>
+                </span>
+              );
+            })}
+            {"\u00a0"}
+            <span className="text-muted-foreground whitespace-nowrap">{"\u00d7\u00a0"}{count}</span>
+          </p>
+          <p className="text-foreground shrink-0 text-end font-normal tabular-nums">
+            <bdi>{money(preview.visaAmountMinor)}</bdi>
+          </p>
+        </div>
+      )}
       {preview.processingSpeed === "fast_track" && fastTrack ? (
         <div className="flex min-h-6 items-baseline justify-between gap-3 text-sm">
           <p className="text-foreground min-w-0">
