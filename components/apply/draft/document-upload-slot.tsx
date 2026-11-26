@@ -26,8 +26,8 @@ export interface IDocumentUploadSlotProps {
   showPhotoGuidance?: boolean;
   stackActions?: boolean;
   ocrNotice?: string | null;
-  /** Reading a passport is status, not a failure. */
-  ocrNoticeTone?: "status" | "alert";
+  /** Reading is status. A complete read is success. A partial read stays an alert. */
+  ocrNoticeTone?: "status" | "success" | "alert";
   onUpload: (file: File, source: TDocumentUploadSource) => void;
   onCancelUpload: () => void;
 }
@@ -152,6 +152,14 @@ export const DocumentUploadSlot: FC<IDocumentUploadSlotProps> = ({
             role="status"
           >
             <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin" aria-hidden />
+            <span className="font-medium">{ocrNotice}</span>
+          </div>
+        ) : ocrNoticeTone === "success" ? (
+          <div
+            className="text-success flex items-start gap-2 rounded-xl border border-success/30 bg-success/10 p-3 text-sm"
+            role="status"
+          >
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden />
             <span className="font-medium">{ocrNotice}</span>
           </div>
         ) : (

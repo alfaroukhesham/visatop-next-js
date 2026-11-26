@@ -51,7 +51,7 @@ export const passportSlotOcrNotice = (
   if (extracting) return t("ocr.reading");
   switch (status) {
     case "succeeded":
-      return t("draft.actionMessages.ocrPartial");
+      return t("ocr.succeeded");
     case "needs_manual":
       return t("draft.actionMessages.ocrManual");
     case "failed":
@@ -59,4 +59,14 @@ export const passportSlotOcrNotice = (
     default:
       return null;
   }
+};
+
+/** Reading stays neutral. A complete read is success. Missing fields stay an alert. */
+export const passportOcrNoticeTone = (
+  extracting: boolean,
+  status: string | null | undefined,
+): "status" | "success" | "alert" => {
+  if (extracting) return "status";
+  if (status === "succeeded") return "success";
+  return "alert";
 };

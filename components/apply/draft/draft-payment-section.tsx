@@ -1,6 +1,6 @@
 "use client";
 
-import type { FC } from "react";
+import { useState, type FC } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { ClientButton } from "@/components/client/client-button";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
@@ -8,7 +8,11 @@ import type { PublicApplication } from "@/lib/applications/public-application";
 import { customerLooksCompleteForPayCopy } from "@/lib/apply/payment-copy";
 import type { Readiness } from "@/lib/documents/validation-readiness";
 import { CheckoutErrorAlert } from "../checkout-error-alert";
-import { CheckoutTermsCheckbox } from "../checkout-terms-checkbox";
+import {
+  CHECKOUT_TERMS_CHECKBOX_ID,
+  CHECKOUT_TERMS_ERROR_ID,
+  CheckoutTermsCheckbox,
+} from "../checkout-terms-checkbox";
 import { PaddleCheckoutButton } from "../paddle-checkout-button";
 import {
   APPLY_PRIMARY_CTA_ROW_CLASS,
@@ -91,6 +95,7 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
+  const [termsErrorNonce, setTermsErrorNonce] = useState(0);
   const payCopyComplete = customerLooksCompleteForPayCopy({
     requiredSlotKeys,
     uploadedTypes,
@@ -129,6 +134,7 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
           if (next) onTermsError(null);
         }}
         error={termsError}
+        errorKey={termsErrorNonce}
       />
       {fincraLocalCheckout ? (
         <p className="text-muted-foreground text-sm">
@@ -141,10 +147,16 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
         applicationId={applicationId}
         termsAccepted={termsAccepted}
         disabled={payBlocked}
-        describedBy={payDescribedBy}
+        describedBy={
+          [payDescribedBy, termsError ? CHECKOUT_TERMS_ERROR_ID : null].filter(Boolean).join(" ") || null
+        }
         onPayingChange={onPayingChange}
         onCheckoutStarted={onCheckoutStarted}
-        onTermsRejected={() => onTermsError(t("checkout.errors.termsRequired"))}
+        onTermsRejected={() => {
+          onTermsError(t("checkout.errors.termsRequired"));
+          setTermsErrorNonce((nonce) => nonce + 1);
+          document.getElementById(CHECKOUT_TERMS_CHECKBOX_ID)?.focus();
+        }}
         onZiinaEmbedded={(url) => {
           onDismissCheckoutError();
           checkout.onZiinaEmbedded(url);

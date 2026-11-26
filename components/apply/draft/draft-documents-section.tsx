@@ -4,7 +4,7 @@ import type { FC } from "react";
 import { AlertTriangle, CheckCircle2, FileStack, Loader2 } from "lucide-react";
 import { useCustomerT } from "@/components/client/customer-i18n-provider";
 import type { TDocumentSlot } from "@/lib/apply/document-requirements";
-import { passportSlotOcrNotice } from "@/lib/apply/ocr-customer-copy";
+import { passportOcrNoticeTone, passportSlotOcrNotice } from "@/lib/apply/ocr-customer-copy";
 import { translateDocumentSlot } from "@/lib/apply/document-slot-i18n";
 import { DocumentUploadSlot } from "./document-upload-slot";
 import type { TDocumentUploadSource } from "@/lib/analytics/document-upload-events";
@@ -60,6 +60,7 @@ export const DraftDocumentsSection: FC<IDraftDocumentsSectionProps> = ({
           addLater={!isPassport}
           showCaptureGuidance={isPassport}
           ocrNotice={isPassport ? passportSlotOcrNotice(ocrStatus, extracting, t) : null}
+          ocrNoticeTone={passportOcrNoticeTone(extracting, ocrStatus)}
           onUpload={(f, source) => onUpload(type, f, source)}
           onCancelUpload={onCancelUpload}
         />
