@@ -47,7 +47,7 @@ export const PayOrderSummary: FC<IPayOrderSummaryProps> = ({
   const changeExtras = offered ? <ChangeExtras href={extrasHref} locked={locked} /> : null;
 
   return (
-    <section aria-labelledby="pay-order-title" className="space-y-4" data-testid="pay-order">
+    <section aria-labelledby="pay-order-title" className="space-y-4 lg:hidden" data-testid="pay-order">
       <h2 id="pay-order-title" className="font-heading text-foreground text-base font-semibold md:text-lg">
         {t("payment.orderTitle")}
       </h2>
@@ -56,52 +56,37 @@ export const PayOrderSummary: FC<IPayOrderSummaryProps> = ({
           {t("extras.removed")}
         </p>
       ) : null}
-      <div className="border-border bg-card space-y-3 rounded-[12px] border p-4 shadow-[0_4px_20px_rgba(0,0,0,0.06)] sm:p-5">
-        <div className="min-[1025px]:hidden">
-          <ExtrasBreakdown
-            preview={preview}
-            visaNames={visaNames}
-            updating={Boolean(quote?.updating)}
-            updatingMode="when-updating"
-            insuranceMode="when-added"
-            insuranceAction={hasInsurance ? changeExtras : null}
-            announcement={null}
-            live={false}
-          />
-          {offered && !hasInsurance ? (
-            <div className="flex min-h-11 items-center justify-between gap-3 text-sm">
-              <p className="text-muted-foreground">{t("extras.noExtras")}</p>
-              {changeExtras}
-            </div>
-          ) : null}
-        </div>
-        {offered ? (
-          <div className="hidden items-start justify-between gap-3 text-sm min-[1025px]:flex">
-            <p className="text-foreground flex min-h-11 items-center">{t("extras.recap.insurance")}</p>
-            <div className="flex shrink-0 flex-col items-end">
-              <p
-                className={
-                  hasInsurance
-                    ? "text-foreground flex min-h-11 items-center font-medium"
-                    : "text-muted-foreground flex min-h-11 items-center"
-                }
-              >
-                {hasInsurance ? t("extras.recap.added") : t("extras.recap.notAdded")}
-              </p>
-              {changeExtras}
-            </div>
+      <div className="border-border bg-card rounded-[12px] border p-4 shadow-[0_4px_20px_rgba(0,0,0,0.06)] sm:p-5">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-2 text-sm">
+          <div className="col-span-2">
+            <ExtrasBreakdown
+              preview={preview}
+              visaNames={visaNames}
+              updating={Boolean(quote?.updating)}
+              updatingMode="when-updating"
+              insuranceMode="when-added"
+              insuranceAction={hasInsurance ? changeExtras : null}
+              announcement={null}
+              live={false}
+            />
+            {offered && !hasInsurance ? (
+              <div className="mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4">
+                <p className="text-muted-foreground">{t("extras.noExtras")}</p>
+                <div className="text-end">{changeExtras}</div>
+              </div>
+            ) : null}
           </div>
-        ) : null}
-        <div className="space-y-2">
-          <ProcessingSpeedLine speed={preview.processingSpeed} fastTrackPromise={fastPromise || null} />
-          <p className="text-sm">
-            <span className="text-muted-foreground">{arrivalLabel}</span>{" "}
-            <span className="text-foreground">
-              <bdi>{dateLabel}</bdi>
-            </span>
-          </p>
+          <ProcessingSpeedLine
+            speed={preview.processingSpeed}
+            fastTrackPromise={fastPromise || null}
+            layout="pair"
+          />
+          <span className="text-muted-foreground">{arrivalLabel}</span>
+          <span className="text-foreground text-end">
+            <bdi>{dateLabel}</bdi>
+          </span>
         </div>
-        {locked ? <p className="text-muted-foreground text-sm">{t("extras.locked")}</p> : null}
+        {locked ? <p className="text-muted-foreground mt-2 text-sm">{t("extras.locked")}</p> : null}
       </div>
     </section>
   );
@@ -111,13 +96,13 @@ const ChangeExtras: FC<{ href: string; locked: boolean }> = ({ href, locked }) =
   const t = useCustomerT();
   if (locked) {
     return (
-      <span className="text-muted-foreground inline-flex min-h-11 items-center text-sm" aria-disabled="true">
+      <span className="text-muted-foreground text-sm" aria-disabled="true">
         {t("extras.changeExtras")}
       </span>
     );
   }
   return (
-    <Link href={href} className="text-secondary inline-flex min-h-11 items-center text-sm underline">
+    <Link href={href} className="text-secondary text-sm underline">
       {t("extras.changeExtras")}
     </Link>
   );

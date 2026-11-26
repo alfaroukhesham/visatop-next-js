@@ -733,7 +733,7 @@
       },
       "badge": "موصى به"
     },
-    "perTravellerSum": "‏{price} × {n} {travellersWord} = ‏{sum}",
+    "perTravellerSum": "‏{price} × {n} {travellersWord} = ‏{sum}",
     "travellers_one": "مسافر",
     "travellers_two": "مسافرَين",
     "travellers_few": "مسافرين",

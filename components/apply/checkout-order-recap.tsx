@@ -382,21 +382,24 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
 
       <AllInPriceBadges badges={displayBadges} />
 
-      <div className="text-muted-foreground flex justify-between gap-4 text-[10px] font-bold uppercase tracking-widest">
-        <span>{t("payment.productColumn")}</span>
-        <span>{t("payment.subtotalColumn")}</span>
-      </div>
-
-      {members.length > 1 ? (
-        <div className="border-border bg-card shadow-[0_4px_20px_rgba(0,0,0,0.06)] rounded-[12px] border p-4 sm:p-5">
-          {loadError ? (
-            <p className="text-error text-sm">{loadError}</p>
-          ) : (
-            <div className="space-y-4">
-              {memberLines.map((line) => (
-                <div key={line.member.applicationId} className="flex items-start justify-between gap-4">
+      <div
+        className="border-border bg-card shadow-[0_4px_20px_rgba(0,0,0,0.06)] space-y-4 rounded-[12px] border p-4 sm:p-5"
+        data-order-recap-card=""
+      >
+        {loadError ? (
+          <p className="text-error text-sm">{loadError}</p>
+        ) : members.length > 1 ? (
+          <div className="space-y-4">
+            {memberLines.map((line) => {
+              const amount = visaAmountText(line.member.applicationId, line.price?.text ?? null);
+              return (
+                <div
+                  key={line.member.applicationId}
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4"
+                  data-recap-line=""
+                >
                   <div className="min-w-0">
-                    <p className="font-heading text-foreground min-w-0 break-words text-pretty text-sm font-bold leading-snug">
+                    <p className="text-foreground min-w-0 break-words text-pretty text-sm font-normal leading-snug">
                       <PartyMemberLine
                         template={t("payment.travellerLine", {
                           number: line.member.travelerIndex + 1,
@@ -406,7 +409,8 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
                           durationDays: line.service?.durationDays,
                           entries: line.service?.entries,
                         })}
-                      />
+                      />{" "}
+                      <bdi className="text-muted-foreground whitespace-nowrap">{t("payment.quantityOne")}</bdi>
                     </p>
                     {line.service ? (
                       <p className="text-muted-foreground mt-0.5 min-w-0 break-words text-pretty text-xs">
@@ -414,143 +418,135 @@ export const CheckoutOrderRecap: FC<ICheckoutOrderRecapProps> = ({
                       </p>
                     ) : null}
                   </div>
-                  <div className="text-end">
-                    {visaAmountText(line.member.applicationId, line.price?.text ?? null) ? (
-                      <p className="text-foreground font-heading text-base font-bold tabular-nums">
-                        <bdi>{visaAmountText(line.member.applicationId, line.price?.text ?? null)}</bdi>
-                      </p>
-                    ) : (
-                      <p className="text-muted-foreground text-sm">{t("payment.totalAtCheckout")}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="border-border bg-card shadow-[0_4px_20px_rgba(0,0,0,0.06)] rounded-[12px] border p-4 sm:p-5">
-          {loadError ? (
-            <p className="text-error text-sm">{loadError}</p>
-          ) : service ? (
-            <>
-              <p className="font-heading text-foreground min-w-0 break-words text-pretty text-base font-bold leading-snug">
-                <CatalogVisaTitle service={service} t={t} locale={locale} />
-              </p>
-              <dl className="text-muted-foreground mt-3 space-y-1.5 text-sm" data-clarity-mask="true">
-                <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                  <dt className="sr-only">{t("payment.nameLabel")}</dt>
-                  <dd>
-                    <span className="font-medium text-foreground/80">{t("payment.nameLabel")}</span>{" "}
-                    {recapValue(fullName)}
-                  </dd>
-                </div>
-                <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                  <dt className="sr-only">{t("payment.emailLabel")}</dt>
-                  <dd>
-                    <span className="font-medium text-foreground/80">{t("payment.emailLabel")}</span> {contactEmailContent()}
-                  </dd>
-                </div>
-                <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                  <dt className="sr-only">{t("payment.dateOfBirthLabel")}</dt>
-                  <dd>
-                    <span className="font-medium text-foreground/80">{t("payment.dateOfBirthLabel")}</span>{" "}
-                    {recapValue(dob)}
-                  </dd>
-                </div>
-                <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                  <dt className="sr-only">{t("payment.passportLabel")}</dt>
-                  <dd>
-                    <span className="font-medium text-foreground/80">{t("payment.passportLabel")}</span>{" "}
-                    {passportNo ? (
-                      <span className="font-mono tabular-nums">{passportNo}</span>
-                    ) : recapFieldsPending ? (
-                      recapPending
-                    ) : (
-                      notAddedYet
-                    )}
-                  </dd>
-                </div>
-              </dl>
-
-              <div className="mt-4 flex items-end justify-between gap-4 border-t border-border pt-4">
-                <p className="text-muted-foreground text-sm tabular-nums">{t("payment.quantityOne")}</p>
-                <div className="text-end">
-                  {visaAmountText(application.id, subtotalText) ? (
-                    <p className="text-foreground font-heading text-lg font-bold tabular-nums">
-                      <bdi>{visaAmountText(application.id, subtotalText)}</bdi>
+                  {amount ? (
+                    <p className="text-foreground text-end text-sm font-normal tabular-nums">
+                      <bdi>{amount}</bdi>
                     </p>
                   ) : (
-                    <p className="text-muted-foreground text-sm">{t("payment.totalAtCheckout")}</p>
+                    <p className="text-muted-foreground text-end text-sm">{t("payment.totalAtCheckout")}</p>
                   )}
                 </div>
-              </div>
-              {price?.isEstimate && quoteFormat === "symbol" ? (
-                <p className="text-muted-foreground mt-2 text-[10px] font-medium uppercase tracking-wide">
-                  {t("payment.estimatedCheckoutNote")}
-                </p>
-              ) : null}
-            </>
-          ) : (
-            <p className="text-muted-foreground text-sm">
-              {t("payment.catalogUnavailable", { serviceId: application.serviceId })}
-            </p>
-          )}
-        </div>
-      )}
-
-      {extraRows.length > 0 ? (
-        <div className="space-y-3">
-          {extraRows.map((row) => (
-            <div key={row.key} className="flex items-start justify-between gap-4 text-sm">
-              <div>
-                <p className="text-foreground font-medium">{extraLineLabel(row.key)}</p>
-                <p className="text-muted-foreground text-xs">
-                  <bdi>× {row.count}</bdi>
-                </p>
-              </div>
-              <p className="text-foreground font-heading text-end font-bold tabular-nums">
-                <bdi>{formatQuote(row.amountMinor)}</bdi>
+              );
+            })}
+          </div>
+        ) : service ? (
+          <>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4" data-recap-line="">
+              <p className="text-foreground min-w-0 break-words text-pretty text-sm font-normal leading-snug">
+                <CatalogVisaTitle service={service} t={t} locale={locale} />{" "}
+                <bdi className="text-muted-foreground whitespace-nowrap">{t("payment.quantityOne")}</bdi>
               </p>
+              {visaAmountText(application.id, subtotalText) ? (
+                <p className="text-foreground text-end text-sm font-normal tabular-nums">
+                  <bdi>{visaAmountText(application.id, subtotalText)}</bdi>
+                </p>
+              ) : (
+                <p className="text-muted-foreground text-end text-sm">{t("payment.totalAtCheckout")}</p>
+              )}
             </div>
-          ))}
-        </div>
-      ) : null}
-
-      {quoteState?.loadError && !serverPreview && !settled ? (
-        <p className="text-foreground text-sm" role="alert">
-          {quoteState.loadError}
-        </p>
-      ) : null}
-
-      {totalText || quoteState?.updating ? (
-        <div
-          className="text-muted-foreground flex justify-between gap-4 text-sm"
-          aria-busy={quoteState?.updating || undefined}
-        >
-          <span className="inline-flex items-center gap-2">
-            {t("payment.total")}
-            {quoteState?.updating ? (
-              <>
-                <Loader2 className="size-4 animate-spin motion-reduce:animate-none" aria-hidden />
-                <span id="extras-recap-updating">{t("extras.recap.updating")}</span>
-              </>
+            <dl className="text-muted-foreground space-y-1.5 text-sm" data-clarity-mask="true">
+              <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                <dt className="sr-only">{t("payment.nameLabel")}</dt>
+                <dd>
+                  <span className="font-medium text-foreground/80">{t("payment.nameLabel")}</span> {recapValue(fullName)}
+                </dd>
+              </div>
+              <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                <dt className="sr-only">{t("payment.emailLabel")}</dt>
+                <dd>
+                  <span className="font-medium text-foreground/80">{t("payment.emailLabel")}</span> {contactEmailContent()}
+                </dd>
+              </div>
+              <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                <dt className="sr-only">{t("payment.dateOfBirthLabel")}</dt>
+                <dd>
+                  <span className="font-medium text-foreground/80">{t("payment.dateOfBirthLabel")}</span> {recapValue(dob)}
+                </dd>
+              </div>
+              <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                <dt className="sr-only">{t("payment.passportLabel")}</dt>
+                <dd>
+                  <span className="font-medium text-foreground/80">{t("payment.passportLabel")}</span>{" "}
+                  {passportNo ? (
+                    <span className="font-mono tabular-nums">{passportNo}</span>
+                  ) : recapFieldsPending ? (
+                    recapPending
+                  ) : (
+                    notAddedYet
+                  )}
+                </dd>
+              </div>
+            </dl>
+            {price?.isEstimate && quoteFormat === "symbol" ? (
+              <p className="text-muted-foreground text-[10px] font-medium uppercase tracking-wide">
+                {t("payment.estimatedCheckoutNote")}
+              </p>
             ) : null}
-          </span>
-          <span className="text-foreground font-heading text-end text-base font-bold tabular-nums">
-            {totalText ? <bdi>{totalText}</bdi> : null}
-          </span>
-        </div>
-      ) : null}
-      {showProcessingSpeed && serverPreview?.processingSpeed ? (
-        <ProcessingSpeedLine
-          speed={serverPreview.processingSpeed}
-          fastTrackPromise={
-            localizedExtraCopy(extraByKey(serverPreview, "fast_track")?.promiseI18n ?? null, locale, "") ||
-            null
-          }
-        />
-      ) : null}
+          </>
+        ) : (
+          <p className="text-muted-foreground text-sm">
+            {t("payment.catalogUnavailable", { serviceId: application.serviceId })}
+          </p>
+        )}
+
+        {extraRows.length > 0 || totalText || quoteState?.updating ? (
+          <div className="border-border space-y-2 border-t pt-4">
+            {extraRows.map((row) => (
+              <div
+                key={row.key}
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 text-sm font-normal"
+                data-recap-line=""
+              >
+                <p className="text-foreground min-w-0">
+                  {extraLineLabel(row.key)}{" "}
+                  <bdi className="text-muted-foreground whitespace-nowrap">× {row.count}</bdi>
+                </p>
+                <p className="text-foreground text-end font-normal tabular-nums">
+                  <bdi>{formatQuote(row.amountMinor)}</bdi>
+                </p>
+              </div>
+            ))}
+            {totalText || quoteState?.updating ? (
+              <div
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 text-sm"
+                aria-busy={quoteState?.updating || undefined}
+                data-recap-total=""
+              >
+                <p className="text-foreground inline-flex items-center gap-2 font-bold">
+                  {t("payment.total")}
+                  {quoteState?.updating ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin motion-reduce:animate-none" aria-hidden />
+                      <span id="extras-recap-updating" className="font-normal">
+                        {t("extras.recap.updating")}
+                      </span>
+                    </>
+                  ) : null}
+                </p>
+                <p className="text-foreground text-end text-base font-bold tabular-nums">
+                  {totalText ? <bdi>{totalText}</bdi> : null}
+                </p>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        {quoteState?.loadError && !serverPreview && !settled ? (
+          <p className="text-foreground text-sm" role="alert">
+            {quoteState.loadError}
+          </p>
+        ) : null}
+
+        {showProcessingSpeed && serverPreview?.processingSpeed ? (
+          <ProcessingSpeedLine
+            speed={serverPreview.processingSpeed}
+            fastTrackPromise={
+              localizedExtraCopy(extraByKey(serverPreview, "fast_track")?.promiseI18n ?? null, locale, "") ||
+              null
+            }
+          />
+        ) : null}
+      </div>
       {quoteState?.announcement ? (
         <p className="sr-only" role="status">
           {quoteState.announcement}

@@ -87,7 +87,7 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
           })}
           <span className="text-muted-foreground whitespace-nowrap"> × {count}</span>
         </p>
-        <p className="text-foreground shrink-0 text-end font-medium tabular-nums">
+        <p className="text-foreground shrink-0 text-end font-normal tabular-nums">
           <bdi>{money(preview.visaAmountMinor)}</bdi>
         </p>
       </div>
@@ -97,7 +97,7 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
             {t("extras.recap.fastTrack")}
             <span className="text-muted-foreground"> × {fastTrack.count}</span>
           </p>
-          <p className="text-foreground shrink-0 text-end font-medium tabular-nums">
+          <p className="text-foreground shrink-0 text-end font-normal tabular-nums">
             <bdi>{money(fastTrack.amountMinor)}</bdi>
           </p>
         </div>
@@ -108,9 +108,9 @@ export const ExtrasBreakdown: FC<IExtrasBreakdownProps> = ({
             {t("extras.recap.insurance")}
             <span className="text-muted-foreground"> × {insurance?.count ?? count}</span>
           </p>
-          <div className="flex shrink-0 flex-col items-end">
+          <div className="flex shrink-0 items-baseline justify-end gap-3">
             {insurance ? (
-              <p className="text-foreground text-end font-medium tabular-nums">
+              <p className="text-foreground text-end font-normal tabular-nums">
                 <bdi>{money(insurance.amountMinor)}</bdi>
               </p>
             ) : (

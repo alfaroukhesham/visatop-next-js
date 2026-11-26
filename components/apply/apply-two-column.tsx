@@ -55,9 +55,10 @@ export const ApplyTwoColumn: FC<IApplyTwoColumnProps> = ({
         <div
           className={cn(
             "grid items-start gap-6",
-            summaryFrom === "desktop"
-              ? "min-[1025px]:grid-cols-[minmax(0,1fr)_280px]"
-              : "lg:grid-cols-[minmax(0,1fr)_280px]",
+            visaSummary &&
+              (summaryFrom === "desktop"
+                ? "min-[1025px]:grid-cols-[minmax(0,1fr)_280px]"
+                : "lg:grid-cols-[minmax(0,1fr)_280px]"),
           )}
         >
           <div

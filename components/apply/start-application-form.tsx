@@ -24,7 +24,6 @@ import {
   APPLY_STEP_PREVIOUS_CLASS,
 } from "@/components/apply/apply-primary-cta";
 import { customerFacingServiceName } from "@/lib/apply/customer-service-name";
-import { MessageWithAmounts } from "@/components/apply/message-with-amounts";
 import { ClientField } from "@/components/client/client-field";
 import { ClientInput } from "@/components/client/client-input";
 import { useCustomerLocale, useCustomerT } from "@/components/client/customer-i18n-provider";
@@ -74,6 +73,7 @@ import {
   calendarDaysBetween,
   formatArrivalDate,
   formatMinorAmount,
+  groupedExtraLines,
   pluralMessage,
   reasonFromErrorDetails,
   relativeArrivalLabel,
@@ -84,6 +84,7 @@ import {
   type TTravelWindow,
 } from "@/lib/apply/checkout-extras-ui";
 import { insuranceStepOffered } from "@/lib/checkout-extras/party-insurance";
+import { editTripReturnHrefs } from "@/lib/apply/edit-trip-return";
 
 type Nationality = { code: string; name: string };
 type Service = IService;
@@ -142,6 +143,13 @@ const toDisplayMinor = (s: Service, tab: DisplayCurrency): number | null => {
   return Number(converted);
 }
 
+interface ISummaryPriceLine {
+  key: string;
+  label: string;
+  count: number;
+  amount: string;
+}
+
 interface ISelectedVisaSummaryProps {
   service: Service;
   answers: { stay: TStayBucket | null; entry: "single" | "multiple"; kind: TTravelerKind };
@@ -149,6 +157,7 @@ interface ISelectedVisaSummaryProps {
   totalText: string | null;
   price: { text: string; isEstimate: boolean } | null;
   badges: TApplyPriceBadges;
+  priceLines?: ISummaryPriceLine[];
 }
 
 const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
@@ -158,6 +167,7 @@ const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
   totalText,
   price,
   badges,
+  priceLines = [],
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
@@ -200,6 +210,21 @@ const SelectedVisaSummary: FC<ISelectedVisaSummaryProps> = ({
           </div>
         ) : null}
       </dl>
+      {priceLines.length > 0 ? (
+        <div className="border-border grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-1.5 border-t pt-3 text-sm font-normal">
+          {priceLines.map((line) => (
+            <div key={line.key} className="contents">
+              <p className="text-foreground min-w-0">
+                {line.label}
+                <span className="text-muted-foreground"> × {line.count}</span>
+              </p>
+              <p className="text-foreground text-end tabular-nums">
+                <bdi>{line.amount}</bdi>
+              </p>
+            </div>
+          ))}
+        </div>
+      ) : null}
       <div className="border-border hidden border-t pt-3 lg:block">
         <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">{t("start.totalLabel")}</p>
         <p className="font-heading text-foreground mt-0.5 text-xl font-bold tabular-nums">
@@ -241,6 +266,7 @@ interface IEditTripSummaryProps {
   speed: "standard" | "fast_track";
   totalText: string | null;
   returnHref: string;
+  previousHref: string | null;
 }
 
 const EditTripSummary: FC<IEditTripSummaryProps> = ({
@@ -251,6 +277,7 @@ const EditTripSummary: FC<IEditTripSummaryProps> = ({
   speed,
   totalText,
   returnHref,
+  previousHref,
 }) => {
   const t = useCustomerT();
   const locale = useCustomerLocale();
@@ -312,14 +339,16 @@ const EditTripSummary: FC<IEditTripSummaryProps> = ({
       ) : null}
       <div className="space-y-2">
         <div className={APPLY_PRIMARY_CTA_ROW_CLASS}>
-          <ClientButton
-            type="button"
-            brand="white"
-            className={APPLY_STEP_PREVIOUS_CLASS}
-            onClick={() => router.push(returnHref)}
-          >
-            {t("start.previousButton")}
-          </ClientButton>
+          {previousHref ? (
+            <ClientButton
+              type="button"
+              brand="white"
+              className={APPLY_STEP_PREVIOUS_CLASS}
+              onClick={() => router.push(previousHref)}
+            >
+              {t("start.previousButton")}
+            </ClientButton>
+          ) : null}
           <ClientButtonLink href={returnHref} brand="cta" className={APPLY_PRIMARY_CTA_CLASS}>
             {t("start.backToApplication")}
           </ClientButtonLink>
@@ -414,6 +443,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     const id = params.get("application")?.trim() ?? "";
     setEditingApplicationId(id || null);
     setExtrasFromQuery(params.get("extras") === "1");
+    setCameFromPayment(params.get("from") === "payment");
   }, []);
   const [nationalities, setNationalities] = useState<Nationality[]>([]);
   const [nationality, setNationality] = useState(boot.nationality);
@@ -428,6 +458,9 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
   });
   const [extrasFromQuery, setExtrasFromQuery] = useState(
     () => new URLSearchParams(window.location.search).get("extras") === "1",
+  );
+  const [cameFromPayment, setCameFromPayment] = useState(
+    () => new URLSearchParams(window.location.search).get("from") === "payment",
   );
   const [savedQuote, setSavedQuote] = useState<TClientQuotePreview | null>(null);
   const quoteEpoch = useRef(0);
@@ -788,15 +821,6 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       }).note
     : null;
   const speedRelative = daysUntil !== null ? relativeArrivalLabel(locale, daysUntil, t) : "";
-  const fastTrackPartyTemplate =
-    speedQuote?.fastTrack?.sumAmountMinor && speedQuote.travellerCount
-      ? t("extras.perTravellerSum", {
-          price: "{price}",
-          n: "{n}",
-          travellersWord: pluralMessage(t, "extras.travellers", locale, speedQuote.travellerCount),
-          sum: "{sum}",
-        })
-      : null;
   const fastTrackPartyAmounts =
     speedQuote?.fastTrack?.sumAmountMinor && speedQuote.travellerCount
       ? {
@@ -1022,6 +1046,14 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       ? null
       : formatDisplayMinor(quotedMinor, displayCurrency, locale);
   const extrasOffered = includeExtras || extrasFromQuery || insuranceStepOffered(savedQuote);
+  const editReturn = editingApplicationId
+    ? editTripReturnHrefs({
+        applicationId: editingApplicationId,
+        fromPayment: cameFromPayment,
+        locked: Boolean(savedQuote?.locked),
+        extrasOffered,
+      })
+    : null;
   const showListContinue = applyStep === "visa" && chooserPhase === "results" && Boolean(serviceId);
   const showTravellerContinue = applyStep === "travellers" && partyEnabled;
   const showEmailContinue = applyStep === "email" && Boolean(serviceId);
@@ -1035,7 +1067,9 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
     const root = stepCardRef.current;
     if (!root) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    root.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+    const rail = root.closest("form")?.querySelector("[data-apply-step-scroll]");
+    const target = rail instanceof HTMLElement ? rail : root;
+    target.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
     const heading = root.querySelector("h1, h2, h3");
     if (heading instanceof HTMLElement) heading.focus({ preventScroll: true });
   }, [applyStep]);
@@ -1074,11 +1108,13 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       ) : null}
 
       {serviceId ? (
-        <ApplyStepsRail
-          currentStep={2}
-          includeExtras={extrasOffered}
-          applicationId={editingApplicationId ?? undefined}
-        />
+        <div data-apply-step-scroll="" className="scroll-mt-[var(--wp-shell-header-height,130px)]">
+          <ApplyStepsRail
+            currentStep={2}
+            includeExtras={extrasOffered}
+            applicationId={editingApplicationId ?? undefined}
+          />
+        </div>
       ) : null}
 
       <div className={serviceId ? "lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:items-start lg:gap-6" : undefined}>
@@ -1121,13 +1157,8 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
               travelDate={savedQuote?.travelDate ?? travelDate}
               speed={speedForSubmit}
               totalText={totalText}
-              returnHref={
-                savedQuote?.locked
-                  ? `/apply/applications/${encodeURIComponent(editingApplicationId)}/payment`
-                  : extrasOffered
-                    ? `/apply/applications/${encodeURIComponent(editingApplicationId)}/extras`
-                    : `/apply/applications/${encodeURIComponent(editingApplicationId)}`
-              }
+              returnHref={editReturn?.backHref ?? `/apply/applications/${encodeURIComponent(editingApplicationId)}`}
+              previousHref={editReturn?.previousHref ?? null}
             />
           ) : applyStep !== "visa" ? null : !nationality ? null : loadingServices && services.length === 0 ? (
             <ClientServiceCardsSkeleton />
@@ -1276,14 +1307,6 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
               }
             />
           )}
-
-          {applyStep === "travellers" && speedForSubmit === "fast_track" && fastTrackPartyTemplate && fastTrackPartyAmounts ? (
-            <p className="text-foreground text-sm">
-              {t("extras.speed.fast.title")}
-              {" · "}
-              <MessageWithAmounts template={fastTrackPartyTemplate} amounts={fastTrackPartyAmounts} />
-            </p>
-          ) : null}
 
           {applyStep === "travellers" && partyEnabled ? (
             <div className="border-border bg-card space-y-3 rounded-2xl border-2 px-5 py-5">
@@ -1525,7 +1548,7 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
       ) : null}
         </div>
         {serviceId && primaryService ? (
-          <div className="mt-6 self-start lg:sticky lg:top-[var(--wp-shell-header-height,1rem)] lg:order-2 lg:mt-0">
+          <div className="mt-6 self-start lg:sticky lg:top-[calc(var(--wp-shell-header-height,1rem)+1rem)] lg:order-2 lg:mt-0">
             <SelectedVisaSummary
               service={primaryService}
               answers={answers}
@@ -1533,6 +1556,30 @@ const StartApplicationFormClient: FC<IStartApplicationFormProps> = ({
               totalText={totalText}
               price={formatPriceForDisplay(primaryService, displayCurrency, locale)}
               badges={badges}
+              priceLines={
+                savedQuote
+                  ? groupedExtraLines(savedQuote).map((row) => ({
+                      key: row.key,
+                      label:
+                        row.key === "fast_track"
+                          ? t("extras.recap.fastTrack")
+                          : t("extras.recap.insurance"),
+                      count: row.count,
+                      amount: formatMinorAmount(row.amountMinor, savedQuote.currency, locale, "code"),
+                    }))
+                  : speedForSubmit === "fast_track" &&
+                      fastTrackPartyAmounts &&
+                      speedQuote?.travellerCount
+                    ? [
+                        {
+                          key: "fast_track",
+                          label: t("extras.recap.fastTrack"),
+                          count: speedQuote.travellerCount,
+                          amount: fastTrackPartyAmounts.sum,
+                        },
+                      ]
+                    : []
+              }
             />
           </div>
         ) : null}

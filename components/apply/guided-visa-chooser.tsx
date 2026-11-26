@@ -523,7 +523,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
             <div className="space-y-4">
               <h3
                 tabIndex={-1}
-                className={`rounded-2xl border border-secondary/20 bg-secondary/5 px-4 py-3 text-sm text-secondary ${APPLY_PROGRAMMATIC_HEADING_CLASS}`}
+                className={`sr-only ${APPLY_PROGRAMMATIC_HEADING_CLASS}`}
               >
                 {t("chooser.matchingVisasBanner", {
                   stay: view.stay ? t(`chooser.stayLabels.${view.stay}`) : "",
