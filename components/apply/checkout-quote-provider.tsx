@@ -97,7 +97,7 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
   const initialTermsSignature = useRef<string | null>(null);
   const cancelRef = useRef<(() => Promise<boolean> | boolean) | null>(null);
 
-  const rememberPrices = useCallback((next: TClientQuotePreview, bumpTerms: boolean) => {
+  const rememberPrices = useCallback((next: TClientQuotePreview) => {
     const priceSignature = extraPriceSignature(next);
     if (initialPrices.current === null) {
       initialPrices.current = priceSignature;
@@ -106,23 +106,22 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
       setPriceChanged(true);
     }
     const termsSignature = termsResetSignature(next);
-    if (initialTermsSignature.current === null || !bumpTerms) {
+    const baseline = initialTermsSignature.current;
+    if (baseline === null || baseline === termsSignature) {
       initialTermsSignature.current = termsSignature;
       return;
     }
-    if (initialTermsSignature.current !== termsSignature) {
-      initialTermsSignature.current = termsSignature;
-      setTermsResetKey((key) => key + 1);
-    }
+    initialTermsSignature.current = termsSignature;
+    setTermsResetKey((key) => key + 1);
   }, []);
 
   const applyPreview = useCallback(
-    (next: TClientQuotePreview, announce: boolean, bumpTerms = true) => {
+    (next: TClientQuotePreview, announce: boolean) => {
       lastSavedRef.current = next;
       previewRef.current = next;
       setPreview(next);
       setLockedOverride(false);
-      rememberPrices(next, bumpTerms);
+      rememberPrices(next);
       if (!announce) return;
       const display = quoteUsesCodeFormat(next) ? "code" : "symbol";
       setAnnouncement(
@@ -267,7 +266,7 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
         );
         if (request !== seq.current || !res.ok) return;
         setLoadError(null);
-        applyPreview(res.data, false, false);
+        applyPreview(res.data, false);
       } catch (error) {
         if (request !== seq.current || isAbortError(error)) return;
       }
