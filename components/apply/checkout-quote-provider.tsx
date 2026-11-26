@@ -17,6 +17,7 @@ import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import {
   didSwitchBackToStandard,
   extraPriceSignature,
+  termsResetSignature,
   extrasSectionVisible,
   formatMinorAmount,
   formatArrivalDate,
@@ -93,28 +94,35 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
   const abortRef = useRef<AbortController | null>(null);
   const lastPatch = useRef<TTripPatchBody | null>(null);
   const initialPrices = useRef<string | null>(null);
+  const initialTermsSignature = useRef<string | null>(null);
   const cancelRef = useRef<(() => Promise<boolean> | boolean) | null>(null);
 
-  const rememberPrices = useCallback((next: TClientQuotePreview) => {
-    const signature = extraPriceSignature(next);
+  const rememberPrices = useCallback((next: TClientQuotePreview, bumpTerms: boolean) => {
+    const priceSignature = extraPriceSignature(next);
     if (initialPrices.current === null) {
-      initialPrices.current = signature;
+      initialPrices.current = priceSignature;
+    } else if (initialPrices.current !== priceSignature) {
+      initialPrices.current = priceSignature;
+      setPriceChanged(true);
+    }
+    const termsSignature = termsResetSignature(next);
+    if (initialTermsSignature.current === null || !bumpTerms) {
+      initialTermsSignature.current = termsSignature;
       return;
     }
-    if (initialPrices.current !== signature) {
-      initialPrices.current = signature;
-      setPriceChanged(true);
+    if (initialTermsSignature.current !== termsSignature) {
+      initialTermsSignature.current = termsSignature;
       setTermsResetKey((key) => key + 1);
     }
   }, []);
 
   const applyPreview = useCallback(
-    (next: TClientQuotePreview, announce: boolean) => {
+    (next: TClientQuotePreview, announce: boolean, bumpTerms = true) => {
       lastSavedRef.current = next;
       previewRef.current = next;
       setPreview(next);
       setLockedOverride(false);
-      rememberPrices(next);
+      rememberPrices(next, bumpTerms);
       if (!announce) return;
       const display = quoteUsesCodeFormat(next) ? "code" : "symbol";
       setAnnouncement(
@@ -259,7 +267,7 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
         );
         if (request !== seq.current || !res.ok) return;
         setLoadError(null);
-        applyPreview(res.data, false);
+        applyPreview(res.data, false, false);
       } catch (error) {
         if (request !== seq.current || isAbortError(error)) return;
       }

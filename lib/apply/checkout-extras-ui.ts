@@ -377,11 +377,17 @@ export const groupedExtraLines = (
   });
 };
 
-export const extraPriceSignature = (preview: TClientQuotePreview): string =>
+export const extraPriceSignature = (
+  preview: Pick<TClientQuotePreview, "availableExtras">,
+): string =>
   preview.availableExtras
     .map((extra) => `${extra.key}:${extra.unitAmountMinor}`)
     .sort()
     .join("|");
+
+/** Offered extra unit prices plus the total. Ignores `locked` and selection flags. */
+export const termsResetSignature = (preview: TClientQuotePreview): string =>
+  `${extraPriceSignature(preview)}#${preview.totalAmountMinor}`;
 
 export const quoteUsesCodeFormat = (preview: TClientQuotePreview): boolean =>
   extrasSectionVisible(preview) || preview.extraLines.length > 0;
