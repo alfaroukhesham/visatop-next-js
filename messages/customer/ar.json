@@ -287,6 +287,7 @@
     "preparingCheckout": "جارٍ تجهيز الدفع الآمن…",
     "previous": "السابق",
     "orderTitle": "طلبك",
+    "tripDetailsTitle": "تفاصيل الرحلة",
     "productColumn": "المنتج",
     "subtotalColumn": "المجموع الفرعي",
     "travellerLine": "مسافر {number} — {service}",
@@ -733,7 +734,7 @@
       },
       "badge": "موصى به"
     },
-    "perTravellerSum": "‏{price} × {n} {travellersWord} = ‏{sum}",
+    "perTravellerSum": "‏{price} × {n} {travellersWord} = ‏{sum}",
     "travellers_one": "مسافر",
     "travellers_two": "مسافرَين",
     "travellers_few": "مسافرين",

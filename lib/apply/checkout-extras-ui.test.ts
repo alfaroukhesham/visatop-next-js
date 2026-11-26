@@ -250,7 +250,7 @@ describe("customer copy", () => {
     expect(lookupCustomerMessage(read("ar"), "start.travelDate.pickDate")).toBe("اختر تاريخًا");
     expect(lookupCustomerMessage(read("fr"), "start.travelDate.departureDate")).toBe("Date du voyage");
     expect(lookupCustomerMessage(read("ar"), "extras.perTravellerSum")).toBe(
-      "\u200f{price} × {n} {travellersWord} = \u200f{sum}",
+      "\u200f{price} ×\u00a0{n} {travellersWord} = \u200f{sum}",
     );
   });
 });

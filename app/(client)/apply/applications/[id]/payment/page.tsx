@@ -65,7 +65,7 @@ const ApplyApplicationPaymentPage = async ({ params }: IApplyApplicationPaymentP
           includeExtras={offered}
           summaryFrom="lg"
           applicationId={id}
-          tripHref={trip && offered ? `${trip}&extras=1` : trip}
+          tripHref={trip ? `${trip}&from=payment${offered ? "&extras=1" : ""}` : null}
           detailsTravellerId={lastTravellerApplicationId(members)}
           hasSelectedVisa
           visaSummary={

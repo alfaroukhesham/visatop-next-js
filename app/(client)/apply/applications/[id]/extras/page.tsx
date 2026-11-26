@@ -64,7 +64,7 @@ const ExtrasPage = async ({ params }: IExtrasPageProps) => {
           includeExtras
           summaryFrom="desktop"
           applicationId={id}
-          tripHref={trip ? `${trip}&extras=1` : null}
+          tripHref={trip ? `${trip}&extras=1&from=extras` : null}
           detailsTravellerId={detailsId}
           hasSelectedVisa
           visaSummary={

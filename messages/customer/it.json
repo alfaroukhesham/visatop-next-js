@@ -287,6 +287,7 @@
     "preparingCheckout": "Preparazione checkout sicuro…",
     "previous": "Indietro",
     "orderTitle": "Il suo ordine",
+    "tripDetailsTitle": "Dettagli del viaggio",
     "productColumn": "Prodotto",
     "subtotalColumn": "Subtotale",
     "travellerLine": "Viaggiatore {number} — {service}",

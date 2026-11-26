@@ -70,7 +70,11 @@ const ApplyApplicationPage = async ({ params, searchParams }: Props) => {
         phase={query.screen === "details" ? "details" : "documents"}
         includeExtras={offered}
         applicationId={id}
-        tripHref={trip && offered ? `${trip}&extras=1` : trip}
+        tripHref={
+          trip
+            ? `${trip}&from=${query.screen === "details" ? "details" : "documents"}${offered ? "&extras=1" : ""}`
+            : trip
+        }
         detailsTravellerId={lastTravellerApplicationId(members)}
         hasSelectedVisa
         summaryFrom="lg"

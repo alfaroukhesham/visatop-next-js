@@ -521,10 +521,7 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
             </p>
           ) : (
             <div className="space-y-4">
-              <h3
-                tabIndex={-1}
-                className={`rounded-2xl border border-secondary/20 bg-secondary/5 px-4 py-3 text-sm text-secondary ${APPLY_PROGRAMMATIC_HEADING_CLASS}`}
-              >
+              <h3 tabIndex={-1} className="sr-only">
                 {t("chooser.matchingVisasBanner", {
                   stay: view.stay ? t(`chooser.stayLabels.${view.stay}`) : "",
                   travellerKind:
@@ -535,12 +532,13 @@ export const GuidedVisaChooser: FC<IGuidedVisaChooserProps> = ({
                 {matches.map((s) => {
                   const price = formatPrice(s);
                   const entryText = entriesLabel(s.entries, t);
-                  const subtitle = serviceResultSubtitle(s.name, s.durationDays, entryText, t);
                   const visaName = customerFacingServiceName(s.name, locale, t, {
                     durationDays: s.durationDays,
                     entries: s.entries,
                     travelerKind: s.travelerKind,
                   });
+                  const subtitle =
+                    visaName === s.name ? serviceResultSubtitle(s.name, s.durationDays, entryText, t) : null;
                   const selected = selectedServiceId === s.id;
                   return (
                     <li key={s.id}>
