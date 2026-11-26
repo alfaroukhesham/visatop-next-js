@@ -57,6 +57,41 @@ const isoToMrzDate = (iso: string): string | null => {
   return `${m[1]!.slice(2)}${m[2]}${m[3]}`;
 };
 
+const titleCaseMrzToken = (raw: string): string =>
+  raw
+    .replace(/</g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+
+export type TMrzLine1Name = {
+  surname: string;
+  givenNames: string;
+  fullName: string;
+};
+
+/**
+ * TD3 line 1 name field: issuing state, then surname `<<` given names.
+ * `<` inside a name is a space. Returns null unless the line is 44 characters and starts with `P<`.
+ */
+export const parseTd3Line1Name = (line1: string | null | undefined): TMrzLine1Name | null => {
+  const line = normalizeMrzLine(line1);
+  if (!line?.startsWith("P<")) return null;
+  if (!/^[A-Z0-9<]+$/.test(line)) return null;
+  const separator = line.indexOf("<<", 5);
+  if (separator < 0) return null;
+  const surname = titleCaseMrzToken(line.slice(5, separator));
+  const givenNames = titleCaseMrzToken(line.slice(separator + 2));
+  if (!surname) return null;
+  return {
+    surname,
+    givenNames,
+    fullName: [givenNames, surname].filter(Boolean).join(" "),
+  };
+};
+
 export const parseTd3Line2 = (line2: string): TMrzFields | null => {
   const line = normalizeMrzLine(line2);
   if (!line) return null;

@@ -300,6 +300,7 @@ export async function POST(
       // Treat as provider error; clear lease so retries can proceed.
       ocrResult = {
         status: "failed",
+        readConfidence: "low",
         attempts: [],
         finalResult: null,
         missingFields: [],
