@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { icaoCheckDigit, mrzCheckDigitsValid, mrzVisualAgrees, parseTd3Line2 } from "./mrz-check";
+import {
+  icaoCheckDigit,
+  mrzCheckDigitsValid,
+  mrzVisualAgrees,
+  parseTd3Line1Name,
+  parseTd3Line2,
+} from "./mrz-check";
 
 describe("icaoCheckDigit", () => {
   it("matches the ICAO 9303 example passport number L898902C3", () => {
@@ -9,6 +15,34 @@ describe("icaoCheckDigit", () => {
   it("matches the example dates of birth and expiry", () => {
     expect(icaoCheckDigit("740812")).toBe("2");
     expect(icaoCheckDigit("120415")).toBe("9");
+  });
+});
+
+const pad44 = (value: string): string => (value + "<".repeat(44)).slice(0, 44);
+
+describe("parseTd3Line1Name", () => {
+  it("title-cases surname and given names from a TD3 line starting with P<", () => {
+    expect(parseTd3Line1Name(pad44("P<NGAEBERE<<"))).toMatchObject({
+      surname: "Ebere",
+      givenNames: "",
+      fullName: "Ebere",
+    });
+    expect(parseTd3Line1Name(pad44("P<NGAEBERE<<CHIOMA"))).toMatchObject({
+      surname: "Ebere",
+      givenNames: "Chioma",
+      fullName: "Chioma Ebere",
+    });
+    expect(parseTd3Line1Name("P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<")).toMatchObject({
+      surname: "Eriksson",
+      givenNames: "Anna Maria",
+      fullName: "Anna Maria Eriksson",
+    });
+  });
+
+  it("leaves the name unused when line 1 is not a 44-character P< line", () => {
+    expect(parseTd3Line1Name("P<NGAEBERE<<")).toBeNull();
+    expect(parseTd3Line1Name(pad44("V<NGAEBERE<<"))).toBeNull();
+    expect(parseTd3Line1Name(pad44("P<NGA<<CHIOMA"))).toBeNull();
   });
 });
 

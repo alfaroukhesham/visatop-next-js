@@ -59,18 +59,33 @@ describe("PaddleCheckoutButton terms gate", () => {
     vi.unstubAllGlobals();
   });
 
-  it("does not call checkout when Terms are unticked", async () => {
+  it("stays clickable when Terms are unticked and shows the Terms error instead of paying", async () => {
+    const user = userEvent.setup();
     const onTermsRejected = vi.fn();
+    const onFincraInline = vi.fn();
     render(
       <PaddleCheckoutButton
         applicationId="app-1"
         termsAccepted={false}
         onTermsRejected={onTermsRejected}
+        onFincraInline={onFincraInline}
       />,
     );
-    expect(screen.getByRole("button", { name: /proceed to payment/i })).toBeDisabled();
+    const button = screen.getByRole("button", { name: /proceed to payment/i });
+    expect(button).toBeEnabled();
+    await user.click(button);
     expect(fetch).not.toHaveBeenCalled();
-    expect(onTermsRejected).not.toHaveBeenCalled();
+    expect(onFincraInline).not.toHaveBeenCalled();
+    expect(onTermsRejected).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports the Terms message when no rejection handler is passed", async () => {
+    const user = userEvent.setup();
+    const onError = vi.fn();
+    render(<PaddleCheckoutButton applicationId="app-1" termsAccepted={false} onError={onError} />);
+    await user.click(screen.getByRole("button", { name: /proceed to payment/i }));
+    expect(fetch).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledWith("Please agree to VisaTop's Terms of Use before paying.");
   });
 
   it("POSTs termsAccepted: true once Terms are ticked", async () => {

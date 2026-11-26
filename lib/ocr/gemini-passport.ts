@@ -6,7 +6,7 @@ import {
 import { setSafeSpanAttributes, withSpan } from "@/lib/observability/tracing";
 
 import { assessPassportImageQuality } from "./image-quality";
-import { mrzCheckDigitsValid, mrzVisualAgrees, parseTd3Line2 } from "./mrz-check";
+import { mrzCheckDigitsValid, mrzVisualAgrees, parseTd3Line1Name, parseTd3Line2 } from "./mrz-check";
 import {
   listFilledOcrFields,
   listMissingOcrFields,
@@ -57,6 +57,8 @@ export type OcrAttemptOutcome = {
 
 export type ExtractPassportResult = {
   status: "succeeded" | "needs_manual" | "failed";
+  /** High only when MRZ check digits agree with the visual number and dates. */
+  readConfidence: "high" | "low";
   attempts: OcrAttemptOutcome[];
   finalResult: OcrResult | null;
   missingFields: RequiredOcrField[];
@@ -129,9 +131,21 @@ function tryParseOcrJson(raw: string): {
   }
   return {
     ok: true,
-    result: { ...zresult.data, schemaVersion: OCR_SCHEMA_VERSION },
+    result: applyMrzFullName({ ...zresult.data, schemaVersion: OCR_SCHEMA_VERSION }),
   };
 }
+
+const namesMatch = (visual: string, mrzName: string): boolean =>
+  visual.replace(/\s+/g, " ").trim().toUpperCase() === mrzName.replace(/\s+/g, " ").trim().toUpperCase();
+
+/** Prefer a valid TD3 line-1 name when it disagrees with the visual-zone name. */
+const applyMrzFullName = (result: OcrResult): OcrResult => {
+  const mrz = parseTd3Line1Name(result.mrzLine1);
+  if (!mrz) return result;
+  const visual = result.fullName?.trim() ?? "";
+  if (visual && namesMatch(visual, mrz.fullName)) return result;
+  return { ...result, fullName: mrz.fullName };
+};
 
 /** Default runtime impl using the Gemini SDK. Tests inject `callModel` instead. */
 const defaultCallModel: CallModelFn = async ({
@@ -257,7 +271,7 @@ async function runPassportOcrAttempt(
 
   const missingFields = listMissingOcrFields(parsed.result);
   const confidence = ocrReadConfidence(parsed.result);
-  if (missingFields.length === 0 && confidence === "high") {
+  if (missingFields.length === 0) {
     const outcome: OcrAttemptOutcome = {
       attempt,
       status: "succeeded",
@@ -273,6 +287,7 @@ async function runPassportOcrAttempt(
       outcome,
       success: {
         status: "succeeded",
+        readConfidence: confidence,
         attempts: [outcome],
         finalResult: parsed.result,
         missingFields: [],
@@ -300,8 +315,8 @@ async function runPassportOcrAttempt(
 
 /**
  * Run up to 2 OCR attempts for the passport bio-page image. Succeeds as soon
- * as required fields are present; otherwise falls through to attempt 2 or
- * ends in `needs_manual` / `failed` per spec §6.2.
+ * as every required field is present, even when `ocrReadConfidence` is low.
+ * `needs_manual` is reserved for a missing required field or a quality-gate failure.
  */
 export function ocrReadConfidence(result: OcrResult | null): "high" | "low" {
   if (!result) return "low";
@@ -331,6 +346,7 @@ const extractPassportUntraced = async (
     if (!quality.ok) {
       return {
         status: "needs_manual",
+        readConfidence: "low",
         attempts: [],
         finalResult: null,
         missingFields: [...listMissingOcrFields(null)],
@@ -365,7 +381,7 @@ const extractPassportUntraced = async (
 
   const anySchemaValid = attempts.some((a) => a.result !== null);
   const status: ExtractPassportResult["status"] =
-    missingFields.length === 0 && finalResult && confidence === "high"
+    missingFields.length === 0 && finalResult
       ? "succeeded"
       : anySchemaValid
         ? "needs_manual"
@@ -373,6 +389,7 @@ const extractPassportUntraced = async (
 
   return {
     status,
+    readConfidence: confidence,
     attempts,
     finalResult,
     missingFields,

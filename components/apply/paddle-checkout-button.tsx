@@ -282,8 +282,8 @@ export function PaddleCheckoutButton({
     <ClientButton
       brand="cta"
       onClick={handleCheckout}
-      disabled={disabled || isInitializing || !termsAccepted}
-      aria-disabled={disabled || isInitializing || !termsAccepted}
+      disabled={disabled || isInitializing}
+      aria-disabled={disabled || isInitializing}
       aria-describedby={describedBy ?? undefined}
       className={APPLY_PRIMARY_CTA_CLASS}
     >

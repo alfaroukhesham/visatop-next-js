@@ -97,7 +97,7 @@ describe("extractPassport", () => {
     expect(callModel).toHaveBeenCalledTimes(2);
   });
 
-  it("never marks a full identity as succeeded without a valid MRZ", async () => {
+  it("succeeds when every required field is present even if MRZ confidence is low", async () => {
     const callModel = vi.fn<CallModelFn>(async () => ({ text: FABRICATED_NO_MRZ_JSON }));
     const out = await extractPassport({
       imageBytes: FAKE_BYTES,
@@ -105,8 +105,55 @@ describe("extractPassport", () => {
       callModel,
       ...withSkip,
     });
-    expect(out.status).toBe("needs_manual");
+    expect(out.status).toBe("succeeded");
+    expect(out.readConfidence).toBe("low");
     expect(out.finalResult?.fullName).toBe("ABDULLAH IBRAHIM AMIR");
+    expect(callModel).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the MRZ line-1 name when it disagrees with the visual name", async () => {
+    const callModel = vi.fn<CallModelFn>(async () => ({
+      text: JSON.stringify({
+        fullName: "SOMEONE ELSE",
+        dateOfBirth: "1990-01-01",
+        nationality: "Nigerian",
+        passportNumber: "A1234567",
+        passportExpiryDate: "2030-01-01",
+        mrzLine1: pad44("P<NGAEBERE<<"),
+        mrzLine2: null,
+      }),
+    }));
+    const out = await extractPassport({
+      imageBytes: FAKE_BYTES,
+      contentType: "image/jpeg",
+      callModel,
+      ...withSkip,
+    });
+    expect(out.finalResult?.fullName).toBe("Ebere");
+    expect(out.status).toBe("succeeded");
+  });
+
+  it("keeps the visual name when MRZ line 1 is invalid", async () => {
+    const callModel = vi.fn<CallModelFn>(async () => ({
+      text: JSON.stringify({
+        fullName: "Ada Lovelace",
+        dateOfBirth: "1815-12-10",
+        nationality: "British",
+        passportNumber: "X1234567",
+        passportExpiryDate: "2030-01-01",
+        mrzLine1: "P<NGAEBERE<<",
+        mrzLine2: null,
+      }),
+    }));
+    const out = await extractPassport({
+      imageBytes: FAKE_BYTES,
+      contentType: "image/jpeg",
+      callModel,
+      ...withSkip,
+    });
+    expect(out.finalResult?.fullName).toBe("Ada Lovelace");
+    expect(out.status).toBe("succeeded");
+    expect(out.readConfidence).toBe("low");
   });
 
   it("does not call the model for a tiny blurry image", async () => {

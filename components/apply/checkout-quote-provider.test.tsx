@@ -58,6 +58,23 @@ const preview = (patch: Partial<TClientQuotePreview> = {}): TClientQuotePreview 
   ...patch,
 });
 
+const TermsProbe = () => {
+  const quote = useCheckoutQuoteOptional();
+  return (
+    <>
+      <span data-testid="terms-key">{String(quote?.termsResetKey ?? "")}</span>
+      <span data-testid="locked">{String(Boolean(quote?.locked))}</span>
+      <span data-testid="total">{quote?.preview?.totalAmountMinor ?? ""}</span>
+      <button type="button" onClick={() => quote?.refreshQuote()}>
+        refresh
+      </button>
+      <button type="button" onClick={() => void quote?.patchTrip({ processingSpeed: "fast_track" })}>
+        ft
+      </button>
+    </>
+  );
+};
+
 const Probe = () => {
   const quote = useCheckoutQuoteOptional();
   return (
@@ -252,5 +269,102 @@ describe("checkout quote provider", () => {
       await Promise.resolve();
     });
     expect(screen.getByTestId("speed").textContent).toBe("fast_track");
+  });
+
+  it("resets Terms when refreshQuote returns a different total", async () => {
+    let loads = 0;
+    fetchMock.mockImplementation(async () => {
+      loads += 1;
+      return {
+        ok: true as const,
+        status: 200,
+        requestId: String(loads),
+        data: preview({
+          locked: loads > 1,
+          totalAmountMinor: loads > 1 ? "18000" : "10000",
+        }),
+      };
+    });
+    render(
+      <CheckoutQuoteProvider applicationId="app-1">
+        <TermsProbe />
+      </CheckoutQuoteProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId("total").textContent).toBe("10000"));
+    expect(screen.getByTestId("terms-key").textContent).toBe("0");
+    fireEvent.click(screen.getByRole("button", { name: "refresh" }));
+    await waitFor(() => expect(screen.getByTestId("total").textContent).toBe("18000"));
+    expect(screen.getByTestId("locked").textContent).toBe("true");
+    expect(screen.getByTestId("terms-key").textContent).toBe("1");
+  });
+
+  it("does not reset Terms when refreshQuote returns the same price", async () => {
+    let loads = 0;
+    fetchMock.mockImplementation(async () => {
+      loads += 1;
+      return {
+        ok: true as const,
+        status: 200,
+        requestId: String(loads),
+        data: preview({ locked: loads > 1, totalAmountMinor: "10000" }),
+      };
+    });
+    render(
+      <CheckoutQuoteProvider applicationId="app-1">
+        <TermsProbe />
+      </CheckoutQuoteProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId("total").textContent).toBe("10000"));
+    fireEvent.click(screen.getByRole("button", { name: "refresh" }));
+    await waitFor(() => expect(screen.getByTestId("locked").textContent).toBe("true"));
+    expect(screen.getByTestId("total").textContent).toBe("10000");
+    expect(screen.getByTestId("terms-key").textContent).toBe("0");
+  });
+
+  it("resets Terms when a saved quote changes a visible unit price or the total", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (String(url).includes("quote-preview")) {
+        return { ok: true as const, status: 200, requestId: "load", data: preview() };
+      }
+      return {
+        ok: true as const,
+        status: 200,
+        requestId: "patch",
+        data: preview({ processingSpeed: "fast_track", totalAmountMinor: "15000" }),
+      };
+    });
+    render(
+      <CheckoutQuoteProvider applicationId="app-1">
+        <TermsProbe />
+      </CheckoutQuoteProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId("total").textContent).toBe("10000"));
+    fireEvent.click(screen.getByRole("button", { name: "ft" }));
+    await waitFor(() => expect(screen.getByTestId("terms-key").textContent).toBe("1"));
+    expect(screen.getByTestId("total").textContent).toBe("15000");
+  });
+
+  it("does not reset Terms when a saved quote only changes locked", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (String(url).includes("quote-preview")) {
+        return { ok: true as const, status: 200, requestId: "load", data: preview() };
+      }
+      return {
+        ok: true as const,
+        status: 200,
+        requestId: "patch",
+        data: preview({ locked: true }),
+      };
+    });
+    render(
+      <CheckoutQuoteProvider applicationId="app-1">
+        <TermsProbe />
+      </CheckoutQuoteProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId("total").textContent).toBe("10000"));
+    fireEvent.click(screen.getByRole("button", { name: "ft" }));
+    await waitFor(() => expect(screen.getByTestId("locked").textContent).toBe("true"));
+    expect(screen.getByTestId("terms-key").textContent).toBe("0");
+    expect(screen.getByTestId("total").textContent).toBe("10000");
   });
 });

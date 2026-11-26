@@ -10,6 +10,8 @@ import {
   pluralMessage,
   relativeArrivalLabel,
   speedUi,
+  termsResetSignature,
+  type TClientAvailableExtra,
   type TClientQuotePreview,
   type TTranslate,
 } from "@/lib/apply/checkout-extras-ui";
@@ -300,6 +302,51 @@ describe("per-traveller insurance preview", () => {
     expect(next.extrasAmountMinor).toBe(String(7900 + 36725 * 2));
     expect(next.totalAmountMinor).toBe(String(70000 + 7900 + 36725 * 2));
     expect(next.availableExtras[0]?.selected).toBe(false);
+  });
+});
+
+const offeredExtra = (
+  key: TClientAvailableExtra["key"],
+  unitAmountMinor: string,
+  selected = false,
+): TClientAvailableExtra => ({
+  key,
+  unitAmountMinor,
+  travellerCount: 1,
+  sumAmountMinor: unitAmountMinor,
+  selected,
+  chargeBasis: "per_traveller",
+  labelI18n: {},
+  descriptionI18n: {},
+  promiseI18n: null,
+  termsUrl: null,
+});
+
+describe("terms reset signature", () => {
+  it("changes when a visible extra unit price or the total changes", () => {
+    const base = preview({
+      availableExtras: [offeredExtra("fast_track", "5000"), offeredExtra("travel_insurance", "7900")],
+      totalAmountMinor: "10000",
+    });
+    expect(termsResetSignature(base)).toBe(termsResetSignature({ ...base, locked: true }));
+    expect(termsResetSignature(base)).toBe(
+      termsResetSignature({
+        ...base,
+        availableExtras: [
+          offeredExtra("travel_insurance", "7900", true),
+          offeredExtra("fast_track", "5000", true),
+        ],
+      }),
+    );
+    expect(termsResetSignature(base)).not.toBe(
+      termsResetSignature({
+        ...base,
+        availableExtras: [offeredExtra("fast_track", "9000"), offeredExtra("travel_insurance", "7900")],
+      }),
+    );
+    expect(termsResetSignature(base)).not.toBe(
+      termsResetSignature({ ...base, totalAmountMinor: "15000" }),
+    );
   });
 });
 

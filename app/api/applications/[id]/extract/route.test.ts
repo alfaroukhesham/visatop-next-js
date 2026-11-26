@@ -78,6 +78,7 @@ const SNAPSHOT = {
 
 const SUCCESS_OCR = {
   status: "succeeded" as const,
+  readConfidence: "high" as const,
   attempts: [
     {
       attempt: 1 as const,
@@ -92,6 +93,8 @@ const SUCCESS_OCR = {
         passportExpiryDate: "2030-01-01",
         profession: null,
         address: null,
+        mrzLine1: null,
+        mrzLine2: null,
       },
       rawText: "{}",
       errorCode: null,
@@ -111,6 +114,8 @@ const SUCCESS_OCR = {
     passportExpiryDate: "2030-01-01",
     profession: null,
     address: null,
+    mrzLine1: null,
+    mrzLine2: null,
   },
   missingFields: [],
   provider: "gemini" as const,

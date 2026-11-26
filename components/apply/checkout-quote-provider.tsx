@@ -17,6 +17,7 @@ import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
 import {
   didSwitchBackToStandard,
   extraPriceSignature,
+  termsResetSignature,
   extrasSectionVisible,
   formatMinorAmount,
   formatArrivalDate,
@@ -93,19 +94,25 @@ export const CheckoutQuoteProvider: FC<ICheckoutQuoteProviderProps> = ({
   const abortRef = useRef<AbortController | null>(null);
   const lastPatch = useRef<TTripPatchBody | null>(null);
   const initialPrices = useRef<string | null>(null);
+  const initialTermsSignature = useRef<string | null>(null);
   const cancelRef = useRef<(() => Promise<boolean> | boolean) | null>(null);
 
   const rememberPrices = useCallback((next: TClientQuotePreview) => {
-    const signature = extraPriceSignature(next);
+    const priceSignature = extraPriceSignature(next);
     if (initialPrices.current === null) {
-      initialPrices.current = signature;
+      initialPrices.current = priceSignature;
+    } else if (initialPrices.current !== priceSignature) {
+      initialPrices.current = priceSignature;
+      setPriceChanged(true);
+    }
+    const termsSignature = termsResetSignature(next);
+    const baseline = initialTermsSignature.current;
+    if (baseline === null || baseline === termsSignature) {
+      initialTermsSignature.current = termsSignature;
       return;
     }
-    if (initialPrices.current !== signature) {
-      initialPrices.current = signature;
-      setPriceChanged(true);
-      setTermsResetKey((key) => key + 1);
-    }
+    initialTermsSignature.current = termsSignature;
+    setTermsResetKey((key) => key + 1);
   }, []);
 
   const applyPreview = useCallback(
