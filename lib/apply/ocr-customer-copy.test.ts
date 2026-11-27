@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { FALLBACK_CUSTOMER_LOCALE_SLUGS } from "@/lib/i18n/customer-locale";
+import { lookupCustomerMessage } from "@/lib/i18n/customer-messages";
+import { getCustomerMessages } from "@/lib/i18n/load-customer-catalog";
 import {
   customerFacingOcrMessage,
   OCR_NEEDS_REVIEW_COPY,
   OCR_READING_COPY,
   OCR_SUCCEEDED_COPY,
   ocrStatusForDraftUi,
+  passportOcrNoticeTone,
   passportSlotOcrNotice,
 } from "./ocr-customer-copy";
 
@@ -34,8 +38,23 @@ describe("ocr-customer-copy", () => {
   it("maps extract outcomes onto the passport-slot notice copy", () => {
     expect(passportSlotOcrNotice("needs_manual", false)).toMatch(/couldn't read everything/i);
     expect(passportSlotOcrNotice("failed", false)).toMatch(/couldn't read your passport/i);
-    expect(passportSlotOcrNotice("succeeded", false)).toMatch(/filled in what we could/i);
+    expect(passportSlotOcrNotice("succeeded", false)).toBe(OCR_SUCCEEDED_COPY);
     expect(passportSlotOcrNotice("needs_manual", true)).toBe(OCR_READING_COPY);
+  });
+
+  it("uses a success tone only after a complete read", () => {
+    expect(passportOcrNoticeTone(true, "succeeded")).toBe("status");
+    expect(passportOcrNoticeTone(false, "succeeded")).toBe("success");
+    expect(passportOcrNoticeTone(false, "needs_manual")).toBe("alert");
+    expect(passportOcrNoticeTone(false, "failed")).toBe("alert");
+  });
+
+  it("has the succeeded copy in every customer locale", () => {
+    for (const slug of FALLBACK_CUSTOMER_LOCALE_SLUGS) {
+      const text = lookupCustomerMessage(getCustomerMessages(slug), "ocr.succeeded");
+      expect(text, slug).toEqual(expect.any(String));
+      expect(text!.trim().length, slug).toBeGreaterThan(0);
+    }
   });
 
   it("prefers this-session extract status, then persisted application status", () => {

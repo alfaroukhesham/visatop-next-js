@@ -26,7 +26,11 @@ import {
   type TApplyWizardStep,
 } from "@/lib/apply/apply-wizard";
 import { insuranceStepOffered } from "@/lib/checkout-extras/party-insurance";
-import { ocrStatusForDraftUi, passportSlotOcrNotice } from "@/lib/apply/ocr-customer-copy";
+import {
+  ocrStatusForDraftUi,
+  passportOcrNoticeTone,
+  passportSlotOcrNotice,
+} from "@/lib/apply/ocr-customer-copy";
 import { translateDocumentSlot } from "@/lib/apply/document-slot-i18n";
 import type { TDocumentSlot } from "@/lib/apply/document-requirements";
 import { fetchApiEnvelope } from "@/lib/portal/fetch-envelope";
@@ -261,6 +265,10 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
   if (!view || !travellerId || view.docsLoading || !view.app) return null;
 
   const passportDoc = view.docsByType.passport_copy ?? null;
+  const passportOcrStatus = ocrStatusForDraftUi(
+    view.extractResult?.extraction.status,
+    view.app.passportExtraction.status,
+  );
   const laterSlots = view.slots.filter((slot) => slot.key !== "passport_copy");
   const otherDocsUploaded = laterSlots.some((slot) => view.docsByType[slot.key as DocType]);
   const isLast = ordered[ordered.length - 1]?.applicationId === travellerId;
@@ -290,15 +298,8 @@ export const ApplyDocumentWizard: FC<IApplyDocumentWizardProps> = ({
             stackActions
             onUpload={(file, source) => onUpload("passport_copy", file, source)}
             onCancelUpload={onCancelUpload}
-            ocrNotice={passportSlotOcrNotice(
-              ocrStatusForDraftUi(
-                view.extractResult?.extraction.status,
-                view.app.passportExtraction.status,
-              ),
-              view.extracting,
-              t,
-            )}
-            ocrNoticeTone={view.extracting ? "status" : "alert"}
+            ocrNotice={passportSlotOcrNotice(passportOcrStatus, view.extracting, t)}
+            ocrNoticeTone={passportOcrNoticeTone(view.extracting, passportOcrStatus)}
           />
           <div className="lg:hidden">
             <ApplyOrderTotal

@@ -61,6 +61,21 @@ describe("CheckoutTermsCheckbox", () => {
         error="Please agree to VisaTop's Terms of Use before paying."
       />,
     );
-    expect(screen.getByRole("alert")).toHaveTextContent(/terms of use/i);
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(/terms of use/i);
+    expect(alert.querySelector("svg")).toBeTruthy();
+  });
+
+  it("remounts the alert when the same error is announced again", () => {
+    const message = "Please agree to VisaTop's Terms of Use before paying.";
+    const { rerender } = render(
+      <CheckoutTermsCheckbox checked={false} onCheckedChange={() => undefined} error={message} errorKey={1} />,
+    );
+    const first = screen.getByRole("alert");
+    rerender(
+      <CheckoutTermsCheckbox checked={false} onCheckedChange={() => undefined} error={message} errorKey={2} />,
+    );
+    expect(screen.getByRole("alert")).not.toBe(first);
+    expect(screen.getByRole("alert")).toHaveTextContent(message);
   });
 });

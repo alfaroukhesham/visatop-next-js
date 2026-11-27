@@ -173,6 +173,34 @@ describe("DocumentUploadSlot", () => {
 
     const notices = screen.getAllByText(/couldn't read everything/i);
     expect(notices).toHaveLength(1);
-    expect(screen.getByRole("status")).toHaveTextContent(/couldn't read everything/i);
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent(/couldn't read everything/i);
+    expect(status).toHaveClass("text-destructive");
+  });
+
+  it("shows a complete OCR read with a check, not the red warning", () => {
+    wrap(
+      <DocumentUploadSlot
+        label="Passport (bio page)"
+        description="JPEG"
+        currentDoc={doc}
+        docType="passport_copy"
+        applicationId="app-1"
+        uploading={false}
+        uploadPercent={null}
+        lastError={null}
+        ocrNotice="Details filled in — please check they are correct."
+        ocrNoticeTone="success"
+        onUpload={() => undefined}
+        onCancelUpload={() => undefined}
+      />,
+    );
+
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent(/details filled in/i);
+    expect(status).toHaveClass("text-foreground");
+    expect(status).not.toHaveClass("text-success");
+    expect(status).not.toHaveClass("text-destructive");
+    expect(status.querySelector("svg")).toHaveClass("text-success");
   });
 });
