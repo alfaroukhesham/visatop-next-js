@@ -5,6 +5,10 @@ import {
   application,
   applicationDocument,
   applicationDocumentBlob,
+  applicationExtraSelection,
+  applicationParty,
+  CHECKOUT_EXTRA_KEYS,
+  checkoutExtra,
   DOCUMENT_STATUS,
   DOCUMENT_TYPE,
   payment,
@@ -78,6 +82,34 @@ export function buildCustomerExportApplicationRows(input: {
     rows.push({ label: "Price paid", value: input.pricePaid ?? "—" });
   }
   return rows;
+}
+
+export function formatExportYesNo(selected: boolean): "Y" | "N" {
+  return selected ? "Y" : "N";
+}
+
+/** Party travel date plus per-traveller insurance and fast-track choices. */
+export function customerExportTripFlags(input: {
+  processingSpeed: string | null;
+  extras: readonly { key: string; selected: boolean }[];
+}): { insuranceSelected: boolean; fastTrackSelected: boolean } {
+  const insuranceSelected = input.extras.some((row) => row.key === "travel_insurance" && row.selected);
+  const fastTrackSelected =
+    input.processingSpeed === "fast_track" ||
+    input.extras.some((row) => row.key === "fast_track" && row.selected);
+  return { insuranceSelected, fastTrackSelected };
+}
+
+export function buildCustomerExportTripRows(input: {
+  travelDate: string | null;
+  insuranceSelected: boolean;
+  fastTrackSelected: boolean;
+}): CustomerExportProfileRow[] {
+  return [
+    { label: "Flight date", value: formatIsoDateAsDdMmYyyy(input.travelDate) },
+    { label: "Insurance", value: formatExportYesNo(input.insuranceSelected) },
+    { label: "Fast track", value: formatExportYesNo(input.fastTrackSelected) },
+  ];
 }
 
 export const CUSTOMER_EXPORT_PROFILE_FIELDS: Array<{
@@ -253,35 +285,53 @@ export async function loadCustomerExportPayload(
       serviceName: visaService.name,
       serviceDurationDays: visaService.durationDays,
       serviceEntries: visaService.entries,
+      travelDate: applicationParty.travelDate,
+      processingSpeed: applicationParty.processingSpeed,
     })
     .from(application)
     .innerJoin(visaService, eq(application.serviceId, visaService.id))
+    .leftJoin(applicationParty, eq(application.partyId, applicationParty.id))
     .where(eq(application.id, applicationId))
     .limit(1);
   const row = appRows[0];
   if (!row) return null;
   const app = row.app;
 
-  const docRows = await tx
-    .select({
-      id: applicationDocument.id,
-      documentType: applicationDocument.documentType,
-      status: applicationDocument.status,
-      contentType: applicationDocument.contentType,
-      originalFilename: applicationDocument.originalFilename,
-      createdAt: applicationDocument.createdAt,
-      bytes: applicationDocumentBlob.bytes,
-    })
-    .from(applicationDocument)
-    .leftJoin(applicationDocumentBlob, eq(applicationDocumentBlob.documentId, applicationDocument.id))
-    .where(
-      and(
-        eq(applicationDocument.applicationId, applicationId),
-        inArray(applicationDocument.documentType, [...CUSTOMER_UPLOAD_DOCUMENT_TYPES]),
-        ne(applicationDocument.status, DOCUMENT_STATUS.DELETED),
-        inArray(applicationDocument.status, [...EXPORTABLE_DOC_STATUSES]),
+  const [docRows, extraRows] = await Promise.all([
+    tx
+      .select({
+        id: applicationDocument.id,
+        documentType: applicationDocument.documentType,
+        status: applicationDocument.status,
+        contentType: applicationDocument.contentType,
+        originalFilename: applicationDocument.originalFilename,
+        createdAt: applicationDocument.createdAt,
+        bytes: applicationDocumentBlob.bytes,
+      })
+      .from(applicationDocument)
+      .leftJoin(applicationDocumentBlob, eq(applicationDocumentBlob.documentId, applicationDocument.id))
+      .where(
+        and(
+          eq(applicationDocument.applicationId, applicationId),
+          inArray(applicationDocument.documentType, [...CUSTOMER_UPLOAD_DOCUMENT_TYPES]),
+          ne(applicationDocument.status, DOCUMENT_STATUS.DELETED),
+          inArray(applicationDocument.status, [...EXPORTABLE_DOC_STATUSES]),
+        ),
       ),
-    );
+    tx
+      .select({
+        key: checkoutExtra.key,
+        selected: applicationExtraSelection.selected,
+      })
+      .from(applicationExtraSelection)
+      .innerJoin(checkoutExtra, eq(checkoutExtra.id, applicationExtraSelection.extraId))
+      .where(
+        and(
+          eq(applicationExtraSelection.applicationId, applicationId),
+          inArray(checkoutExtra.key, [...CHECKOUT_EXTRA_KEYS]),
+        ),
+      ),
+  ]);
 
   const serviceType = formatServiceTypeForExport({
     name: row.serviceName,
@@ -298,8 +348,17 @@ export async function loadCustomerExportPayload(
       : {}),
   });
 
+  const tripFlags = customerExportTripFlags({
+    processingSpeed: row.processingSpeed,
+    extras: extraRows,
+  });
   const profileRows: CustomerExportProfileRow[] = [
     ...applicationRows,
+    ...buildCustomerExportTripRows({
+      travelDate: row.travelDate,
+      insuranceSelected: tripFlags.insuranceSelected,
+      fastTrackSelected: tripFlags.fastTrackSelected,
+    }),
     ...CUSTOMER_EXPORT_PROFILE_FIELDS.map(({ label, pick }) => ({
       label,
       value: pick(app),
