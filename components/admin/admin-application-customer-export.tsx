@@ -62,8 +62,8 @@ export function AdminApplicationCustomerExport({ applicationId }: { applicationI
         <h3 className="text-sm font-semibold">Export customer data</h3>
         <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
           Download a ZIP with applicant details (email and step 3 profile fields), the visa service type,
-          and customer uploads (passport copy, personal photo, and any supporting files). Outcome and
-          admin-only documents are not included.
+          flight date, insurance (Y/N), fast track (Y/N), and customer uploads (passport copy, personal
+          photo, and any supporting files). Outcome and admin-only documents are not included.
         </p>
       </div>
 

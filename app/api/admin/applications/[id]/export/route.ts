@@ -1,5 +1,5 @@
 /**
- * Admin export of customer-provided application data (step 3 profile + uploads).
+ * Admin export of customer-provided application data (step 3 profile, trip choices, and uploads).
  * Returns a ZIP: `application-data.csv` plus document files under `documents/`.
  */
 import { headers } from "next/headers";

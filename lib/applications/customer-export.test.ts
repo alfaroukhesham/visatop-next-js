@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildCustomerExportApplicationRows,
   buildCustomerExportCsv,
+  buildCustomerExportTripRows,
+  customerExportTripFlags,
   customerExportZipBasename,
   escapeCsvCell,
   formatServiceTypeForExport,
@@ -56,6 +58,64 @@ describe("buildCustomerExportApplicationRows", () => {
     ).toEqual([
       { label: "Service type", value: "Tourist visa" },
       { label: "Price paid", value: "$419.00" },
+    ]);
+  });
+});
+
+describe("customerExportTripFlags", () => {
+  it("reads insurance from the traveller selection and fast track from speed or selection", () => {
+    expect(
+      customerExportTripFlags({
+        processingSpeed: "standard",
+        extras: [
+          { key: "travel_insurance", selected: true },
+          { key: "fast_track", selected: false },
+        ],
+      }),
+    ).toEqual({ insuranceSelected: true, fastTrackSelected: false });
+
+    expect(
+      customerExportTripFlags({
+        processingSpeed: "fast_track",
+        extras: [],
+      }),
+    ).toEqual({ insuranceSelected: false, fastTrackSelected: true });
+
+    expect(
+      customerExportTripFlags({
+        processingSpeed: null,
+        extras: [{ key: "fast_track", selected: true }],
+      }),
+    ).toEqual({ insuranceSelected: false, fastTrackSelected: true });
+  });
+});
+
+describe("buildCustomerExportTripRows", () => {
+  it("writes flight date and Y/N extras", () => {
+    expect(
+      buildCustomerExportTripRows({
+        travelDate: "2026-12-20",
+        insuranceSelected: true,
+        fastTrackSelected: false,
+      }),
+    ).toEqual([
+      { label: "Flight date", value: "20-12-2026" },
+      { label: "Insurance", value: "Y" },
+      { label: "Fast track", value: "N" },
+    ]);
+  });
+
+  it("leaves flight date blank when the party has none", () => {
+    expect(
+      buildCustomerExportTripRows({
+        travelDate: null,
+        insuranceSelected: false,
+        fastTrackSelected: false,
+      }),
+    ).toEqual([
+      { label: "Flight date", value: "" },
+      { label: "Insurance", value: "N" },
+      { label: "Fast track", value: "N" },
     ]);
   });
 });
