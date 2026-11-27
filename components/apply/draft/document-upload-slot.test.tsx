@@ -198,8 +198,9 @@ describe("DocumentUploadSlot", () => {
 
     const status = screen.getByRole("status");
     expect(status).toHaveTextContent(/details filled in/i);
-    expect(status).toHaveClass("text-success");
+    expect(status).toHaveClass("text-foreground");
+    expect(status).not.toHaveClass("text-success");
     expect(status).not.toHaveClass("text-destructive");
-    expect(status.querySelector("svg")).toBeTruthy();
+    expect(status.querySelector("svg")).toHaveClass("text-success");
   });
 });

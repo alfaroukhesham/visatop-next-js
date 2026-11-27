@@ -156,10 +156,10 @@ export const DocumentUploadSlot: FC<IDocumentUploadSlotProps> = ({
           </div>
         ) : ocrNoticeTone === "success" ? (
           <div
-            className="text-success flex items-start gap-2 rounded-xl border border-success/30 bg-success/10 p-3 text-sm"
+            className="text-foreground flex items-start gap-2 rounded-xl border border-success/30 bg-success/10 p-3 text-sm"
             role="status"
           >
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <CheckCircle2 className="text-success mt-0.5 size-4 shrink-0" aria-hidden />
             <span className="font-medium">{ocrNotice}</span>
           </div>
         ) : (

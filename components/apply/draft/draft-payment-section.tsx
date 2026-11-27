@@ -155,7 +155,9 @@ export const DraftPaymentSection: FC<IDraftPaymentSectionProps> = ({
         onTermsRejected={() => {
           onTermsError(t("checkout.errors.termsRequired"));
           setTermsErrorNonce((nonce) => nonce + 1);
-          document.getElementById(CHECKOUT_TERMS_CHECKBOX_ID)?.focus();
+          const termsCheckbox = document.getElementById(CHECKOUT_TERMS_CHECKBOX_ID);
+          termsCheckbox?.scrollIntoView({ block: "center" });
+          termsCheckbox?.focus({ preventScroll: true });
         }}
         onZiinaEmbedded={(url) => {
           onDismissCheckoutError();

@@ -94,9 +94,18 @@ describe("DraftPaymentSection terms error", () => {
 
   it("focuses the checkbox, describes the pay button, and re-announces a repeat click", async () => {
     const user = userEvent.setup();
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      writable: true,
+      value: scrollIntoView,
+    });
+    const focus = vi.spyOn(HTMLElement.prototype, "focus");
     render(<Harness />);
     const pay = screen.getByRole("button", { name: /proceed to payment/i });
     await user.click(pay);
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "center" });
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
     const checkbox = document.getElementById(CHECKOUT_TERMS_CHECKBOX_ID);
     expect(checkbox).toHaveFocus();
     const firstAlert = screen.getByRole("alert");
@@ -105,5 +114,8 @@ describe("DraftPaymentSection terms error", () => {
     await user.click(pay);
     expect(screen.getByRole("alert")).not.toBe(firstAlert);
     expect(document.getElementById(CHECKOUT_TERMS_CHECKBOX_ID)).toHaveFocus();
+    expect(scrollIntoView).toHaveBeenCalledTimes(2);
+    focus.mockRestore();
+    delete HTMLElement.prototype.scrollIntoView;
   });
 });
